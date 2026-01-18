@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({
+definePageMeta({//
   title: '홈',
   middleware: [
     function (to, from) {
