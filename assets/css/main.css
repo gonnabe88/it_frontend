@@ -1,0 +1,123 @@
+@font-face {
+    font-family: 'NotoSansKR';
+    src: url('/assets/fonts/NotoSansKR-Thin.woff2') format('woff2');
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'NotoSansKR';
+    src: url('/assets/fonts/NotoSansKR-Light.woff2') format('woff2');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'NotoSansKR';
+    src: url('/assets/fonts/NotoSansKR-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'NotoSansKR';
+    src: url('/assets/fonts/NotoSansKR-Medium.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'NotoSansKR';
+    src: url('/assets/fonts/NotoSansKR-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Quill Font Customization - Global */
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value=notosanskr]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value=notosanskr]::before {
+    content: 'Noto Sans KR';
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+.ql-font-notosanskr {
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+.ql-editor {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 16px;
+    /* Set default size */
+}
+
+/* Fix for cut-off text in picker labels */
+.ql-snow .ql-picker-label::before {
+    display: inline-block;
+    line-height: 22px;
+    /* Adjust line height to prevent clipping */
+    vertical-align: top;
+}
+
+/* Widen the font picker and ensure label allows text to fit */
+.ql-snow .ql-picker.ql-font {
+    width: 120px !important;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item::before {
+    width: 100% !important;
+    text-align: left !important;
+    text-overflow: unset !important;
+    /* Prevent ellipsis */
+}
+
+/* Custom Size Picker Labels */
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="8px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="8px"]::before {
+    content: '8px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="10px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="10px"]::before {
+    content: '10px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="11px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="11px"]::before {
+    content: '11px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="12px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="12px"]::before {
+    content: '12px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="14px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="14px"]::before {
+    content: '14px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="16px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before {
+    content: '16px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="18px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18px"]::before {
+    content: '18px';
+}
+
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="20px"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before {
+    content: '20px';
+}
