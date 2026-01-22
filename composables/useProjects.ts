@@ -10,6 +10,8 @@ export interface Project {
     endDt: string;
     prjSts: string;
     prjMngNo: string;
+    bgYy: number;
+    svnHdq: string; // 주관부문 및 부서
 }
 
 export interface ProjectDetail extends Project {

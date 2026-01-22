@@ -23,18 +23,25 @@ const searchFilters = ref({
     budgetMax: null as number | null,
     startDate: null as Date | null,
     endDate: null as Date | null,
-    status: [] as string[]
+    status: [] as string[],
+    major_hdq: [] as string[],
 });
 
 // Dropdown Options
+const majorHdqs = computed(() => [...new Set(projects.value.map(p => p.svnHdq).filter(Boolean))]);
 const majorDepartments = computed(() => [...new Set(projects.value.map(p => p.svnDpm).filter(Boolean))]);
 const itDepartments = computed(() => [...new Set(projects.value.map(p => p.itDpm).filter(Boolean))]);
 const statusOptions = computed(() => [...new Set(projects.value.map(p => p.prjSts).filter(Boolean))]);
 
 // AutoComplete Suggestions
+const filteredMajorHdqs = ref<string[]>([]);
 const filteredMajorDepartments = ref<string[]>([]);
 const filteredItDepartments = ref<string[]>([]);
 const filteredStatuses = ref<string[]>([]);
+
+const searchMajorHdq = (event: { query: string }) => {
+    filteredMajorHdqs.value = majorHdqs.value.filter(d => d.includes(event.query));
+};
 
 const searchMajorDept = (event: { query: string }) => {
     filteredMajorDepartments.value = majorDepartments.value.filter(d => d.includes(event.query));
@@ -57,7 +64,8 @@ const resetFilters = () => {
         budgetMax: null,
         startDate: null,
         endDate: null,
-        status: []
+        status: [],
+        major_hdq: []
     };
 };
 
@@ -66,6 +74,9 @@ const filteredProjects = computed(() => {
         // Name Filter
         if (searchFilters.value.name && !project.prjNm.includes(searchFilters.value.name)) return false;
         
+        // 부문 및 본부 필터 (다중)
+        if (searchFilters.value.major_hdq.length > 0 && !searchFilters.value.major_hdq.includes(project.svnHdq)) return false;
+
         // Department Filters (Multiple)
         if (searchFilters.value.major_department.length > 0 && !searchFilters.value.major_department.includes(project.svnDpm)) return false;
         if (searchFilters.value.it_department.length > 0 && !searchFilters.value.it_department.includes(project.itDpm)) return false;
@@ -199,6 +210,12 @@ const formatBudget = (amount: number) => {
                 <div class="flex flex-col gap-2">
                     <label for="name" class="font-semibold">사업명</label>
                     <InputText id="name" v-model="searchFilters.name" placeholder="사업명을 입력하세요" />
+                </div>
+
+                <!-- 주관부문 -->
+                <div class="flex flex-col gap-2">
+                    <label for="major_hdq" class="font-semibold">주관부문 및 본부</label>
+                    <AutoComplete id="major_hdq" v-model="searchFilters.major_hdq" :suggestions="filteredMajorHdqs" @complete="searchMajorHdq" multiple dropdown placeholder="주관부문 및 본부 선택 (다중)" fluid />
                 </div>
 
                 <!-- 주관부서 -->
