@@ -1,6 +1,7 @@
 
 // Type Definitions
 export interface Project {
+    prjMngNo: string;
     prjNm: string;
     prjTp: string;
     svnDpm: string;
@@ -9,7 +10,6 @@ export interface Project {
     sttDt: string;
     endDt: string;
     prjSts: string;
-    prjMngNo: string;
     bgYy: number;
     svnHdq: string; // 주관부문 및 부서
 }

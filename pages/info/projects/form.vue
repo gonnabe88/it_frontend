@@ -33,7 +33,7 @@ const form = ref({
     hrfPln: '', // 향후계획
     itDpmCgpr: '', // 정보전략팀 담당자
     itDpmTlr: '', // IT팀장
-    lblFsgTlm: '', // 의무완료기한
+    lblFsgTlm:  null as Date | null, // 의무완료기한
     mnUsr: '', // 주요사용자
     ncs: '', // 필요성
     plm: '', // 문제
@@ -74,6 +74,7 @@ onMounted(async () => {
                     ...project,
                     sttDt: project.sttDt ? new Date(project.sttDt) : null,
                     endDt: project.endDt ? new Date(project.endDt) : null,
+                    lblFsgTlm: project.lblFsgTlm ? new Date(project.lblFsgTlm) : null,
                 };
             } else if (error.value) {
                 console.error('Failed to load project', error.value);
@@ -91,13 +92,22 @@ onMounted(async () => {
     }
 });
 
+// Date formatting helper
+const formatDate = (date: Date | null): string => {
+    if (!date) return '';
+    const offset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - offset);
+    return localDate.toISOString().split('T')[0];
+};
+
 // 저장
 const executeSave = async () => {
     const payload = {
         ...form.value,
         prjMngNo: projectId,
-        sttDt: form.value.sttDt ? form.value.sttDt.toISOString().split('T')[0] : '',
-        endDt: form.value.endDt ? form.value.endDt.toISOString().split('T')[0] : '',
+        sttDt: formatDate(form.value.sttDt),
+        endDt: formatDate(form.value.endDt),
+        lblFsgTlm: formatDate(form.value.lblFsgTlm),
     };
 
     try {
@@ -317,7 +327,7 @@ definePageMeta({
                     </div>
                     <div class="flex flex-col gap-2">
                         <label class="font-semibold">법규상 완료시기</label>
-                        <InputText v-model="form.lblFsgTlm" fluid />
+                        <DatePicker v-model="form.lblFsgTlm" showIcon fluid dateFormat="yy-mm-dd" />
                     </div>
                 </div>
             </div>
@@ -408,208 +418,11 @@ definePageMeta({
 
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">사업추진 가능성</label>
-
+                        <InputText v-model="form.prjPulPtt" fluid />
                     </div>
                 </div>
                 <Divider />
 
-                <!-- 사업 개요 -->
-                <div class="space-y-6">
-                    <h3 class="text-xl font-semibold">사업 개요</h3>
-                    <div class="flex flex-col gap-2">
-                        <RichEditor v-model="form.prjDes" editorStyle="height: 150px" placeholder="사업 상세 내용을 입력하세요." />
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2 col-span-1">
-                            <label class="font-semibold">현황</label>
-                            <Textarea v-model="form.saf" style="height: 150px;" />
-                        </div>
-                        <div class="flex flex-col gap-2 col-span-1">
-                            <label class="font-semibold">필요성</label>
-                            <Textarea v-model="form.ncs" style="height: 150px;" />
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2 col-span-1">
-                            <label class="font-semibold">기대효과</label>
-                            <Textarea v-model="form.xptEff" style="height: 150px;" />
-                        </div>
-                        <div class="flex flex-col gap-2 col-span-1">
-                            <label class="font-semibold">미추진 시 문제점</label>
-                            <Textarea v-model="form.plm" style="height: 150px;" />
-                        </div>
-                    </div>
-                </div>
-
-                <Divider />
-
-                <div class="space-y-6">
-                    <div class="flex items-end gap-2">
-                        <span class="text-xl font-semibold">사업범위</span>
-                        <span class="text-sm text-zinc-500">전산 요구사항</span>
-                    </div>
-                    <!-- 사업범위 -->
-                    <div class="flex flex-col gap-2">
-                        <RichEditor v-model="form.prjRng" editorStyle="height: 150px" />
-                    </div>
-                </div>
-
-                <Divider />
-
-                <div class="space-y-6">
-                    <div class="flex items-end gap-2">
-                        <span class="text-xl font-semibold">진행상황</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2 col-span-1">
-                            <label class="font-semibold">추진 경과</label>
-                            <Textarea v-model="form.pulPsg" style="height: 150px;" />
-                        </div>
-                        <div class="flex flex-col gap-2 col-span-1">
-                            <label class="font-semibold">향후 계획</label>
-                            <Textarea v-model="form.hrfPln" style="height: 150px;" />
-                        </div>
-                    </div>
-                </div>
-
-                <Divider />
-
-                <div class="space-y-6">
-                    <div class="flex items-end gap-2">
-                        <span class="text-xl font-semibold">사업구분</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">업무 구분</label>
-                            <InputText v-model="form.bzDtt" fluid />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">사업 유형</label>
-                            <InputText v-model="form.prjTp" fluid />
-                        </div>
-
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">기술 유형</label>
-                            <InputText v-model="form.tchnTp" fluid />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">주요 사용자</label>
-                            <InputText v-model="form.mnUsr" fluid />
-                        </div>
-                    </div>
-                </div>
-
-                <Divider />
-
-                <div class="space-y-6">
-                    <div class="flex items-end gap-2">
-                        <span class="text-xl font-semibold">편성기준</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">중복 여부 (Y/N)</label>
-                            <Select v-model="form.dplYn" :options="['Y', 'N']" fluid />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">법규상 완료시기</label>
-                            <InputText v-model="form.lblFsgTlm" fluid />
-                        </div>
-                    </div>
-                </div>
-
-                <Divider />
-
-                <!-- Basic Info -->
-                <div class="space-y-6">
-                    <div class="flex items-end gap-2">
-                        <span class="text-xl font-semibold">담당부서</span>
-                    </div>
-
-                    <div class="flex gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">주관부문</label>
-                            <Select v-model="form.svnHdq" :options="majorHdqs" placeholder="주관부문 선택" editable
-                                class="w-80" />
-                        </div>
-                    </div>
-
-                    <div class="flex gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">주관부서</label>
-                            <Select v-model="form.svnDpm" :options="majorDepartments" placeholder="주관 부서 선택" editable
-                                class="w-40" />
-                        </div>
-                        <div class="flex flex-col  gap-2 flex-1">
-                            <label class="font-semibold">담당팀장</label>
-                            <InputText v-model="form.svnDpmTlr" placeholder="이름" fluid />
-                        </div>
-                        <div class="flex flex-col  gap-2 flex-1">
-                            <label class="font-semibold">담당자</label>
-                            <InputText v-model="form.svnDpmCgpr" placeholder="이름" fluid />
-                        </div>
-                    </div>
-
-                    <div class="flex gap-6">
-                        <div class="flex flex-col gap-2">
-                            <label class="font-semibold">IT부서</label>
-                            <Select v-model="form.itDpm" :options="itDepartments" placeholder="IT부서 선택" editable
-                                class="w-40" />
-                        </div>
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">담당팀장</label>
-                            <InputText v-model="form.itDpmTlr" placeholder="이름" fluid />
-                        </div>
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">담당자</label>
-                            <InputText v-model="form.itDpmCgpr" placeholder="이름" fluid />
-                        </div>
-                    </div>
-
-                </div>
-
-                <Divider />
-
-                <div class="space-y-6">
-                    <div class="flex items-end gap-2">
-                        <span class="text-xl font-semibold">추진시기 및 소요예산</span>
-                    </div>
-
-                    <div class="flex gap-6">
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">예산 (원)</label>
-                            <InputNumber v-model="form.prjBg" mode="currency" currency="KRW" locale="ko-KR"
-                                placeholder="예산 입력" fluid />
-                        </div>
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">전결권</label>
-                            <InputText v-model="form.edrt" fluid />
-                        </div>
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">보고상태</label>
-                            <InputText v-model="form.rprSts" fluid />
-                        </div>
-                    </div>
-
-                    <div class="flex gap-6">
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">시작일</label>
-                            <DatePicker v-model="form.sttDt" showIcon fluid dateFormat="yy-mm-dd" />
-                        </div>
-
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">종료일</label>
-                            <DatePicker v-model="form.endDt" showIcon fluid dateFormat="yy-mm-dd" />
-                        </div>
-
-                        <div class="flex flex-col gap-2 flex-1">
-                            <label class="font-semibold">사업추진 가능성</label>
-                            <InputText v-model="form.prjPulPtt" fluid />
-                        </div>
-                    </div>
-                </div>
                 <div
                     class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
                     <div class="flex items-center justify-between">
@@ -619,33 +432,33 @@ definePageMeta({
 
                     <div class="overflow-x-auto">
                         <DataTable :value="form.resourceItems" resizableColumns columnResizeMode="fit" showGridlines
-                            size="small">
+                            size="small" class="resource-table">
                             <template #empty>
                                 <div class="text-center text-zinc-500 py-4">
                                     등록된 소요자원이 없습니다. 품목 추가 버튼을 눌러 등록해주세요.
                                 </div>
                             </template>
 
-                            <Column header="구분" headerClass="text-center" style="min-width: 120px">
+                            <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 120px">
                                 <template #body="{ data }">
                                     <Select v-model="data.category" :options="resourceCategoryOptions" placeholder="선택"
                                         class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="항목" headerClass="text-center" style="min-width: 200px">
+                            <Column header="항목" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 200px">
                                 <template #body="{ data }">
                                     <Textarea v-model="data.item" rows="1" autoResize class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="수량" headerClass="text-center" style="width: 80px">
+                            <Column header="수량" headerClass="text-center justify-center [&>div]:justify-center" style="width: 80px">
                                 <template #body="{ data }">
                                     <InputNumber v-model="data.quantity" :min="0" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="단가" headerClass="text-center" style="min-width: 120px">
+                            <Column header="단가" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 120px">
                                 <template #body="{ data }">
                                     <InputNumber v-model="data.unitPrice" mode="currency"
                                         :currency="data.currency || 'KRW'" locale="ko-KR" readonly
@@ -653,26 +466,26 @@ definePageMeta({
                                 </template>
                             </Column>
 
-                            <Column header="통화" headerClass="text-center" style="min-width: 100px">
+                            <Column header="통화" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 100px">
                                 <template #body="{ data }">
                                     <Select v-model="data.currency" :options="currencyOptions" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="소계" headerClass="text-center" style="min-width: 120px">
+                            <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 120px">
                                 <template #body="{ data }">
                                     <InputNumber v-model="data.subtotal" mode="currency"
                                         :currency="data.currency || 'KRW'" locale="ko-KR" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="산정근거" headerClass="text-center" style="min-width: 200px">
+                            <Column header="산정근거" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 200px">
                                 <template #body="{ data }">
                                     <Textarea v-model="data.basis" rows="1" autoResize class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="도입시기/지급주기" headerClass="text-center" style="min-width: 150px">
+                            <Column header="도입시기/지급주기" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 150px">
                                 <template #body="{ data }">
                                     <div v-if="['개발비', '기계장치', '기타무형자산'].includes(data.category)">
                                         <DatePicker v-model="data.introDate" view="month" dateFormat="yy-mm" showIcon
@@ -685,19 +498,19 @@ definePageMeta({
                                 </template>
                             </Column>
 
-                            <Column header="정보보호" headerClass="text-center" style="min-width: 80px">
+                            <Column header="정보보호" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 80px">
                                 <template #body="{ data }">
                                     <Select v-model="data.infoProtection" :options="ynOptions" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="통합인프라" headerClass="text-center" style="min-width: 80px">
+                            <Column header="통합인프라" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 80px">
                                 <template #body="{ data }">
                                     <Select v-model="data.integratedInfra" :options="ynOptions" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="" headerClass="text-center" style="width: 50px">
+                            <Column header="" headerClass="text-center justify-center [&>div]:justify-center" style="width: 50px">
                                 <template #body="{ index }">
                                     <Button icon="pi pi-trash" text severity="danger"
                                         @click="removeResourceRow(index)" />
@@ -716,3 +529,15 @@ definePageMeta({
         </div>
     </div>
 </template>
+
+<style scoped>
+:deep(.resource-table .p-datatable-thead > tr > th) {
+    background-color: #f4f4f5 !important; /* zinc-100 */
+}
+:deep(.dark .resource-table .p-datatable-thead > tr > th) {
+    background-color: #27272a !important; /* zinc-800 */
+}
+:deep(.resource-table .p-datatable-thead > tr > th .p-column-header-content) {
+    justify-content: center;
+}
+</style>
