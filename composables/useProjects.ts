@@ -1,16 +1,16 @@
 
 // Type Definitions
 export interface Project {
-    prjMngNo: string;
-    prjNm: string;
-    prjTp: string;
-    svnDpm: string;
-    itDpm: string;
-    prjBg: number;
-    sttDt: string;
-    endDt: string;
-    prjSts: string;
-    bgYy: number;
+    prjMngNo: string; // 프로젝트관리번호
+    prjNm: string; // 프로젝트명
+    prjTp: string; // 프로젝트유형
+    svnDpm: string; // 주관부서
+    itDpm: string; // 담당부서
+    prjBg: number; // 프로젝트규모
+    sttDt: string; // 시작일
+    endDt: string; // 종료일
+    prjSts: string; // 프로젝트상태
+    bgYy: number; // 예산년도
     svnHdq: string; // 주관부문 및 부서
 }
 
@@ -19,8 +19,8 @@ export interface ProjectDetail extends Project {
     dplYn: string; // 중복여부
     edrt: string; // 전결권
     hrfPln: string; // 향후계획
-    itDpmCgpr: string;
-    itDpmTlr: string;
+    itDpmCgpr: string; // IT담당자
+    itDpmTlr: string; // IT담당팀장
     lblFsgTlm: string; // 의무완료기한
     mnUsr: string; // 주요사용자
     ncs: string; // 필요성
@@ -32,8 +32,8 @@ export interface ProjectDetail extends Project {
     pulRsn: string; // 추진사유
     rprSts: string; // 보고상태
     saf: string; // 현황
-    svnDpmCgpr: string;
-    svnDpmTlr: string;
+    svnDpmCgpr: string; // 주관부문 및 부서 담당자
+    svnDpmTlr: string; // 주관부문 및 부서 담당팀장
     tchnTp: string; // 기술유형
     xptEff: string; // 기대효과
 }

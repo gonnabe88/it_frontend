@@ -12,6 +12,16 @@ const { data: projectsData, error } = await fetchProjects();
 
 // 프로젝트 목록 Computed property to handle potential null data
 const projects = computed(() => projectsData.value || []);
+const selectedProjects = ref([]);
+
+const requestApproval = () => {
+    if (selectedProjects.value.length === 0) {
+        alert('결재할 프로젝트를 선택해주세요.');
+        return;
+    }
+    const ids = selectedProjects.value.map((p: any) => p.prjMngNo).join(',');
+    navigateTo(`/info/projects/report?ids=${ids}`);
+};
 
 // 검색 로직
 const visibleDrawer = ref(false);
@@ -156,6 +166,7 @@ const formatBudget = (amount: number) => {
             <div class="flex items-center gap-4">
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="basic" />
                 <Button label="조회" icon="pi pi-search" severity="secondary" outlined @click="visibleDrawer = true" />
+                <Button label="결재신청" icon="pi pi-check-square" severity="help" @click="requestApproval" :disabled="selectedProjects.length === 0" />
                 <Button label="예산 신청" icon="pi pi-plus" @click="navigateTo('/info/projects/form')" />
             </div>
         </div>
@@ -165,12 +176,15 @@ const formatBudget = (amount: number) => {
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
             <DataTable v-else :value="filteredProjects" paginator :rows="10" 
+                v-model:selection="selectedProjects"
+                dataKey="prjMngNo"
                 tableStyle="min-width: 50rem"
                 :pt="{
                     headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                     bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                 }"
             >
+                <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
                 <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
                     <template #body="slotProps">
                         <div class="flex items-center gap-2">

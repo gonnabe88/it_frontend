@@ -73,7 +73,7 @@ const items = ref([
     {
         label: '전자결재',
         root: true,
-        command: () => navigateTo('/audit')
+        command: () => navigateTo('/approval')
     }
 ]);
 
