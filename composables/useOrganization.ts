@@ -15,15 +15,28 @@ export interface User {
 }
 
 export const useOrganization = () => {
+    const { accessToken } = useAuth();
+
     // API Call to fetch organizations
     const fetchOrganizations = () => {
-        return useFetch<Organization[]>('http://localhost:8080/api/organizations');
+        return useFetch<Organization[]>('http://localhost:8080/api/organizations', {
+            server: false, // 클라이언트 사이드에서만 실행
+            watch: [accessToken], // accessToken 변경 시 재요청
+            headers: computed(() => ({
+                Authorization: `Bearer ${accessToken.value}`
+            }))
+        });
     };
 
     // API Call to fetch users by organization code
     const fetchUsers = (orgCode: string) => {
         return useFetch<User[]>('http://localhost:8080/api/users', {
-            query: { orgCode }
+            server: false, // 클라이언트 사이드에서만 실행
+            watch: [accessToken], // accessToken 변경 시 재요청
+            query: { orgCode },
+            headers: computed(() => ({
+                Authorization: `Bearer ${accessToken.value}`
+            }))
         });
     };
 

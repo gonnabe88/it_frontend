@@ -12,6 +12,7 @@ export interface Project {
     prjSts: string; // 프로젝트상태
     bgYy: number; // 예산년도
     svnHdq: string; // 주관부문 및 부서
+    apfSts: string; // 결재현황
 }
 
 export interface ProjectDetail extends Project {
@@ -40,28 +41,39 @@ export interface ProjectDetail extends Project {
 
 export const useProjects = () => {
     const API_BASE_URL = 'http://localhost:8080/api/projects';
+    const { $apiFetch } = useNuxtApp();
 
-    // List
+    // List - useApi 사용 (자동 인증 및 토큰 갱신)
     const fetchProjects = () => {
-        return useFetch<Project[]>(API_BASE_URL);
+        return useApi<Project[]>(API_BASE_URL);
     };
 
-    // Detail
+    // Detail - useApi 사용
     const fetchProject = (id: string | number) => {
-        return useFetch<ProjectDetail>(`${API_BASE_URL}/${id}`);
+        return useApi<ProjectDetail>(`${API_BASE_URL}/${id}`);
     };
 
-    // Create
+    // Bulk Get - $apiFetch 사용 (플러그인에서 제공하는 인증된 fetch)
+    const fetchProjectsBulk = async (prjMngNos: string[]) => {
+        return await $apiFetch<ProjectDetail[]>(`${API_BASE_URL}/bulk-get`, {
+            method: 'POST',
+            body: {
+                prjMngNos
+            }
+        });
+    };
+
+    // Create - $apiFetch 사용
     const createProject = async (payload: any) => {
-        return await $fetch(API_BASE_URL, {
+        return await $apiFetch(API_BASE_URL, {
             method: 'POST',
             body: payload
         });
     };
 
-    // Update
+    // Update - $apiFetch 사용
     const updateProject = async (id: string | number, payload: any) => {
-        return await $fetch(`${API_BASE_URL}/${id}`, {
+        return await $apiFetch(`${API_BASE_URL}/${id}`, {
             method: 'PUT',
             body: payload
         });
@@ -70,6 +82,7 @@ export const useProjects = () => {
     return {
         fetchProjects,
         fetchProject,
+        fetchProjectsBulk,
         createProject,
         updateProject
     };

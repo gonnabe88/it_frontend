@@ -2,12 +2,23 @@ import Aura from '@primevue/themes/aura';
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
-  devtools: { enabled: true },
+  devtools: {
+    enabled: true,
+
+    timeline: {
+      enabled: true
+    }
+  },
   modules: [
-    '@primevue/nuxt-module'
+    '@primevue/nuxt-module',
+    '@pinia/nuxt'
   ],
+  pinia: {
+    storesDirs: ['./stores/**']
+  },
   primevue: {
     options: {
+
       theme: {
         preset: Aura,
         options: {

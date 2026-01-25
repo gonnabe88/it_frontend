@@ -3,6 +3,7 @@
     src: url('/assets/fonts/NotoSansKR-Thin.woff2') format('woff2');
     font-weight: 100;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -10,6 +11,7 @@
     src: url('/assets/fonts/NotoSansKR-Light.woff2') format('woff2');
     font-weight: 300;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -17,6 +19,7 @@
     src: url('/assets/fonts/NotoSansKR-Regular.woff2') format('woff2');
     font-weight: 400;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -24,6 +27,7 @@
     src: url('/assets/fonts/NotoSansKR-Medium.woff2') format('woff2');
     font-weight: 500;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -31,6 +35,7 @@
     src: url('/assets/fonts/NotoSansKR-Bold.woff2') format('woff2');
     font-weight: 700;
     font-style: normal;
+    font-display: swap;
 }
 
 @tailwind base;
@@ -120,4 +125,109 @@
 .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="20px"]::before,
 .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before {
     content: '20px';
+}
+
+/* Custom Tag Styles */
+.kdb-tag-green {
+    @apply !bg-green-100 !text-green-800;
+}
+
+.dark .kdb-tag-green {
+    @apply !bg-green-900/30 !text-green-300;
+}
+
+.kdb-tag-blue {
+    @apply !bg-blue-100 !text-blue-800;
+}
+
+.dark .kdb-tag-blue {
+    @apply !bg-blue-900/30 !text-blue-300;
+}
+
+.kdb-tag-yellow {
+    @apply !bg-yellow-100 !text-yellow-800;
+}
+
+.dark .kdb-tag-yellow {
+    @apply !bg-yellow-900/30 !text-yellow-300;
+}
+
+.kdb-tag-red {
+    @apply !bg-red-100 !text-red-800;
+}
+
+.dark .kdb-tag-red {
+    @apply !bg-red-900/30 !text-red-300;
+}
+
+.kdb-tag-gray {
+    @apply !bg-gray-100 !text-gray-800;
+}
+
+.dark .kdb-tag-gray {
+    @apply !bg-gray-800 !text-gray-300;
+}
+
+.kdb-tag-indigo {
+    @apply !bg-indigo-100 !text-indigo-800;
+}
+
+.dark .kdb-tag-indigo {
+    @apply !bg-indigo-800 !text-indigo-300;
+}
+
+.kdb-tag-purple {
+    @apply !bg-purple-100 !text-purple-800;
+}
+
+.dark .kdb-tag-purple {
+    @apply !bg-purple-800 !text-purple-300;
+}
+
+.kdb-tag-pink {
+    @apply !bg-pink-100 !text-pink-800;
+}
+
+.dark .kdb-tag-pink {
+    @apply !bg-pink-800 !text-pink-300;
+}
+
+.kdb-tag-orange {
+    @apply !bg-orange-100 !text-orange-800;
+}
+
+.dark .kdb-tag-orange {
+    @apply !bg-orange-800 !text-orange-300;
+}
+
+.kdb-tag-cyan {
+    @apply !bg-cyan-100 !text-cyan-800;
+}
+
+.dark .kdb-tag-cyan {
+    @apply !bg-cyan-800 !text-cyan-300;
+}
+
+.kdb-tag-slate {
+    @apply !bg-slate-100 !text-slate-800;
+}
+
+.dark .kdb-tag-slate {
+    @apply !bg-slate-800 !text-slate-300;
+}
+
+.kdb-tag-teal {
+    @apply !bg-teal-100 !text-teal-800;
+}
+
+.dark .kdb-tag-teal {
+    @apply !bg-teal-800 !text-teal-300;
+}
+
+.kdb-tag-rose {
+    @apply !bg-rose-100 !text-rose-800;
+}
+
+.dark .kdb-tag-rose {
+    @apply !bg-rose-800 !text-rose-300;
 }
