@@ -159,9 +159,9 @@ const formatBudget = (amount: number) => {
             <div class="flex items-center gap-4">
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="basic" />
                 <Button label="조회" icon="pi pi-search" severity="secondary" outlined @click="visibleDrawer = true" />
+                <Button label="사업등록" icon="pi pi-plus" @click="navigateTo('/info/projects/form')" />
                 <Button label="결재신청" icon="pi pi-check-square" severity="help" @click="requestApproval"
                     :disabled="selectedProjects.length === 0" />
-                <Button label="예산 신청" icon="pi pi-plus" @click="navigateTo('/info/projects/form')" />
             </div>
         </div>
 

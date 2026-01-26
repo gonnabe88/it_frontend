@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAuth } from '~/composables/useAuth';
+import logo from '@/assets/logo.png';
 
 definePageMeta({
     layout: false, // 로그인 페이지는 레이아웃 없이
@@ -56,8 +57,8 @@ const handleKeyPress = (event: KeyboardEvent) => {
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
                 <!-- 로고 및 타이틀 -->
                 <div class="text-center mb-8">
-                    <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-full mb-4">
-                        <i class="pi pi-building text-3xl text-white"></i>
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded mb-4">
+                        <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" />
                     </div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">IT Portal</h1>
                     <p class="text-gray-600 dark:text-gray-400">정보화사업 관리 시스템</p>
