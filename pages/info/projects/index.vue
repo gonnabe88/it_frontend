@@ -170,7 +170,7 @@ const formatBudget = (amount: number) => {
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
             <DataTable v-else :value="filteredProjects" paginator :rows="10" v-model:selection="selectedProjects"
-                dataKey="prjMngNo" tableStyle="min-width: 50rem" :pt="{
+                sortField="prjMngNo" :sortOrder="-1" dataKey="prjMngNo" tableStyle="min-width: 50rem" :pt="{
                     headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                     bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                 }">

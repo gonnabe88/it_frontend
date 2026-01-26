@@ -15,6 +15,26 @@ export interface Project {
     apfSts: string; // 결재현황
 }
 
+// 품목(Item) 인터페이스 정의
+export interface ProjectItem {
+    gclMngNo?: string; // 품목관리번호 (PK)
+    gclSno?: number; // 품목순번
+    gclDtt: string; // 품목구분 (Category: 개발비, 기계장치 등)
+    gclNm: string; // 품목명 (Item Name)
+    gclQtt: number; // 수량 (Quantity)
+    cur: string; // 통화 (Currency: KRW, USD ...)
+    xcr?: number; // 환율 (Exchange Rate)
+    xcrBseDt?: string; // 환율기준일
+    bgFdtn: string; // 예산산출근거 (Basis)
+    itdDt?: string; // 도입시기 (Intro Date)
+    dfrCle?: string; // 지급주기 (Payment Cycle)
+    infPrtYn: string; // 정보보호여부 (Y/N)
+    itrInfrYn: string; // 통합인프라여부 (Y/N)
+    lstYn?: string; // 최종여부
+    upr?: number; // 단가 (Unit Price) - UI 연동용 추가
+    amt?: number; // 소계/금액 (Amount) - UI 연동용 추가
+}
+
 export interface ProjectDetail extends Project {
     bzDtt: string; // 업무구분
     dplYn: string; // 중복여부
@@ -37,6 +57,7 @@ export interface ProjectDetail extends Project {
     svnDpmTlr: string; // 주관부문 및 부서 담당팀장
     tchnTp: string; // 기술유형
     xptEff: string; // 기대효과
+    items?: ProjectItem[]; // 품목 정보 리스트
 }
 
 export const useProjects = () => {
@@ -79,11 +100,19 @@ export const useProjects = () => {
         });
     };
 
+    // Delete - $apiFetch 사용
+    const deleteProject = async (id: string | number) => {
+        return await $apiFetch(`${API_BASE_URL}/${id}`, {
+            method: 'DELETE'
+        });
+    };
+
     return {
         fetchProjects,
         fetchProject,
         fetchProjectsBulk,
         createProject,
-        updateProject
+        updateProject,
+        deleteProject
     };
 };

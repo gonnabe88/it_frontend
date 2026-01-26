@@ -9,6 +9,11 @@ const router = useRouter();
 const confirm = useConfirm();
 const { fetchProject, createProject, updateProject } = useProjects();
 
+const title = '사업정보 입력';
+definePageMeta({
+    title
+});
+
 const projectId = route.query.id ? (route.query.id as string) : null;
 const isEditMode = computed(() => !!projectId);
 
@@ -33,7 +38,7 @@ const form = ref({
     hrfPln: '', // 향후계획
     itDpmCgpr: '', // 정보전략팀 담당자
     itDpmTlr: '', // IT팀장
-    lblFsgTlm:  null as Date | null, // 의무완료기한
+    lblFsgTlm: null as Date | null, // 의무완료기한
     mnUsr: '', // 주요사용자
     ncs: '', // 필요성
     plm: '', // 문제
@@ -69,12 +74,31 @@ onMounted(async () => {
             const { data, error } = await fetchProject(projectId);
             if (data.value) {
                 const project = data.value;
+
+                // API 응답의 items를 UI 모델인 resourceItems로 변환
+                const mappedItems = (project.items || []).map((item: any) => ({
+                    category: item.gclDtt, // 품목구분
+                    item: item.gclNm, // 품목명
+                    quantity: item.gclQtt, // 수량
+                    currency: item.cur, // 통화
+                    basis: item.bgFdtn, // 예산산출근거
+                    introDate: item.itdDt ? new Date(item.itdDt) : null, // 도입시기
+                    paymentCycle: item.dfrCle, // 지급주기
+                    infoProtection: item.infPrtYn, // 정보보호여부
+                    integratedInfra: item.itrInfrYn, // 통합인프라여부
+
+                    // UI 계산 필드 복원 (API에 uqr/amt가 없다면 계산 필요할 수 있음)
+                    unitPrice: item.upr || 0, // 단가
+                    subtotal: item.amt || 0, // 소계
+                }));
+
                 form.value = {
                     ...form.value,
                     ...project,
                     sttDt: project.sttDt ? new Date(project.sttDt) : null,
                     endDt: project.endDt ? new Date(project.endDt) : null,
                     lblFsgTlm: project.lblFsgTlm ? new Date(project.lblFsgTlm) : null,
+                    resourceItems: mappedItems // 매핑된 품목 리스트 할당
                 };
             } else if (error.value) {
                 console.error('Failed to load project', error.value);
@@ -100,15 +124,46 @@ const formatDate = (date: Date | null): string => {
     return localDate.toISOString().split('T')[0];
 };
 
-// 저장
+// 저장 로직 (상세 주석 포함)
 const executeSave = async () => {
+    // 1. UI의 resourceItems를 API 스펙인 items로 변환
+    const items = form.value.resourceItems.map(item => ({
+        // 품목 정보 매핑
+        gclDtt: item.category, // 품목구분 (Category)
+        gclNm: item.item, // 품목명 (Item Name)
+        gclQtt: item.quantity, // 수량 (Quantity)
+        cur: item.currency, // 통화 (Currency)
+        bgFdtn: item.basis, // 예산산출근거 (Basis)
+        itdDt: formatDate(item.introDate), // 도입시기 (Intro Date) - 날짜 포맷 변환
+        dfrCle: item.paymentCycle, // 지급주기 (Payment Cycle)
+        infPrtYn: item.infoProtection, // 정보보호여부 (Y/N)
+        itrInfrYn: item.integratedInfra, // 통합인프라여부 (Y/N)
+
+        // 추가 정보 (UI 연동용)
+        upr: item.unitPrice, // 단가
+        amt: item.subtotal, // 소계
+
+        // API 필수 필드 기본값 설정 (값 없을 시)
+        gclMngNo: null as string | null, // 신규 시 null
+        gclSno: 0,
+        xcr: 0,
+        xcrBseDt: formatDate(new Date()), // 현재 날짜 기준
+        lstYn: 'Y' // 최종여부 기본값 Y
+    }));
+
+    // 2. 전체 Payload 구성
     const payload = {
         ...form.value,
         prjMngNo: projectId,
         sttDt: formatDate(form.value.sttDt),
         endDt: formatDate(form.value.endDt),
         lblFsgTlm: formatDate(form.value.lblFsgTlm),
+        items: items // 변환된 품목 리스트 추가
     };
+
+    // 불필요한 UI용 resourceItems 필드는 payload에서 제외하는 것이 좋으나,
+    // ...form.value로 인해 포함되어도 백엔드에서 무시한다면 상관없음.
+    // 명확하게 하려면 delete payload.resourceItems; 를 할 수 있음.
 
     try {
         let response;
@@ -191,9 +246,6 @@ const cancel = () => {
     router.back();
 };
 
-definePageMeta({
-    title: '사업 정보 입력'
-});
 </script>
 
 <template>
@@ -439,26 +491,30 @@ definePageMeta({
                                 </div>
                             </template>
 
-                            <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 120px">
+                            <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 120px">
                                 <template #body="{ data }">
                                     <Select v-model="data.category" :options="resourceCategoryOptions" placeholder="선택"
                                         class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="항목" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 200px">
+                            <Column header="항목" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 200px">
                                 <template #body="{ data }">
                                     <Textarea v-model="data.item" rows="1" autoResize class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="수량" headerClass="text-center justify-center [&>div]:justify-center" style="width: 80px">
+                            <Column header="수량" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="width: 80px">
                                 <template #body="{ data }">
                                     <InputNumber v-model="data.quantity" :min="0" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="단가" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 120px">
+                            <Column header="단가" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 120px">
                                 <template #body="{ data }">
                                     <InputNumber v-model="data.unitPrice" mode="currency"
                                         :currency="data.currency || 'KRW'" locale="ko-KR" readonly
@@ -466,26 +522,30 @@ definePageMeta({
                                 </template>
                             </Column>
 
-                            <Column header="통화" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 100px">
+                            <Column header="통화" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 100px">
                                 <template #body="{ data }">
                                     <Select v-model="data.currency" :options="currencyOptions" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 120px">
+                            <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 120px">
                                 <template #body="{ data }">
                                     <InputNumber v-model="data.subtotal" mode="currency"
                                         :currency="data.currency || 'KRW'" locale="ko-KR" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="산정근거" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 200px">
+                            <Column header="산정근거" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 200px">
                                 <template #body="{ data }">
                                     <Textarea v-model="data.basis" rows="1" autoResize class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="도입시기/지급주기" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 150px">
+                            <Column header="도입시기/지급주기" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 150px">
                                 <template #body="{ data }">
                                     <div v-if="['개발비', '기계장치', '기타무형자산'].includes(data.category)">
                                         <DatePicker v-model="data.introDate" view="month" dateFormat="yy-mm" showIcon
@@ -498,19 +558,22 @@ definePageMeta({
                                 </template>
                             </Column>
 
-                            <Column header="정보보호" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 80px">
+                            <Column header="정보보호" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 80px">
                                 <template #body="{ data }">
                                     <Select v-model="data.infoProtection" :options="ynOptions" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="통합인프라" headerClass="text-center justify-center [&>div]:justify-center" style="min-width: 80px">
+                            <Column header="통합인프라" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="min-width: 80px">
                                 <template #body="{ data }">
                                     <Select v-model="data.integratedInfra" :options="ynOptions" class="w-full" />
                                 </template>
                             </Column>
 
-                            <Column header="" headerClass="text-center justify-center [&>div]:justify-center" style="width: 50px">
+                            <Column header="" headerClass="text-center justify-center [&>div]:justify-center"
+                                style="width: 50px">
                                 <template #body="{ index }">
                                     <Button icon="pi pi-trash" text severity="danger"
                                         @click="removeResourceRow(index)" />
@@ -532,11 +595,15 @@ definePageMeta({
 
 <style scoped>
 :deep(.resource-table .p-datatable-thead > tr > th) {
-    background-color: #f4f4f5 !important; /* zinc-100 */
+    background-color: #f4f4f5 !important;
+    /* zinc-100 */
 }
+
 :deep(.dark .resource-table .p-datatable-thead > tr > th) {
-    background-color: #27272a !important; /* zinc-800 */
+    background-color: #27272a !important;
+    /* zinc-800 */
 }
+
 :deep(.resource-table .p-datatable-thead > tr > th .p-column-header-content) {
     justify-content: center;
 }
