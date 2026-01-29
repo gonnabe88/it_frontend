@@ -87,9 +87,9 @@ onMounted(async () => {
                     infoProtection: item.infPrtYn, // 정보보호여부
                     integratedInfra: item.itrInfrYn, // 통합인프라여부
 
-                    // UI 계산 필드 복원 (API에 uqr/amt가 없다면 계산 필요할 수 있음)
+                    // UI 계산 필드 복원 (API에 uqr/gclAmt가 없다면 계산 필요할 수 있음)
                     unitPrice: item.upr || 0, // 단가
-                    subtotal: item.amt || 0, // 소계
+                    gclAmt: item.gclAmt || 0, // 소계
                 }));
 
                 form.value = {
@@ -141,7 +141,7 @@ const executeSave = async () => {
 
         // 추가 정보 (UI 연동용)
         upr: item.unitPrice, // 단가
-        amt: item.subtotal, // 소계
+        gclAmt: item.gclAmt, // 소계
 
         // API 필수 필드 기본값 설정 (값 없을 시)
         gclMngNo: null as string | null, // 신규 시 null
@@ -217,7 +217,7 @@ const addResourceRow = () => {
         quantity: 0,
         unitPrice: 0,
         currency: 'KRW',
-        subtotal: 0,
+        gclAmt: 0,
         basis: '',
         introDate: null,
         paymentCycle: '',
@@ -234,8 +234,8 @@ const removeResourceRow = (index: number) => {
 watch(() => form.value.resourceItems, (items) => {
     if (!items) return;
     items.forEach(item => {
-        if (item.quantity > 0 && item.subtotal > 0) {
-            item.unitPrice = Math.round(item.subtotal / item.quantity);
+        if (item.quantity > 0 && item.gclAmt > 0) {
+            item.unitPrice = Math.round(item.gclAmt / item.quantity);
         } else {
             item.unitPrice = 0;
         }
@@ -532,7 +532,7 @@ const cancel = () => {
                             <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center"
                                 style="min-width: 120px">
                                 <template #body="{ data }">
-                                    <InputNumber v-model="data.subtotal" mode="currency"
+                                    <InputNumber v-model="data.gclAmt" mode="currency"
                                         :currency="data.currency || 'KRW'" locale="ko-KR" class="w-full" />
                                 </template>
                             </Column>

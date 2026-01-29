@@ -70,7 +70,7 @@ const getCurrentStageIndex = (status?: string) => {
 // 소요자원 합계 계산
 const totalItemsAmount = computed(() => {
     if (!project.value?.items) return 0;
-    return project.value.items.reduce((sum, item) => sum + (item.amt || 0), 0);
+    return project.value.items.reduce((sum, item) => sum + (item.gclAmt || 0), 0);
 });
 
 // 자원 구분별 태그 색상 매핑
@@ -374,7 +374,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] text-zinc-400 uppercase font-bold">Manager</span>
                             <span class="text-zinc-900 dark:text-zinc-100 font-bold text-lg">{{ project.svnDpmTlr || '-'
-                            }}</span>
+                                }}</span>
                             <span class="text-xs text-zinc-500">팀장</span>
                         </div>
                         <div class="flex flex-col gap-1">
@@ -412,13 +412,13 @@ const formatDateToYearMonth = (dateStr?: string) => {
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] text-zinc-400 uppercase font-bold">Manager</span>
                             <span class="text-zinc-900 dark:text-zinc-100 font-bold text-lg">{{ project.itDpmTlr || '-'
-                            }}</span>
+                                }}</span>
                             <span class="text-xs text-zinc-500">팀장</span>
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] text-zinc-400 uppercase font-bold">Staff</span>
                             <span class="text-zinc-900 dark:text-zinc-100 font-bold text-lg">{{ project.itDpmCgpr || '-'
-                            }}</span>
+                                }}</span>
                             <span class="text-xs text-zinc-500">담당</span>
                         </div>
                     </div>
@@ -542,7 +542,8 @@ const formatDateToYearMonth = (dateStr?: string) => {
                     <Column field="upr" header="단가" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-right"
                         class="text-right" style="min-width: 120px">
                         <template #body="{ data }">
-                            <span class="text-zinc-600 dark:text-zinc-400">{{ formatCurrency(data.upr || 0).replace('₩',
+                            <span class="text-zinc-600 dark:text-zinc-400">{{ formatCurrency(data.gclAmt / data.gclQtt ||
+                                0).replace('₩',
                                 '') }}</span>
                         </template>
                     </Column>
@@ -551,8 +552,8 @@ const formatDateToYearMonth = (dateStr?: string) => {
                     <Column field="amt" header="소계" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-right"
                         class="text-right bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 140px">
                         <template #body="{ data }">
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ formatCurrency(data.amt || 0)
-                                }}</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ formatCurrency(data.gclAmt || 0)
+                            }}</span>
                         </template>
                     </Column>
                     <Column field="bgFdtn" header="산정근거" headerClass="bg-zinc-50/80 dark:bg-zinc-800"
