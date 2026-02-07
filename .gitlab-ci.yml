@@ -9,10 +9,6 @@ virus_scan:
     # 경로를 생성하지 않고 현재 루트에 바로 저장해봅니다.
     - freshclam || true 
     - clamscan -r . --log=clamav-result.txt
-  artifacts:
-    when: always
-    paths:
-      - clamav-result.txt  # 폴더 없이 파일명만 지정
 
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
