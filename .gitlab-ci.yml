@@ -13,9 +13,7 @@ virus_scan:
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
   stage: scan
-  image:
-    name: ghcr.io/google/osv-scanner:latest
-    entrypoint: [""]
-  script:
-    - /usr/local/bin/osv-scanner -r .
+  image: ghcr.io/google/osv-scanner:latest
+  entrypoint: ["osv-scanner"]
+  command: ["-r", "."]
   allow_failure: true
