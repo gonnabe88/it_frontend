@@ -8,7 +8,6 @@ virus_scan:
   script:
     - freshclam || true 
     - clamscan -r . --log=clamav-result.txt
-  allow_failure: true
 
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
@@ -18,4 +17,3 @@ osv_scan:
     entrypoint: ["/bin/sh", "-c"]
   script:
     - trivy fs .
-  allow_failure: true
