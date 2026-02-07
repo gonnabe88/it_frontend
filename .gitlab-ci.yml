@@ -16,4 +16,7 @@ osv_scan:
   image: ghcr.io/google/osv-scanner:latest
   entrypoint: ["osv-scanner"]
   command: ["-r", "."]
+  # script가 없으면 실행되지 않는 버전도 있으니 빈 값이라도 넣어줍니다.
+  script:
+    - echo "Scanning for vulnerabilities..."
   allow_failure: true
