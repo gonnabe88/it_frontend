@@ -1,0 +1,27 @@
+stages:
+  - scan
+
+# 1. 백신 검사 (ClamAV)
+virus_scan:
+  stage: scan
+  image: clamav/clamav:latest
+  script:
+    - mkdir -p reports
+    - freshclam || true 
+    - clamscan -r . --log=reports/clamav-result.txt
+  artifacts:
+    when: always
+    paths:
+      - reports/clamav-result.txt
+
+# 2. 오픈소스 취약점 점검 (OSV)
+osv_scan:
+  stage: scan
+  image: google/osv-scanner:latest
+  script:
+    - mkdir -p reports
+    - osv-scanner -r . --format json > reports/osv-result.json
+  artifacts:
+    when: always
+    paths:
+      - reports/osv-result.json
