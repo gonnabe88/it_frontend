@@ -1,3 +1,8 @@
+# 0. 스테이지 선언 (이 부분이 빠지면 에러가 납니다)
+stages:
+  - scan
+  - mirror
+
 # 1. 백신 검사
 virus_scan:
   stage: scan
@@ -5,12 +10,11 @@ virus_scan:
   script:
     - freshclam || true 
     - clamscan -r . --log=clamav-result.txt
-    # 백신 검사 통과 증명서 생성
     - echo "VIRUS_FREE" > virus_result.txt
   artifacts:
     paths:
       - virus_result.txt
-  allow_failure: false # 통제를 위해 false로 설정
+  allow_failure: false
 
 # 2. 오픈소스 취약점 점검
 osv_scan:
@@ -20,25 +24,26 @@ osv_scan:
     entrypoint: ["/bin/sh", "-c"]
   script:
     - trivy fs --severity HIGH,CRITICAL --exit-code 1 .
-    # 취약점 점검 통과 증명서 생성
     - echo "SCAN_PASSED" > scan_result.txt
   artifacts:
     paths:
       - scan_result.txt
   allow_failure: false
 
-# 3. 내부 저장소 미러링 (통제 게이트)
+# 3. 내부 저장소 미러링
 internal_mirror:
   stage: mirror
+  image: alpine:latest
   needs: 
     - job: virus_scan
       artifacts: true
     - job: osv_scan
       artifacts: true
+  before_script:
+    - apk add git
   script:
-    # 두 파일이 모두 있는지 최종 검증
     - if [ ! -f virus_result.txt ] || [ ! -f scan_result.txt ]; then echo "보안 점검 누락!"; exit 1; fi
     - echo "백신 및 취약점 점검 모두 통과. 미러링을 시작합니다."
-    # - git push --mirror ...
+    # - git push --mirror http://${INTERNAL_USER}:${INTERNAL_PASS}@your-internal-repo.kdb.co.kr/repo.git
   only:
     - main
