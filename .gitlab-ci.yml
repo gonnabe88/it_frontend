@@ -13,9 +13,8 @@ virus_scan:
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
   stage: scan
-  image:
-    name: ghcr.io/google/osv-scanner:latest
-    entrypoint: ["/osv-scanner", "-r", "."]
+  # 쉘이 포함된 alpine 버전을 사용합니다.
+  image: ghcr.io/google/osv-scanner:alpine
   script:
-    - true
+    - osv-scanner -r .
   allow_failure: true
