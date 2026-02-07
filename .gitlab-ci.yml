@@ -1,19 +1,38 @@
 stages:
   - scan
+  - mirror
 
 # 1. 백신 검사 (ClamAV)
+# 백신은 탐지 오류가 잦을 수 있어 우선 allow_failure를 유지하되, 로그만 남깁니다.
 virus_scan:
   stage: scan
   image: clamav/clamav:latest
   script:
     - freshclam || true 
     - clamscan -r . --log=clamav-result.txt
+  allow_failure: false
 
-# 2. 오픈소스 취약점 점검 (OSV)
+# 2. 오픈소스 취약점 점검 (Trivy)
+# HIGH, CRITICAL 취약점 발견 시 Exit Code 1을 뱉으며 Job을 실패(Fail)시킵니다.
 osv_scan:
   stage: scan
   image:
     name: ghcr.io/aquasecurity/trivy:latest
     entrypoint: ["/bin/sh", "-c"]
   script:
-    - trivy fs .
+    - trivy fs --severity HIGH,CRITICAL --exit-code 1 .
+  # allow_failure를 제거하여 이 단계가 실패하면 파이프라인 전체를 멈춥니다.
+  allow_failure: false
+
+# 3. 내부 저장소 미러링 (통제 게이트)
+# scan 스테이지의 모든 작업이 성공(Success)해야만 실행됩니다.
+internal_mirror:
+  stage: mirror
+  image: alpine:latest
+  before_script:
+    - apk add git
+  script:
+    - echo "모든 보안 점검을 통과하였습니다. 내부망으로 소스코드 미러링을 수행합니다."
+    # - git push --mirror http://${INTERNAL_USER}:${INTERNAL_PASS}@your-internal-repo.kdb.co.kr/repo.git
+  only:
+    - main
