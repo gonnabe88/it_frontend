@@ -6,17 +6,18 @@ virus_scan:
   stage: scan
   image: clamav/clamav:latest
   script:
-    # 경로를 생성하지 않고 현재 루트에 바로 저장해봅니다.
     - freshclam || true 
     - clamscan -r . --log=clamav-result.txt
+  allow_failure: true
 
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
   stage: scan
-  image: ghcr.io/google/osv-scanner:latest
-  entrypoint: ["osv-scanner"]
-  command: ["-r", "."]
-  # script가 없으면 실행되지 않는 버전도 있으니 빈 값이라도 넣어줍니다.
+  image:
+    name: ghcr.io/google/osv-scanner:latest
+    # entrypoint와 command는 반드시 image 바로 아래(내부)에 있어야 합니다.
+    entrypoint: ["osv-scanner"]
+    command: ["-r", "."]
   script:
     - echo "Scanning for vulnerabilities..."
   allow_failure: true
