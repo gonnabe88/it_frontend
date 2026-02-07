@@ -13,7 +13,9 @@ virus_scan:
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
   stage: scan
-  image: ghcr.io/google/osv-scanner:latest
+  image:
+    name: ghcr.io/google/osv-scanner:latest
+    entrypoint: [""]
   script:
     - mkdir -p reports
     - osv-scanner -r . --format json > reports/osv-result.json
