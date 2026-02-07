@@ -374,7 +374,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] text-zinc-400 uppercase font-bold">Manager</span>
                             <span class="text-zinc-900 dark:text-zinc-100 font-bold text-lg">{{ project.svnDpmTlr || '-'
-                                }}</span>
+                            }}</span>
                             <span class="text-xs text-zinc-500">팀장</span>
                         </div>
                         <div class="flex flex-col gap-1">
@@ -412,13 +412,13 @@ const formatDateToYearMonth = (dateStr?: string) => {
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] text-zinc-400 uppercase font-bold">Manager</span>
                             <span class="text-zinc-900 dark:text-zinc-100 font-bold text-lg">{{ project.itDpmTlr || '-'
-                                }}</span>
+                            }}</span>
                             <span class="text-xs text-zinc-500">팀장</span>
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-[10px] text-zinc-400 uppercase font-bold">Staff</span>
                             <span class="text-zinc-900 dark:text-zinc-100 font-bold text-lg">{{ project.itDpmCgpr || '-'
-                                }}</span>
+                            }}</span>
                             <span class="text-xs text-zinc-500">담당</span>
                         </div>
                     </div>
@@ -487,7 +487,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
                         <div class="absolute top-0 left-0 w-1/3 h-full bg-indigo-500 rounded-full"></div>
                     </div>
 
-                    <!-- 종료일-->
+                    <!-- 종료일 -->
                     <div class="flex flex-col items-center gap-2">
                         <span class="text-xs font-bold text-zinc-400 uppercase tracking-widest">End Date</span>
                         <div class="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-mono">{{ project.endDt ||
@@ -552,7 +552,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
                         class="text-right bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 140px">
                         <template #body="{ data }">
                             <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ formatCurrency(data.amt || 0)
-                            }}</span>
+                                }}</span>
                         </template>
                     </Column>
                     <Column field="bgFdtn" header="산정근거" headerClass="bg-zinc-50/80 dark:bg-zinc-800"
