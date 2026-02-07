@@ -11,10 +11,9 @@ virus_scan:
   allow_failure: true
 
 # 2. 오픈소스 취약점 점검 (OSV)
-osv_scan:
+trivy_scan:
   stage: scan
-  # 쉘이 포함된 alpine 버전을 사용합니다.
-  image: ghcr.io/google/osv-scanner:alpine
+  image: aquasecurity/trivy:latest
   script:
-    - osv-scanner -r .
+    - trivy fs .
   allow_failure: true
