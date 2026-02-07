@@ -15,9 +15,8 @@ osv_scan:
   stage: scan
   image:
     name: ghcr.io/google/osv-scanner:latest
-    # entrypoint와 command는 반드시 image 바로 아래(내부)에 있어야 합니다.
-    entrypoint: ["osv-scanner"]
-    command: ["-r", "."]
+    # command 대신 entrypoint에 실행 인자까지 모두 포함시킵니다.
+    entrypoint: ["osv-scanner", "-r", "."]
   script:
     - echo "Scanning for vulnerabilities..."
   allow_failure: true
