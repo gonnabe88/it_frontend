@@ -13,7 +13,9 @@ virus_scan:
 # 2. 오픈소스 취약점 점검 (OSV)
 osv_scan:
   stage: scan
-  image: ghcr.io/aquasecurity/trivy:latest
+  image:
+    name: ghcr.io/aquasecurity/trivy:latest
+    entrypoint: ["/bin/sh", "-c"]
   script:
     - trivy fs .
   allow_failure: true
