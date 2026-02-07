@@ -15,8 +15,9 @@ osv_scan:
   stage: scan
   image:
     name: ghcr.io/google/osv-scanner:latest
-    # 파일 이름을 찾지 못하므로, 이미지 내부의 절대 경로를 직접 찔러줍니다.
+    # entrypoint에 인자까지 모두 포함하여 고정시킵니다.
     entrypoint: ["/osv-scanner", "-r", "."]
+  # GitLab이 -c 를 붙이지 못하도록 script 단계를 사실상 생략합니다.
   script:
-    - echo "Scanning..."
+    - "" 
   allow_failure: true
