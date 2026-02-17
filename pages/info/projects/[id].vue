@@ -42,24 +42,21 @@ const getStatusClass = (status: string) => {
     switch (status) {
         case '예산 신청': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
         case '사전 협의': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-        case '정실협 진행중': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300';
+        case '정실협': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300';
         case '요건 상세화': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
         case '소요예산 산정': return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300';
-        case '과심위 진행중': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-        case '입찰/계약 진행중': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300';
-        case '사업 진행중': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-        case '사업 완료': return 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-300';
-        case '대금지급 완료': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300';
-        case '성과평가(대기)': return 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300';
-        case '성과평가(완료)': return 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        case '과심위': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+        case '입찰/계약': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300';
+        case '사업 추진': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+        case '대금지급': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300';
+        case '성과평가': return 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
         default: return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300';
     }
 };
 
 const projectStages = [
-    '예산 신청', '사전 협의', '정실협 진행중', '요건 상세화', '소요예산 산정',
-    '과심위 진행중', '입찰/계약 진행중', '사업 진행중', '사업 완료',
-    '대금지급 완료', '성과평가(대기)', '성과평가(완료)', '완료'
+    '예산 신청', '사전 협의', '정실협', '요건 상세화', '소요예산 산정',
+    '과심위', '입찰/계약', '사업 추진', '대금지급', '성과평가', '완료'
 ];
 
 const getCurrentStageIndex = (status?: string) => {
@@ -70,7 +67,7 @@ const getCurrentStageIndex = (status?: string) => {
 // 소요자원 합계 계산
 const totalItemsAmount = computed(() => {
     if (!project.value?.items) return 0;
-    return project.value.items.reduce((sum, item) => sum + (item.gclAmt || 0), 0);
+    return project.value.items.reduce((sum: number, item: any) => sum + (item.gclAmt || 0), 0);
 });
 
 // 자원 구분별 태그 색상 매핑
@@ -144,44 +141,73 @@ const formatDateToYearMonth = (dateStr?: string) => {
             </div>
         </div>
 
-        <!-- 1. 사업 진행 현황 (Stepper - Responsive Wrap) -->
+        <!-- 1. 사업 진행 현황 (Timeline Style) -->
         <section
-            class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+            class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md overflow-visible">
             <div class="flex items-center justify-between mb-8">
                 <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                     <i class="pi pi-step-forward-alt text-indigo-500"></i>
                     사업 진행 현황
                 </h3>
+                <!-- 현재 단계 뱃지 -->
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800">
+                    {{ project.prjSts }}
+                </span>
             </div>
 
-            <div class="flex flex-wrap items-center gap-4">
-                <div v-for="(step, index) in projectStages" :key="index" class="flex items-center gap-2">
-                    <!-- Step Item -->
-                    <div class="flex items-center gap-3 px-4 py-2 rounded-full border transition-all duration-300"
-                        :class="[
-                            getCurrentStageIndex(project.prjSts) > index
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300'
-                                : getCurrentStageIndex(project.prjSts) === index
-                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none ring-2 ring-indigo-100 dark:ring-indigo-900/30'
-                                    : 'bg-white border-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-600'
-                        ]">
-                        <!-- Icon/Number -->
-                        <div v-if="getCurrentStageIndex(project.prjSts) > index">
-                            <i class="pi pi-check-circle text-lg"></i>
-                        </div>
-                        <div v-else
-                            class="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border"
-                            :class="getCurrentStageIndex(project.prjSts) === index ? 'border-white/30 bg-white/20' : 'border-zinc-300 dark:border-zinc-600'">
-                            {{ index + 1 }}
+            <!-- 타임라인 컨테이너 (스크롤 제거, 전체 너비 맞춤) -->
+            <div class="relative w-full px-2">
+                <div class="flex items-start justify-between w-full">
+                    <!-- 각 스텝 -->
+                    <div v-for="(step, index) in projectStages" :key="index" 
+                         class="relative flex flex-col items-center flex-1 group">
+                        
+                        <!-- 연결선 (왼쪽으로 뻗는 선) -->
+                        <div v-if="Number(index) > 0" 
+                             class="absolute top-5 right-1/2 w-full h-[2px] -translate-y-1/2 -z-10 transition-colors duration-500"
+                             :class="[
+                                getCurrentStageIndex(project.prjSts) >= Number(index) 
+                                    ? 'bg-indigo-500' 
+                                    : 'bg-zinc-200 dark:bg-zinc-700'
+                             ]">
                         </div>
 
-                        <!-- Label -->
-                        <span class="text-sm font-semibold whitespace-nowrap">{{ step }}</span>
+                        <!-- 원형 마커 -->
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
+                            :class="[
+                                getCurrentStageIndex(project.prjSts) > Number(index)
+                                    ? 'border-indigo-200 bg-indigo-50 text-indigo-400 dark:border-indigo-800 dark:bg-indigo-900/10 dark:text-indigo-500' // 완료 (De-emphasized)
+                                    : getCurrentStageIndex(project.prjSts) === Number(index)
+                                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 scale-110 ring-4 ring-indigo-50 dark:ring-indigo-900/20' // 현재 (Emphasized)
+                                        : 'border-zinc-200 text-zinc-300 dark:border-zinc-700 dark:text-zinc-600 bg-white dark:bg-zinc-900' // 예정
+                            ]">
+                             
+                            <!-- 완료 아이콘 -->
+                            <i v-if="getCurrentStageIndex(project.prjSts) > Number(index)" class="pi pi-check text-lg font-bold"></i>
+                            <!-- 진행중 텍스트 -->
+                            <span v-else-if="getCurrentStageIndex(project.prjSts) === Number(index)" class="text-[10px] font-bold tracking-tighter">진행</span>
+                            <!-- 예정 숫자 -->
+                            <span v-else>{{ Number(index) + 1 }}</span>
+
+                            <!-- 현재 단계 핑 효과 -->
+                            <span v-if="getCurrentStageIndex(project.prjSts) === Number(index)" 
+                                  class="absolute inset-0 rounded-full animate-ping bg-indigo-500 opacity-20"></span>
+                        </div>
+
+                        <!-- 라벨 텍스트 -->
+                        <div class="h-10 flex items-start justify-center w-full">
+                            <span class="text-[10px] sm:text-xs font-medium text-center break-keep leading-tight px-0.5 transition-colors duration-300 w-full"
+                                :class="[
+                                    getCurrentStageIndex(project.prjSts) === Number(index)
+                                        ? 'text-indigo-700 dark:text-indigo-400 font-bold'
+                                        : getCurrentStageIndex(project.prjSts) > Number(index)
+                                            ? 'text-zinc-500 dark:text-zinc-500' // 완료된 텍스트는 약간 흐리게
+                                            : 'text-zinc-300 dark:text-zinc-600' // 예정 텍스트는 더 흐리게
+                                ]">
+                                {{ step }}
+                            </span>
+                        </div>
                     </div>
-
-                    <!-- Arrow Separator -->
-                    <i v-if="index < projectStages.length - 1"
-                        class="pi pi-angle-right text-zinc-300 dark:text-zinc-600 text-sm"></i>
                 </div>
             </div>
         </section>
