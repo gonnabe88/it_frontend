@@ -1,79 +1,129 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-const selectedProject = ref();
-const projects = ref([
-    { name: '차세대 정보시스템 구축', code: 'PJ-2026-001' },
-    { name: '노후 PC 교체 사업', code: 'PJ-2026-002' },
-    { name: '정보보호 컨설팅', code: 'PJ-2026-003' }
-]);
+const router = useRouter();
 
-const amount = ref();
-const description = ref('');
-const type = ref();
-const types = ref(['S/W 구입', 'H/W 구입', '용역비', '기타']);
+const navigateTo = (path: string) => {
+    router.push(path);
+};
+
+definePageMeta({
+    title: '예산 신청'
+});
 </script>
 
 <template>
-    <div class="flex flex-col h-[calc(100vh-10rem)] space-y-4">
-        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">예산 신청</h1>
-        
-        <!-- Top: Selection -->
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                <i class="pi pi-search bg-primary-50 text-primary-600 p-1.5 rounded-lg text-sm"></i>
-                대상 사업 선택
-            </h2>
-            <div class="flex flex-col md:flex-row gap-4 items-end md:items-center">
-                <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-2">
-                         <label class="text-sm text-zinc-500">사업명</label>
-                         <Select v-model="selectedProject" :options="projects" optionLabel="name" placeholder="사업을 선택하세요" class="w-full" />
+    <div class="flex flex-col items-center justify-center h-full overflow-hidden">
+        <div id="budget" class="flex flex-col items-center justify-center">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-7xl px-4">
+                <!-- 정보화사업 Card -->
+                <div @click="navigateTo('/info/projects/form')"
+                    class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
+
+                    <!-- Fixed Height Header -->
+                    <div class="flex flex-col items-center h-[260px] w-full pt-6">
+                        <div
+                            class="p-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
+                            <i class="pi pi-desktop text-5xl"></i>
+                        </div>
+                        <h2
+                            class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            정보화사업</h2>
+                        <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">자본예산 / 전산임차료(AI)</p>
                     </div>
-                     <div class="flex flex-col gap-2">
-                         <label class="text-sm text-zinc-500">예산 비목</label>
-                         <Select v-model="type" :options="types" placeholder="비목 선택" class="w-full" />
+
+                    <div class="w-full px-4 pb-6">
+                        <div class="flex flex-col gap-2 items-start">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 shrink-0">자본예산</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">기계장치(HW), 기타무형자산(SW), 개발비</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800 shrink-0">전산임차료</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">AI 서비스 이용료</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <Button label="조회" icon="pi pi-search" class="w-full md:w-auto" />
+
+                <!-- 전산업무비 Card -->
+                <div @click="navigateTo('/info/cost/form')"
+                    class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
+
+                    <!-- Fixed Height Header -->
+                    <div class="flex flex-col items-center h-[260px] w-full pt-6">
+                        <div
+                            class="p-6 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300">
+                            <i class="pi pi-wallet text-5xl"></i>
+                        </div>
+                        <h2
+                            class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                            전산업무비</h2>
+                        <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">전산 일반관리비</p>
+                    </div>
+
+                    <div class="w-full px-4 pb-6">
+                        <div class="flex flex-col gap-2 items-start">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 shrink-0">전산임차료</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">SW 라이선스 이용료</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 shrink-0">전산용역비</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">외주인력(ITO) 운영비 등</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 shrink-0">전산여비</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">IT 업무추진 관련 여비</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800 shrink-0">전산제비</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">회선사용료, 유지보수 등</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 경상사업 Card -->
+                <div @click="navigateTo('/info/recurring/form')"
+                    class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-red-500 dark:hover:border-red-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
+
+                    <!-- Fixed Height Header -->
+                    <div class="flex flex-col items-center h-[260px] w-full pt-6">
+                        <div
+                            class="p-6 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform duration-300">
+                            <i class="pi pi-briefcase text-5xl"></i>
+                        </div>
+                        <h2
+                            class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-6 mb-2 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                            경상사업</h2>
+                        <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">정보기기, 업무용 SW 구매 등</p>
+                    </div>
+
+                    <div class="w-full px-4 pb-6">
+                        <div class="flex flex-col gap-2 items-start">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-800 shrink-0">국내</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">도면 설계(CADian), Adobe CCT 등</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="px-2 py-1 rounded-md text-xs font-medium bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-800 shrink-0">해외</span>
+                                <span class="text-sm text-zinc-600 dark:text-zinc-400">신규 채용에 따른 PC 구입, 노후 PC 교체
+                                    등</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <!-- Bottom: Input Form -->
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex-1 overflow-auto">
-             <h2 class="text-lg font-semibold mb-6 flex items-center gap-2">
-                <i class="pi pi-pencil bg-primary-50 text-primary-600 p-1.5 rounded-lg text-sm"></i>
-                신청 내역 입력
-             </h2>
-             
-             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="space-y-6">
-                    <div class="flex flex-col gap-2">
-                        <label class="font-medium text-zinc-700 dark:text-zinc-300">신청 금액</label>
-                        <InputNumber v-model="amount" mode="currency" currency="KRW" locale="ko-KR" placeholder="0" class="w-full" inputClass="w-full" />
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="font-medium text-zinc-700 dark:text-zinc-300">집행 예상일</label>
-                        <DatePicker showIcon fluid iconDisplay="input" />
-                    </div>
-                     <div class="flex flex-col gap-2">
-                        <label class="font-medium text-zinc-700 dark:text-zinc-300">관련 문서</label>
-                        <FileUpload mode="basic" name="demo[]" url="/api/upload" accept="image/*" :maxFileSize="1000000" chooseLabel="파일 첨부" class="w-full" />
-                    </div>
-                </div>
-
-                <div class="space-y-6 h-full flex flex-col">
-                    <div class="flex flex-col gap-2 flex-1">
-                        <label class="font-medium text-zinc-700 dark:text-zinc-300">산출 내역 및 사유</label>
-                        <Textarea v-model="description" class="w-full h-full min-h-[150px]" placeholder="상세 내용을 입력하세요." />
-                    </div>
-                </div>
-             </div>
-
-             <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                <Button label="초기화" severity="secondary" text />
-                <Button label="신청하기" icon="pi pi-send" />
-             </div>
         </div>
     </div>
 </template>

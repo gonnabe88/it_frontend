@@ -61,7 +61,7 @@ const ynOptions = ['Y', 'N'];
 
 // Dropdown Options
 const prjTypeOptions = ['신규', '계속'];
-const statusOptions = ['예산 신청', '사전 협의', '정실협 진행중', '요건 상세화', '소요예산 산정', '과심위 진행중', '입찰/계약 진행중', '사업 진행중', '사업 완료', '대금지급 완료', '성과평가(대기)', '성과평가(완료)', '완료'];
+const statusOptions = ['예산 신청', '사전 협의', '정실협', '요건 상세화', '소요예산 산정', '과심위', '입찰/계약', '사업 추진', '대금지급', '성과평가', '완료'];
 
 // Mock Departments
 const majorHdqs = ['글로벌사업부문', '경영지원부문', 'IT운영부문', '정보보호부문', '디지털혁신부문'];
@@ -87,9 +87,9 @@ onMounted(async () => {
                     infoProtection: item.infPrtYn, // 정보보호여부
                     integratedInfra: item.itrInfrYn, // 통합인프라여부
 
-                    // UI 계산 필드 복원 (API에 uqr/amt가 없다면 계산 필요할 수 있음)
+                    // UI 계산 필드 복원 (API에 uqr/gclAmt가 없다면 계산 필요할 수 있음)
                     unitPrice: item.upr || 0, // 단가
-                    subtotal: item.amt || 0, // 소계
+                    gclAmt: item.gclAmt || 0, // 소계
                 }));
 
                 form.value = {
@@ -141,7 +141,7 @@ const executeSave = async () => {
 
         // 추가 정보 (UI 연동용)
         upr: item.unitPrice, // 단가
-        amt: item.subtotal, // 소계
+        gclAmt: item.gclAmt, // 소계
 
         // API 필수 필드 기본값 설정 (값 없을 시)
         gclMngNo: null as string | null, // 신규 시 null
@@ -217,7 +217,7 @@ const addResourceRow = () => {
         quantity: 0,
         unitPrice: 0,
         currency: 'KRW',
-        subtotal: 0,
+        gclAmt: 0,
         basis: '',
         introDate: null,
         paymentCycle: '',
@@ -234,8 +234,8 @@ const removeResourceRow = (index: number) => {
 watch(() => form.value.resourceItems, (items) => {
     if (!items) return;
     items.forEach(item => {
-        if (item.quantity > 0 && item.subtotal > 0) {
-            item.unitPrice = Math.round(item.subtotal / item.quantity);
+        if (item.quantity > 0 && item.gclAmt > 0) {
+            item.unitPrice = Math.round(item.gclAmt / item.quantity);
         } else {
             item.unitPrice = 0;
         }
@@ -532,7 +532,7 @@ const cancel = () => {
                             <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center"
                                 style="min-width: 120px">
                                 <template #body="{ data }">
-                                    <InputNumber v-model="data.subtotal" mode="currency"
+                                    <InputNumber v-model="data.gclAmt" mode="currency"
                                         :currency="data.currency || 'KRW'" locale="ko-KR" class="w-full" />
                                 </template>
                             </Column>

@@ -32,7 +32,7 @@ export interface ProjectItem {
     itrInfrYn: string; // 통합인프라여부 (Y/N)
     lstYn?: string; // 최종여부
     upr?: number; // 단가 (Unit Price) - UI 연동용 추가
-    amt?: number; // 소계/금액 (Amount) - UI 연동용 추가
+    gclAmt?: number; // 소계/금액 (Amount) - UI 연동용 추가
 }
 
 export interface ProjectDetail extends Project {
