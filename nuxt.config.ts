@@ -19,7 +19,7 @@ export default defineNuxtConfig({
     '@pinia/nuxt'
   ],
   pinia: {
-    storesDirs: ['./stores/**']
+    storesDirs: ['./app/stores/**']
   },
   primevue: {
     options: {
