@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
 import { useRouter } from 'vue-router';
+import { formatBudget as formatBudgetUtil } from '~/utils/common';
 
 const title = '전산업무비 목록';
 definePageMeta({
@@ -22,26 +23,7 @@ const selectedCosts = ref<ItCost[]>([]);
 // 화폐 단위
 const units = ['원', '천원', '백만원', '억원'];
 const selectedUnit = ref('백만원'); // 기본값
-const formatBudget = (amount: number) => {
-    let value = amount;
-    let fractionDigits = 0;
-
-    switch (selectedUnit.value) {
-        case '천원':
-            value = amount / 1000;
-            break;
-        case '백만원':
-            value = amount / 1000000;
-            fractionDigits = 1;
-            break;
-        case '억원':
-            value = amount / 100000000;
-            fractionDigits = 1;
-            break;
-    }
-
-    return value.toLocaleString(undefined, { maximumFractionDigits: fractionDigits });
-};
+const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.value);
 
 // 일괄 수정
 const handleBulkEdit = () => {

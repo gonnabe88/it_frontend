@@ -42,6 +42,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 페이지 클릭 시 텍스트 커서(캐럿) 깜박임 방지 */
+body {
+    caret-color: transparent;
+}
+
+/* 실제 입력 필드에서는 커서가 보이도록 예외 처리 */
+input,
+textarea,
+select,
+[contenteditable="true"],
+.ql-editor {
+    caret-color: auto;
+}
+
 /* Quill Font Customization - Global */
 .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=notosanskr]::before,
 .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=notosanskr]::before {

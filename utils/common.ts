@@ -1,3 +1,25 @@
+// 예산 단위 변환 포맷팅 (원 → 천원/백만원/억원)
+export const formatBudget = (amount: number, unit: string) => {
+    let value = amount;
+    let fractionDigits = 0;
+
+    switch (unit) {
+        case '천원':
+            value = amount / 1000;
+            break;
+        case '백만원':
+            value = amount / 1000000;
+            fractionDigits = 1;
+            break;
+        case '억원':
+            value = amount / 100000000;
+            fractionDigits = 1;
+            break;
+    }
+
+    return value.toLocaleString(undefined, { maximumFractionDigits: fractionDigits });
+};
+
 // 결재 상태별 태그 스타일
 export const getApprovalTagClass = (status: string) => {
     switch (status) {

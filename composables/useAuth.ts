@@ -2,7 +2,7 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '~/stores/auth';
 
 // 타입 re-export (기존 코드와의 호환성 유지)
-export * from '~/types/auth';
+export * from '../types/auth';
 
 export const useAuth = () => {
     const store = useAuthStore();

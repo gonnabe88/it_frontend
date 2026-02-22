@@ -154,8 +154,7 @@ const result = ref({
 const calculateResult = () => {
     // Team Logic
     const techs = answers.value.newTechs;
-    const work = answers.value.workTypes;
-    
+
     if (techs.some(t => ['AI/ML', '블록체인', '메타버스'].includes(t))) {
         result.value.team = '디지털혁신팀';
     } else if (answers.value.reasons.includes('보안성 강화') || answers.value.workTypes.includes('정보보호')) {

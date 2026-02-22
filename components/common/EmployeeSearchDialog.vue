@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useOrganization, type Organization, type User } from '~/composables/useOrganization';
+import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
 
 const props = defineProps({
     visible: {
@@ -24,7 +24,7 @@ const { fetchOrganizations, fetchUsers, buildOrgTree } = useOrganization();
 const nodes = ref<any[]>([]);
 const expandedKeys = ref({});
 const selectedNode = ref();
-const users = ref<User[]>([]);
+const users = ref<OrgUser[]>([]);
 const loadingUsers = ref(false);
 const selectedUser = ref();
 

@@ -61,17 +61,18 @@ export interface ProjectDetail extends Project {
 }
 
 export const useProjects = () => {
-    const API_BASE_URL = 'http://localhost:8080/api/projects';
+    const config = useRuntimeConfig();
+    const API_BASE_URL = `${config.public.apiBase}/api/projects`;
     const { $apiFetch } = useNuxtApp();
 
-    // List - useApi 사용 (자동 인증 및 토큰 갱신)
+    // List - useApiFetch 사용 (자동 인증 및 토큰 갱신)
     const fetchProjects = () => {
-        return useApi<Project[]>(API_BASE_URL);
+        return useApiFetch<Project[]>(API_BASE_URL);
     };
 
-    // Detail - useApi 사용
+    // Detail - useApiFetch 사용
     const fetchProject = (id: string | number) => {
-        return useApi<ProjectDetail>(`${API_BASE_URL}/${id}`);
+        return useApiFetch<ProjectDetail>(`${API_BASE_URL}/${id}`);
     };
 
     // Bulk Get - $apiFetch 사용 (플러그인에서 제공하는 인증된 fetch)

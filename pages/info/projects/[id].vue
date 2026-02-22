@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import 'quill/dist/quill.core.css';
+import DOMPurify from 'isomorphic-dompurify';
 
 const route = useRoute();
 const router = useRouter();
@@ -81,6 +82,9 @@ const getCategorySeverity = (category: string) => {
         default: return 'secondary';
     }
 };
+
+// HTML 새니타이징 (XSS 방지)
+const sanitizeHtml = (html: string) => DOMPurify.sanitize(html);
 
 // 날짜를 YYYY-MM 형식으로 포맷팅
 const formatDateToYearMonth = (dateStr?: string) => {
@@ -222,7 +226,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
 
             <!-- 사업 설명 (Rich Text) -->
             <div class="ql-editor p-6 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
-                v-html="project.prjDes || '<span class=\'text-zinc-400 italic\'>내용 없음</span>'"></div>
+                v-html="sanitizeHtml(project.prjDes || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"></div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                 <!-- 현황 -->
@@ -271,7 +275,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
                 사업 범위
             </h3>
             <div class="ql-editor p-6 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
-                v-html="project.prjRng || '<span class=\'text-zinc-400 italic\'>내용 없음</span>'"></div>
+                v-html="sanitizeHtml(project.prjRng || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"></div>
         </section>
 
         <!-- 4. 진행 상황 (Progress) -->

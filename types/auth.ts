@@ -10,10 +10,6 @@ export interface LoginResponse {
     empNm: string; // 사원명
 }
 
-export interface RefreshRequest {
-    refreshToken: string;
-}
-
 export interface User {
     eno: string;
     empNm: string;

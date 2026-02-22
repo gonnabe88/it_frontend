@@ -1,12 +1,4 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
-
-const navigateTo = (path: string) => {
-    router.push(path);
-};
-
 definePageMeta({
     title: '예산 신청'
 });

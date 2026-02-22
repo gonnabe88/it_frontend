@@ -20,8 +20,7 @@ const showApprovalDialog = ref(false);
 const approvalOpinion = ref('');
 const isSubmitting = ref(false);
 
-const onEmployeeSelect = (user: any) => {
-    console.log('Selected user:', user);
+const onEmployeeSelect = (_user: any) => {
     // Future implementation: handle selection
 };
 
@@ -99,7 +98,6 @@ const processApproval = async (status: '승인' | '반려') => {
 
         await bulkApprove(items);
 
-        await refresh(); // 목록 새로고침
         await refresh(); // 목록 새로고침
         selectedApprovals.value = []; // 선택 초기화
         showApprovalDialog.value = false;

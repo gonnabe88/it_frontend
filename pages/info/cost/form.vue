@@ -15,7 +15,6 @@ definePageMeta({
 });
 
 const costs = ref<ItCost[]>([]);
-const deletedIds = ref<string[]>([]); // 삭제된 ID 추적 (필요시 서버 삭제 요청)
 
 // 초기 데이터 로드
 onMounted(async () => {

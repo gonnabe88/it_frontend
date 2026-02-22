@@ -1,12 +1,10 @@
-import { ref } from 'vue';
-
 export interface Organization {
     bbrNm: string; // 부서명
     prlmHrkOgzCCone: string | null; // 상위부서코드
     prlmOgzCCone: string; // 부서코드
 }
 
-export interface User {
+export interface OrgUser {
     bbrNm: string; // 부서명
     eno: string; // 사원번호
     ptCNm: string | null; // 직위/직급
@@ -15,28 +13,18 @@ export interface User {
 }
 
 export const useOrganization = () => {
-    const { accessToken } = useAuth();
+    const config = useRuntimeConfig();
+    const API_BASE = config.public.apiBase;
 
     // API Call to fetch organizations
     const fetchOrganizations = () => {
-        return useFetch<Organization[]>('http://localhost:8080/api/organizations', {
-            server: false, // 클라이언트 사이드에서만 실행
-            watch: [accessToken], // accessToken 변경 시 재요청
-            headers: computed(() => ({
-                Authorization: `Bearer ${accessToken.value}`
-            }))
-        });
+        return useApiFetch<Organization[]>(`${API_BASE}/api/organizations`);
     };
 
     // API Call to fetch users by organization code
-    const fetchUsers = (orgCode: string) => {
-        return useFetch<User[]>('http://localhost:8080/api/users', {
-            server: false, // 클라이언트 사이드에서만 실행
-            watch: [accessToken], // accessToken 변경 시 재요청
-            query: { orgCode },
-            headers: computed(() => ({
-                Authorization: `Bearer ${accessToken.value}`
-            }))
+    const fetchUsers = (orgCode: string | Ref<string>) => {
+        return useApiFetch<OrgUser[]>(`${API_BASE}/api/users`, {
+            query: { orgCode }
         });
     };
 

@@ -37,11 +37,12 @@ export interface CreateApplicationRequest {
 }
 
 export const useApprovals = () => {
-    const API_BASE_URL = 'http://localhost:8080/api/applications';
+    const config = useRuntimeConfig();
+    const API_BASE_URL = `${config.public.apiBase}/api/applications`;
     const { $apiFetch } = useNuxtApp();
 
     const fetchApprovals = () => {
-        return useApi<Approval[]>(API_BASE_URL);
+        return useApiFetch<Approval[]>(API_BASE_URL);
     };
 
     // Create Application - 신청서 생성 (액션 함수는 $apiFetch 사용)

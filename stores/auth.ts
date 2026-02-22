@@ -7,9 +7,10 @@ export const useAuthStore = defineStore('auth', () => {
     const refreshToken = ref<string | null>(null);
 
     const isAuthenticated = computed(() => !!accessToken.value && !!user.value);
-    
+
     // API URL
-    const API_BASE_URL = 'http://localhost:8080/api/auth';
+    const config = useRuntimeConfig();
+    const API_BASE_URL = `${config.public.apiBase}/api/auth`;
 
     // 로그인
     const login = async (credentials: LoginRequest): Promise<void> => {
@@ -95,9 +96,13 @@ export const useAuthStore = defineStore('auth', () => {
             const storedUser = localStorage.getItem('user');
 
             if (storedAccessToken && storedRefreshToken && storedUser) {
-                accessToken.value = storedAccessToken;
-                refreshToken.value = storedRefreshToken;
-                user.value = JSON.parse(storedUser);
+                try {
+                    accessToken.value = storedAccessToken;
+                    refreshToken.value = storedRefreshToken;
+                    user.value = JSON.parse(storedUser);
+                } catch {
+                    clearAuth();
+                }
             }
         }
     };

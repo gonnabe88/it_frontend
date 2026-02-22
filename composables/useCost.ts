@@ -20,17 +20,18 @@ export interface ItCost {
 }
 
 export const useCost = () => {
-    const API_BASE_URL = 'http://localhost:8080/api/cost';
+    const config = useRuntimeConfig();
+    const API_BASE_URL = `${config.public.apiBase}/api/cost`;
     const { $apiFetch } = useNuxtApp();
 
-    // List - useApi 사용 (자동 인증 및 토큰 갱신)
+    // List - useApiFetch 사용 (자동 인증 및 토큰 갱신)
     const fetchCosts = () => {
-        return useApi<ItCost[]>(API_BASE_URL);
+        return useApiFetch<ItCost[]>(API_BASE_URL);
     };
 
-    // Detail - useApi 사용
+    // Detail - useApiFetch 사용
     const fetchCost = (id: string) => {
-        return useApi<ItCost>(`${API_BASE_URL}/${id}`);
+        return useApiFetch<ItCost>(`${API_BASE_URL}/${id}`);
     };
 
     // Bulk Get - $apiFetch 사용

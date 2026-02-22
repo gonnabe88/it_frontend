@@ -30,7 +30,7 @@ const items = ref([
                 {
                     items: [
                         { label: '정보화사업', icon: 'pi pi-briefcase', subtext: 'Information Projects', command: () => navigateTo('/info/projects') },
-                        { label: '예산관리', icon: 'pi pi-wallet', subtext: 'Budget Management', command: () => navigateTo('/info/budget') }
+                        { label: '예산관리', icon: 'pi pi-wallet', subtext: 'Budget Management', command: () => navigateTo('/budget') }
                     ]
                 }
             ],
@@ -145,7 +145,7 @@ const navigateToTab = (path: string) => {
                     <span class="inline-flex flex-col gap-1">
                         <span class="font-bold text-lg text-zinc-800 dark:text-zinc-100">{{ item.label }}</span>
                         <span class="whitespace-nowrap text-zinc-500 dark:text-zinc-400 text-sm">{{ item.subtext
-                            }}</span>
+                        }}</span>
                     </span>
                 </a>
                 <div v-else class="flex flex-col items-center w-full">
@@ -169,7 +169,7 @@ const navigateToTab = (path: string) => {
                     <div class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700">
                         <div class="text-right hidden md:block">
                             <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ user?.empNm || '사용자'
-                                }}</div>
+                            }}</div>
                             <div class="text-xs text-zinc-500">{{ user?.eno || '' }}</div>
                         </div>
                         <Avatar :label="user?.empNm?.charAt(0) || 'U'"
