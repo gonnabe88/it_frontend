@@ -4,7 +4,7 @@ IT 포털 시스템은 프로젝트 관리, 전자 결재, 감사, 진단 기능
 
 ## 기술 스택 (Tech Stack)
 
-- **Framework**: [Nuxt 3](https://nuxt.com)
+- **Framework**: [Nuxt 4](https://nuxt.com)
 - **UI Library**: [PrimeVue](https://primevue.org) (Aura Theme)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com)
 - **State Management**: [Pinia](https://pinia.vuejs.org)
