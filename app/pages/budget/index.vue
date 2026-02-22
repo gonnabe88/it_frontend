@@ -1,19 +1,49 @@
+<!--
+================================================================================
+[pages/budget/index.vue] 예산 신청 유형 선택 페이지
+================================================================================
+예산을 신청하기 전, 신청 유형을 선택하는 카드 선택 UI 페이지입니다.
+세 가지 예산 신청 유형 카드를 클릭하면 해당 등록 폼으로 이동합니다.
+
+[예산 신청 유형]
+  1. 정보화사업 → /info/projects/form
+     - 자본예산 (기계장치HW, 기타무형자산SW, 개발비)
+     - 전산임차료 (AI 서비스 이용료)
+
+  2. 전산업무비 → /info/cost/form
+     - 전산임차료 (SW 라이선스 이용료)
+     - 전산용역비 (외주인력ITO 운영비)
+     - 전산여비 (IT 업무추진 여비)
+     - 전산제비 (회선사용료, 유지보수 등)
+
+  3. 경상사업 → /info/recurring/form (향후 구현 예정)
+     - 국내: 도면 설계(CADian), Adobe CCT 등
+     - 해외: 신규 채용에 따른 PC 구입, 노후 PC 교체 등
+
+[UX]
+  - 카드 호버 시 색상 강조 + 아이콘 스케일 업 애니메이션
+================================================================================
+-->
 <script setup lang="ts">
+/* 페이지 탭 제목 설정 */
 definePageMeta({
     title: '예산 신청'
 });
 </script>
 
 <template>
+    <!-- 전체 화면 중앙 정렬 컨테이너 -->
     <div class="flex flex-col items-center justify-center h-full overflow-hidden">
         <div id="budget" class="flex flex-col items-center justify-center">
 
+            <!-- 예산 신청 유형 카드 3개 (3열 그리드) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-7xl px-4">
-                <!-- 정보화사업 Card -->
+
+                <!-- 1. 정보화사업 카드 (인디고 테마) -->
                 <div @click="navigateTo('/info/projects/form')"
                     class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-indigo-500 dark:hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
 
-                    <!-- Fixed Height Header -->
+                    <!-- 아이콘 영역 (고정 높이) -->
                     <div class="flex flex-col items-center h-[260px] w-full pt-6">
                         <div
                             class="p-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
@@ -25,6 +55,7 @@ definePageMeta({
                         <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">자본예산 / 전산임차료(AI)</p>
                     </div>
 
+                    <!-- 예산 세부 항목 뱃지 목록 -->
                     <div class="w-full px-4 pb-6">
                         <div class="flex flex-col gap-2 items-start">
                             <div class="flex items-center gap-2">
@@ -41,11 +72,11 @@ definePageMeta({
                     </div>
                 </div>
 
-                <!-- 전산업무비 Card -->
+                <!-- 2. 전산업무비 카드 (에메랄드 테마) -->
                 <div @click="navigateTo('/info/cost/form')"
                     class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
 
-                    <!-- Fixed Height Header -->
+                    <!-- 아이콘 영역 (고정 높이) -->
                     <div class="flex flex-col items-center h-[260px] w-full pt-6">
                         <div
                             class="p-6 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300">
@@ -57,6 +88,7 @@ definePageMeta({
                         <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">전산 일반관리비</p>
                     </div>
 
+                    <!-- 예산 세부 항목 뱃지 목록 -->
                     <div class="w-full px-4 pb-6">
                         <div class="flex flex-col gap-2 items-start">
                             <div class="flex items-center gap-2">
@@ -83,11 +115,11 @@ definePageMeta({
                     </div>
                 </div>
 
-                <!-- 경상사업 Card -->
+                <!-- 3. 경상사업 카드 (레드 테마, 향후 구현 예정) -->
                 <div @click="navigateTo('/info/recurring/form')"
                     class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-red-500 dark:hover:border-red-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
 
-                    <!-- Fixed Height Header -->
+                    <!-- 아이콘 영역 (고정 높이) -->
                     <div class="flex flex-col items-center h-[260px] w-full pt-6">
                         <div
                             class="p-6 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform duration-300">
@@ -99,6 +131,7 @@ definePageMeta({
                         <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">정보기기, 업무용 SW 구매 등</p>
                     </div>
 
+                    <!-- 예산 세부 항목 뱃지 목록 -->
                     <div class="w-full px-4 pb-6">
                         <div class="flex flex-col gap-2 items-start">
                             <div class="flex items-center gap-2">

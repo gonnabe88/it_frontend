@@ -1,11 +1,32 @@
+<!--
+================================================================================
+[pages/info/index.vue] 정보화사업 대시보드 (홈)
+================================================================================
+정보화사업 메인 대시보드 페이지입니다.
+현재는 주요 지표 카드, 공지사항, 주요 일정을 정적 데이터로 표시합니다.
+
+[UI 구성]
+  - 상단: 페이지 제목 + 빠른 액션 버튼 (사업 등록, 보고서 다운로드)
+  - 중간: 4개 KPI 카드 (진행중인 사업 / 집행예산 / 접수된 요청 / 시스템 가동률)
+  - 하단: 공지사항 목록 + 주요 일정 리스트
+
+[향후 개선]
+  - KPI 수치를 API에서 실시간으로 가져오는 기능 추가 예정
+  - 공지사항/일정 데이터를 백엔드 API로 연결 예정
+================================================================================
+-->
 <script setup lang="ts">
+/* 페이지 탭 제목 설정 (useTabs composable이 이 값을 읽어 탭 이름으로 사용) */
 const title = '정보화사업 홈';
 definePageMeta({
     title
 });
 </script>
+
 <template>
     <div class="space-y-6">
+
+        <!-- 페이지 헤더: 제목 + 빠른 액션 버튼 -->
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">정보화 대시보드</h1>
             <div class="flex gap-2">
@@ -14,7 +35,10 @@ definePageMeta({
             </div>
         </div>
 
+        <!-- KPI 요약 카드 (4개 그리드) -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+            <!-- 진행중인 사업 수 -->
             <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
                 <div class="flex items-center justify-between mb-4">
                     <span class="text-zinc-500 font-medium">진행중인 사업</span>
@@ -26,6 +50,8 @@ definePageMeta({
                     <span>전월 대비 2건 증가</span>
                 </div>
             </div>
+
+            <!-- 금년 집행 예산 -->
             <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
                 <div class="flex items-center justify-between mb-4">
                     <span class="text-zinc-500 font-medium">금년 집행 예산</span>
@@ -36,6 +62,8 @@ definePageMeta({
                     <span>전체 예산의 42%</span>
                 </div>
             </div>
+
+            <!-- 접수된 요청 수 (처리지연 경고 포함) -->
             <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
                 <div class="flex items-center justify-between mb-4">
                     <span class="text-zinc-500 font-medium">접수된 요청</span>
@@ -47,6 +75,8 @@ definePageMeta({
                     <span>3건 처리지연</span>
                 </div>
             </div>
+
+            <!-- 시스템 가동률 -->
             <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
                 <div class="flex items-center justify-between mb-4">
                     <span class="text-zinc-500 font-medium">시스템 가동률</span>
@@ -59,11 +89,15 @@ definePageMeta({
             </div>
         </div>
 
+        <!-- 하단: 공지사항 + 주요 일정 (2열 그리드) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- 공지사항 목록 -->
             <div
                 class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 h-96">
                 <h3 class="font-bold text-lg mb-4">공지사항</h3>
                 <div class="space-y-3">
+                    <!-- 임시 데이터 (5개 반복), 추후 API 연결 예정 -->
                     <div v-for="i in 5" :key="i"
                         class="flex items-center justify-between p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg cursor-pointer transition-colors">
                         <div class="flex items-center gap-3">
@@ -74,11 +108,13 @@ definePageMeta({
                     </div>
                 </div>
             </div>
+
+            <!-- 주요 일정 목록 -->
             <div
                 class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 h-96">
                 <h3 class="font-bold text-lg mb-4">주요 일정</h3>
-                <!-- Calendar placeholder or list -->
                 <div class="space-y-4">
+                    <!-- 일정 항목 1: 정보화실무협의회 -->
                     <div class="flex gap-4">
                         <div
                             class="w-16 h-16 bg-primary-50 dark:bg-zinc-800 rounded-lg flex flex-col items-center justify-center text-primary-600 font-bold">
@@ -90,6 +126,7 @@ definePageMeta({
                             <div class="text-sm text-zinc-500 mt-1">14:00 - 16:00 | 대회의실</div>
                         </div>
                     </div>
+                    <!-- 일정 항목 2: 차세대 시스템 오픈식 -->
                     <div class="flex gap-4">
                         <div
                             class="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-lg flex flex-col items-center justify-center text-zinc-600 font-bold">
