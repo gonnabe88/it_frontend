@@ -243,10 +243,12 @@ const executeSave = async () => {
                 router.push('/info/projects');
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Save failed', error);
+        /* API 응답에서 오류 메시지 추출 (data.message → message → 기본 메시지 순으로 폴백) */
+        const apiMessage = error?.data?.message || error?.message || '저장 중 오류가 발생했습니다.';
         confirm.require({
-            message: '저장 중 오류가 발생했습니다.',
+            message: apiMessage,
             header: '오류',
             icon: 'pi pi-exclamation-triangle',
             rejectProps: { class: 'hidden' },
