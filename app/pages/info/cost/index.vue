@@ -139,7 +139,8 @@ const filteredCosts = computed(() => {
                     </template>
                 </Column>
                 <Column field="dfrCle" header="지급주기" sortable></Column>
-                <Column field="pulCgpr" header="담당자" sortable></Column>
+                <Column field="pulDpmNm" header="추진부서" sortable></Column>
+                <Column field="pulCgprNm" header="담당자" sortable></Column>
 
                 <!-- 상세 조회 버튼 -->
                 <Column style="width: 10%">

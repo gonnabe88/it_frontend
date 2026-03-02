@@ -95,8 +95,8 @@ const searchFilters = ref({
 
 /* ── AutoComplete 기본 데이터 (목록에서 유니크 값 추출) ── */
 const majorHdqs = computed(() => [...new Set(projects.value.map(p => p.svnHdq).filter(Boolean))]);
-const majorDepartments = computed(() => [...new Set(projects.value.map(p => p.svnDpm).filter(Boolean))]);
-const itDepartments = computed(() => [...new Set(projects.value.map(p => p.itDpm).filter(Boolean))]);
+const majorDepartments = computed(() => [...new Set(projects.value.map(p => p.svnDpmNm).filter(Boolean))]);
+const itDepartments = computed(() => [...new Set(projects.value.map(p => p.itDpmNm).filter(Boolean))]);
 const statusOptions = computed(() => [...new Set(projects.value.map(p => p.prjSts).filter(Boolean))]);
 
 /* ── AutoComplete 검색 Suggestions (타이핑에 따라 필터링) ── */
@@ -169,10 +169,10 @@ const filteredProjects = computed(() => {
         if (searchFilters.value.major_hdq.length > 0 && !searchFilters.value.major_hdq.includes(project.svnHdq)) return false;
 
         /* 주관부서 다중 필터 */
-        if (searchFilters.value.major_department.length > 0 && !searchFilters.value.major_department.includes(project.svnDpm)) return false;
+        if (searchFilters.value.major_department.length > 0 && !searchFilters.value.major_department.includes(project.svnDpmNm)) return false;
 
         /* IT부서 다중 필터 */
-        if (searchFilters.value.it_department.length > 0 && !searchFilters.value.it_department.includes(project.itDpm)) return false;
+        if (searchFilters.value.it_department.length > 0 && !searchFilters.value.it_department.includes(project.itDpmNm)) return false;
 
         /* 진행 상태 다중 필터 */
         if (searchFilters.value.status.length > 0 && !searchFilters.value.status.includes(project.prjSts)) return false;
@@ -263,8 +263,8 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                         </div>
                     </template>
                 </Column>
-                <Column field="svnDpm" header="주관부서" sortable></Column>
-                <Column field="itDpm" header="IT부서" sortable></Column>
+                <Column field="svnDpmNm" header="주관부서" sortable></Column>
+                <Column field="itDpmNm" header="IT부서" sortable></Column>
 
                 <!-- 예산: 선택된 단위로 변환 -->
                 <Column field="prjBg" :header="`예산 (${selectedUnit})`" sortable>

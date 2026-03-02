@@ -432,7 +432,7 @@ export const usePdfReport = () => {
                                 { text: '보고상태', style: 'label' }, { text: cellVal(project.rprSts) }
                             ],
                             [
-                                { text: '예산년도', style: 'label' }, { text: cellVal(project.bgYy) },
+                                { text: '사업연도', style: 'label' }, { text: cellVal(project.prjYy) },
                                 { text: '소요예산', style: 'label' },
                                 // 예산 금액은 통화 형식으로 표시 (오른쪽 정렬)
                                 { text: project.prjBg ? project.prjBg.toLocaleString() + ' 원' : '', bold: true, alignment: 'right' }

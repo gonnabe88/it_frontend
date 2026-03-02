@@ -39,7 +39,11 @@ export interface ItCost {
     xcrBseDt?: string;      // 환율기준일자 (환율 적용 기준 날짜, optional)
     infPrtYn: string;       // 정보보호여부 (Y: 정보보호 관련 항목 / N: 일반)
     indRsn: string;         // 증감사유 (전년 대비 예산 증감 사유)
-    pulCgpr: string;        // 추진담당자 (해당 계약의 IT 담당자)
+    pulCgpr: string;        // 추진담당자 사번 (해당 계약의 IT 담당자)
+    pulCgprNm: string;      // 추진담당자명 (사용자명 조회 결과)
+    pulDpmNm: string;       // 추진부서명 (조직명 조회 결과)
+    assetBg: number;        // 자본예산 (원 단위)
+    apfSts: string;         // 결재현황 (전자결재 신청 상태)
     delYn?: string;         // 삭제여부 (Y: 삭제됨 / N: 유효, optional)
 }
 

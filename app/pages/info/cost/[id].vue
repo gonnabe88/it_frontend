@@ -137,8 +137,12 @@ const formatNumber = (value: number | undefined) => {
                         <span class="font-medium">{{ cost.cttOpp }}</span>
                     </div>
                     <div class="flex flex-col gap-1">
+                        <span class="text-sm text-zinc-500">추진부서</span>
+                        <span class="font-medium">{{ cost.pulDpmNm }}</span>
+                    </div>
+                    <div class="flex flex-col gap-1">
                         <span class="text-sm text-zinc-500">추진담당자</span>
-                        <span class="font-medium">{{ cost.pulCgpr }}</span>
+                        <span class="font-medium">{{ cost.pulCgprNm }}</span>
                     </div>
                 </div>
             </div>

@@ -41,13 +41,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
-import { useRouter, useRoute } from 'vue-router'; // Ensure useRouter and useRoute are imported
 import { useProjects } from '~/composables/useProjects'; // Assuming useProjects is in composables
+import { PROJECT_STAGES, getApprovalAuthority } from '~/utils/common';
+import { useCurrencyRates } from '~/composables/useCurrencyRates';
 
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
 const { fetchProject, createProject, updateProject } = useProjects();
+const { fetchRates, exchangeRates, convertToKRW } = useCurrencyRates();
+await fetchRates();
 
 const title = '사업정보 입력';
 definePageMeta({
@@ -93,17 +96,24 @@ const form = ref({
     svnDpmCgpr: '', // 주관부서 담당자
     svnDpmTlr: '', // 주관부서 팀장
     tchnTp: '', // 기술유형
+    bgYy: new Date().getMonth() + 1 >= 10 ? new Date().getFullYear() + 1 : new Date().getFullYear(), // 사업연도 (10월 이상이면 내년, 아니면 올해)
     resourceItems: [] as any[] // UI용 소요자원 상세내용 (저장 시 items로 변환)
 });
 
+/** 
+ * 사업연도(bgYy) 선택지 옵션 생성 (현재 연도 기준: 작년, 올해, 내년)
+ */
+const currentYear = new Date().getFullYear();
+const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
+
 /* ── 드롭다운 선택지 옵션 ── */
 const resourceCategoryOptions = ['개발비', '기계장치', '기타무형자산', '전산임차료', '전산제비'];
-const currencyOptions = ['KRW', 'USD', 'EUR', 'JPY', 'CNY'];
+const currencyOptions = computed(() => Object.keys(exchangeRates.value));
 const paymentCycleOptions = ['월', '분기', '반기', '년'];
 const ynOptions = ['Y', 'N'];
 
 const prjTypeOptions = ['신규', '계속'];
-const statusOptions = ['예산 신청', '사전 협의', '정실협', '요건 상세화', '소요예산 산정', '과심위', '입찰/계약', '사업 추진', '대금지급', '성과평가', '완료'];
+const statusOptions = PROJECT_STAGES;
 
 /* ── 부서 목록 (Mock 데이터 - 향후 API 연결 예정) ── */
 const majorHdqs = ['글로벌사업부문', '경영지원부문', 'IT운영부문', '정보보호부문', '디지털혁신부문'];
@@ -135,8 +145,8 @@ onMounted(async () => {
                     integratedInfra: item.itrInfrYn, // 통합인프라여부
 
                     /* UI 계산 필드 복원 */
-                    unitPrice: item.upr || 0, // 단가
                     gclAmt: item.gclAmt || 0, // 소계
+                    xcr: item.xcr // 저장된 환율 복원
                 }));
 
                 /* API 응답을 폼에 병합 (날짜 필드는 Date 객체로 변환) */
@@ -201,13 +211,13 @@ const executeSave = async () => {
         itrInfrYn: item.integratedInfra, // 통합인프라여부 (Y/N)
 
         /* UI 계산 필드 */
-        upr: item.unitPrice, // 단가
+        upr: item.quantity > 0 && item.gclAmt > 0 ? Math.round(item.gclAmt / item.quantity) : 0, // 단가 (자동 계산 전송)
         gclAmt: item.gclAmt, // 소계
 
         /* API 필수 기본값 설정 */
         gclMngNo: null as string | null, // 신규 시 null
         gclSno: 0,
-        xcr: 0,
+        xcr: exchangeRates.value[item.currency] || 1, // 적용된 환율 전송
         xcrBseDt: formatDate(new Date()), // 현재 날짜 기준
         lstYn: 'Y' // 최종여부 기본값
     }));
@@ -284,7 +294,6 @@ const addResourceRow = () => {
         category: '개발비',
         item: '',
         quantity: 0,
-        unitPrice: 0,
         currency: 'KRW',
         gclAmt: 0,
         basis: '',
@@ -306,19 +315,35 @@ const removeResourceRow = (index: number) => {
 };
 
 /**
- * 소요자원 단가 자동 계산 감시자
- * gclAmt(소계) 또는 quantity(수량)가 변경되면 unitPrice = gclAmt ÷ quantity를 자동 계산합니다.
+ * 소요자원 단가 및 총 예산, 전결권 자동 계산 감시자
+ * gclAmt(소계) 또는 quantity(수량)가 변경되면 unitPrice(단가) = gclAmt ÷ quantity를 자동 계산합니다.
+ * 동시에 모든 항목의 gclAmt(소계) 합계를 form.prjBg(총 예산)에 반영하고 전결권을 자동 판정합니다.
  * deep 감시로 중첩 필드 변경도 감지합니다.
  */
 watch(() => form.value.resourceItems, (items) => {
     if (!items) return;
+    let totalAmt = 0;
+    let capitalBudget = 0;
+    let operatingExpense = 0;
+
     items.forEach(item => {
-        if (item.quantity > 0 && item.gclAmt > 0) {
-            item.unitPrice = Math.round(item.gclAmt / item.quantity);
-        } else {
-            item.unitPrice = 0;
+        // 소계 합산 (원화 환산)
+        const krwAmt = convertToKRW(item.gclAmt || 0, item.currency || 'KRW');
+        totalAmt += krwAmt;
+
+        // 예산 성격에 따라 분리 (자본예산: 개발비/기계장치/기타무형자산, 일반관리비: 전산임차료/전산제비)
+        if (['개발비', '기계장치', '기타무형자산'].includes(item.category)) {
+            capitalBudget += krwAmt;
+        } else if (['전산임차료', '전산제비'].includes(item.category)) {
+            operatingExpense += krwAmt;
         }
     });
+
+    // 총 예산에 반영 (자동 동기화)
+    form.value.prjBg = totalAmt;
+
+    // 전결권 자동 계산 및 반영
+    form.value.edrt = getApprovalAuthority(capitalBudget, operatingExpense);
 }, { deep: true });
 
 /**
@@ -332,22 +357,37 @@ const cancel = () => {
 
 <template>
     <div class="space-y-6">
-        <!-- 페이지 헤더: 신규 등록 / 수정 모드에 따라 제목 변경 -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+        <!-- 상단 고정(Sticky) 헤더 영역 -->
+        <div
+            class="sticky -top-6 z-20 -mt-6 -mx-6 px-6 py-4 sm:-mx-8 sm:px-8 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-4">
                 {{ isEditMode ? '사업 정보 수정' : '신규 사업 등록' }}
+                <!-- 수정 모드에서만 상태 변경 드롭다운을 헤더 영역에 노출 -->
+                <div v-if="isEditMode" class="flex items-center gap-2 text-base font-normal">
+                    <span class="text-zinc-500 text-sm">| 진행 상태 :</span>
+                    <Select v-model="form.prjSts" :options="statusOptions" placeholder="상태 변경" class="w-48 !text-sm"
+                        size="small" />
+                </div>
             </h1>
+
+            <!-- 우측 상단 액션 버튼 그룹 -->
+            <div class="flex items-center gap-2">
+                <Button label="취소" severity="secondary" @click="cancel" class="!px-5 !rounded-lg" />
+                <Button label="저장" severity="primary" @click="saveProject"
+                    class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20" />
+            </div>
         </div>
 
         <div
             class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
             <h3 class="text-xl font-semibold">사업명</h3>
 
-            <!-- 사업명 섹션: 유형 + 상태(수정 모드) + 사업명 -->
+            <!-- 사업명 섹션: 연도 + 유형 + 사업명 -->
             <div class="flex gap-6">
-                <!-- 수정 모드에서만 진행 상태 선택 표시 -->
-                <div v-if="isEditMode" class="grid grid-cols gap-2">
-                    <Select v-model="form.prjSts" :options="statusOptions" placeholder="상태 선택" class="w-80" />
+                <!-- 사업 연도 선택 (자동 연산된 YYYY-1, YYYY, YYYY+1) -->
+                <div class="flex flex-col gap-2">
+                    <Select v-model="form.bgYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
+                        :disabled="isEditMode" />
                 </div>
                 <!-- 사업 유형 선택 (신규/계속) -->
                 <div class="flex flex-col gap-2">
@@ -535,11 +575,12 @@ const cancel = () => {
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">예산 (원)</label>
                         <InputNumber v-model="form.prjBg" mode="currency" currency="KRW" locale="ko-KR"
-                            placeholder="예산 입력" fluid />
+                            placeholder="자동 계산됨" fluid readonly inputClass="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">전결권</label>
-                        <InputText v-model="form.edrt" fluid />
+                        <InputText v-model="form.edrt" readonly placeholder="자동 지정됨" fluid
+                            class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">보고상태</label>
@@ -607,15 +648,7 @@ const cancel = () => {
                                 </template>
                             </Column>
 
-                            <!-- 단가: gclAmt ÷ quantity 자동 계산 (읽기 전용) -->
-                            <Column header="단가" headerClass="text-center justify-center [&>div]:justify-center"
-                                style="min-width: 120px">
-                                <template #body="{ data }">
-                                    <InputNumber v-model="data.unitPrice" mode="currency"
-                                        :currency="data.currency || 'KRW'" locale="ko-KR" readonly
-                                        class="w-full bg-zinc-100 dark:bg-zinc-800" />
-                                </template>
-                            </Column>
+
 
                             <!-- 통화: KRW/USD/EUR 등 -->
                             <Column header="통화" headerClass="text-center justify-center [&>div]:justify-center"
@@ -687,11 +720,7 @@ const cancel = () => {
                     </div>
                 </div>
 
-                <!-- 최종 액션 버튼: 취소 / 저장 -->
-                <div class="flex justify-end gap-2 pt-4">
-                    <Button label="취소" severity="secondary" @click="cancel" />
-                    <Button label="저장" @click="saveProject" />
-                </div>
+                <!-- 최종 액션 버튼 (플로팅 그룹) -->
             </div>
         </div>
     </div>

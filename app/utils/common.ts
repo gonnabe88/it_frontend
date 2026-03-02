@@ -65,6 +65,52 @@ export const formatBudget = (amount: number, unit: string) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: fractionDigits });
 };
 
+
+/**
+ * 자본예산과 일반관리비 합계에 따라 전결권(결재권자)을 반환
+ *
+ * [자본예산 합계 (개발비, 기계장치, 기타무형자산)]
+ *  - 20억 이상 : 회장
+ *  - 10억 이상 : 전무이사
+ *  - 5억 이상 : 부문장
+ *  - 2억 이상 : 지역본부장
+ *  - 2억 미만 : 부장
+ *
+ * [일반관리비 합계 (전산임차료, 전산제비)]
+ *  - 5억원 이상 : 회장
+ *  - 3억원 이상 : 전무이사
+ *  - 1억원 이상 : 부문장
+ *  - 3천만원 이상 : 지역본부장
+ *  - 3천만원 미만 : 부장
+ *
+ * 두 산정 기준 중 더 상위의 결재권자를 최종 전결권으로 적용합니다.
+ * (직급 순: 회장 > 전무이사 > 부문장 > 지역본부장 > 부장)
+ * 
+ * @param capitalBudget 자본예산 합계(원)
+ * @param operatingExpense 일반관리비 합계(원)
+ * @returns 최종 전결권자 직급
+ */
+export const getApprovalAuthority = (capitalBudget: number, operatingExpense: number): string => {
+    const roles = ['부장', '지역본부장', '부문장', '전무이사', '회장'];
+    
+    // 자본예산 기준 등급 계산 (0: 부장, 1: 지역본부장, 2: 부문장, 3: 전무이사, 4: 회장)
+    let capLevel = 0;
+    if (capitalBudget >= 2000000000) capLevel = 4;      // 20억 이상
+    else if (capitalBudget >= 1000000000) capLevel = 3; // 10억 이상
+    else if (capitalBudget >= 500000000) capLevel = 2;  // 5억 이상
+    else if (capitalBudget >= 200000000) capLevel = 1;  // 2억 이상
+    
+    // 일반관리비 기준 등급 계산
+    let opLevel = 0;
+    if (operatingExpense >= 500000000) opLevel = 4;     // 5억 이상
+    else if (operatingExpense >= 300000000) opLevel = 3;// 3억 이상
+    else if (operatingExpense >= 100000000) opLevel = 2;// 1억 이상
+    else if (operatingExpense >= 30000000) opLevel = 1; // 3천만 이상
+    
+    // 두 기준 중 더 높은 등급(레벨) 반환
+    return roles[Math.max(capLevel, opLevel)] || '부장';
+};
+
 /**
  * 결재 상태(apfSts)에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
  *
@@ -123,20 +169,97 @@ export const getApprovalTagClass = (status: string) => {
  * // 템플릿에서 사용
  * <Tag :class="getProjectTagClass(project.prjSts)" :value="project.prjSts" />
  */
+
+/** 프로젝트 진행 상태 단계 목록 */
+export const PROJECT_STAGES = [
+    '예산 신청', '사전 협의', '정실협', '요건 상세화', '소요예산 산정',
+    '과심위', '입찰/계약', '사업 추진', '예산배정', '대금지급', '성과평가', '완료'
+];
+
+/**
+ * 사업현황 상태(prjSts)에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
+ *
+ * 상세 페이지 등에서 배경과 텍스트 색상을 지정하기 위해 사용합니다. (main.css에서 정의한 kdb-tag-* 클래스)
+ *
+ * @param status - 사업현황 상태 문자열 (Project.prjSts)
+ * @returns 커스텀 CSS 클래스명 ('kdb-tag-*')
+ */
 export const getProjectTagClass = (status: string) => {
     switch (status) {
         case '예산 신청':        return 'kdb-tag-yellow'; // 예산 신청 단계
         case '사전 협의':        return 'kdb-tag-green';  // 현업-IT 사전 협의
-        case '정실협 진행중':    return 'kdb-tag-indigo'; // 정보화실행협의회 심의 중
+        case '정실협':           return 'kdb-tag-indigo'; // 정보화실행협의회 심의 중
         case '요건 상세화':      return 'kdb-tag-purple'; // 상세 요건 정의 단계
         case '소요예산 산정':    return 'kdb-tag-pink';   // 예산 세부 산정 단계
-        case '과심위 진행중':    return 'kdb-tag-orange'; // 과제심의위원회 심의 중
-        case '입찰/계약 진행중': return 'kdb-tag-cyan';   // 조달/입찰/계약 처리 중
-        case '사업 진행중':      return 'kdb-tag-green';  // 사업 수행 중
-        case '사업 완료':        return 'kdb-tag-slate';  // 사업 종료
-        case '대금지급 완료':    return 'kdb-tag-teal';   // 대금 정산 완료
-        case '성과평가(대기)':   return 'kdb-tag-rose';   // 성과평가 대기 중
-        case '성과평가(완료)':   return 'kdb-tag-gray';   // 성과평가까지 모두 완료
+        case '과심위':           return 'kdb-tag-orange'; // 과제심의위원회 심의 중
+        case '입찰/계약':        return 'kdb-tag-cyan';   // 조달/입찰/계약 처리 중
+        case '사업 추진':        return 'kdb-tag-green';  // 사업 수행 중
+        case '예산배정':         return 'kdb-tag-teal';   // 예산배정
+        case '대금지급':         return 'kdb-tag-teal';   // 대금 정산 완료
+        case '성과평가':         return 'kdb-tag-rose';   // 성과평가 대기 중/완료
+        case '완료':             return 'kdb-tag-slate';  // 사업 종료
+        default:                 return 'kdb-tag-gray';   // 미정의 상태 기본값
+    }
+};
+
+
+
+/**
+ * 전산업무비 상태에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
+ *
+ * IT 프로젝트의 진행 단계를 시각적으로 구분하기 위한 색상 매핑입니다.
+ * 단계가 많으므로 색상을 다양하게 배정하여 혼동을 최소화합니다.
+ *
+ * [IT 프로젝트 진행 단계 및 색상 매핑]
+ *  - 예산 신청       → kdb-tag-yellow (노랑: 초기 신청 단계)
+ *  - 사전 협의       → kdb-tag-green  (녹색: 협의 진행)
+ *  - 정실협 진행중   → kdb-tag-indigo (인디고: 정보화실행협의회 단계)
+ *  - 요건 상세화     → kdb-tag-purple (보라: 요건 정의 단계)
+ *  - 소요예산 산정   → kdb-tag-pink   (분홍: 예산 산정 단계)
+ *  - 과심위 진행중   → kdb-tag-orange (주황: 과제심의위원회 단계)
+ *  - 입찰/계약 진행중→ kdb-tag-cyan   (청록: 구매/계약 단계)
+ *  - 사업 진행중     → kdb-tag-green  (녹색: 실제 사업 수행 중)
+ *  - 사업 완료       → kdb-tag-slate  (슬레이트: 사업 종료)
+ *  - 대금지급 완료   → kdb-tag-teal   (틸: 정산 완료)
+ *  - 성과평가(대기)  → kdb-tag-rose   (로즈: 평가 대기)
+ *  - 성과평가(완료)  → kdb-tag-gray   (회색: 모든 절차 완료)
+ *  - 기타            → kdb-tag-gray   (회색: 미정의 상태)
+ *
+ * @param status - 사업현황 상태 문자열 (Project.prjSts)
+ * @returns 커스텀 CSS 클래스명 ('kdb-tag-*')
+ *
+ * @example
+ * // 템플릿에서 사용
+ * <Tag :class="getCostTagClass(project.prjSts)" :value="project.prjSts" />
+ */
+
+/** 전산업무비 진행 상태 단계 목록 */
+export const COST_STAGES = [
+    '예산 신청', '과심위', '입찰/계약', '사업 추진', '예산배정', '대금지급', '완료'
+];
+
+/**
+ * 전산업무비 상태(costSts)에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
+ *
+ * 상세 페이지 등에서 배경과 텍스트 색상을 지정하기 위해 사용합니다. (main.css에서 정의한 kdb-tag-* 클래스)
+ *
+ * @param status - 사업현황 상태 문자열 (Project.prjSts)
+ * @returns 커스텀 CSS 클래스명 ('kdb-tag-*')
+ */
+export const getCostTagClass = (status: string) => {
+    switch (status) {
+        case '예산 신청':        return 'kdb-tag-yellow'; // 예산 신청 단계
+        case '사전 협의':        return 'kdb-tag-green';  // 현업-IT 사전 협의
+        case '정실협':           return 'kdb-tag-indigo'; // 정보화실행협의회 심의 중
+        case '요건 상세화':      return 'kdb-tag-purple'; // 상세 요건 정의 단계
+        case '소요예산 산정':    return 'kdb-tag-pink';   // 예산 세부 산정 단계
+        case '과심위':           return 'kdb-tag-orange'; // 과제심의위원회 심의 중
+        case '입찰/계약':        return 'kdb-tag-cyan';   // 조달/입찰/계약 처리 중
+        case '사업 추진':        return 'kdb-tag-green';  // 사업 수행 중
+        case '예산배정':         return 'kdb-tag-teal';   // 예산배정
+        case '대금지급':         return 'kdb-tag-teal';   // 대금 정산 완료
+        case '성과평가':         return 'kdb-tag-rose';   // 성과평가 대기 중/완료
+        case '완료':             return 'kdb-tag-slate';  // 사업 종료
         default:                 return 'kdb-tag-gray';   // 미정의 상태 기본값
     }
 };

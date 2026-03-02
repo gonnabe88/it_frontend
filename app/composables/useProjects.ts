@@ -28,13 +28,18 @@ export interface Project {
     prjNm: string;     // 프로젝트명
     prjTp: string;     // 프로젝트유형 (신규개발, 고도화, 유지보수 등)
     svnDpm: string;    // 주관부서 (프로젝트를 주도하는 현업 부서)
+    svnDpmNm: string;  // 주관부서명 (조직명 조회 결과)
     itDpm: string;     // IT담당부서 (IT 측 담당 부서)
+    itDpmNm: string;   // IT담당부서명 (조직명 조회 결과)
     prjBg: number;     // 프로젝트 예산 규모 (원 단위)
+    assetBg: number;   // 자본예산 (원 단위)
+    costBg: number;    // 일반관리비 (원 단위)
     sttDt: string;     // 시작일 (YYYY-MM-DD)
     endDt: string;     // 종료일 (YYYY-MM-DD)
     prjSts: string;    // 프로젝트 상태 (검토중, 진행중, 완료, 보류 등)
-    bgYy: number;      // 예산년도 (YYYY)
+    prjYy: number;     // 사업연도 (YYYY)
     svnHdq: string;    // 주관부문 (상위 조직 단위)
+    svnDpmCgprNm: string; // 주관부서 담당자명 (사용자명 조회 결과)
     apfSts: string;    // 결재현황 (전자결재 신청 상태)
 }
 
@@ -72,8 +77,10 @@ export interface ProjectDetail extends Project {
     dplYn: string;       // 중복여부 (타 프로젝트와의 중복 여부 Y/N)
     edrt: string;        // 전결권 (전결 가능한 결재 수준)
     hrfPln: string;      // 향후계획 (HTML 형식 가능)
-    itDpmCgpr: string;   // IT 담당자 이름
-    itDpmTlr: string;    // IT 담당팀장 이름
+    itDpmCgpr: string;   // IT 담당자 사번
+    itDpmCgprNm: string; // IT 담당자명 (사용자명 조회 결과)
+    itDpmTlr: string;    // IT 담당팀장 사번
+    itDpmTlrNm: string;  // IT 담당팀장명 (사용자명 조회 결과)
     lblFsgTlm: string;   // 의무완료기한 (법적/정책적 필수 완료 시점)
     mnUsr: string;       // 주요사용자 (시스템 주 사용 부서/대상)
     ncs: string;         // 필요성 (Needs, HTML 형식 가능)
@@ -85,8 +92,10 @@ export interface ProjectDetail extends Project {
     pulRsn: string;      // 추진사유 (HTML 형식 가능)
     rprSts: string;      // 보고상태 (경영진 보고 여부)
     saf: string;         // 현황 (Situation As-Is, HTML 형식 가능)
-    svnDpmCgpr: string;  // 주관부서 현업 담당자 이름
-    svnDpmTlr: string;   // 주관부서 현업 담당팀장 이름
+    svnDpmCgpr: string;  // 주관부서 현업 담당자 사번
+    svnDpmCgprNm: string;// 주관부서 현업 담당자명 (사용자명 조회 결과)
+    svnDpmTlr: string;   // 주관부서 현업 담당팀장 사번
+    svnDpmTlrNm: string; // 주관부서 현업 담당팀장명 (사용자명 조회 결과)
     tchnTp: string;      // 기술유형 (웹, 모바일, AI 등)
     xptEff: string;      // 기대효과 (Expected Effect, HTML 형식 가능)
     items?: ProjectItem[];// 품목 리스트 (예산 구성 항목, optional)
