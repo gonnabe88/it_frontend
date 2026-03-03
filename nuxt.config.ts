@@ -21,6 +21,11 @@ import Aura from '@primevue/themes/aura';
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
 
+  /* ── Nuxt 4 호환 모드: app/ 디렉토리를 소스 루트(~)로 사용 ── */
+  future: {
+    compatibilityVersion: 4
+  },
+
   /* ── 런타임 설정: 환경변수 기반 API 베이스 URL ── */
   runtimeConfig: {
     public: {
