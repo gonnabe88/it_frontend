@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
 
 const props = defineProps({

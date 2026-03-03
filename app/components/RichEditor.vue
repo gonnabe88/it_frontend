@@ -64,23 +64,29 @@ const editorRef = ref<any>(null);
  *                   (입력을 시작했다가 모두 지운 경우 placeholder 복원 목적)
  */
 /**
+ * 언마운트 시 정리를 위해 editorEl과 MutationObserver 참조를 외부에서 유지합니다.
+ * 익명 함수는 removeEventListener로 제거할 수 없으므로 핸들러도 참조를 보관합니다.
+ */
+let _editorEl: HTMLElement | null = null;
+let _observer: MutationObserver | null = null;
+
+const onCompositionStart = () => _editorEl?.classList.remove('ql-blank');
+const onCompositionEnd = () => {
+    // trim() 후 빈 문자열은 falsy이므로 !text 하나로 충분합니다.
+    if (!_editorEl?.innerText?.trim()) _editorEl?.classList.add('ql-blank');
+};
+
+/**
  * IME composition 이벤트 리스너를 .ql-editor 요소에 등록하는 함수
  *
  * @param editorEl - Quill이 생성한 .ql-editor DOM 요소
  */
 function attachCompositionHandlers(editorEl: HTMLElement) {
+    _editorEl = editorEl;
     // 한글 조합 시작 → placeholder 즉시 숨김
-    editorEl.addEventListener('compositionstart', () => {
-        editorEl.classList.remove('ql-blank');
-    });
-
+    editorEl.addEventListener('compositionstart', onCompositionStart);
     // 한글 조합 종료 → 에디터가 비어있으면 placeholder 복원
-    editorEl.addEventListener('compositionend', () => {
-        const text = editorEl.innerText?.trim();
-        if (!text || text === '') {
-            editorEl.classList.add('ql-blank');
-        }
-    });
+    editorEl.addEventListener('compositionend', onCompositionEnd);
 }
 
 /**
@@ -98,19 +104,34 @@ onMounted(() => {
     // 이미 .ql-editor가 렌더링된 경우 즉시 등록
     const existing = container.querySelector('.ql-editor');
     if (existing) {
-        attachCompositionHandlers(existing);
+        attachCompositionHandlers(existing as HTMLElement);
         return;
     }
 
     // 아직 렌더링되지 않은 경우 MutationObserver로 대기
-    const observer = new MutationObserver((_, obs) => {
+    _observer = new MutationObserver(() => {
         const editorEl = container.querySelector('.ql-editor');
         if (editorEl) {
-            attachCompositionHandlers(editorEl);
-            obs.disconnect(); // .ql-editor를 찾았으므로 감시 종료
+            attachCompositionHandlers(editorEl as HTMLElement);
+            _observer?.disconnect(); // .ql-editor를 찾았으므로 감시 종료
+            _observer = null;
         }
     });
-    observer.observe(container, { childList: true, subtree: true });
+    _observer.observe(container, { childList: true, subtree: true });
+});
+
+/**
+ * 컴포넌트 언마운트 시 이벤트 리스너와 MutationObserver를 정리합니다.
+ * .ql-editor가 나타나기 전에 언마운트된 경우 observer도 해제합니다.
+ */
+onBeforeUnmount(() => {
+    _observer?.disconnect();
+    _observer = null;
+    if (_editorEl) {
+        _editorEl.removeEventListener('compositionstart', onCompositionStart);
+        _editorEl.removeEventListener('compositionend', onCompositionEnd);
+        _editorEl = null;
+    }
 });
 </script>
 
