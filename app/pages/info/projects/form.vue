@@ -44,6 +44,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useProjects } from '~/composables/useProjects'; // Assuming useProjects is in composables
 import { PROJECT_STAGES, getApprovalAuthority } from '~/utils/common';
 import { useCurrencyRates } from '~/composables/useCurrencyRates';
+import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -66,8 +67,10 @@ const isEditMode = computed(() => !!projectId);
 const form = ref({
     prjNm: '',
     prjTp: '신규',
-    svnDpm: '',
-    itDpm: '',
+    svnDpm: '',        // 주관부서코드
+    svnDpmNm: '',      // 주관부서명 (직원 검색에서 자동 세팅)
+    itDpm: '',         // IT부서코드
+    itDpmNm: '',       // IT부서명 (직원 검색에서 자동 세팅)
     prjBg: 0,
     prjSts: '예산 신청',
     sttDt: null as Date | null,
@@ -82,8 +85,10 @@ const form = ref({
     dplYn: 'N', // 중복여부
     edrt: '', // 전결권
     hrfPln: '', // 향후계획
-    itDpmCgpr: '', // 정보전략팀 담당자
-    itDpmTlr: '', // IT팀장
+    itDpmCgpr: '',     // IT부서 담당자 사원번호
+    itDpmCgprNm: '',   // IT부서 담당자명 (직원 검색에서 자동 세팅)
+    itDpmTlr: '',      // IT부서 팀장 사원번호
+    itDpmTlrNm: '',    // IT부서 팀장명 (직원 검색에서 자동 세팅)
     lblFsgTlm: null as Date | null, // 의무완료기한
     mnUsr: '', // 주요사용자
     ncs: '', // 필요성
@@ -93,15 +98,17 @@ const form = ref({
     pulPsg: '', // 추진경과
     rprSts: '', // 보고상태
     saf: '', // 현황
-    svnDpmCgpr: '', // 주관부서 담당자
-    svnDpmTlr: '', // 주관부서 팀장
+    svnDpmCgpr: '',    // 주관부서 담당자 사원번호
+    svnDpmCgprNm: '',  // 주관부서 담당자명 (직원 검색에서 자동 세팅)
+    svnDpmTlr: '',     // 주관부서 팀장 사원번호
+    svnDpmTlrNm: '',   // 주관부서 팀장명 (직원 검색에서 자동 세팅)
     tchnTp: '', // 기술유형
-    bgYy: new Date().getMonth() + 1 >= 10 ? new Date().getFullYear() + 1 : new Date().getFullYear(), // 사업연도 (10월 이상이면 내년, 아니면 올해)
+    prjYy: new Date().getMonth() + 1 >= 10 ? new Date().getFullYear() + 1 : new Date().getFullYear(), // 사업연도 (10월 이상이면 내년, 아니면 올해)
     resourceItems: [] as any[] // UI용 소요자원 상세내용 (저장 시 items로 변환)
 });
 
 /** 
- * 사업연도(bgYy) 선택지 옵션 생성 (현재 연도 기준: 작년, 올해, 내년)
+ * 사업연도(prjYy) 선택지 옵션 생성 (현재 연도 기준: 작년, 올해, 내년)
  */
 const currentYear = new Date().getFullYear();
 const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
@@ -117,8 +124,76 @@ const statusOptions = PROJECT_STAGES;
 
 /* ── 부서 목록 (Mock 데이터 - 향후 API 연결 예정) ── */
 const majorHdqs = ['글로벌사업부문', '경영지원부문', 'IT운영부문', '정보보호부문', '디지털혁신부문'];
-const majorDepartments = ['글로벌사업부', '경영지원부', 'IT운영부', '정보보호부', '디지털혁신부'];
-const itDepartments = ['정보전략팀', '경영지원팀', 'IT운영팀', '정보보호팀', '디지털혁신팀', 'CS팀'];
+
+/**
+ * ── 직원 검색 다이얼로그 상태 관리 ──
+ * 6개 필드(주관부서, 주관부서 팀장, 주관부서 담당자, IT부서, IT부서 팀장, IT부서 담당자)에
+ * 각각 EmployeeSearchDialog를 연결합니다.
+ * activeDialogField: 현재 열려있는 다이얼로그가 어떤 필드용인지 식별하는 키
+ */
+const showEmployeeDialog = ref(false);
+const employeeDialogHeader = ref('직원 조회');
+/** 다이얼로그에서 직원 선택 후 어떤 폼 필드에 세팅할지 결정하는 키 */
+const activeDialogField = ref<
+    'svnDpm' | 'svnDpmTlr' | 'svnDpmCgpr' | 'itDpm' | 'itDpmTlr' | 'itDpmCgpr'
+>('svnDpm');
+
+/**
+ * 직원 검색 다이얼로그 열기
+ * 어떤 필드에서 호출되었는지에 따라 다이얼로그 헤더와 필드 키를 설정합니다.
+ *
+ * @param field - 세팅할 폼 필드 키
+ * @param header - 다이얼로그 타이틀
+ */
+const openEmployeeDialog = (field: typeof activeDialogField.value, header: string) => {
+    activeDialogField.value = field;
+    employeeDialogHeader.value = header;
+    showEmployeeDialog.value = true;
+};
+
+/**
+ * 직원 선택 완료 핸들러
+ * EmployeeSearchDialog의 @select 이벤트로 전달받은 직원 정보를
+ * activeDialogField에 따라 해당 폼 필드에 세팅합니다.
+ *
+ * @param user - 선택된 직원 정보 ({ eno, usrNm, bbrNm, orgCode, ... })
+ */
+const onEmployeeSelected = (user: any) => {
+    switch (activeDialogField.value) {
+        /* ── 주관부서 ── */
+        case 'svnDpm':
+            // 부서코드 + 부서명 세팅
+            form.value.svnDpm = user.orgCode || '';
+            form.value.svnDpmNm = user.bbrNm || '';
+            break;
+        case 'svnDpmTlr':
+            // 주관부서 팀장: 사원번호 + 이름 세팅
+            form.value.svnDpmTlr = user.eno || '';
+            form.value.svnDpmTlrNm = user.usrNm || '';
+            break;
+        case 'svnDpmCgpr':
+            // 주관부서 담당자: 사원번호 + 이름 세팅
+            form.value.svnDpmCgpr = user.eno || '';
+            form.value.svnDpmCgprNm = user.usrNm || '';
+            break;
+        /* ── IT부서 ── */
+        case 'itDpm':
+            // 부서코드 + 부서명 세팅
+            form.value.itDpm = user.orgCode || '';
+            form.value.itDpmNm = user.bbrNm || '';
+            break;
+        case 'itDpmTlr':
+            // IT부서 팀장: 사원번호 + 이름 세팅
+            form.value.itDpmTlr = user.eno || '';
+            form.value.itDpmTlrNm = user.usrNm || '';
+            break;
+        case 'itDpmCgpr':
+            // IT부서 담당자: 사원번호 + 이름 세팅
+            form.value.itDpmCgpr = user.eno || '';
+            form.value.itDpmCgprNm = user.usrNm || '';
+            break;
+    }
+};
 
 /**
  * 수정 모드 초기 데이터 로드
@@ -386,7 +461,7 @@ const cancel = () => {
             <div class="flex gap-6">
                 <!-- 사업 연도 선택 (자동 연산된 YYYY-1, YYYY, YYYY+1) -->
                 <div class="flex flex-col gap-2">
-                    <Select v-model="form.bgYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
+                    <Select v-model="form.prjYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
                         :disabled="isEditMode" />
                 </div>
                 <!-- 사업 유형 선택 (신규/계속) -->
@@ -512,13 +587,14 @@ const cancel = () => {
 
             <Divider />
 
-            <!-- 담당부서 섹션: 주관부문 → 주관부서 → IT부서 -->
+            <!-- 담당부서 섹션: 주관부문 → 주관부서(팀장/담당자) → IT부서(팀장/담당자) -->
+            <!-- 각 필드는 직원검색 버튼을 클릭하여 EmployeeSearchDialog에서 선택합니다. -->
             <div class="space-y-6">
                 <div class="flex items-end gap-2">
                     <span class="text-xl font-semibold">담당부서</span>
                 </div>
 
-                <!-- 주관부문 선택 -->
+                <!-- 주관부문 선택 (드롭다운, 기존 방식 유지) -->
                 <div class="flex gap-6">
                     <div class="flex flex-col gap-2">
                         <label class="font-semibold">주관부문</label>
@@ -527,40 +603,83 @@ const cancel = () => {
                     </div>
                 </div>
 
-                <!-- 주관부서 + 팀장/담당자 -->
+                <!-- 주관부서 + 팀장/담당자 (직원 검색 다이얼로그 연동) -->
                 <div class="flex gap-6">
-                    <div class="flex flex-col gap-2">
+                    <!-- 주관부서: 부서명 표시 + 검색 버튼 -->
+                    <div class="flex flex-col gap-2 w-60">
                         <label class="font-semibold">주관부서</label>
-                        <Select v-model="form.svnDpm" :options="majorDepartments" placeholder="주관 부서 선택" editable
-                            class="w-40" />
+                        <div class="flex gap-1">
+                            <InputText :modelValue="form.svnDpmNm || form.svnDpm" placeholder="부서 검색" fluid readonly
+                                class="cursor-pointer" @click="openEmployeeDialog('svnDpm', '주관부서 직원 검색')" />
+                            <Button icon="pi pi-search" severity="secondary"
+                                @click="openEmployeeDialog('svnDpm', '주관부서 직원 검색')" />
+                        </div>
                     </div>
-                    <div class="flex flex-col  gap-2 flex-1">
+                    <!-- 주관부서 담당팀장 -->
+                    <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">담당팀장</label>
-                        <InputText v-model="form.svnDpmTlr" placeholder="이름" fluid />
+                        <div class="flex gap-1">
+                            <InputText :modelValue="form.svnDpmTlrNm ? `${form.svnDpmTlrNm} (${form.svnDpmTlr})` : ''"
+                                placeholder="직원 검색" fluid readonly class="cursor-pointer"
+                                @click="openEmployeeDialog('svnDpmTlr', '주관부서 담당팀장 검색')" />
+                            <Button icon="pi pi-search" severity="secondary"
+                                @click="openEmployeeDialog('svnDpmTlr', '주관부서 담당팀장 검색')" />
+                        </div>
                     </div>
-                    <div class="flex flex-col  gap-2 flex-1">
+                    <!-- 주관부서 담당자 -->
+                    <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">담당자</label>
-                        <InputText v-model="form.svnDpmCgpr" placeholder="이름" fluid />
+                        <div class="flex gap-1">
+                            <InputText
+                                :modelValue="form.svnDpmCgprNm ? `${form.svnDpmCgprNm} (${form.svnDpmCgpr})` : ''"
+                                placeholder="직원 검색" fluid readonly class="cursor-pointer"
+                                @click="openEmployeeDialog('svnDpmCgpr', '주관부서 담당자 검색')" />
+                            <Button icon="pi pi-search" severity="secondary"
+                                @click="openEmployeeDialog('svnDpmCgpr', '주관부서 담당자 검색')" />
+                        </div>
                     </div>
                 </div>
 
-                <!-- IT부서 + 팀장/담당자 -->
+                <!-- IT부서 + 팀장/담당자 (직원 검색 다이얼로그 연동) -->
                 <div class="flex gap-6">
-                    <div class="flex flex-col gap-2">
+                    <!-- IT부서: 부서명 표시 + 검색 버튼 -->
+                    <div class="flex flex-col gap-2 w-60">
                         <label class="font-semibold">IT부서</label>
-                        <Select v-model="form.itDpm" :options="itDepartments" placeholder="IT부서 선택" editable
-                            class="w-40" />
+                        <div class="flex gap-1">
+                            <InputText :modelValue="form.itDpmNm || form.itDpm" placeholder="부서 검색" fluid readonly
+                                class="cursor-pointer" @click="openEmployeeDialog('itDpm', 'IT부서 직원 검색')" />
+                            <Button icon="pi pi-search" severity="secondary"
+                                @click="openEmployeeDialog('itDpm', 'IT부서 직원 검색')" />
+                        </div>
                     </div>
+                    <!-- IT부서 담당팀장 -->
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">담당팀장</label>
-                        <InputText v-model="form.itDpmTlr" placeholder="이름" fluid />
+                        <div class="flex gap-1">
+                            <InputText :modelValue="form.itDpmTlrNm ? `${form.itDpmTlrNm} (${form.itDpmTlr})` : ''"
+                                placeholder="직원 검색" fluid readonly class="cursor-pointer"
+                                @click="openEmployeeDialog('itDpmTlr', 'IT부서 담당팀장 검색')" />
+                            <Button icon="pi pi-search" severity="secondary"
+                                @click="openEmployeeDialog('itDpmTlr', 'IT부서 담당팀장 검색')" />
+                        </div>
                     </div>
+                    <!-- IT부서 담당자 -->
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="font-semibold">담당자</label>
-                        <InputText v-model="form.itDpmCgpr" placeholder="이름" fluid />
+                        <div class="flex gap-1">
+                            <InputText :modelValue="form.itDpmCgprNm ? `${form.itDpmCgprNm} (${form.itDpmCgpr})` : ''"
+                                placeholder="직원 검색" fluid readonly class="cursor-pointer"
+                                @click="openEmployeeDialog('itDpmCgpr', 'IT부서 담당자 검색')" />
+                            <Button icon="pi pi-search" severity="secondary"
+                                @click="openEmployeeDialog('itDpmCgpr', 'IT부서 담당자 검색')" />
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- 직원 검색 다이얼로그 (6개 필드에서 공유, activeDialogField로 구분) -->
+            <EmployeeSearchDialog v-model:visible="showEmployeeDialog" :header="employeeDialogHeader"
+                @select="onEmployeeSelected" />
 
             <Divider />
 

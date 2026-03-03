@@ -61,7 +61,7 @@ const collapseAll = () => {
 // Handle tree node selection
 const onNodeSelect = async (node: any) => {
     if (!node.key) return;
-    
+
     loadingUsers.value = true;
     try {
         const { data } = await fetchUsers(node.key);
@@ -78,8 +78,15 @@ const onNodeSelect = async (node: any) => {
     }
 };
 
+/**
+ * 직원 행 선택 핸들러
+ * 선택된 직원 정보(OrgUser)에 현재 선택된 부서 node의 key(부서코드)를 추가하여 emit합니다.
+ * 부모 컴포넌트에서 부서코드(orgCode)와 부서명(bbrNm)을 함께 활용할 수 있습니다.
+ */
 const onUserSelect = (event: any) => {
-    emit('select', event.data);
+    // 현재 선택된 tree node에서 부서코드 추출 (selectedNode는 { [key]: true } 형태)
+    const orgCode = selectedNode.value ? Object.keys(selectedNode.value)[0] : '';
+    emit('select', { ...event.data, orgCode });
     isVisible.value = false;
 };
 </script>
@@ -95,15 +102,14 @@ const onUserSelect = (event: any) => {
                         <Button label="모두 접기" icon="pi pi-angle-double-up" size="small" text @click="collapseAll" />
                     </div>
                     <Tree :value="nodes" selectionMode="single" v-model:selectionKeys="selectedNode"
-                        v-model:expandedKeys="expandedKeys"
-                        @node-select="onNodeSelect" class="w-full border-none p-0" :filter="true" filterMode="lenient"
-                        filterPlaceholder="부서 검색">
+                        v-model:expandedKeys="expandedKeys" @node-select="onNodeSelect" class="w-full border-none p-0"
+                        :filter="true" filterMode="lenient" filterPlaceholder="부서 검색">
                     </Tree>
                 </SplitterPanel>
                 <SplitterPanel :size="70" :minSize="50" class="h-full flex flex-col p-2 relative">
                     <DataTable :value="users" :loading="loadingUsers" size="small" stripedRows selectionMode="single"
-                        v-model:selection="selectedUser" @row-select="onUserSelect" dataKey="eno"
-                        :paginator="true" :rows="10" scrollable scrollHeight="flex">
+                        v-model:selection="selectedUser" @row-select="onUserSelect" dataKey="eno" :paginator="true"
+                        :rows="10" scrollable scrollHeight="flex">
                         <template #empty>
                             <div class="text-center text-zinc-500 py-8">
                                 <i class="pi pi-search text-2xl mb-2 block"></i>
@@ -128,9 +134,12 @@ const onUserSelect = (event: any) => {
 
 <style scoped>
 :deep(.p-splitter) {
-    border: 1px solid #e5e7eb; /* tailwind gray-200 */
+    border: 1px solid #e5e7eb;
+    /* tailwind gray-200 */
 }
+
 :deep(.dark .p-splitter) {
-    border: 1px solid #27272a; /* tailwind zinc-800 */
+    border: 1px solid #27272a;
+    /* tailwind zinc-800 */
 }
 </style>

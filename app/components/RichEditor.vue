@@ -28,16 +28,95 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+/**
+ * PrimeVue Editor(Quill) 컴포넌트 참조
+ * onMounted에서 내부 DOM(.ql-editor)에 접근하기 위해 사용합니다.
+ */
+const editorRef = ref<any>(null);
+
+/**
+ * [한글 IME Placeholder 미사라짐 문제 수정]
+ *
+ * ── 문제 현상 ──
+ * Quill 에디터의 placeholder는 CSS 기반으로 동작합니다:
+ *   .ql-editor.ql-blank::before { content: attr(data-placeholder); }
+ * 에디터가 비어있으면 'ql-blank' 클래스가 붙어 placeholder가 표시되고,
+ * 내용이 입력되면 Quill이 'ql-blank'를 제거하여 placeholder가 사라집니다.
+ *
+ * 그런데 한글(예: 'ㅇ')을 입력하면 placeholder가 즉시 사라지지 않습니다.
+ * 영문이나 숫자는 한 글자만 입력해도 바로 사라지는 것과 대비됩니다.
+ *
+ * ── 원인 ──
+ * 한글은 IME(Input Method Editor) 조합 과정을 거칩니다:
+ *   ㅇ → 아 → 안 → 안녕 (조합이 끝날 때까지 하나의 입력 세션)
+ *
+ * 브라우저는 조합 시작 시 'compositionstart', 끝날 때 'compositionend' 이벤트를 발생시킵니다.
+ * Quill은 조합 중(composing)에는 콘텐츠 변경을 보류하기 때문에
+ * 'ql-blank' 클래스가 제거되지 않아 placeholder가 그대로 남아있게 됩니다.
+ *
+ * 반면 영문/숫자는 IME 조합 없이 'input' 이벤트가 즉시 발생하므로
+ * Quill이 바로 'ql-blank'를 제거하여 placeholder가 즉시 사라집니다.
+ *
+ * ── 해결 ──
+ * compositionstart: 한글 조합이 시작되면 즉시 'ql-blank' 클래스를 제거합니다.
+ * compositionend:   조합이 끝난 후 에디터가 비어있으면 'ql-blank'를 다시 추가합니다.
+ *                   (입력을 시작했다가 모두 지운 경우 placeholder 복원 목적)
+ */
+/**
+ * IME composition 이벤트 리스너를 .ql-editor 요소에 등록하는 함수
+ *
+ * @param editorEl - Quill이 생성한 .ql-editor DOM 요소
+ */
+function attachCompositionHandlers(editorEl: HTMLElement) {
+    // 한글 조합 시작 → placeholder 즉시 숨김
+    editorEl.addEventListener('compositionstart', () => {
+        editorEl.classList.remove('ql-blank');
+    });
+
+    // 한글 조합 종료 → 에디터가 비어있으면 placeholder 복원
+    editorEl.addEventListener('compositionend', () => {
+        const text = editorEl.innerText?.trim();
+        if (!text || text === '') {
+            editorEl.classList.add('ql-blank');
+        }
+    });
+}
+
+/**
+ * PrimeVue Editor는 Quill 인스턴스를 비동기로 초기화합니다.
+ * 따라서 onMounted 시점에 .ql-editor DOM이 아직 생성되지 않았을 수 있습니다.
+ *
+ * MutationObserver를 사용하여 .ql-editor가 DOM에 나타나는 시점을 감지하고,
+ * 그때 compositionstart/compositionend 이벤트 리스너를 등록합니다.
+ * 이미 존재하는 경우에는 즉시 등록합니다.
+ */
+onMounted(() => {
+    const container = editorRef.value?.$el;
+    if (!container) return;
+
+    // 이미 .ql-editor가 렌더링된 경우 즉시 등록
+    const existing = container.querySelector('.ql-editor');
+    if (existing) {
+        attachCompositionHandlers(existing);
+        return;
+    }
+
+    // 아직 렌더링되지 않은 경우 MutationObserver로 대기
+    const observer = new MutationObserver((_, obs) => {
+        const editorEl = container.querySelector('.ql-editor');
+        if (editorEl) {
+            attachCompositionHandlers(editorEl);
+            obs.disconnect(); // .ql-editor를 찾았으므로 감시 종료
+        }
+    });
+    observer.observe(container, { childList: true, subtree: true });
+});
 </script>
 
 <template>
-    <Editor 
-        :modelValue="modelValue" 
-        @update:modelValue="emit('update:modelValue', $event)" 
-        :editorStyle="editorStyle" 
-        class="w-full" 
-        :placeholder="placeholder"
-    >
+    <Editor ref="editorRef" :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)"
+        :editorStyle="editorStyle" class="w-full" :placeholder="placeholder">
         <template #toolbar>
             <span class="ql-formats">
                 <select class="ql-font">
