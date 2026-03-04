@@ -37,6 +37,26 @@ import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { useApprovals, type BulkApprovalItem } from '~/composables/useApprovals';
 import { usePdfReport } from '~/composables/usePdfReport';
 
+/**
+ * 결재 진행 상황 타임라인 항목 인터페이스
+ * openTimeline()에서 기안자 정보와 결재자 목록을 통합하여 구성합니다.
+ *
+ * [필드 설명]
+ *  - dcdTp   : 결재 유형 ('기안' | '결재' 등 - API 응답 기준)
+ *  - dcdSts  : 결재 상태 ('승인' | '반려' | '결재중' | null - 미처리 시 null)
+ *  - dcdDt   : 결재 처리일자 (미처리 시 null)
+ *  - dcdOpnn : 결재 의견 (미입력 시 null)
+ *  - dcdSqn  : 결재 순번 (openTimeline 내 sort 기준, 기안자는 해당 없음)
+ */
+interface TimelineApprover {
+    dcdEno: string;         // 결재자(기안자) 사원번호
+    dcdDt: string | null;   // 결재 처리일자
+    dcdTp: string;          // 결재 유형 ('기안' | '결재' 등)
+    dcdSts: string | null;  // 결재 상태 ('승인' | '반려' | '결재중' | null)
+    dcdOpnn: string | null; // 결재 의견
+    dcdSqn?: number;        // 결재 순번 (기안자 제외)
+}
+
 const { fetchApprovals, bulkApprove } = useApprovals();
 const { generateReport } = usePdfReport();
 
@@ -198,7 +218,7 @@ const processApproval = async (status: '승인' | '반려') => {
 /* ── 결재 진행 상황 타임라인 다이얼로그 ── */
 const showTimelineDialog = ref(false);
 /** 타임라인에 표시할 기안자 + 결재자 통합 목록 */
-const timelineApprovers = ref<any[]>([]);
+const timelineApprovers = ref<TimelineApprover[]>([]);
 /** 현재 타임라인에 표시 중인 신청서명 */
 const currentTimelineApfNm = ref('');
 /** 현재 타임라인에 표시 중인 결재 관리번호 */
@@ -212,7 +232,7 @@ const currentTimelineApfMngNo = ref('');
  */
 const openTimeline = (data: any) => {
     /* 기안자 정보를 타임라인 첫 번째 항목으로 구성 */
-    const drafter = {
+    const drafter: TimelineApprover = {
         dcdEno: data.rqsEno,
         dcdDt: data.rqsDt,
         dcdTp: '기안',
@@ -221,7 +241,7 @@ const openTimeline = (data: any) => {
     };
 
     /* 기안자 + 결재자 목록 합치기 */
-    timelineApprovers.value = [drafter, ...(data.approvers || [])];
+    timelineApprovers.value = [drafter, ...(data.approvers || [])] as TimelineApprover[];
     currentTimelineApfNm.value = data.apfNm;
     currentTimelineApfMngNo.value = data.apfMngNo;
     showTimelineDialog.value = true;

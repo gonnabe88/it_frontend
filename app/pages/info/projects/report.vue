@@ -38,6 +38,15 @@ import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
 import { useApprovals, type CreateApplicationRequest } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
+import type { OrgUser } from '~/composables/useOrganization';
+
+/**
+ * EmployeeSearchDialog emit 데이터 타입
+ * OrgUser에 EmployeeSearchDialog에서 추가하는 부서코드(orgCode) 필드를 포함합니다.
+ */
+interface EmployeeSelectResult extends OrgUser {
+    orgCode: string; // 선택된 Tree 노드의 부서코드
+}
 
 const { fetchProjectsBulk } = useProjects();
 const { generateReport } = usePdfReport();
@@ -102,15 +111,14 @@ const openEmployeeSearch = (target: 'teamLead' | 'deptHead') => {
  * 직원 검색 선택 완료 콜백
  * 선택된 직원 정보를 결재 라인에 반영하고 PDF를 재생성합니다.
  *
- * @param employee - EmployeeSearchDialog에서 전달하는 직원 객체 (usrNm, ptCNm, eno 등)
+ * @param employee - EmployeeSearchDialog에서 emit하는 EmployeeSelectResult
+ *                   (OrgUser 필드 + orgCode)
  */
-const onEmployeeSelect = (employee: any) => {
-    console.log('Selected employee:', employee);
-
-    /* EmployeeSearchDialog에서 전달하는 OrgUser 타입의 필드명 사용 */
-    const name = employee.usrNm || employee.name || '';
-    const rank = employee.ptCNm || employee.rank || '';
-    const id = employee.eno || employee.id || '';
+const onEmployeeSelect = (employee: EmployeeSelectResult) => {
+    /* OrgUser 타입의 필드명으로 결재자 정보 추출 */
+    const name = employee.usrNm;
+    const rank = employee.ptCNm || '';
+    const id = employee.eno;
 
     if (currentSearchTarget.value === 'teamLead') {
         approvalLine.value.teamLead = {

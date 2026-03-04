@@ -78,21 +78,44 @@ const handleBulkEdit = () => {
     router.push({ path: '/info/cost/form', query: { ids } });
 };
 
+/** 검색어 (비목명 · 계약명 · 계약상대처 · 추진부서 · 담당자 통합 검색) */
+const searchKeyword = ref('');
+
 /**
- * 전산업무비 목록 필터링 (현재는 전체 표시, 향후 검색 기능 확장 예정)
+ * 전산업무비 목록 검색 필터링
+ * searchKeyword가 비어있으면 전체를 반환합니다.
+ * 비목명(ioeNm) · 계약명(cttNm) · 계약상대처(cttOpp) · 추진부서(pulDpmNm) · 담당자(pulCgprNm)
+ * 다섯 개 필드를 대소문자 구분 없이 검색합니다.
  */
 const filteredCosts = computed(() => {
-    return costs.value;
+    const kw = searchKeyword.value.trim().toLowerCase();
+    if (!kw) return costs.value;
+    return costs.value.filter(cost =>
+        cost.ioeNm?.toLowerCase().includes(kw) ||
+        cost.cttNm?.toLowerCase().includes(kw) ||
+        cost.cttOpp?.toLowerCase().includes(kw) ||
+        cost.pulDpmNm?.toLowerCase().includes(kw) ||
+        cost.pulCgprNm?.toLowerCase().includes(kw)
+    );
 });
 </script>
 
 <template>
     <div class="space-y-6">
 
-        <!-- 페이지 헤더: 제목 + 예산 단위 선택 + 액션 버튼 -->
-        <div class="flex items-center justify-between">
+        <!-- 페이지 헤더: 제목 + 검색 + 예산 단위 선택 + 액션 버튼 -->
+        <div class="flex items-center justify-between gap-4 flex-wrap">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- 통합 검색 입력 (비목명·계약명·계약상대처·추진부서·담당자) -->
+                <IconField>
+                    <InputIcon class="pi pi-search" />
+                    <InputText
+                        v-model="searchKeyword"
+                        placeholder="비목명, 계약명, 담당자 등 검색"
+                        class="w-64"
+                    />
+                </IconField>
                 <!-- 예산 표시 단위 선택 (원/천원/백만원/억원) -->
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="basic" />
                 <!-- 본인 담당 항목 일괄 수정 -->

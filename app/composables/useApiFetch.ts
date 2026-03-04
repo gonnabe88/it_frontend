@@ -3,10 +3,13 @@
  * [useApiFetch] 인증 기반 HTTP 요청 Composable
  * ============================================================================
  * Nuxt의 useFetch를 래핑하여 아래 기능을 자동으로 처리합니다:
- *  1. accessToken을 Authorization 헤더에 자동 주입
- *  2. accessToken 변경 시 자동 재요청 (watch 설정)
- *  3. 401 Unauthorized 응답 시 토큰 갱신(refresh) 시도
- *  4. 토큰 갱신 실패 시 로그아웃 처리 및 로그인 페이지로 리다이렉트
+ *  1. credentials:'include'로 httpOnly 쿠키 자동 전송
+ *  2. 401 Unauthorized 응답 시 토큰 갱신(refresh) 시도
+ *  3. 토큰 갱신 실패 시 로그아웃 처리 및 로그인 페이지로 리다이렉트
+ *
+ * [인증 전략: httpOnly 쿠키]
+ *  - JWT 토큰은 httpOnly 쿠키에 저장되어 브라우저가 자동 전송합니다.
+ *  - Authorization 헤더 주입은 불필요합니다.
  *
  * [사용 원칙]
  *  - GET(조회) 요청에 사용합니다.
@@ -14,6 +17,7 @@
  * ============================================================================
  */
 import type { UseFetchOptions } from 'nuxt/app';
+import { useToast } from 'primevue/usetoast';
 
 /**
  * 인증이 적용된 useFetch 래퍼 함수
@@ -34,8 +38,10 @@ import type { UseFetchOptions } from 'nuxt/app';
  * });
  */
 export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOptions<T> = {}) => {
-    // 인증 store에서 토큰 및 인증 관련 함수를 가져옴
-    const { accessToken, refresh, logout } = useAuth();
+    // 인증 store에서 인증 관련 함수를 가져옴
+    const { refresh, logout } = useAuth();
+    // 사용자 친화적 에러 메시지 표시용 Toast 서비스
+    const toast = useToast();
 
     // 동시에 여러 401 응답이 발생할 경우 토큰 갱신을 중복 실행하지 않기 위한 플래그
     let isRefreshing = false;
@@ -45,24 +51,38 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
         ...options,
         // 클라이언트 사이드에서만 실행 (SSR 비활성화)
         server: false,
-        // accessToken이 변경될 때마다 자동으로 재요청
-        watch: [accessToken],
         /**
-         * 요청 시마다 최신 accessToken으로 Authorization 헤더를 동적으로 생성
-         * computed를 사용하여 반응형으로 토큰 값을 추적
+         * httpOnly 쿠키 자동 전송을 위한 credentials 설정
+         * 브라우저가 accessToken 쿠키를 모든 요청에 자동으로 포함합니다.
+         *
+         * [httpOnly 쿠키 전환 이전]
+         *  - Authorization 헤더를 computed로 동적 생성
+         *  - accessToken 변경 시 watch로 자동 재요청
+         *
+         * [변경 후]
+         *  - 쿠키는 브라우저가 관리하므로 헤더 주입/watch 불필요
+         *  - credentials: 'include'만 설정
          */
-        headers: computed(() => {
-            const headers: Record<string, string> = { ...((options.headers as any) || {}) };
-            if (accessToken.value) {
-                headers.Authorization = `Bearer ${accessToken.value}`;
-            }
-            return headers;
-        }),
+        credentials: 'include' as RequestCredentials,
+        /**
+         * 네트워크 오류 핸들러 (서버 연결 자체가 불가능한 경우)
+         * - fetch가 네트워크 레벨에서 실패(DNS 오류, 연결 거부 등)할 때 호출됩니다.
+         */
+        onRequestError: () => {
+            toast.add({
+                severity: 'error',
+                summary: '네트워크 오류',
+                detail: '서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.',
+                life: 5000
+            });
+        },
         /**
          * 응답 에러 핸들러
-         * - 401 응답 수신 시 토큰 갱신 시도
-         * - isRefreshing 플래그로 중복 갱신 방지
-         * - 갱신 실패 시 로그아웃 후 로그인 페이지로 이동
+         * - 401: 토큰 갱신 시도 → 실패 시 로그아웃 + 로그인 페이지 이동
+         * - 403: 권한 없음 안내 Toast
+         * - 404: 데이터 없음 안내 Toast
+         * - 5xx: 서버 오류 안내 Toast
+         * - isRefreshing 플래그로 중복 401 처리 방지
          */
         onResponseError: async ({ response }: { response: Response }) => {
             if (response.status === 401 && !isRefreshing) {
@@ -78,6 +98,27 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
                     // 갱신 성공/실패 여부와 상관없이 플래그 해제
                     isRefreshing = false;
                 }
+            } else if (response.status === 403) {
+                toast.add({
+                    severity: 'warn',
+                    summary: '권한 없음',
+                    detail: '해당 리소스에 접근 권한이 없습니다.',
+                    life: 4000
+                });
+            } else if (response.status === 404) {
+                toast.add({
+                    severity: 'warn',
+                    summary: '데이터 없음',
+                    detail: '요청한 데이터를 찾을 수 없습니다.',
+                    life: 3000
+                });
+            } else if (response.status >= 500) {
+                toast.add({
+                    severity: 'error',
+                    summary: '서버 오류',
+                    detail: '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+                    life: 5000
+                });
             }
         }
     };

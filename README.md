@@ -1,4 +1,4 @@
-# IT Portal - 개발 노트 (Development Notes)
+# 개발 노트 (Development Notes)
 
 ## 1. 시스템 개요
 
@@ -88,6 +88,34 @@ CLAUDE.md 규칙에 따라 **모든 v-html 사용 시 DOMPurify 적용이 필수
 `nuxt.config.ts`의 인라인 스크립트가 Nuxt 하이드레이션 **이전**에 실행되어  
 `localStorage('theme')` 또는 시스템 설정 기반으로 `<html class="dark">`를 즉시 적용합니다.
 
+### 4.6 직원 검색 다이얼로그 공유 패턴
+
+`EmployeeSearchDialog.vue`는 조직 트리 + 사용자 목록을 표시하고, 선택 시 `@select` 이벤트로  
+`{ eno, usrNm, bbrNm, orgCode }` 형태의 직원 정보를 전달합니다.
+
+하나의 다이얼로그를 여러 폼 필드에서 공유하는 패턴:
+```ts
+// 1. 어떤 필드에서 열었는지 추적
+const activeDialogField = ref<'svnDpm' | 'itDpm' | ...>('svnDpm');
+
+// 2. 헤더를 computed로 파생
+const FIELD_HEADERS = { svnDpm: '주관부서 검색', ... } as const;
+const dialogHeader = computed(() => FIELD_HEADERS[activeDialogField.value]);
+
+// 3. 선택 시 FIELD_CONFIG 매핑으로 폼에 세팅
+const FIELD_CONFIG = {
+  svnDpm:    { valueKey: 'orgCode', labelKey: 'bbrNm' },
+  svnDpmTlr: { valueKey: 'eno',     labelKey: 'usrNm' },
+  ...
+};
+```
+
+### 4.7 한글 IME placeholder 대응
+
+Quill 에디터에서 한글 입력 시 `compositionstart`/`compositionend` 이벤트를 감지하여  
+`.ql-blank` 클래스를 수동 제어합니다. `MutationObserver`로 `.ql-editor` 렌더링 시점을 감지하고,  
+`onBeforeUnmount`에서 이벤트 리스너와 옵저버를 정리하여 메모리 누수를 방지합니다.
+
 ## 5. 인증 흐름
 
 ```
@@ -110,6 +138,10 @@ CLAUDE.md 규칙에 따라 **모든 v-html 사용 시 DOMPurify 적용이 필수
 # 의존성 설치
 npm install
 
+# 타입 정의 생성 (Type Generation)
+'Nuxt의 자동 생성 타입(.nuxt/)을 최신 상태로 유지하려면 아래 명령어를 실행하세요. IDE에서 타입 오류(예: vue 모듈을 찾을 수 없음)가 발생할 때 유용합니다.'
+npm run postinstall
+
 # 개발 서버 실행 (기본 포트: 3000)
 npm run dev
 ```
@@ -121,4 +153,16 @@ npm run dev
 - PrimeVue 컴포넌트를 우선 사용하고, Tailwind CSS로 스타일링합니다.
 - API 요청: GET → `useApiFetch`, POST/PUT/DELETE → `$apiFetch`
 - API 베이스 URL은 `runtimeConfig`에서 관리합니다.
+- `components/common/` 하위 컴포넌트는 Nuxt 자동 등록 시 `Common` 접두사가 붙으므로,  
+  기존 코드와의 일관성을 위해 **명시적 import**를 사용합니다.
 - 상세 규칙은 `CLAUDE.md` 파일을 참조하세요.
+
+## 9. 최근 구현 이력
+
+| 날짜 | 항목 | 비고 |
+|------|------|------|
+| 2026-03-04 | 직원 검색 다이얼로그 연동 | `form.vue` 6개 필드(주관/IT 부서·팀장·담당자) |
+| 2026-03-04 | 한글 IME placeholder 수정 | `RichEditor.vue` compositionstart/end 처리 |
+| 2026-03-03 | JPA 복합키 리팩토링 | `ProjectId` @IdClass 적용 (백엔드) |
+| 2026-03-02 | 예산 통합 목록 "전체" 탭 | `budget/list.vue` UnifiedBudgetItem 구현 |
+| 2026-03-02 | 추진부서 필드 추가 | `Bcostm` 엔티티 + DTO (백엔드) |

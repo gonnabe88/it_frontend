@@ -11,6 +11,11 @@
  * ⚠️ 주의: composables/useOrganization.ts의 OrgUser 타입과 구별됩니다.
  *  - 이 파일의 User: { eno, empNm } - 로그인/인증 전용 최소 정보
  *  - OrgUser         : { eno, usrNm, bbrNm, ... } - 조직도 조회용 확장 정보
+ *
+ * [인증 전략 변경 (httpOnly 쿠키)]
+ *  - JWT 토큰은 서버가 Set-Cookie로 httpOnly 쿠키에 저장합니다.
+ *  - 프론트엔드에서는 토큰에 직접 접근할 수 없으며, 브라우저가 자동 전송합니다.
+ *  - LoginResponse에는 토큰 없이 사용자 정보(eno, empNm)만 포함됩니다.
  * ============================================================================
  */
 
@@ -26,18 +31,16 @@ export interface LoginRequest {
 
 /**
  * [LoginResponse] 로그인 응답 인터페이스
- * 로그인 성공 시 서버가 반환하는 JWT 토큰 및 사용자 기본 정보입니다.
- * 응답받은 토큰은 stores/auth.ts에서 상태 및 localStorage에 저장됩니다.
+ * 로그인 성공 시 서버가 반환하는 사용자 기본 정보입니다.
  *
- * [토큰 전략]
- *  - accessToken  : 단기 유효 토큰, 모든 API 요청의 Authorization 헤더에 포함
- *  - refreshToken : 장기 유효 토큰, accessToken 만료 시 갱신 요청에 사용
+ * [httpOnly 쿠키 전환]
+ *  - 이전: 응답 body에 accessToken, refreshToken 포함
+ *  - 현재: 토큰은 Set-Cookie 헤더로 httpOnly 쿠키에 저장되며,
+ *          응답 body에는 사용자 정보만 포함됩니다.
  */
 export interface LoginResponse {
-    accessToken: string;  // JWT 액세스 토큰 (단기, API 인증용)
-    refreshToken: string; // JWT 리프레시 토큰 (장기, 토큰 갱신용)
-    eno: string;          // 로그인한 사용자의 사원번호
-    empNm: string;        // 로그인한 사용자의 사원명 (화면 표시용)
+    eno: string;   // 로그인한 사용자의 사원번호
+    empNm: string; // 로그인한 사용자의 사원명 (화면 표시용)
 }
 
 /**

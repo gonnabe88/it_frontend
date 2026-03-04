@@ -11,9 +11,14 @@
  *  - 인증 관련 액션(login, logout, refresh, restoreSession)을 직접 노출합니다.
  *  - types/auth.ts의 타입들을 re-export하여 기존 import 경로와의 호환성을 유지합니다.
  *
+ * [httpOnly 쿠키 전환]
+ *  - accessToken, refreshToken은 httpOnly 쿠키에 저장되어 JS 접근 불가하므로
+ *    더 이상 노출하지 않습니다.
+ *  - 이전에 accessToken을 사용하던 코드는 제거되었습니다.
+ *
  * [사용처]
  *  - 로그인/로그아웃 UI 컴포넌트
- *  - useApiFetch (토큰 주입 및 갱신)
+ *  - useApiFetch (401 에러 시 갱신/로그아웃 처리)
  *  - middleware/auth.global.ts (인증 상태 확인)
  * ============================================================================
  */
@@ -32,8 +37,6 @@ export * from '../types/auth';
  *
  * @returns 인증 관련 상태(ref) 및 액션 함수 객체
  *   - user           : 현재 로그인한 사용자 정보 (ref<User | null>)
- *   - accessToken    : JWT 액세스 토큰 (ref<string | null>)
- *   - refreshToken   : JWT 리프레시 토큰 (ref<string | null>)
  *   - isAuthenticated: 로그인 여부 (ref<boolean>, getter)
  *   - login          : 로그인 액션 (stores/auth.ts 위임)
  *   - logout         : 로그아웃 액션 (stores/auth.ts 위임)
@@ -58,14 +61,15 @@ export const useAuth = () => {
      * storeToRefs로 state/getter를 반응형 ref로 변환
      * 구조분해 할당 후에도 반응성이 유지됩니다.
      * (일반 구조분해는 반응성을 잃으므로 주의)
+     *
+     * [httpOnly 쿠키 전환 후]
+     *  - accessToken, refreshToken은 스토어에서 제거되어 더 이상 노출하지 않음
      */
-    const { user, accessToken, refreshToken, isAuthenticated } = storeToRefs(store);
+    const { user, isAuthenticated } = storeToRefs(store);
 
     return {
         // 반응형 상태 (ref 형태로 반환)
         user,
-        accessToken,
-        refreshToken,
         isAuthenticated, // computed getter도 storeToRefs로 ref 변환 가능
         // 인증 액션 (store의 함수를 직접 참조하여 반응성 유지)
         login: store.login,

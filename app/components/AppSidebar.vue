@@ -1,6 +1,25 @@
 <script setup lang="ts">
-const collapsed = useState('sidebar-collapsed', () => false);
-const toggleSidebar = () => collapsed.value = !collapsed.value;
+/**
+ * 사이드바 축소 상태
+ * - SSR 하이드레이션 불일치 방지를 위해 기본값은 false로 초기화합니다.
+ * - onMounted에서 localStorage에 저장된 값을 읽어 복원합니다.
+ * - 상태 변경 시 localStorage에 자동 저장합니다.
+ */
+const collapsed = ref(false);
+
+onMounted(() => {
+    // 브라우저 새로고침 후 이전 축소 상태 복원
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved !== null) {
+        collapsed.value = saved === 'true';
+    }
+});
+
+const toggleSidebar = () => {
+    collapsed.value = !collapsed.value;
+    // 변경된 상태를 localStorage에 영구 저장
+    localStorage.setItem('sidebar-collapsed', String(collapsed.value));
+};
 
 const route = useRoute();
 const context = computed(() => route.path.startsWith('/audit') ? 'audit' : 'info');

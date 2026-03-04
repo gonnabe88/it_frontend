@@ -7,13 +7,17 @@
  *
  * [자동 처리 기능]
  *  1. 요청 인터셉터(onRequest):
- *     - 모든 요청에 현재 accessToken을 Authorization 헤더로 자동 첨부
+ *     - 모든 요청에 credentials:'include'를 설정하여 httpOnly 쿠키 자동 전송
  *
  *  2. 응답 에러 인터셉터(onResponseError):
- *     - 401 Unauthorized 응답 시 refreshToken으로 토큰 갱신 시도
+ *     - 401 Unauthorized 응답 시 쿠키의 refreshToken으로 토큰 갱신 시도
  *     - 갱신 실패 시 로그아웃 처리 및 /login으로 리다이렉트
  *     - 로그아웃 API 자체의 401 실패는 무시 (이미 로그아웃 중인 상태)
  *     - isRefreshing 플래그로 토큰 갱신 중복 요청 방지
+ *
+ * [인증 전략: httpOnly 쿠키]
+ *  - JWT 토큰은 httpOnly 쿠키에 저장되어 브라우저가 자동 전송합니다.
+ *  - Authorization 헤더 주입은 불필요합니다.
  *
  * [사용 원칙]
  *  - POST/PUT/DELETE 등 데이터 변경 요청에 사용합니다.
@@ -30,8 +34,8 @@
  * ============================================================================
  */
 export default defineNuxtPlugin(() => {
-    // useAuth composable을 통해 현재 인증 상태 및 액션 접근
-    const { accessToken, refresh, logout } = useAuth();
+    // useAuth composable을 통해 인증 액션 접근
+    const { refresh, logout } = useAuth();
 
     /**
      * 토큰 갱신 진행 중 여부를 나타내는 플래그
@@ -47,17 +51,18 @@ export default defineNuxtPlugin(() => {
     const apiFetch = $fetch.create({
         /**
          * 요청 인터셉터: 모든 요청 전에 실행
-         * 현재 accessToken을 Authorization 헤더에 주입합니다.
-         * 토큰이 없으면 (비로그인 상태) 헤더 추가를 건너뜁니다.
+         * httpOnly 쿠키가 자동 전송되도록 credentials를 설정합니다.
+         *
+         * [httpOnly 쿠키 전환 이전]
+         *  - accessToken을 Authorization 헤더에 수동 주입
+         *
+         * [변경 후]
+         *  - 쿠키는 브라우저가 자동 전송하므로 헤더 주입 불필요
+         *  - credentials: 'include'만 설정하면 됨
          */
         onRequest({ options }) {
-            if (accessToken.value) {
-                // 기존 헤더 객체를 유지하면서 Authorization만 추가/덮어쓰기
-                options.headers = {
-                    ...(options.headers as any || {}),
-                    Authorization: `Bearer ${accessToken.value}`
-                };
-            }
+            // httpOnly 쿠키 자동 전송을 위한 credentials 설정
+            options.credentials = 'include';
         },
 
         /**
@@ -67,7 +72,7 @@ export default defineNuxtPlugin(() => {
          * [처리 흐름]
          *  1. 로그아웃 API(/auth/logout) 자체의 401은 무시 (이미 로그아웃 중)
          *  2. isRefreshing 플래그 확인 → 이미 갱신 중이면 스킵
-         *  3. refresh() 호출 → 성공 시 원래 요청 컴포넌트에서 재시도 가능
+         *  3. refresh() 호출 → 서버가 새 쿠키 세팅
          *  4. 갱신 실패 시 logout() → /login 리다이렉트
          *  5. finally에서 isRefreshing 플래그 해제
          */
@@ -97,7 +102,7 @@ export default defineNuxtPlugin(() => {
                         await logout();
                         navigateTo('/login');
                     }
-                    // 갱신 성공 시: 호출한 컴포넌트에서 재시도 처리 (여기서는 자동 재시도 없음)
+                    // 갱신 성공 시: 서버가 새 쿠키를 세팅하므로 별도 처리 불필요
                 } finally {
                     // 갱신 성공/실패 여부와 상관없이 플래그 반드시 해제
                     isRefreshing = false;

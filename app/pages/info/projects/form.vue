@@ -45,13 +45,15 @@ import { useProjects } from '~/composables/useProjects'; // Assuming useProjects
 import { PROJECT_STAGES, getApprovalAuthority } from '~/utils/common';
 import { useCurrencyRates } from '~/composables/useCurrencyRates';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import type { OrgUser } from '~/composables/useOrganization';
 
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
 const { fetchProject, createProject, updateProject } = useProjects();
-const { fetchRates, exchangeRates, convertToKRW } = useCurrencyRates();
-await fetchRates();
+// useCurrencyRates() 내부에서 useApiFetch가 자동으로 초기 fetch를 실행하므로
+// fetchRates() (= refresh) 중복 호출 불필요 → 2회 호출 및 40X 오류 방지
+const { exchangeRates, convertToKRW } = useCurrencyRates();
 
 const title = '사업정보 입력';
 definePageMeta({
@@ -62,6 +64,38 @@ definePageMeta({
 const projectId = route.query.id ? (route.query.id as string) : null;
 /** 수정 모드 여부 (projectId 존재 시 true) */
 const isEditMode = computed(() => !!projectId);
+
+/**
+ * 소요자원 항목 인터페이스 (UI 모델)
+ * API 응답의 item 필드를 UI에서 사용하기 위해 변환한 구조입니다.
+ * 저장 시 executeSave()에서 API 스펙(gclDtt, gclNm 등)으로 역변환됩니다.
+ *
+ * [API 필드 매핑]
+ *  category       ↔ gclDtt  (품목구분)
+ *  item           ↔ gclNm   (품목명)
+ *  quantity       ↔ gclQtt  (수량)
+ *  currency       ↔ cur     (통화)
+ *  basis          ↔ bgFdtn  (예산산출근거)
+ *  introDate      ↔ itdDt   (도입시기)
+ *  paymentCycle   ↔ dfrCle  (지급주기)
+ *  infoProtection ↔ infPrtYn (정보보호여부)
+ *  integratedInfra↔ itrInfrYn (통합인프라여부)
+ *  gclAmt         ↔ gclAmt  (소계)
+ */
+interface ResourceItem {
+    category: string;        // 품목구분 (API: gclDtt)
+    item: string;            // 품목명 (API: gclNm)
+    quantity: number;        // 수량 (API: gclQtt)
+    currency: string;        // 통화 (API: cur)
+    basis: string;           // 예산산출근거 (API: bgFdtn)
+    introDate: Date | null;  // 도입시기 (API: itdDt)
+    paymentCycle: string;    // 지급주기 (API: dfrCle)
+    infoProtection: string;  // 정보보호여부 (API: infPrtYn)
+    integratedInfra: string; // 통합인프라여부 (API: itrInfrYn)
+    gclAmt: number;          // 소계 (API: gclAmt)
+    unitPrice?: number;      // 단가 (UI 계산 필드: gclAmt ÷ quantity)
+    xcr?: number;            // 환율 (API: xcr, 수정 모드에서 복원)
+}
 
 /** 폼 데이터 상태 (신규/수정 공통) */
 const form = ref({
@@ -104,7 +138,7 @@ const form = ref({
     svnDpmTlrNm: '',   // 주관부서 팀장명 (직원 검색에서 자동 세팅)
     tchnTp: '', // 기술유형
     prjYy: new Date().getMonth() + 1 >= 10 ? new Date().getFullYear() + 1 : new Date().getFullYear(), // 사업연도 (10월 이상이면 내년, 아니면 올해)
-    resourceItems: [] as any[] // UI용 소요자원 상세내용 (저장 시 items로 변환)
+    resourceItems: [] as ResourceItem[] // UI용 소요자원 상세내용 (저장 시 items로 변환)
 });
 
 /** 
@@ -174,18 +208,41 @@ const openEmployeeDialog = (field: typeof activeDialogField.value) => {
 };
 
 /**
+ * EmployeeSearchDialog emit 데이터 타입
+ * OrgUser(조직도 사용자)에 EmployeeSearchDialog에서 추가하는 부서코드(orgCode) 필드를 포함합니다.
+ * EmployeeSearchDialog의 onUserSelect()에서 { ...OrgUser, orgCode } 형태로 emit됩니다.
+ */
+interface EmployeeSelectResult extends OrgUser {
+    orgCode: string; // 부서코드 (선택된 Tree 노드의 key)
+}
+
+/**
  * 직원 선택 완료 핸들러
  * EmployeeSearchDialog의 @select 이벤트로 전달받은 직원 정보를
  * FIELD_CONFIG 매핑에 따라 해당 폼 필드에 세팅합니다.
  *
- * @param user - 선택된 직원 정보 ({ eno, usrNm, bbrNm, orgCode, ... })
+ * [타입 안전성]
+ * (form.value as any) 타입 단언 대신, 필드별 명시적 setter 맵을 사용하여
+ * TypeScript가 폼 필드 존재 여부를 검증할 수 있도록 합니다.
+ *
+ * @param user - EmployeeSearchDialog에서 emit된 직원 정보
  */
-const onEmployeeSelected = (user: any) => {
+const onEmployeeSelected = (user: EmployeeSelectResult) => {
     const { valueKey, labelKey } = FIELD_CONFIG[activeDialogField.value];
-    const field = activeDialogField.value;
-    // 코드 필드와 이름 필드를 각각 세팅 (부서: orgCode+bbrNm, 담당자: eno+usrNm)
-    (form.value as any)[field] = user[valueKey] || '';
-    (form.value as any)[`${field}Nm`] = user[labelKey] || '';
+    // FIELD_CONFIG의 valueKey/labelKey로 실제 값과 표시명을 추출
+    const value = user[valueKey] || '';
+    const label = user[labelKey] || '';
+
+    // 필드별 타입 안전한 setter 맵 (TypeScript가 form.value 필드 존재를 검증)
+    const setters: Record<typeof activeDialogField.value, () => void> = {
+        svnDpm:     () => { form.value.svnDpm = value;     form.value.svnDpmNm = label;     },
+        svnDpmTlr:  () => { form.value.svnDpmTlr = value;  form.value.svnDpmTlrNm = label;  },
+        svnDpmCgpr: () => { form.value.svnDpmCgpr = value; form.value.svnDpmCgprNm = label; },
+        itDpm:      () => { form.value.itDpm = value;      form.value.itDpmNm = label;      },
+        itDpmTlr:   () => { form.value.itDpmTlr = value;   form.value.itDpmTlrNm = label;   },
+        itDpmCgpr:  () => { form.value.itDpmCgpr = value;  form.value.itDpmCgprNm = label;  },
+    };
+    setters[activeDialogField.value]();
 };
 
 /**
