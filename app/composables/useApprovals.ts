@@ -144,8 +144,23 @@ export const useApprovals = () => {
         });
     };
 
+    /**
+     * 단일 신청서 상세 조회
+     * GET /api/applications/{apfMngNo}
+     *
+     * @param apfMngNo - 조회할 신청관리번호
+     * @returns 신청서 상세 정보 (apfDtlCone 포함)
+     *
+     * @example
+     * const approval = await fetchApplication('APF-2026-001');
+     */
+    const fetchApplication = async (apfMngNo: string) => {
+        return await $apiFetch<Approval>(`${API_BASE_URL}/${apfMngNo}`);
+    };
+
     return {
         fetchApprovals,
+        fetchApplication,
         createApplication,
         bulkApprove
     };

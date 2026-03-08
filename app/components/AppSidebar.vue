@@ -54,7 +54,8 @@ const menuItems = computed(() => {
         { label: '사전진단', icon: 'pi pi-check-square', to: '/diagnosis' },
         {
             label: '전산예산', icon: 'pi pi-wallet', items: [
-                { label: '예산 신청', to: '/budget' },
+                { label: '예산 작성', to: '/budget' },
+                { label: '결재 상신', to: '/budget/approval' },
                 { label: '예산 목록', to: '/budget/list' }
             ]
         },

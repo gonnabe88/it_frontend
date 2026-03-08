@@ -2,15 +2,15 @@
  * ============================================================================
  * [usePdfReport] PDF 보고서 생성 Composable
  * ============================================================================
- * pdfmake 라이브러리를 사용하여 프로젝트 예산편성 신청서를 PDF로 생성합니다.
+ * pdfmake 라이브러리를 사용하여 예산편성 신청서를 PDF로 생성합니다.
  * 한글 출력을 위해 NanumGothic 폰트를 동적으로 로드하여 적용합니다.
  *
  * [생성되는 PDF 구조]
- *  - 헤더 영역: 문서 제목(예산편성 신청) + 결재선 테이블 (기안자/팀장/부서장)
- *  - 프로젝트 타이틀 바: 순번 + 프로젝트명 (파란색 배경)
- *  - 프로젝트 상세 테이블: 기본 정보 + HTML 서술 필드 (현황/필요성/사업내용 등)
+ *  - 1페이지: 총괄표 (합계 통계 + 사업/계약별 예산 목록)
+ *  - 정보화사업 섹션 (1건 이상인 경우): 사업별 상세 테이블
+ *  - 전산업무비 섹션 (1건 이상인 경우): 계약별 상세 테이블
+ *  - 각 섹션은 페이지 나누기(pageBreak)로 구분
  *  - 페이지 푸터: 현재 페이지 / 전체 페이지 수
- *  - 다수 프로젝트 처리: 프로젝트별 페이지 나누기(pageBreak) 적용
  *
  * [폰트 전략]
  *  - 모듈 수준 캐시(cachedVfs, cachedFonts)로 폰트 중복 로딩 방지
@@ -26,6 +26,7 @@
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts'; // Roboto 기본 폰트 포함
 import type { ProjectDetail } from '~/composables/useProjects';
+import type { ItCost } from '~/composables/useCost';
 import nanumGothic from '@/assets/fonts/NanumGothic-Regular.ttf?url';
 import nanumGothicBold from '@/assets/fonts/NanumGothic-Bold.ttf?url';
 import nanumGothicExtraBold from '@/assets/fonts/NanumGothic-ExtraBold.ttf?url';
@@ -77,7 +78,7 @@ interface ApprovalLine {
  * PDF 보고서 생성 Composable 함수
  *
  * @returns PDF 생성 관련 함수 객체
- *   - generateReport: 프로젝트 배열과 결재선을 받아 PDF Blob URL을 반환
+ *   - generateReport: 프로젝트/전산업무비 배열과 결재선을 받아 PDF Blob URL을 반환
  */
 export const usePdfReport = () => {
 
@@ -178,32 +179,31 @@ export const usePdfReport = () => {
     };
 
     /**
-     * 프로젝트 예산편성 신청서 PDF 생성
+     * 예산편성 신청서 PDF 생성
      *
      * [PDF 레이아웃 구성]
-     *  1. 헤더 영역: "예산편성 신청" 제목 + 결재선(기안자/팀장/부서장) 테이블
-     *  2. 프로젝트 타이틀 바: 파란색 배경의 프로젝트명
-     *  3. 프로젝트 상세 정보 테이블: 4열 그리드 (레이블 | 값 | 레이블 | 값)
-     *  4. 서술 필드: 현황/필요성/사업내용/범위/기대효과/추진사유 등 (HTML → 일반 텍스트 변환)
-     *  5. 페이지 푸터: 페이지 번호
+     *  1. 첫 페이지: 총괄표 (합계 통계 + 사업/계약별 예산 목록)
+     *  2. 정보화사업 섹션 (1건 이상): 사업별 상세 정보 테이블
+     *  3. 전산업무비 섹션 (1건 이상): 계약별 상세 정보 테이블
+     *  4. 페이지 푸터: 페이지 번호
      *
-     * @param projects     - PDF에 포함할 프로젝트 상세 정보 배열
+     * @param projects     - PDF에 포함할 정보화사업 상세 정보 배열
      * @param approvalLine - 결재선 정보 (기안자, 팀장, 부서장)
-     * @returns PDF Blob URL (window.URL.createObjectURL 결과, `<iframe src="">` 또는 다운로드에 사용)
+     * @param costs        - PDF에 포함할 전산업무비 배열 (선택, 기본값 빈 배열)
+     * @returns PDF Blob URL (window.URL.createObjectURL 결과)
      * @throws PDF 생성 중 오류 발생 시 에러를 throw
-     *
-     * @example
-     * const { generateReport } = usePdfReport();
-     * const pdfUrl = await generateReport(selectedProjects, {
-     *   drafter:  { name: '홍길동', rank: '대리', date: '2026-01-01', id: 'E001' },
-     *   teamLead: { name: '김팀장', rank: '팀장', date: '',           id: 'E002' },
-     *   deptHead: { name: '이부장', rank: '부장', date: '',           id: 'E003' }
-     * });
-     * // pdfUrl을 <a href={pdfUrl} download> 또는 <iframe src={pdfUrl}>에 사용
      */
-    const generateReport = async (projects: ProjectDetail[], approvalLine: ApprovalLine) => {
+    const generateReport = async (
+        projects: ProjectDetail[],
+        approvalLine: ApprovalLine,
+        costs: ItCost[] = []
+    ) => {
         try {
             console.log('generateReport START');
+            
+            // 방어 로직: 파라미터가 undefined/null로 넘어올 경우 빈 배열 보장
+            projects = projects || [];
+            costs = costs || [];
 
             // 한글 폰트 로드 (캐시 활용)
             const font = await loadKoreanFont();
@@ -215,11 +215,14 @@ export const usePdfReport = () => {
 
             // PDF 디자인 색상 상수 (Blue/Indigo 테마)
             const colors = {
-                primary:  '#1e3a8a', // 다크 블루 (텍스트/헤더)
-                accent:   '#2563eb', // 블루 600 (강조색, 타이틀 배경)
-                headerBg: '#eff6ff', // 블루 50 (테이블 헤더 배경)
-                border:   '#bfdbfe', // 블루 200 (테이블 경계선)
-                textGray: '#4b5563'  // 그레이 600 (보조 텍스트)
+                primary:    '#1e3a8a', // 다크 블루 (텍스트/헤더)
+                accent:     '#2563eb', // 블루 600 (정보화사업 타이틀 배경)
+                accentCost: '#059669', // 에메랄드 600 (전산업무비 타이틀 배경)
+                headerBg:   '#eff6ff', // 블루 50 (테이블 헤더 배경)
+                headerBgCost: '#ecfdf5', // 에메랄드 50 (전산업무비 헤더 배경)
+                border:     '#bfdbfe', // 블루 200 (테이블 경계선)
+                borderCost: '#a7f3d0', // 에메랄드 200 (전산업무비 경계선)
+                textGray:   '#4b5563'  // 그레이 600 (보조 텍스트)
             };
 
             // pdfmake 문서 정의 객체 초기화
@@ -247,6 +250,13 @@ export const usePdfReport = () => {
                         alignment: 'center',
                         valign:    'middle'
                     },
+                    labelCost: {
+                        bold:      true,
+                        fillColor: colors.headerBgCost,
+                        color:     '#065f46', // 에메랄드 900
+                        alignment: 'center',
+                        valign:    'middle'
+                    },
                     tableText:   { margin: [2, 2, 2, 2] },
                     titleBox:    { margin: [0, 10, 0, 10] },
                     approvalBox: { margin: [0, 0, 0, 20] }
@@ -264,106 +274,305 @@ export const usePdfReport = () => {
                 }
             };
 
-            // 프로젝트별 콘텐츠 생성
-            projects.forEach((project, index) => {
+            // ====================================================================
+            // 공통 헬퍼: null/undefined → 빈 문자열 변환
+            // ====================================================================
 
-                // 두 번째 프로젝트부터 페이지 나누기 삽입
-                if (index > 0) {
-                    docDefinition.content.push({ text: '', pageBreak: 'before' });
+            /**
+             * null/undefined 값을 빈 문자열로 변환하는 헬퍼
+             * @param val - 변환할 값
+             * @returns 문자열 또는 빈 문자열
+             */
+            const cellVal = (val: any) => val ? String(val) : '';
+
+            /**
+             * HTML 문자열을 pdfmake에서 사용 가능한 일반 텍스트로 변환
+             * pdfmake는 HTML을 직접 렌더링하지 않으므로 태그를 제거하고
+             * 블록 요소는 개행(\n)으로 치환합니다.
+             *
+             * @param html - 변환할 HTML 문자열
+             * @returns 태그가 제거된 일반 텍스트
+             */
+            const htmlToText = (html: string) => {
+                if(!html) return '';
+                let text = html;
+                // 블록 레벨 태그 닫기를 개행으로 변환 (p, div, h1-h6, li, tr)
+                text = text.replace(/<\/(p|div|h[1-6]|li|tr)>/gi, '\n');
+                // <br> 태그를 개행으로 변환
+                text = text.replace(/<br\s*\/?>/gi, '\n');
+                // 남은 모든 HTML 태그 제거
+                text = text.replace(/<[^>]+>/g, '');
+                // HTML 엔티티 복원 (기본 5개)
+                text = text.replace(/&nbsp;/g, ' ');
+                text = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+                return text.trim();
+            };
+
+            // ====================================================================
+            // 공통 헬퍼: 결재선 테이블 빌더
+            // ====================================================================
+
+            /**
+             * 결재선 테이블 생성 (기안자 / 팀장 / 부서장)
+             * 각 열에 직위, 이름, 결재일자를 표시합니다.
+             * 결재자가 미지정된 경우 회색 텍스트로 표시합니다.
+             */
+            const buildApprovalTable = () => ({
+                table: {
+                    widths: [60, 60, 60],
+                    body: [
+                        // 헤더 행: 역할 구분
+                        [
+                            { text: '기안자', style: 'label' },
+                            { text: '팀장',   style: 'label' },
+                            { text: '부서장', style: 'label' }
+                        ],
+                        // 이름 + 직위 행
+                        [
+                            {
+                                stack: [
+                                    { text: approvalLine.drafter.name,  alignment: 'center', margin: [0, 0, 0, 2] },
+                                    { text: approvalLine.drafter.rank,  fontSize: 8, alignment: 'center', color: colors.textGray }
+                                ],
+                                height: 50
+                            },
+                            {
+                                stack: [
+                                    // 결재자 미지정 시 '결재자'로 표시하고 회색 처리
+                                    { text: approvalLine.teamLead.name || '결재자', alignment: 'center', margin: [0, 0, 0, 2], color: approvalLine.teamLead.name ? 'black' : 'gray' },
+                                    { text: approvalLine.teamLead.rank || '(미지정)', fontSize: 8, alignment: 'center', color: colors.textGray }
+                                ],
+                                height: 50
+                            },
+                            {
+                                stack: [
+                                    { text: approvalLine.deptHead.name || '결재자', alignment: 'center', margin: [0, 0, 0, 2], color: approvalLine.deptHead.name ? 'black' : 'gray' },
+                                    { text: approvalLine.deptHead.rank || '(미지정)', fontSize: 8, alignment: 'center', color: colors.textGray }
+                                ],
+                                height: 50
+                            }
+                        ],
+                        // 결재일자 행
+                        [
+                            { text: approvalLine.drafter.date,  fontSize: 8, alignment: 'center', color: colors.textGray },
+                            { text: approvalLine.teamLead.date, fontSize: 8, alignment: 'center', color: colors.textGray },
+                            { text: approvalLine.deptHead.date, fontSize: 8, alignment: 'center', color: colors.textGray }
+                        ]
+                    ]
+                },
+                layout: {
+                    hLineWidth: (i:number) => 1,
+                    vLineWidth: (i:number) => 1,
+                    hLineColor: colors.border,
+                    vLineColor: colors.border,
+                    // 이름 행(index 1)의 세로 패딩을 늘려 가운데 정렬 효과
+                    paddingTop:    (i:number, node:any) => i === 1 ? 12 : 4,
+                    paddingBottom: (i:number, node:any) => i === 1 ? 12 : 4
                 }
+            });
 
-                // ====================================================================
-                // 1. 헤더 영역: 문서 제목 + 결재선 테이블
-                // ====================================================================
-
-                /**
-                 * 결재선 테이블 (기안자 / 팀장 / 부서장)
-                 * 각 열에 직위, 이름, 결재일자를 표시합니다.
-                 * 결재자가 미지정된 경우 회색 텍스트로 표시합니다.
-                 */
-                const approvalTable = {
-                    table: {
-                        widths: [60, 60, 60],
-                        body: [
-                            // 헤더 행: 역할 구분
-                            [
-                                { text: '기안자', style: 'label' },
-                                { text: '팀장',   style: 'label' },
-                                { text: '부서장', style: 'label' }
-                            ],
-                            // 이름 + 직위 행
-                            [
-                                {
-                                    stack: [
-                                        { text: approvalLine.drafter.name,  alignment: 'center', margin: [0, 0, 0, 2] },
-                                        { text: approvalLine.drafter.rank,  fontSize: 8, alignment: 'center', color: colors.textGray }
-                                    ],
-                                    height: 50
-                                },
-                                {
-                                    stack: [
-                                        // 결재자 미지정 시 '결재자'로 표시하고 회색 처리
-                                        { text: approvalLine.teamLead.name || '결재자', alignment: 'center', margin: [0, 0, 0, 2], color: approvalLine.teamLead.name ? 'black' : 'gray' },
-                                        { text: approvalLine.teamLead.rank || '(미지정)', fontSize: 8, alignment: 'center', color: colors.textGray }
-                                    ],
-                                    height: 50
-                                },
-                                {
-                                    stack: [
-                                        { text: approvalLine.deptHead.name || '결재자', alignment: 'center', margin: [0, 0, 0, 2], color: approvalLine.deptHead.name ? 'black' : 'gray' },
-                                        { text: approvalLine.deptHead.rank || '(미지정)', fontSize: 8, alignment: 'center', color: colors.textGray }
-                                    ],
-                                    height: 50
-                                }
-                            ],
-                            // 결재일자 행
-                            [
-                                { text: approvalLine.drafter.date,  fontSize: 8, alignment: 'center', color: colors.textGray },
-                                { text: approvalLine.teamLead.date, fontSize: 8, alignment: 'center', color: colors.textGray },
-                                { text: approvalLine.deptHead.date, fontSize: 8, alignment: 'center', color: colors.textGray }
-                            ]
+            /**
+             * 헤더 섹션 생성 (2단 컬럼: 왼쪽 문서 제목/번호 + 오른쪽 결재선 테이블)
+             */
+            const buildHeaderSection = () => ({
+                columns: [
+                    {
+                        width: '*',
+                        stack: [
+                            { text: '예산편성 신청', style: 'header' },
+                            { text: '문서번호: (자동생성)', color: colors.textGray, fontSize: 9 },
+                            { text: '보존연한: 5년',       color: colors.textGray, fontSize: 9 }
                         ]
                     },
-                    layout: {
-                        hLineWidth: (i:number) => 1,
-                        vLineWidth: (i:number) => 1,
-                        hLineColor: colors.border,
-                        vLineColor: colors.border,
-                        // 이름 행(index 1)의 세로 패딩을 늘려 가운데 정렬 효과
-                        paddingTop:    (i:number, node:any) => i === 1 ? 12 : 4,
-                        paddingBottom: (i:number, node:any) => i === 1 ? 12 : 4
+                    {
+                        width: 'auto',
+                        stack: [buildApprovalTable()]
                     }
-                };
+                ],
+                margin: [0, 0, 0, 20]
+            });
 
-                // 2단 컬럼: 왼쪽(문서 제목/번호) + 오른쪽(결재선 테이블)
-                const headerSection = {
-                    columns: [
-                        {
-                            width: '*',
-                            stack: [
-                                { text: '예산편성 신청', style: 'header' },
-                                { text: '문서번호: (자동생성)', color: colors.textGray, fontSize: 9 },
-                                { text: '보존연한: 5년',       color: colors.textGray, fontSize: 9 }
-                            ]
-                        },
-                        {
-                            width: 'auto',
-                            stack: [approvalTable]
-                        }
-                    ],
-                    margin: [0, 0, 0, 20]
-                };
+            // ====================================================================
+            // 공통 레이아웃 설정 (테이블 경계선/패딩)
+            // ====================================================================
 
-                docDefinition.content.push(headerSection);
+            const tableLayout = {
+                hLineWidth:  (i: number) => 1,
+                vLineWidth:  (i: number) => 1,
+                hLineColor:  (i: number) => colors.border,
+                vLineColor:  (i: number) => colors.border,
+                paddingTop:    (i: number) => 8,
+                paddingBottom: (i: number) => 8,
+                paddingLeft:   (i: number) => 6,
+                paddingRight:  (i: number) => 6
+            };
 
-                // ====================================================================
-                // 2. 프로젝트 타이틀 바 (파란색 배경 + 흰색 텍스트)
-                // ====================================================================
-                docDefinition.content.push({
-                    table: {
-                        widths: ['*'],
-                        body: [
-                            [{
+            const tableLayoutCost = {
+                hLineWidth:  (i: number) => 1,
+                vLineWidth:  (i: number) => 1,
+                hLineColor:  (i: number) => colors.borderCost,
+                vLineColor:  (i: number) => colors.borderCost,
+                paddingTop:    (i: number) => 8,
+                paddingBottom: (i: number) => 8,
+                paddingLeft:   (i: number) => 6,
+                paddingRight:  (i: number) => 6
+            };
+
+            // ====================================================================
+            // 예산 합계 계산
+            // ====================================================================
+
+            /** 정보화사업 합계: 총 예산, 자본예산, 일반관리비 */
+            const projTotalBg  = projects.reduce((s, p) => s + (p.prjBg   || 0), 0);
+            const projAssetBg  = projects.reduce((s, p) => s + (p.assetBg || 0), 0);
+            const projCostBg   = projects.reduce((s, p) => s + (p.costBg  || 0), 0);
+
+            /** 전산업무비 합계: 총 예산, 자본예산, 일반관리비(= 총예산 - 자본예산) */
+            const costTotalBg  = costs.reduce((s, c) => s + (c.itMngcBg || 0), 0);
+            const costAssetBg  = costs.reduce((s, c) => s + (c.assetBg  || 0), 0);
+            const costCostBg   = costs.reduce((s, c) => s + ((c.itMngcBg || 0) - (c.assetBg || 0)), 0);
+
+            /** 전체 합계 */
+            const grandTotalBg = projTotalBg + costTotalBg;
+            const grandAssetBg = projAssetBg + costAssetBg;
+            const grandCostBg  = projCostBg  + costCostBg;
+
+            /** 금액 포맷 헬퍼 (원 단위 천 단위 구분자) */
+            const fmtAmt = (n: number) => n.toLocaleString() + ' 원';
+
+            // ====================================================================
+            // 0. 총괄표 페이지 (첫 번째 페이지)
+            // ====================================================================
+
+            // 헤더 (제목 + 결재선)
+            docDefinition.content.push(buildHeaderSection());
+
+            // 총괄표 타이틀 바
+            docDefinition.content.push({
+                table: {
+                    widths: ['*'],
+                    body: [[{
+                        text:      '예산편성 신청 총괄표',
+                        fontSize:  14,
+                        bold:      true,
+                        color:     'white',
+                        fillColor: colors.primary,
+                        border:    [false, false, false, false],
+                        margin:    [10, 5, 10, 5]
+                    }]]
+                },
+                layout: 'noBorders',
+                margin: [0, 0, 0, 10]
+            });
+
+            // 구분별 합계 통계 테이블 (정보화사업 / 전산업무비 / 합계)
+            docDefinition.content.push({
+                table: {
+                    widths: ['20%', '10%', '23%', '23%', '24%'],
+                    body: [
+                        // 헤더 행
+                        [
+                            { text: '구분',       style: 'label' },
+                            { text: '건수',       style: 'label' },
+                            { text: '총 예산',    style: 'label' },
+                            { text: '자본예산',   style: 'label' },
+                            { text: '일반관리비', style: 'label' }
+                        ],
+                        // 정보화사업 행 (1건 이상인 경우만 표시)
+                        ...(projects.length > 0 ? [[
+                            { text: '정보화사업', bold: true, color: colors.primary },
+                            { text: `${projects.length}건`, alignment: 'center' },
+                            { text: fmtAmt(projTotalBg),  alignment: 'right' },
+                            { text: fmtAmt(projAssetBg),  alignment: 'right' },
+                            { text: fmtAmt(projCostBg),   alignment: 'right' }
+                        ]] : []),
+                        // 전산업무비 행 (1건 이상인 경우만 표시)
+                        ...(costs.length > 0 ? [[
+                            { text: '전산업무비', bold: true, color: '#065f46' },
+                            { text: `${costs.length}건`, alignment: 'center' },
+                            { text: fmtAmt(costTotalBg), alignment: 'right' },
+                            { text: fmtAmt(costAssetBg), alignment: 'right' },
+                            { text: fmtAmt(costCostBg),  alignment: 'right' }
+                        ]] : []),
+                        // 합계 행
+                        [
+                            { text: '합계', bold: true, fillColor: colors.headerBg, color: colors.primary },
+                            { text: `${projects.length + costs.length}건`, alignment: 'center', bold: true, fillColor: colors.headerBg },
+                            { text: fmtAmt(grandTotalBg), alignment: 'right', bold: true, fillColor: colors.headerBg },
+                            { text: fmtAmt(grandAssetBg), alignment: 'right', bold: true, fillColor: colors.headerBg },
+                            { text: fmtAmt(grandCostBg),  alignment: 'right', bold: true, fillColor: colors.headerBg }
+                        ]
+                    ]
+                },
+                layout: tableLayout,
+                margin: [0, 0, 0, 15]
+            });
+
+            // 사업/계약별 예산 현황 소제목
+            docDefinition.content.push({
+                text:     '사업/계약별 예산 현황',
+                fontSize: 11,
+                bold:     true,
+                color:    colors.primary,
+                margin:   [0, 0, 0, 6]
+            });
+
+            // 사업/계약별 예산 목록 테이블
+            const allItemRows = [
+                // 정보화사업 행들
+                ...projects.map((p, i) => [
+                    { text: String(i + 1), alignment: 'center' },
+                    { text: cellVal(p.prjNm) },
+                    { text: fmtAmt(p.prjBg   || 0), alignment: 'right' },
+                    { text: fmtAmt(p.assetBg || 0), alignment: 'right' },
+                    { text: fmtAmt(p.costBg  || 0), alignment: 'right' }
+                ]),
+                // 전산업무비 행들
+                ...costs.map((c, i) => [
+                    { text: String(projects.length + i + 1), alignment: 'center' },
+                    { text: cellVal(c.cttNm) },
+                    { text: fmtAmt(c.itMngcBg || 0), alignment: 'right' },
+                    { text: fmtAmt(c.assetBg  || 0), alignment: 'right' },
+                    { text: fmtAmt((c.itMngcBg || 0) - (c.assetBg || 0)), alignment: 'right' }
+                ])
+            ];
+
+            docDefinition.content.push({
+                table: {
+                    widths: ['10%', '*', '20%', '17%', '17%'],
+                    body: [
+                        // 헤더 행
+                        [
+                            { text: '순번',        style: 'label' },
+                            { text: '사업명/계약명', style: 'label' },
+                            { text: '총 예산',     style: 'label' },
+                            { text: '자본예산',    style: 'label' },
+                            { text: '일반관리비',  style: 'label' }
+                        ],
+                        ...allItemRows
+                    ]
+                },
+                layout: tableLayout
+            });
+
+            // ====================================================================
+            // 1. 정보화사업 섹션 (1건 이상인 경우만)
+            // ====================================================================
+
+            if (projects.length > 0) {
+                projects.forEach((project, index) => {
+
+                    // 총괄표 이후이므로 항상 페이지 나누기
+                    docDefinition.content.push({ text: '', pageBreak: 'before' });
+
+                    // 헤더 (제목 + 결재선)
+                    docDefinition.content.push(buildHeaderSection());
+
+                    // 프로젝트 타이틀 바 (파란색 배경 + 흰색 텍스트)
+                    docDefinition.content.push({
+                        table: {
+                            widths: ['*'],
+                            body: [[{
                                 text:      `${index + 1}. ${project.prjNm}`,
                                 fontSize:  14,
                                 bold:      true,
@@ -371,160 +580,208 @@ export const usePdfReport = () => {
                                 fillColor: colors.accent,
                                 border:    [false, false, false, false],
                                 margin:    [10, 5, 10, 5]
-                            }]
-                        ]
-                    },
-                    layout: 'noBorders',
-                    margin: [0, 0, 0, 10]
-                });
+                            }]]
+                        },
+                        layout: 'noBorders',
+                        margin: [0, 0, 0, 10]
+                    });
 
-                // ====================================================================
-                // 3. 프로젝트 상세 정보 테이블 (4열 레이아웃: 15% | 35% | 15% | 35%)
-                // ====================================================================
-
-                /**
-                 * null/undefined 값을 빈 문자열로 변환하는 헬퍼
-                 * @param val - 변환할 값
-                 * @returns 문자열 또는 빈 문자열
-                 */
-                const cellVal = (val: any) => val ? String(val) : '';
-
-                /**
-                 * HTML 문자열을 pdfmake에서 사용 가능한 일반 텍스트로 변환
-                 * pdfmake는 HTML을 직접 렌더링하지 않으므로 태그를 제거하고
-                 * 블록 요소는 개행(\n)으로 치환합니다.
-                 *
-                 * @param html - 변환할 HTML 문자열
-                 * @returns 태그가 제거된 일반 텍스트
-                 */
-                const htmlToText = (html: string) => {
-                    if(!html) return '';
-                    let text = html;
-                    // 블록 레벨 태그 닫기를 개행으로 변환 (p, div, h1-h6, li, tr)
-                    text = text.replace(/<\/(p|div|h[1-6]|li|tr)>/gi, '\n');
-                    // <br> 태그를 개행으로 변환
-                    text = text.replace(/<br\s*\/?>/gi, '\n');
-                    // 남은 모든 HTML 태그 제거
-                    text = text.replace(/<[^>]+>/g, '');
-                    // HTML 엔티티 복원 (기본 5개)
-                    text = text.replace(/&nbsp;/g, ' ');
-                    text = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
-                    return text.trim();
-                };
-
-                // 기본 정보 + 서술 필드를 포함한 메인 테이블
-                docDefinition.content.push({
-                    table: {
-                        widths: ['15%', '35%', '15%', '35%'],
-                        body: [
-                            // 기본 정보 행들 (2열 병합 또는 4열 독립)
-                            [
-                                { text: '사업명',   style: 'label' },
-                                { text: cellVal(project.prjNm), colSpan: 3, bold: true, color: colors.primary },
-                                {}, {}
-                            ],
-                            [
-                                { text: '관리번호', style: 'label' }, { text: cellVal(project.prjMngNo) },
-                                { text: '사업유형', style: 'label' }, { text: cellVal(project.prjTp) }
-                            ],
-                            [
-                                { text: '상태',     style: 'label' }, { text: cellVal(project.prjSts) },
-                                { text: '보고상태', style: 'label' }, { text: cellVal(project.rprSts) }
-                            ],
-                            [
-                                { text: '사업연도', style: 'label' }, { text: cellVal(project.prjYy) },
-                                { text: '소요예산', style: 'label' },
-                                // 예산 금액은 통화 형식으로 표시 (오른쪽 정렬)
-                                { text: project.prjBg ? project.prjBg.toLocaleString() + ' 원' : '', bold: true, alignment: 'right' }
-                            ],
-                            [
-                                { text: '시작일', style: 'label' }, { text: cellVal(project.sttDt) },
-                                { text: '종료일', style: 'label' }, { text: cellVal(project.endDt) }
-                            ],
-                            [
-                                { text: '주관부문', style: 'label' }, { text: cellVal(project.svnHdq) },
-                                { text: '주관부서', style: 'label' }, { text: cellVal(project.svnDpm) }
-                            ],
-                            [
-                                { text: '현업담당자', style: 'label' }, { text: cellVal(project.svnDpmCgpr) },
-                                { text: '현업팀장',   style: 'label' }, { text: cellVal(project.svnDpmTlr) }
-                            ],
-                            [
-                                { text: 'IT담당부서', style: 'label' }, { text: cellVal(project.itDpm) },
-                                { text: 'IT담당자',   style: 'label' },
-                                // IT담당자와 팀장을 슬래시(/)로 구분하여 한 셀에 표시
-                                { text: `${cellVal(project.itDpmCgpr)} / ${cellVal(project.itDpmTlr)} (팀장)` }
-                            ],
-                            [
-                                { text: '주요사용자', style: 'label' }, { text: cellVal(project.mnUsr) },
-                                { text: '업무구분',   style: 'label' }, { text: cellVal(project.bzDtt) }
-                            ],
-                            [
-                                { text: '기술유형', style: 'label' }, { text: cellVal(project.tchnTp) },
-                                { text: '전결권',   style: 'label' }, { text: cellVal(project.edrt) }
-                            ],
-                            [
-                                { text: '중복여부', style: 'label' }, { text: cellVal(project.dplYn) },
-                                { text: '의무완료', style: 'label' }, { text: cellVal(project.lblFsgTlm) }
-                            ],
-                            // HTML 서술 필드 (colSpan: 3으로 오른쪽 3열 병합)
-                            [
-                                { text: '현황(Situation)',    style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.saf),        colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '필요성(Needs)',      style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.ncs),        colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '사업내용(Des)',      style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.prjDes),     colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '사업범위(Scope)',    style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.prjRng),     colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '기대효과(Effect)',   style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.xptEff),     colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '추진사유',           style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.pulRsn),     colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '추진경과',           style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.pulPsg),     colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '문제점',             style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.plm),        colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '향후계획',           style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.hrfPln),     colSpan: 3 }, {}, {}
-                            ],
-                            [
-                                { text: '추진가능성',         style: 'label', fillColor: colors.headerBg },
-                                { text: htmlToText(project.prjPulPtt),  colSpan: 3 }, {}, {}
+                    // 프로젝트 상세 정보 테이블 (4열 레이아웃: 15% | 35% | 15% | 35%)
+                    docDefinition.content.push({
+                        table: {
+                            widths: ['15%', '35%', '15%', '35%'],
+                            body: [
+                                // 기본 정보 행들 (2열 병합 또는 4열 독립)
+                                [
+                                    { text: '사업명',   style: 'label' },
+                                    { text: cellVal(project.prjNm), colSpan: 3, bold: true, color: colors.primary },
+                                    {}, {}
+                                ],
+                                [
+                                    { text: '관리번호', style: 'label' }, { text: cellVal(project.prjMngNo) },
+                                    { text: '사업유형', style: 'label' }, { text: cellVal(project.prjTp) }
+                                ],
+                                [
+                                    { text: '상태',     style: 'label' }, { text: cellVal(project.prjSts) },
+                                    { text: '보고상태', style: 'label' }, { text: cellVal(project.rprSts) }
+                                ],
+                                [
+                                    { text: '사업연도', style: 'label' }, { text: cellVal(project.prjYy) },
+                                    { text: '소요예산', style: 'label' },
+                                    // 예산 금액은 통화 형식으로 표시 (오른쪽 정렬)
+                                    { text: project.prjBg ? project.prjBg.toLocaleString() + ' 원' : '', bold: true, alignment: 'right' }
+                                ],
+                                [
+                                    { text: '시작일', style: 'label' }, { text: cellVal(project.sttDt) },
+                                    { text: '종료일', style: 'label' }, { text: cellVal(project.endDt) }
+                                ],
+                                [
+                                    { text: '주관부문', style: 'label' }, { text: cellVal(project.svnHdq) },
+                                    { text: '주관부서', style: 'label' }, { text: cellVal(project.svnDpm) }
+                                ],
+                                [
+                                    { text: '현업담당자', style: 'label' }, { text: cellVal(project.svnDpmCgpr) },
+                                    { text: '현업팀장',   style: 'label' }, { text: cellVal(project.svnDpmTlr) }
+                                ],
+                                [
+                                    { text: 'IT담당부서', style: 'label' }, { text: cellVal(project.itDpm) },
+                                    { text: 'IT담당자',   style: 'label' },
+                                    // IT담당자와 팀장을 슬래시(/)로 구분하여 한 셀에 표시
+                                    { text: `${cellVal(project.itDpmCgpr)} / ${cellVal(project.itDpmTlr)} (팀장)` }
+                                ],
+                                [
+                                    { text: '주요사용자', style: 'label' }, { text: cellVal(project.mnUsr) },
+                                    { text: '업무구분',   style: 'label' }, { text: cellVal(project.bzDtt) }
+                                ],
+                                [
+                                    { text: '기술유형', style: 'label' }, { text: cellVal(project.tchnTp) },
+                                    { text: '전결권',   style: 'label' }, { text: cellVal(project.edrt) }
+                                ],
+                                [
+                                    { text: '중복여부', style: 'label' }, { text: cellVal(project.dplYn) },
+                                    { text: '의무완료', style: 'label' }, { text: cellVal(project.lblFsgTlm) }
+                                ],
+                                // HTML 서술 필드 (colSpan: 3으로 오른쪽 3열 병합)
+                                [
+                                    { text: '현황(Situation)',    style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.saf),        colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '필요성(Needs)',      style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.ncs),        colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '사업내용(Des)',      style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.prjDes),     colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '사업범위(Scope)',    style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.prjRng),     colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '기대효과(Effect)',   style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.xptEff),     colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '추진사유',           style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.pulRsn),     colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '추진경과',           style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.pulPsg),     colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '문제점',             style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.plm),        colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '향후계획',           style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.hrfPln),     colSpan: 3 }, {}, {}
+                                ],
+                                [
+                                    { text: '추진가능성',         style: 'label', fillColor: colors.headerBg },
+                                    { text: htmlToText(project.prjPulPtt),  colSpan: 3 }, {}, {}
+                                ]
                             ]
-                        ]
-                    },
-                    layout: {
-                        hLineWidth:  (i: number) => 1,
-                        vLineWidth:  (i: number) => 1,
-                        hLineColor:  (i: number) => colors.border,
-                        vLineColor:  (i: number) => colors.border,
-                        paddingTop:    (i: number) => 8,
-                        paddingBottom: (i: number) => 8,
-                        paddingLeft:   (i: number) => 6,
-                        paddingRight:  (i: number) => 6
-                    }
+                        },
+                        layout: tableLayout
+                    });
                 });
-            });
+            }
 
             // ====================================================================
-            // 4. PDF 생성 및 Blob URL 반환
+            // 2. 전산업무비 섹션 (1건 이상인 경우만)
+            // ====================================================================
+
+            if (costs.length > 0) {
+                costs.forEach((cost, index) => {
+
+                    // 이전 내용(총괄표 또는 마지막 정보화사업)과 구분하기 위해 페이지 나누기
+                    docDefinition.content.push({ text: '', pageBreak: 'before' });
+
+                    // 헤더 (제목 + 결재선)
+                    docDefinition.content.push(buildHeaderSection());
+
+                    // 전산업무비 타이틀 바 (에메랄드 색 배경 + 흰색 텍스트)
+                    docDefinition.content.push({
+                        table: {
+                            widths: ['*'],
+                            body: [[{
+                                text:      `[전산업무비] ${projects.length + index + 1}. ${cost.cttNm}`,
+                                fontSize:  14,
+                                bold:      true,
+                                color:     'white',
+                                fillColor: colors.accentCost,
+                                border:    [false, false, false, false],
+                                margin:    [10, 5, 10, 5]
+                            }]]
+                        },
+                        layout: 'noBorders',
+                        margin: [0, 0, 0, 10]
+                    });
+
+                    // 전산업무비 상세 정보 테이블 (4열 레이아웃: 15% | 35% | 15% | 35%)
+                    docDefinition.content.push({
+                        table: {
+                            widths: ['15%', '35%', '15%', '35%'],
+                            body: [
+                                // 계약명 (전체 행 병합)
+                                [
+                                    { text: '계약명',   style: 'labelCost' },
+                                    { text: cellVal(cost.cttNm), colSpan: 3, bold: true, color: '#065f46' },
+                                    {}, {}
+                                ],
+                                // 비목명 / 계약구분
+                                [
+                                    { text: '비목명',    style: 'labelCost' }, { text: cellVal(cost.ioeNm) },
+                                    { text: '계약구분',  style: 'labelCost' }, { text: cellVal(cost.cttTp) }
+                                ],
+                                // 계약상대처 / 결재현황
+                                [
+                                    { text: '계약상대처', style: 'labelCost' }, { text: cellVal(cost.cttOpp) },
+                                    { text: '결재현황',   style: 'labelCost' }, { text: cellVal(cost.apfSts) }
+                                ],
+                                // 전산업무비(총예산) / 자본예산
+                                [
+                                    { text: '전산업무비', style: 'labelCost' },
+                                    { text: cost.itMngcBg ? cost.itMngcBg.toLocaleString() + ' 원' : '', bold: true, alignment: 'right' },
+                                    { text: '자본예산',   style: 'labelCost' },
+                                    { text: cost.assetBg  ? cost.assetBg.toLocaleString()  + ' 원' : '', bold: true, alignment: 'right' }
+                                ],
+                                // 추진담당자 / 추진부서
+                                [
+                                    { text: '추진담당자', style: 'labelCost' }, { text: cellVal(cost.pulCgprNm) },
+                                    { text: '추진부서',   style: 'labelCost' }, { text: cellVal(cost.pulDpmNm) }
+                                ],
+                                // 지급주기 / 지급예정월
+                                [
+                                    { text: '지급주기',   style: 'labelCost' }, { text: cellVal(cost.dfrCle) },
+                                    { text: '지급예정월', style: 'labelCost' }, { text: cellVal(typeof cost.fstDfrDt === 'string' ? cost.fstDfrDt : String(cost.fstDfrDt)) }
+                                ],
+                                // 통화 / 환율
+                                [
+                                    { text: '통화',     style: 'labelCost' }, { text: cellVal(cost.cur) },
+                                    { text: '환율',     style: 'labelCost' }, { text: cost.xcr ? `${cost.xcr.toLocaleString()} (기준일: ${cellVal(cost.xcrBseDt)})` : '-' }
+                                ],
+                                // 정보보호여부 (3열 병합)
+                                [
+                                    { text: '정보보호여부', style: 'labelCost', fillColor: colors.headerBgCost },
+                                    { text: cellVal(cost.infPrtYn), colSpan: 3 }, {}, {}
+                                ],
+                                // 증감사유 (3열 병합)
+                                [
+                                    { text: '증감사유', style: 'labelCost', fillColor: colors.headerBgCost },
+                                    { text: cellVal(cost.indRsn), colSpan: 3 }, {}, {}
+                                ]
+                            ]
+                        },
+                        layout: tableLayoutCost
+                    });
+                });
+            }
+
+            // ====================================================================
+            // 3. PDF 생성 및 Blob URL 반환
             // ====================================================================
 
             /**

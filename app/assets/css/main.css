@@ -70,7 +70,23 @@ select,
 .ql-editor {
     font-family: 'Noto Sans KR', sans-serif;
     font-size: 16px;
-    /* Set default size */
+    line-height: 1.2 !important;
+}
+
+/* Quill 리스트 이중 기호 수정 (Tailwind CSS preflight 충돌)
+   Quill은 ordered·bullet 모두 <ol> 태그를 사용하며
+   ::before 가상 요소로 기호를 렌더링합니다.
+   브라우저 기본 ::marker와 Quill ::before가 동시에 표시되는 것을
+   방지하기 위해 ::marker를 비웁니다. */
+.ql-editor ol li[data-list="ordered"]::marker,
+.ql-editor ol li[data-list="bullet"]::marker {
+    content: none;
+}
+
+/* 불렛 리스트 기호(•) 명시적 지정 - Tailwind 충돌로 인한 counter 오표시 방지 */
+.ql-editor ol li[data-list="bullet"]::before {
+    content: '\2022' !important;
+    counter-increment: none !important;
 }
 
 /* Fix for cut-off text in picker labels */
@@ -244,4 +260,16 @@ select,
 
 .dark .kdb-tag-rose {
     @apply !bg-rose-800 !text-rose-300;
+}
+
+/* ========================================================================
+   다크모드 전환 애니메이션 (View Transition API)
+   AppHeader.vue의 toggleTheme()에서 startViewTransition과 함께 사용됩니다.
+   양방향(라이트↔다크) 부드러운 크로스페이드 전환을 적용합니다.
+   ======================================================================== */
+
+/* 크로스페이드 전환 시간을 300ms로 단축하여 가벼운 느낌 */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 300ms;
 }

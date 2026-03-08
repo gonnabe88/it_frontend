@@ -1,6 +1,6 @@
 # 프로젝트 백로그 (Project Backlog)
 
-> 마지막 갱신일: 2026-03-05
+> 마지막 갱신일: 2026-03-08
 
 ## 🔴 우선순위 높음
 
@@ -11,16 +11,14 @@
 ## 🟡 우선순위 중간
 
 ### 기능 개선
-- [ ] `pages/audit/index.vue` — 현재 정적 더미 데이터 → API 연동 필요
-- [ ] `pages/info/index.vue` — 대시보드 KPI/공지사항/일정 정적 데이터 → API 연동 필요
-- [ ] `pages/info/projects/form.vue` — 주관부문(`majorHdqs`) 목록을 하드코딩 배열에서 API 조회로 전환
+- [x] `pages/info/projects/form.vue` — 주관부문(`majorHdqs`) 목록을 하드코딩 배열에서 API 조회로 전환
 - [ ] `components/common/EmployeeSearchDialog.vue` — 사원 이름 검색 기능 구현 (현재 부서 트리 선택 후 목록에서만 검색 가능)
 - [ ] `pages/budget/index.vue` — 경상사업 카드의 "준비 중" 상태를 실제 기능으로 구현
 - [ ] `pages/info/cost/form.vue` — 행 삭제 시 기존 DB 데이터에 대한 삭제 API 연동 정책 결정
 - [x] `pages/info/cost/index.vue` — `filteredCosts` computed가 필터링 없이 전체 반환 → 검색 기능 구현 예정
 
 ### 코드 품질
-- [ ] `pages/approval/index.vue` (494줄) — 컴포넌트 분리 검토 (타임라인, 결재 목록, 상세)
+- [x] `pages/approval/index.vue` (494줄) — 컴포넌트 분리 검토 (타임라인, 결재 목록, 상세)
 - [ ] `pages/info/projects/[id].vue` (769줄) — 섹션별 서브 컴포넌트 분리 검토
 - [ ] `composables/usePdfReport.ts` (638줄) — PDF 빌더 패턴 도입 또는 모듈 분리 검토
 - [ ] `pages/budget/list.vue` (560줄) — 탭별 콘텐츠를 별도 컴포넌트로 분리 검토
@@ -33,13 +31,13 @@
 ## 🟢 우선순위 낮음
 
 ### UX 개선
-- [ ] 다크모드 전환 시 트랜지션 애니메이션 추가
+- [x] 다크모드 전환 시 트랜지션 애니메이션 추가
 - [ ] DataTable 페이지네이션 크기 사용자 설정 기능
 - [ ] PDF 보고서 프리뷰 시 로딩 진행률 표시
 
 ### 인프라/DevOps
 - [ ] 환경별(`.env.development`, `.env.production`) 설정 분리
-- [ ] E2E 테스트 환경 구축 (Playwright)
+- [x] E2E 테스트 환경 구축 (Playwright)
 
 ---
 
@@ -66,3 +64,6 @@
 | `pages/info/cost/index.vue` — `filteredCosts` 실제 검색 기능 구현 (5개 필드 통합) | 2026-03-05 |
 | `stores/auth.ts` — localStorage 토큰 저장 → httpOnly Cookie 전환 | 2026-03-04 |
 | Rich Text 입력 필드 서버 측 XSS 필터링 추가 (jsoup) | 2026-03-04 |
+| `pages/info/projects/form.vue` — 주관부문·주관부서·IT부서 담당팀장 선택 시 `/api/users/{eno}` API 자동 세팅 | 2026-03-08 |
+| `components/AppHeader.vue` + `main.css` — View Transition API 기반 애니메이션 | 2026-03-08 |
+| `pages/approval/index.vue` — 결재 타임라인 `ApprovalTimeline.vue` 컴포넌트 분리 (110줄 감소) | 2026-03-08 |

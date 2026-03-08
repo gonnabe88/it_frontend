@@ -40,7 +40,7 @@ export interface Project {
     prjYy: number;     // 사업연도 (YYYY)
     svnHdq: string;    // 주관부문 (상위 조직 단위)
     svnDpmCgprNm: string; // 주관부서 담당자명 (사용자명 조회 결과)
-    apfSts: string;    // 결재현황 (전자결재 신청 상태)
+    applicationInfo?: any; // 결재 타임라인 및 신청 상태 정보
 }
 
 /**
@@ -118,13 +118,15 @@ export const useProjects = () => {
      * 프로젝트 목록 조회 (요약 정보)
      * useApiFetch를 사용하여 자동 인증 및 토큰 갱신이 적용됩니다.
      *
+     * @param query - 선택적 쿼리 파라미터 (예: { apfSts: 'none' } → 결재신청 없는 항목만)
      * @returns useApiFetch 반환값 ({ data: Project[], pending, error, refresh })
      *
      * @example
-     * const { data: projects, pending } = fetchProjects();
+     * const { data: projects } = fetchProjects();
+     * const { data: unsubmitted } = fetchProjects({ apfSts: 'none' });
      */
-    const fetchProjects = () => {
-        return useApiFetch<Project[]>(API_BASE_URL);
+    const fetchProjects = (query?: Record<string, string>) => {
+        return useApiFetch<Project[]>(API_BASE_URL, query ? { query } : {});
     };
 
     /**

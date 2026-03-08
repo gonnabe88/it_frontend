@@ -148,7 +148,7 @@ export const getApprovalTagClass = (status: string) => {
  * 단계가 많으므로 색상을 다양하게 배정하여 혼동을 최소화합니다.
  *
  * [IT 프로젝트 진행 단계 및 색상 매핑]
- *  - 예산 신청       → kdb-tag-yellow (노랑: 초기 신청 단계)
+ *  - 예산 작성       → kdb-tag-yellow (노랑: 초기 신청 단계)
  *  - 사전 협의       → kdb-tag-green  (녹색: 협의 진행)
  *  - 정실협 진행중   → kdb-tag-indigo (인디고: 정보화실행협의회 단계)
  *  - 요건 상세화     → kdb-tag-purple (보라: 요건 정의 단계)
@@ -172,7 +172,7 @@ export const getApprovalTagClass = (status: string) => {
 
 /** 프로젝트 진행 상태 단계 목록 */
 export const PROJECT_STAGES = [
-    '예산 신청', '사전 협의', '정실협', '요건 상세화', '소요예산 산정',
+    '예산 작성', '사전 협의', '정실협', '요건 상세화', '소요예산 산정',
     '과심위', '입찰/계약', '사업 추진', '예산배정', '대금지급', '성과평가', '완료'
 ];
 
@@ -186,7 +186,7 @@ export const PROJECT_STAGES = [
  */
 export const getProjectTagClass = (status: string) => {
     switch (status) {
-        case '예산 신청':        return 'kdb-tag-yellow'; // 예산 신청 단계
+        case '예산 작성':        return 'kdb-tag-yellow'; // 예산 작성 단계
         case '사전 협의':        return 'kdb-tag-green';  // 현업-IT 사전 협의
         case '정실협':           return 'kdb-tag-indigo'; // 정보화실행협의회 심의 중
         case '요건 상세화':      return 'kdb-tag-purple'; // 상세 요건 정의 단계
@@ -211,7 +211,7 @@ export const getProjectTagClass = (status: string) => {
  * 단계가 많으므로 색상을 다양하게 배정하여 혼동을 최소화합니다.
  *
  * [IT 프로젝트 진행 단계 및 색상 매핑]
- *  - 예산 신청       → kdb-tag-yellow (노랑: 초기 신청 단계)
+ *  - 예산 작성       → kdb-tag-yellow (노랑: 초기 신청 단계)
  *  - 사전 협의       → kdb-tag-green  (녹색: 협의 진행)
  *  - 정실협 진행중   → kdb-tag-indigo (인디고: 정보화실행협의회 단계)
  *  - 요건 상세화     → kdb-tag-purple (보라: 요건 정의 단계)
@@ -235,7 +235,7 @@ export const getProjectTagClass = (status: string) => {
 
 /** 전산업무비 진행 상태 단계 목록 */
 export const COST_STAGES = [
-    '예산 신청', '과심위', '입찰/계약', '사업 추진', '예산배정', '대금지급', '완료'
+    '예산 작성', '과심위', '입찰/계약', '사업 추진', '예산배정', '대금지급', '완료'
 ];
 
 /**
@@ -248,7 +248,7 @@ export const COST_STAGES = [
  */
 export const getCostTagClass = (status: string) => {
     switch (status) {
-        case '예산 신청':        return 'kdb-tag-yellow'; // 예산 신청 단계
+        case '예산 작성':        return 'kdb-tag-yellow'; // 예산 작성 단계
         case '사전 협의':        return 'kdb-tag-green';  // 현업-IT 사전 협의
         case '정실협':           return 'kdb-tag-indigo'; // 정보화실행협의회 심의 중
         case '요건 상세화':      return 'kdb-tag-purple'; // 상세 요건 정의 단계

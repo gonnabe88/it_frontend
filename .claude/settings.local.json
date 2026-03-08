@@ -3,7 +3,10 @@
     "allow": [
       "WebFetch(domain:nuxt.com)",
       "Bash(cd:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm install:*)",
+      "Bash(xargs grep:*)"
     ]
-  }
+  },
+  "language": "korean"
 }

@@ -1,0 +1,324 @@
+{
+  "timestamp": "2026-03-08T14:12:10.720Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-03-08T14:12:10.256Z",
+    "activeFeatures": [
+      "it_frontend",
+      "unit",
+      "stores",
+      "composables",
+      "helpers",
+      "e2e",
+      "프론트엔드 테스트 구성 Gap 분석",
+      "budget"
+    ],
+    "primaryFeature": "it_frontend",
+    "features": {
+      "it_frontend": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:21:56.632Z",
+          "lastUpdated": "2026-03-08T13:36:31.575Z"
+        },
+        "lastFile": "/c/it/it_frontend/app/components/AppSidebar.vue"
+      },
+      "unit": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:22:37.658Z",
+          "lastUpdated": "2026-03-07T16:22:37.658Z"
+        },
+        "lastFile": "C:/it/it_frontend/tests/unit/utils/common.test.ts"
+      },
+      "stores": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:23:13.125Z",
+          "lastUpdated": "2026-03-07T16:24:52.369Z"
+        },
+        "lastFile": "C:/it/it_frontend/tests/unit/stores/auth.test.ts"
+      },
+      "composables": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:23:36.885Z",
+          "lastUpdated": "2026-03-08T13:54:58.355Z"
+        },
+        "lastFile": "/c/it/it_frontend/app/composables/useCost.ts"
+      },
+      "helpers": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:23:49.020Z",
+          "lastUpdated": "2026-03-07T16:23:49.020Z"
+        },
+        "lastFile": "C:/it/it_frontend/tests/e2e/helpers/mockApi.ts"
+      },
+      "e2e": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:23:59.354Z",
+          "lastUpdated": "2026-03-07T16:24:20.448Z"
+        },
+        "lastFile": "C:/it/it_frontend/tests/e2e/approval.spec.ts"
+      },
+      "프론트엔드 테스트 구성 Gap 분석": {
+        "phase": "act",
+        "phaseNumber": 5,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T16:27:31.634Z",
+          "lastUpdated": "2026-03-07T16:27:31.635Z"
+        },
+        "previousPhase": "check",
+        "autoAdvanced": true
+      },
+      "budget": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T13:34:57.367Z",
+          "lastUpdated": "2026-03-08T14:12:10.256Z"
+        },
+        "lastFile": "/c/it/it_frontend/app/components/budget/BudgetTableActions.vue"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-03-07T15:52:46.492Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-03-08T14:12:10.256Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-03-07T16:21:56.632Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:22:01.054Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:22:37.658Z",
+        "feature": "unit",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:23:13.125Z",
+        "feature": "stores",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:23:36.885Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:23:49.020Z",
+        "feature": "helpers",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:23:59.354Z",
+        "feature": "e2e",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:24:08.393Z",
+        "feature": "e2e",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:24:14.665Z",
+        "feature": "e2e",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:24:20.448Z",
+        "feature": "e2e",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:24:47.721Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:24:52.370Z",
+        "feature": "stores",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:27:31.635Z",
+        "feature": "프론트엔드 테스트 구성 Gap 분석",
+        "phase": "act",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:34:57.367Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:36:31.575Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:36:50.934Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:39:20.060Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:40:02.475Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:44:12.940Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:44:31.112Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:45:13.363Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:45:35.577Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:46:14.308Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:46:26.328Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:52:53.179Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:53:00.479Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:54:58.355Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T13:55:04.454Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T14:08:22.570Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T14:08:27.297Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T14:12:10.256Z",
+        "feature": "budget",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

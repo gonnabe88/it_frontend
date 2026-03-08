@@ -9,7 +9,7 @@
   - 결재 차례 판별: isMyTurn()으로 현재 대기자가 로그인 사용자인지 확인
   - 개별 결재: 행의 승인/반려 버튼으로 단건 처리
   - 일괄 결재: 체크박스 선택 후 '일괄 결재' 버튼으로 다건 일괄 처리
-  - 결재 진행 상황 타임라인: 기안자 + 결재자 순서를 수평 타임라인으로 시각화
+  - 결재 진행 상황 타임라인: ApprovalTimeline 컴포넌트로 분리 (기안자 + 결재자 수평 타임라인)
   - PDF 보고서 뷰어: 신청서명 클릭 시 원문 PDF 생성 후 iframe으로 표시
 
 [선택 가능 조건]
@@ -35,30 +35,8 @@ import { useAuth } from '~/composables/useAuth';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 import { useApprovals, type BulkApprovalItem } from '~/composables/useApprovals';
-import { usePdfReport } from '~/composables/usePdfReport';
-
-/**
- * 결재 진행 상황 타임라인 항목 인터페이스
- * openTimeline()에서 기안자 정보와 결재자 목록을 통합하여 구성합니다.
- *
- * [필드 설명]
- *  - dcdTp   : 결재 유형 ('기안' | '결재' 등 - API 응답 기준)
- *  - dcdSts  : 결재 상태 ('승인' | '반려' | '결재중' | null - 미처리 시 null)
- *  - dcdDt   : 결재 처리일자 (미처리 시 null)
- *  - dcdOpnn : 결재 의견 (미입력 시 null)
- *  - dcdSqn  : 결재 순번 (openTimeline 내 sort 기준, 기안자는 해당 없음)
- */
-interface TimelineApprover {
-    dcdEno: string;         // 결재자(기안자) 사원번호
-    dcdDt: string | null;   // 결재 처리일자
-    dcdTp: string;          // 결재 유형 ('기안' | '결재' 등)
-    dcdSts: string | null;  // 결재 상태 ('승인' | '반려' | '결재중' | null)
-    dcdOpnn: string | null; // 결재 의견
-    dcdSqn?: number;        // 결재 순번 (기안자 제외)
-}
 
 const { fetchApprovals, bulkApprove } = useApprovals();
-const { generateReport } = usePdfReport();
 
 const { user } = useAuth();
 /** 전자결재 목록 데이터 및 새로고침 함수 */
@@ -215,65 +193,39 @@ const processApproval = async (status: '승인' | '반려') => {
     }
 };
 
-/* ── 결재 진행 상황 타임라인 다이얼로그 ── */
+/* ── 결재 진행 상황 타임라인 (ApprovalTimeline 컴포넌트 연동) ── */
 const showTimelineDialog = ref(false);
-/** 타임라인에 표시할 기안자 + 결재자 통합 목록 */
-const timelineApprovers = ref<TimelineApprover[]>([]);
-/** 현재 타임라인에 표시 중인 신청서명 */
-const currentTimelineApfNm = ref('');
-/** 현재 타임라인에 표시 중인 결재 관리번호 */
-const currentTimelineApfMngNo = ref('');
+/** 타임라인에 전달할 선택된 결재 항목 데이터 */
+const selectedTimelineData = ref<any>(null);
 
 /**
  * 결재 진행 상황 타임라인 다이얼로그 열기
- * 기안자 정보를 첫 번째 항목으로 구성하고 결재자 목록을 합쳐 표시합니다.
+ * 선택된 결재 데이터를 ApprovalTimeline 컴포넌트에 전달합니다.
  *
  * @param data - 결재 항목 데이터 (rqsEno, rqsDt 등 기안 정보 포함)
  */
 const openTimeline = (data: any) => {
-    /* 기안자 정보를 타임라인 첫 번째 항목으로 구성 */
-    const drafter: TimelineApprover = {
-        dcdEno: data.rqsEno,
-        dcdDt: data.rqsDt,
-        dcdTp: '기안',
-        dcdSts: '승인', // 기안은 승인 상태로 간주
-        dcdOpnn: data.rqsOpnn
-    };
-
-    /* 기안자 + 결재자 목록 합치기 */
-    timelineApprovers.value = [drafter, ...(data.approvers || [])] as TimelineApprover[];
-    currentTimelineApfNm.value = data.apfNm;
-    currentTimelineApfMngNo.value = data.apfMngNo;
+    selectedTimelineData.value = data;
     showTimelineDialog.value = true;
 };
 
-/* ── PDF 보고서 뷰어 다이얼로그 ── */
+/* ── 신청서 조회 PDF 뷰어 다이얼로그 ── */
+/** ApplicationViewerDialog 표시 여부 */
 const showReportDialog = ref(false);
-/** 생성된 PDF Blob URL (iframe src에 사용) */
-const currentPdfUrl = ref<string | null>(null);
+/** 조회할 신청관리번호 */
+const currentApfMngNo = ref('');
 
 /**
- * 보고서 PDF 생성 및 뷰어 다이얼로그 열기
- * apfDtlCone(신청 상세 JSON)을 파싱하여 generateReport를 호출합니다.
- *
- * @param data - 결재 항목 데이터 (apfDtlCone 필드에 JSON 형태의 사업/결재선 정보 포함)
+ * 신청서 조회 다이얼로그 열기
+ * @param data - 결재 항목 데이터 (apfMngNo 포함)
  */
-const openReport = async (data: any) => {
-    if (!data.apfDtlCone) {
-        alert('상세 내용이 없습니다.');
+const openReport = (data: any) => {
+    if (!data.apfMngNo) {
+        alert('신청관리번호가 없습니다.');
         return;
     }
-    try {
-        /* apfDtlCone는 { projects: ProjectDetail[], approvalLine: ApprovalLine } JSON 문자열 */
-        const detail = JSON.parse(data.apfDtlCone);
-        // generateReport expects (projects, approvalLine)
-        const url = await generateReport(detail.projects, detail.approvalLine);
-        currentPdfUrl.value = url;
-        showReportDialog.value = true;
-    } catch (e) {
-        console.error('Failed to generate report', e);
-        alert('보고서를 생성할 수 없습니다.');
-    }
+    currentApfMngNo.value = data.apfMngNo;
+    showReportDialog.value = true;
 };
 
 definePageMeta({
@@ -385,112 +337,14 @@ definePageMeta({
         </Dialog>
 
 
-        <!-- 결재 진행 상황 타임라인 다이얼로그 -->
-        <Dialog v-model:visible="showTimelineDialog" modal class="w-[90vw]" :style="{ maxWidth: '1000px' }"
-            :showHeader="false">
-            <!-- 커스텀 헤더: 신청서명 + 관리번호 표시 -->
-            <div
-                class="flex items-start justify-between p-6 border-b border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-t-lg">
-                <div class="flex gap-4">
-                    <div
-                        class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                        <i class="pi pi-sitemap text-xl text-blue-600 dark:text-blue-400"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">결재 진행 상황</h3>
-                        <div class="flex flex-col gap-0.5 text-sm text-gray-500 dark:text-gray-400">
-                            <span class="font-medium text-gray-700 dark:text-gray-300">{{ currentTimelineApfNm }}</span>
-                            <span class="text-xs font-mono">No. {{ currentTimelineApfMngNo }}</span>
-                        </div>
-                    </div>
-                </div>
-                <Button icon="pi pi-times" text rounded severity="secondary" @click="showTimelineDialog = false" />
-            </div>
-
-            <!-- 타임라인 본문: 수평 배치 + 상태별 색상 마커 -->
-            <div class="p-6 bg-slate-50 dark:bg-zinc-900/50 overflow-x-auto rounded-b-lg">
-                <div class="relative flex items-start justify-between min-w-[600px] px-4 pt-4 pb-8">
-                    <!-- 수평 연결선 (배경) -->
-                    <div class="absolute top-9 left-10 right-10 h-0.5 bg-gray-200 dark:bg-gray-700 -z-0"></div>
-
-                    <!-- 타임라인 각 항목 (기안자 + 결재자) -->
-                    <div v-for="(approver, index) in timelineApprovers" :key="index"
-                        class="relative z-10 flex flex-col items-center flex-1 min-w-[150px]">
-                        <!-- 상태별 색상 원형 마커 -->
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-4 border-white dark:border-zinc-900 shadow-sm transition-all duration-300 mb-4"
-                            :class="{
-                                'bg-indigo-100 text-indigo-600 ring-4 ring-indigo-50': approver.dcdTp === '기안',
-                                'bg-green-100 text-green-600 ring-4 ring-green-50': approver.dcdTp !== '기안' && (approver.dcdSts === '승인' || (!approver.dcdSts && approver.dcdDt)),
-                                'bg-red-100 text-red-600 ring-4 ring-red-50': approver.dcdSts === '반려',
-                                'bg-gray-100 text-gray-400': !approver.dcdSts && !approver.dcdDt && approver.dcdTp !== '기안',
-                                'bg-blue-100 text-blue-600': approver.dcdSts === '결재중'
-                            }">
-                            <i class="pi" :class="{
-                                'pi-file-edit': approver.dcdTp === '기안',
-                                'pi-check': approver.dcdTp !== '기안' && (approver.dcdSts === '승인' || (!approver.dcdSts && approver.dcdDt)),
-                                'pi-times': approver.dcdSts === '반려',
-                                'pi-user': !approver.dcdSts && !approver.dcdDt && approver.dcdTp !== '기안',
-                                'pi-spin pi-spinner': approver.dcdSts === '결재중'
-                            }"></i>
-                        </div>
-
-                        <!-- 결재자 정보 카드 -->
-                        <div
-                            class="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700 w-full max-w-[220px] text-center group relative">
-                            <!-- 카드 위쪽 삼각형 포인터 -->
-                            <div
-                                class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-zinc-800 border-t border-l border-gray-100 dark:border-zinc-700 transform rotate-45 transition-colors">
-                            </div>
-
-                            <div class="flex flex-col items-center gap-1 mb-2">
-                                <Badge :value="approver.dcdTp || '결재'"
-                                    :severity="approver.dcdTp === '기안' ? 'info' : 'secondary'" size="small"
-                                    class="mb-1" />
-                                <span class="font-bold text-gray-900 dark:text-gray-100 text-lg">{{ approver.dcdEno
-                                    }}</span>
-                                <span class="text-xs text-gray-500 font-mono">{{ approver.dcdDt || '-' }}</span>
-                            </div>
-
-                            <!-- 결재 상태 및 의견 표시 -->
-                            <div v-if="approver.dcdSts || approver.dcdDt || approver.dcdOpnn"
-                                class="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-700">
-                                <div class="mb-2">
-                                    <span class="font-bold text-sm px-2 py-0.5 rounded" :class="{
-                                        'bg-indigo-50 text-indigo-700': approver.dcdTp === '기안',
-                                        'bg-green-50 text-green-700': approver.dcdTp !== '기안' && (approver.dcdSts === '승인' || (!approver.dcdSts && approver.dcdDt)),
-                                        'bg-red-50 text-red-700': approver.dcdSts === '반려'
-                                    }">
-                                        {{ approver.dcdTp === '기안' ? '기안 상신' : (approver.dcdSts || (approver.dcdDt ?
-                                        '결재완료'
-                                        :'')) }}
-                                    </span>
-                                </div>
-                                <p v-if="approver.dcdOpnn"
-                                    class="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-zinc-900/50 p-2 rounded text-left break-keep italic">
-                                    "{{ approver.dcdOpnn }}"
-                                </p>
-                            </div>
-                            <div v-else class="mt-2 text-sm text-gray-400">
-                                대기 중
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Dialog>
+        <!-- 결재 진행 상황 타임라인 (컴포넌트 분리) -->
+        <ApprovalTimeline v-model:visible="showTimelineDialog" :approvalData="selectedTimelineData" />
 
 
-        <!-- PDF 보고서 뷰어 다이얼로그 -->
-        <Dialog v-model:visible="showReportDialog" header="신청서 조회" modal class="w-[90vw] h-[90vh]"
-            :style="{ maxWidth: '1000px' }" maximizable>
-            <div class="w-full h-[80vh] bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <!-- 생성된 PDF를 iframe으로 표시 -->
-                <iframe v-if="currentPdfUrl" :src="currentPdfUrl" class="w-full h-full border-none"></iframe>
-                <div v-else class="text-gray-500">
-                    보고서를 불러오는 중...
-                </div>
-            </div>
-        </Dialog>
+        <!-- 신청서 조회 PDF 뷰어 다이얼로그 (재사용 컴포넌트) -->
+        <ApplicationViewerDialog
+            v-model:visible="showReportDialog"
+            :apfMngNo="currentApfMngNo" />
     </div>
 </template>
 

@@ -20,7 +20,9 @@ const isVisible = computed({
     set: (value) => emit('update:visible', value)
 });
 
-const { fetchOrganizations, fetchUsers, buildOrgTree } = useOrganization();
+const { fetchOrganizations, buildOrgTree } = useOrganization();
+const config = useRuntimeConfig();
+const { $apiFetch } = useNuxtApp();
 const nodes = ref<any[]>([]);
 const expandedKeys = ref({});
 const selectedNode = ref();
@@ -59,19 +61,19 @@ const collapseAll = () => {
 };
 
 // Handle tree node selection
+// useFetch 기반의 fetchUsers는 이벤트 핸들러 내부에서 HTTP 응답을 await하지 않으므로
+// 실제 Promise를 반환하는 $apiFetch로 직접 호출합니다.
 const onNodeSelect = async (node: any) => {
     if (!node.key) return;
 
     loadingUsers.value = true;
     try {
-        const { data } = await fetchUsers(node.key);
-        if (data.value) {
-            users.value = data.value;
-        } else {
-            users.value = [];
-        }
+        const data = await $apiFetch<OrgUser[]>(`${config.public.apiBase}/api/users`, {
+            query: { orgCode: node.key }
+        });
+        users.value = data || [];
     } catch (e) {
-        console.error('Failed to users', e);
+        console.error('Failed to fetch users', e);
         users.value = [];
     } finally {
         loadingUsers.value = false;

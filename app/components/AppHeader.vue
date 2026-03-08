@@ -82,7 +82,11 @@ const items = ref([
 
 const isDark = ref(false);
 
-const toggleTheme = () => {
+/**
+ * 실제 테마 적용 로직 (다크/라이트 전환)
+ * toggleTheme()에서 View Transition 콜백으로 호출되거나, 미지원 시 직접 호출됩니다.
+ */
+const applyTheme = () => {
     isDark.value = !isDark.value;
     if (isDark.value) {
         document.documentElement.classList.add('dark');
@@ -91,6 +95,21 @@ const toggleTheme = () => {
         document.documentElement.classList.remove('dark');
         localStorage.setItem('theme', 'light');
     }
+};
+
+/**
+ * 다크모드 전환 핸들러 (View Transition API 활용)
+ * View Transition API를 사용하여 부드러운 크로스페이드 전환을 수행합니다.
+ * 미지원 브라우저에서는 applyTheme()을 즉시 실행합니다.
+ */
+const toggleTheme = () => {
+    // View Transition API 지원 여부 확인 (Chrome 111+, Edge 111+)
+    if (!document.startViewTransition) {
+        applyTheme();
+        return;
+    }
+    // 크로스페이드 트랜지션 실행
+    document.startViewTransition(() => applyTheme());
 };
 
 const handleLogout = async () => {
@@ -145,7 +164,7 @@ const navigateToTab = (path: string) => {
                     <span class="inline-flex flex-col gap-1">
                         <span class="font-bold text-lg text-zinc-800 dark:text-zinc-100">{{ item.label }}</span>
                         <span class="whitespace-nowrap text-zinc-500 dark:text-zinc-400 text-sm">{{ item.subtext
-                        }}</span>
+                            }}</span>
                     </span>
                 </a>
                 <div v-else class="flex flex-col items-center w-full">
@@ -169,7 +188,7 @@ const navigateToTab = (path: string) => {
                     <div class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700">
                         <div class="text-right hidden md:block">
                             <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ user?.empNm || '사용자'
-                            }}</div>
+                                }}</div>
                             <div class="text-xs text-zinc-500">{{ user?.eno || '' }}</div>
                         </div>
                         <Avatar :label="user?.empNm?.charAt(0) || 'U'"

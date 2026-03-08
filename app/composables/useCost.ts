@@ -64,13 +64,15 @@ export const useCost = () => {
      * IT 관리비 전체 목록 조회
      * useApiFetch를 사용하여 자동 인증 및 토큰 갱신이 적용됩니다.
      *
+     * @param query - 선택적 쿼리 파라미터 (예: { apfSts: 'none' } → 결재신청 없는 항목만)
      * @returns useApiFetch 반환값 ({ data: ItCost[], pending, error, refresh })
      *
      * @example
-     * const { data: costs, pending } = fetchCosts();
+     * const { data: costs } = fetchCosts();
+     * const { data: unsubmitted } = fetchCosts({ apfSts: 'none' });
      */
-    const fetchCosts = () => {
-        return useApiFetch<ItCost[]>(API_BASE_URL);
+    const fetchCosts = (query?: Record<string, string>) => {
+        return useApiFetch<ItCost[]>(API_BASE_URL, query ? { query } : {});
     };
 
     /**

@@ -8,9 +8,16 @@
 [주요 기능]
   - 예산 단위 변환: SelectButton으로 원/천원/백만원/억원 단위 전환
   - 예산 요약 카드: 정보화사업 예산 합계, 전산업무비 예산 합계, 전체 합계
-  - 정보화사업 탭: 검색(사업명/주관부서/IT부서) + DataTable (결재현황/사업현황 태그 포함)
-  - 전산업무비 탭: 검색(비목명/계약명/계약상대처) + DataTable
+  - 정보화사업 탭: 검색(사업명/주관부서/IT부서) + DataTable (체크박스 다중 선택)
+  - 전산업무비 탭: 검색(비목명/계약명/계약상대처) + DataTable (체크박스 다중 선택)
+  - 결재신청: 선택된 항목들을 sessionStorage에 저장 후 /budget/report 로 이동
   - 각 탭 헤더에 전체 항목 수(Badge) 표시
+
+[결재신청 로직]
+  - 정보화사업/전산업무비 탭에서 각각 체크박스로 다중 선택
+  - 선택된 정보화사업 prjMngNo → sessionStorage('selectedBudgetProjectIds')
+  - 선택된 전산업무비 itMngcNo → sessionStorage('selectedBudgetCostIds')
+  - /budget/report 페이지로 이동
 
 [탭 구성]
   - TabView: activeTab ref로 탭 인덱스 관리
@@ -21,12 +28,18 @@
 [라우팅 링크]
   - 정보화사업 목록 → /info/projects/:prjMngNo
   - 전산업무비 목록 → /info/cost/:itMngcNo
+  - 결재신청 → /budget/report
 ================================================================================
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useProjects, type Project } from '~/composables/useProjects';
+import * as XLSX from 'xlsx';
+import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import ApprovalTimeline from '~/components/approval/ApprovalTimeline.vue';
+import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
+import { useAuth } from '~/composables/useAuth';
+import { usePdfReport } from '~/composables/usePdfReport';
 import { getApprovalTagClass, formatBudget as formatBudgetUtil } from '~/utils/common';
 
 const title = '예산 목록';
@@ -35,11 +48,11 @@ definePageMeta({
 });
 
 /* ── 탭 관리 ── */
-/** 현재 활성화된 탭 인덱스 (0: 정보화사업, 1: 전산업무비) */
+/** 현재 활성화된 탭 인덱스 (0: 전체, 1: 정보화사업, 2: 전산업무비) */
 const activeTab = ref(0);
 
 /* ── 정보화사업 데이터 ── */
-const { fetchProjects } = useProjects();
+const { fetchProjects, fetchProjectsBulk } = useProjects();
 const { data: projectsData, error: projectsError } = await fetchProjects();
 /** 정보화사업 목록 (null 안전 처리) */
 const projects = computed(() => projectsData.value || []);
@@ -69,6 +82,7 @@ interface UnifiedBudgetItem {
     endDt: string;       // 종료일
     apfSts: string;      // 결재현황
     lstChgDtm: string;   // 최근수정일
+    applicationInfo?: any; // 결재 타임라인용 상세 정보
 }
 
 /**
@@ -89,8 +103,9 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         managerNm: p.svnDpmCgprNm || '',
         sttDt: p.sttDt || '',
         endDt: p.endDt || '',
-        apfSts: p.apfSts || '',
-        lstChgDtm: (p as any).lstChgDtm || ''
+        apfSts: p.applicationInfo?.apfSts || '',
+        lstChgDtm: (p as any).lstChgDtm || '',
+        applicationInfo: p.applicationInfo
     }));
     /* 전산업무비 매핑 */
     const costItems: UnifiedBudgetItem[] = costs.value.map((c: ItCost) => ({
@@ -107,7 +122,8 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         sttDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         endDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         apfSts: c.apfSts || '',
-        lstChgDtm: (c as any).lstChgDtm || ''
+        lstChgDtm: (c as any).lstChgDtm || '',
+        applicationInfo: (c as any).applicationInfo
     }));
     return [...projectItems, ...costItems];
 });
@@ -144,58 +160,422 @@ const costSearch = ref('');
 /** 전체 탭 검색어 */
 const allSearch = ref('');
 
+/* ── 조회 Drawer ── */
+/** Drawer 표시 여부 */
+const visibleDrawer = ref(false);
 /**
- * 정보화사업 필터링
- * 사업명, 주관부서, IT부서 중 하나라도 검색어를 포함하면 반환합니다.
+ * 현재 Drawer에 표시할 탭 (0: 전체, 1: 정보화사업, 2: 전산업무비)
+ * 각 탭의 "조회" 버튼 클릭 시 해당 인덱스로 설정됩니다.
+ */
+const drawerActiveTab = ref(0);
+
+/** 조회 Drawer 열기 */
+const openDrawer = (tabIdx: number) => {
+    drawerActiveTab.value = tabIdx;
+    visibleDrawer.value = true;
+};
+
+/* ── 정보화사업 Drawer 필터 ── */
+const projectFilters = ref({
+    major_hdq: [] as string[],
+    major_department: [] as string[],
+    it_department: [] as string[],
+    status: [] as string[],
+    apfSts: [] as string[],
+    budgetMin: null as number | null,
+    budgetMax: null as number | null,
+    assetBgMin: null as number | null,
+    assetBgMax: null as number | null,
+    costBgMin: null as number | null,
+    costBgMax: null as number | null,
+    startDate: null as Date | null,
+    endDate: null as Date | null
+});
+
+/** 정보화사업 필터 적용 여부 */
+const hasProjectFilters = computed(() =>
+    projectFilters.value.major_hdq.length > 0 ||
+    projectFilters.value.major_department.length > 0 ||
+    projectFilters.value.it_department.length > 0 ||
+    projectFilters.value.status.length > 0 ||
+    projectFilters.value.apfSts.length > 0 ||
+    projectFilters.value.budgetMin !== null ||
+    projectFilters.value.budgetMax !== null ||
+    projectFilters.value.assetBgMin !== null ||
+    projectFilters.value.assetBgMax !== null ||
+    projectFilters.value.costBgMin !== null ||
+    projectFilters.value.costBgMax !== null ||
+    projectFilters.value.startDate !== null ||
+    projectFilters.value.endDate !== null
+);
+
+/* AutoComplete 옵션: 목록 데이터에서 유니크 값 추출 */
+const projMajorHdqs = computed(() => [...new Set(projects.value.map((p: Project) => p.svnHdq).filter(Boolean))]);
+const projMajorDepts = computed(() => [...new Set(projects.value.map((p: Project) => p.svnDpmNm).filter(Boolean))]);
+const projItDepts = computed(() => [...new Set(projects.value.map((p: Project) => p.itDpmNm).filter(Boolean))]);
+const projStatuses = computed(() => [...new Set(projects.value.map((p: Project) => p.prjSts).filter(Boolean))]);
+const projApfStsOpts = computed(() => [...new Set(projects.value.map((p: Project) => p.applicationInfo?.apfSts).filter(Boolean))]);
+
+const filteredProjMajorHdqs = ref<string[]>([]);
+const filteredProjMajorDepts = ref<string[]>([]);
+const filteredProjItDepts = ref<string[]>([]);
+const filteredProjStatuses = ref<string[]>([]);
+const filteredProjApfSts = ref<string[]>([]);
+
+const searchProjMajorHdq = (e: { query: string }) => { filteredProjMajorHdqs.value = projMajorHdqs.value.filter(v => v.includes(e.query)); };
+const searchProjMajorDept = (e: { query: string }) => { filteredProjMajorDepts.value = projMajorDepts.value.filter(v => v.includes(e.query)); };
+const searchProjItDept = (e: { query: string }) => { filteredProjItDepts.value = projItDepts.value.filter(v => v.includes(e.query)); };
+const searchProjStatus = (e: { query: string }) => { filteredProjStatuses.value = projStatuses.value.filter(v => v.includes(e.query)); };
+const searchProjApfSts = (e: { query: string }) => { filteredProjApfSts.value = projApfStsOpts.value.filter(v => v.includes(e.query)); };
+
+/** 정보화사업 필터 초기화 */
+const resetProjectFilters = () => {
+    projectFilters.value = { major_hdq: [], major_department: [], it_department: [], status: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null, startDate: null, endDate: null };
+};
+
+/* ── 전산업무비 Drawer 필터 ── */
+const costFilters = ref({
+    ioeNm: [] as string[],
+    cttTp: [] as string[],
+    cttOpp: [] as string[],
+    pulDpmNm: [] as string[],
+    apfSts: [] as string[],
+    budgetMin: null as number | null,
+    budgetMax: null as number | null,
+    assetBgMin: null as number | null,
+    assetBgMax: null as number | null,
+    costBgMin: null as number | null,
+    costBgMax: null as number | null
+});
+
+/** 전산업무비 필터 적용 여부 */
+const hasCostFilters = computed(() =>
+    costFilters.value.ioeNm.length > 0 ||
+    costFilters.value.cttTp.length > 0 ||
+    costFilters.value.cttOpp.length > 0 ||
+    costFilters.value.pulDpmNm.length > 0 ||
+    costFilters.value.apfSts.length > 0 ||
+    costFilters.value.budgetMin !== null ||
+    costFilters.value.budgetMax !== null ||
+    costFilters.value.assetBgMin !== null ||
+    costFilters.value.assetBgMax !== null ||
+    costFilters.value.costBgMin !== null ||
+    costFilters.value.costBgMax !== null
+);
+
+const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeNm).filter(Boolean))]);
+const costCttTps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttTp).filter(Boolean))]);
+const costCttOpps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttOpp).filter(Boolean))]);
+const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.pulDpmNm).filter(Boolean))]);
+const costApfStsOpts = computed(() => [...new Set(costs.value.map((c: ItCost) => c.apfSts).filter(Boolean))]);
+
+const filteredCostIoeNms = ref<string[]>([]);
+const filteredCostCttTps = ref<string[]>([]);
+const filteredCostCttOpps = ref<string[]>([]);
+const filteredCostPulDpmNms = ref<string[]>([]);
+const filteredCostApfSts = ref<string[]>([]);
+
+const searchCostIoeNm = (e: { query: string }) => { filteredCostIoeNms.value = costIoeNms.value.filter(v => v.includes(e.query)); };
+const searchCostCttTp = (e: { query: string }) => { filteredCostCttTps.value = costCttTps.value.filter(v => v.includes(e.query)); };
+const searchCostCttOpp = (e: { query: string }) => { filteredCostCttOpps.value = costCttOpps.value.filter(v => v.includes(e.query)); };
+const searchCostPulDpmNm = (e: { query: string }) => { filteredCostPulDpmNms.value = costPulDpmNms.value.filter(v => v.includes(e.query)); };
+const searchCostApfSts = (e: { query: string }) => { filteredCostApfSts.value = costApfStsOpts.value.filter(v => v.includes(e.query)); };
+
+/** 전산업무비 필터 초기화 */
+const resetCostFilters = () => {
+    costFilters.value = { ioeNm: [], cttTp: [], cttOpp: [], pulDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
+};
+
+/* ── 전체 탭 Drawer 필터 ── */
+const allFilters = ref({
+    type: [] as string[],
+    deptNm: [] as string[],
+    apfSts: [] as string[],
+    budgetMin: null as number | null,
+    budgetMax: null as number | null,
+    assetBgMin: null as number | null,
+    assetBgMax: null as number | null,
+    costBgMin: null as number | null,
+    costBgMax: null as number | null
+});
+
+/** 전체 탭 필터 적용 여부 */
+const hasAllFilters = computed(() =>
+    allFilters.value.type.length > 0 ||
+    allFilters.value.deptNm.length > 0 ||
+    allFilters.value.apfSts.length > 0 ||
+    allFilters.value.budgetMin !== null ||
+    allFilters.value.budgetMax !== null ||
+    allFilters.value.assetBgMin !== null ||
+    allFilters.value.assetBgMax !== null ||
+    allFilters.value.costBgMin !== null ||
+    allFilters.value.costBgMax !== null
+);
+
+const allTypeOpts = ['사업', '비용'];
+const allDeptNmOpts = computed(() => [...new Set(unifiedItems.value.map(i => i.deptNm).filter(Boolean))]);
+const allApfStsOpts = computed(() => [...new Set(unifiedItems.value.map(i => i.apfSts).filter(Boolean))]);
+
+const filteredAllTypes = ref<string[]>([]);
+const filteredAllDeptNms = ref<string[]>([]);
+const filteredAllApfSts = ref<string[]>([]);
+
+const searchAllType = (e: { query: string }) => { filteredAllTypes.value = allTypeOpts.filter(v => v.includes(e.query)); };
+const searchAllDeptNm = (e: { query: string }) => { filteredAllDeptNms.value = allDeptNmOpts.value.filter(v => v.includes(e.query)); };
+const searchAllApfSts = (e: { query: string }) => { filteredAllApfSts.value = allApfStsOpts.value.filter(v => v.includes(e.query)); };
+
+/** 전체 탭 필터 초기화 */
+const resetAllFilters = () => {
+    allFilters.value = { type: [], deptNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
+};
+
+/**
+ * 정보화사업 필터링 (텍스트 검색 + Drawer 다중 조건)
  */
 const filteredProjects = computed(() => {
-    if (!projectSearch.value) return projects.value;
-    const keyword = projectSearch.value.toLowerCase();
-    return projects.value.filter((p: Project) =>
-        p.prjNm?.toLowerCase().includes(keyword) ||
-        p.svnDpmNm?.toLowerCase().includes(keyword) ||
-        p.itDpmNm?.toLowerCase().includes(keyword)
-    );
+    return projects.value.filter((p: Project) => {
+        /* 텍스트 검색 */
+        if (projectSearch.value) {
+            const kw = projectSearch.value.toLowerCase();
+            if (!p.prjNm?.toLowerCase().includes(kw) &&
+                !p.svnDpmNm?.toLowerCase().includes(kw) &&
+                !p.itDpmNm?.toLowerCase().includes(kw)) return false;
+        }
+        /* Drawer 필터 */
+        if (projectFilters.value.major_hdq.length > 0 && !projectFilters.value.major_hdq.includes(p.svnHdq)) return false;
+        if (projectFilters.value.major_department.length > 0 && !projectFilters.value.major_department.includes(p.svnDpmNm)) return false;
+        if (projectFilters.value.it_department.length > 0 && !projectFilters.value.it_department.includes(p.itDpmNm)) return false;
+        if (projectFilters.value.status.length > 0 && !projectFilters.value.status.includes(p.prjSts)) return false;
+        if (projectFilters.value.apfSts.length > 0 && !projectFilters.value.apfSts.includes(p.applicationInfo?.apfSts)) return false;
+        if (projectFilters.value.budgetMin !== null && p.prjBg < projectFilters.value.budgetMin) return false;
+        if (projectFilters.value.budgetMax !== null && p.prjBg > projectFilters.value.budgetMax) return false;
+        if (projectFilters.value.assetBgMin !== null && (p.assetBg || 0) < projectFilters.value.assetBgMin) return false;
+        if (projectFilters.value.assetBgMax !== null && (p.assetBg || 0) > projectFilters.value.assetBgMax) return false;
+        if (projectFilters.value.costBgMin !== null && (p.costBg || 0) < projectFilters.value.costBgMin) return false;
+        if (projectFilters.value.costBgMax !== null && (p.costBg || 0) > projectFilters.value.costBgMax) return false;
+        if (projectFilters.value.startDate) {
+            const fs = projectFilters.value.startDate.toISOString().split('T')[0]!;
+            if (p.endDt < fs) return false;
+        }
+        if (projectFilters.value.endDate) {
+            const fe = projectFilters.value.endDate.toISOString().split('T')[0]!;
+            if (p.sttDt > fe) return false;
+        }
+        return true;
+    });
 });
 
 /**
- * 전산업무비 필터링
- * 비목명, 계약명, 계약상대처 중 하나라도 검색어를 포함하면 반환합니다.
+ * 전산업무비 필터링 (텍스트 검색 + Drawer 다중 조건)
  */
 const filteredCosts = computed(() => {
-    if (!costSearch.value) return costs.value;
-    const keyword = costSearch.value.toLowerCase();
-    return costs.value.filter((c: ItCost) =>
-        c.ioeNm?.toLowerCase().includes(keyword) ||
-        c.cttNm?.toLowerCase().includes(keyword) ||
-        c.cttOpp?.toLowerCase().includes(keyword)
-    );
+    return costs.value.filter((c: ItCost) => {
+        /* 텍스트 검색 */
+        if (costSearch.value) {
+            const kw = costSearch.value.toLowerCase();
+            if (!c.ioeNm?.toLowerCase().includes(kw) &&
+                !c.cttNm?.toLowerCase().includes(kw) &&
+                !c.cttOpp?.toLowerCase().includes(kw)) return false;
+        }
+        /* Drawer 필터 */
+        if (costFilters.value.ioeNm.length > 0 && !costFilters.value.ioeNm.includes(c.ioeNm)) return false;
+        if (costFilters.value.cttTp.length > 0 && !costFilters.value.cttTp.includes(c.cttTp)) return false;
+        if (costFilters.value.cttOpp.length > 0 && !costFilters.value.cttOpp.includes(c.cttOpp)) return false;
+        if (costFilters.value.pulDpmNm.length > 0 && !costFilters.value.pulDpmNm.includes(c.pulDpmNm)) return false;
+        if (costFilters.value.apfSts.length > 0 && !costFilters.value.apfSts.includes(c.apfSts)) return false;
+        if (costFilters.value.budgetMin !== null && c.itMngcBg < costFilters.value.budgetMin) return false;
+        if (costFilters.value.budgetMax !== null && c.itMngcBg > costFilters.value.budgetMax) return false;
+        if (costFilters.value.assetBgMin !== null && (c.assetBg || 0) < costFilters.value.assetBgMin) return false;
+        if (costFilters.value.assetBgMax !== null && (c.assetBg || 0) > costFilters.value.assetBgMax) return false;
+        /* 전산업무비 일반관리비 = 총예산 - 자본예산 */
+        const costCostBg = c.itMngcBg - (c.assetBg || 0);
+        if (costFilters.value.costBgMin !== null && costCostBg < costFilters.value.costBgMin) return false;
+        if (costFilters.value.costBgMax !== null && costCostBg > costFilters.value.costBgMax) return false;
+        return true;
+    });
 });
 
 /**
- * 전체 통합 목록 필터링
- * 사업명/계약명, 담당부서, 담당자 중 하나라도 검색어를 포함하면 반환합니다.
+ * 전체 통합 목록 필터링 (텍스트 검색 + Drawer 다중 조건)
  */
 const filteredAll = computed(() => {
-    if (!allSearch.value) return unifiedItems.value;
-    const keyword = allSearch.value.toLowerCase();
-    return unifiedItems.value.filter(item =>
-        item.name?.toLowerCase().includes(keyword) ||
-        item.deptNm?.toLowerCase().includes(keyword) ||
-        item.managerNm?.toLowerCase().includes(keyword)
-    );
+    return unifiedItems.value.filter(item => {
+        /* 텍스트 검색 */
+        if (allSearch.value) {
+            const kw = allSearch.value.toLowerCase();
+            if (!item.name?.toLowerCase().includes(kw) &&
+                !item.deptNm?.toLowerCase().includes(kw) &&
+                !item.managerNm?.toLowerCase().includes(kw)) return false;
+        }
+        /* Drawer 필터 */
+        if (allFilters.value.type.length > 0 && !allFilters.value.type.includes(item._type)) return false;
+        if (allFilters.value.deptNm.length > 0 && !allFilters.value.deptNm.includes(item.deptNm)) return false;
+        if (allFilters.value.apfSts.length > 0 && !allFilters.value.apfSts.includes(item.apfSts)) return false;
+        if (allFilters.value.budgetMin !== null && item.totalBg < allFilters.value.budgetMin) return false;
+        if (allFilters.value.budgetMax !== null && item.totalBg > allFilters.value.budgetMax) return false;
+        if (allFilters.value.assetBgMin !== null && (item.assetBg || 0) < allFilters.value.assetBgMin) return false;
+        if (allFilters.value.assetBgMax !== null && (item.assetBg || 0) > allFilters.value.assetBgMax) return false;
+        if (allFilters.value.costBgMin !== null && (item.costBg || 0) < allFilters.value.costBgMin) return false;
+        if (allFilters.value.costBgMax !== null && (item.costBg || 0) > allFilters.value.costBgMax) return false;
+        return true;
+    });
 });
 
-/* ── 예산 합계 계산 ── */
-/** 정보화사업 예산 합계 (원 단위) */
-const totalProjectBudget = computed(() => {
-    return projects.value.reduce((sum: number, p: Project) => sum + (p.prjBg || 0), 0);
+
+/* ── 페이지 크기 ── */
+/** 페이지당 표시 건수 옵션 */
+const pageSizeOptions = [
+    { label: '10건', value: 10 },
+    { label: '20건', value: 20 },
+    { label: '50건', value: 50 }
+];
+/** 전체 탭 페이지당 표시 건수 */
+const allPageSize = ref(10);
+/** 정보화사업 탭 페이지당 표시 건수 */
+const projectPageSize = ref(10);
+/** 전산업무비 탭 페이지당 표시 건수 */
+const costPageSize = ref(10);
+
+/* ── 다중 선택 (결재신청용) ── */
+/** 전체 탭에서 선택된 통합 항목들 */
+const selectedAll = ref<UnifiedBudgetItem[]>([]);
+/** 정보화사업 탭에서 선택된 항목들 */
+const selectedProjects = ref<Project[]>([]);
+/** 전산업무비 탭에서 선택된 항목들 */
+const selectedCosts = ref<ItCost[]>([]);
+
+/**
+ * 전체 탭 + 개별 탭 선택을 합산한 중복 제거 ID 집합
+ * 동일 항목을 전체 탭과 개별 탭 모두에서 선택해도 1건으로 처리됩니다.
+ */
+const mergedSelection = computed(() => {
+    /* 정보화사업: 개별 탭 선택 + 전체 탭에서 '사업' 유형 선택 → 중복 제거 */
+    const projectIdSet = new Set([
+        ...selectedProjects.value.map((p: Project) => p.prjMngNo),
+        ...selectedAll.value.filter(i => i._type === '사업').map(i => i._id)
+    ]);
+    /* 전산업무비: 개별 탭 선택 + 전체 탭에서 '비용' 유형 선택 → 중복 제거 */
+    const costIdSet = new Set([
+        ...selectedCosts.value.map((c: ItCost) => c.itMngcNo || '').filter(Boolean),
+        ...selectedAll.value.filter(i => i._type === '비용').map(i => i._id)
+    ]);
+    return { projectIds: [...projectIdSet], costIds: [...costIdSet] };
 });
 
-/** 전산업무비 예산 합계 (원 단위) */
-const totalCostBudget = computed(() => {
-    return costs.value.reduce((sum: number, c: ItCost) => sum + (c.itMngcBg || 0), 0);
+/** 결재신청 버튼 활성화 여부 (어느 탭에서든 하나라도 선택된 경우) */
+const hasSelection = computed(() =>
+    mergedSelection.value.projectIds.length > 0 || mergedSelection.value.costIds.length > 0
+);
+
+/** 선택된 정보화사업 건수 (중복 제거) */
+const selectedProjectCount = computed(() => mergedSelection.value.projectIds.length);
+/** 선택된 전산업무비 건수 (중복 제거) */
+const selectedCostCount = computed(() => mergedSelection.value.costIds.length);
+
+/**
+ * 결재신청 처리
+ * 전체/개별 탭에서 선택된 항목을 합산(중복 제거)하여
+ * 관리번호를 sessionStorage에 저장 후 /budget/report 로 이동합니다.
+ */
+const requestApproval = () => {
+    if (!hasSelection.value) {
+        alert('결재할 항목을 선택해주세요.');
+        return;
+    }
+
+    if (process.client) {
+        /* 중복 제거된 최종 ID 목록 저장 */
+        sessionStorage.setItem('selectedBudgetProjectIds', JSON.stringify(mergedSelection.value.projectIds));
+        sessionStorage.setItem('selectedBudgetCostIds', JSON.stringify(mergedSelection.value.costIds));
+    }
+
+    navigateTo('/budget/report');
+};
+
+/**
+ * 모든 탭 선택 초기화
+ */
+const clearSelection = () => {
+    selectedAll.value = [];
+    selectedProjects.value = [];
+    selectedCosts.value = [];
+};
+
+/**
+ * ============================================================
+ * 커스텀 체크박스 선택 관리
+ * ============================================================
+ * PrimeVue DataTable의 내부 select-all 로직은 헤더 체크박스 상태를
+ * "전체 행 선택 여부"로 판단하므로, locked 항목 제거 후 항상
+ * 인디터미네이트 상태가 되어 해제가 불가능해집니다.
+ * 이를 우회하기 위해 selectionMode="multiple" Column 대신
+ * 헤더/바디 슬롯에 직접 Checkbox를 렌더링하여 선택 상태를 완전히 제어합니다.
+ */
+
+/* ── 전체 탭 ── */
+/** 선택 가능한 항목만 전부 선택됐을 때 true */
+const allHeaderChecked = computed(() => {
+    const selectable = filteredAll.value.filter(i => !i.apfSts);
+    return selectable.length > 0 && selectedAll.value.length === selectable.length;
 });
+/** 일부만 선택된 경우 인디터미네이트 */
+const allHeaderIndeterminate = computed(() =>
+    selectedAll.value.length > 0 && !allHeaderChecked.value
+);
+/** 헤더 체크박스 토글: 선택 가능 항목 전체 선택 or 전체 해제 */
+const toggleAllSelectAll = (val: boolean) => {
+    selectedAll.value = val ? filteredAll.value.filter(i => !i.apfSts) : [];
+};
+/** 전체 탭 행 선택 여부 */
+const isRowInSelectedAll = (data: UnifiedBudgetItem) =>
+    selectedAll.value.some(i => i._id === data._id);
+/** 전체 탭 개별 행 토글 */
+const toggleRowInAll = (data: UnifiedBudgetItem, val: boolean) => {
+    if (data.apfSts) return;
+    selectedAll.value = val
+        ? [...selectedAll.value, data]
+        : selectedAll.value.filter(i => i._id !== data._id);
+};
+
+/* ── 정보화사업 탭 ── */
+const projHeaderChecked = computed(() => {
+    const selectable = filteredProjects.value.filter((p: Project) => !p.applicationInfo?.apfSts);
+    return selectable.length > 0 && selectedProjects.value.length === selectable.length;
+});
+const projHeaderIndeterminate = computed(() =>
+    selectedProjects.value.length > 0 && !projHeaderChecked.value
+);
+const toggleProjSelectAll = (val: boolean) => {
+    selectedProjects.value = val ? filteredProjects.value.filter((p: Project) => !p.applicationInfo?.apfSts) : [];
+};
+const isRowInSelectedProjects = (data: Project) =>
+    selectedProjects.value.some(p => p.prjMngNo === data.prjMngNo);
+const toggleRowInProjects = (data: Project, val: boolean) => {
+    if (data.applicationInfo?.apfSts) return;
+    selectedProjects.value = val
+        ? [...selectedProjects.value, data]
+        : selectedProjects.value.filter(p => p.prjMngNo !== data.prjMngNo);
+};
+
+/* ── 전산업무비 탭 ── */
+const costHeaderChecked = computed(() => {
+    const selectable = filteredCosts.value.filter((c: ItCost) => !c.apfSts);
+    return selectable.length > 0 && selectedCosts.value.length === selectable.length;
+});
+const costHeaderIndeterminate = computed(() =>
+    selectedCosts.value.length > 0 && !costHeaderChecked.value
+);
+const toggleCostSelectAll = (val: boolean) => {
+    selectedCosts.value = val ? filteredCosts.value.filter((c: ItCost) => !c.apfSts) : [];
+};
+const isRowInSelectedCosts = (data: ItCost) =>
+    selectedCosts.value.some(c => c.itMngcNo === data.itMngcNo);
+const toggleRowInCosts = (data: ItCost, val: boolean) => {
+    if (data.apfSts) return;
+    selectedCosts.value = val
+        ? [...selectedCosts.value, data]
+        : selectedCosts.value.filter(c => c.itMngcNo !== data.itMngcNo);
+};
 
 /**
  * 탭 헤더 아이템 정의
@@ -213,71 +593,219 @@ const tabItems = computed(() => [
         badge: costs.value.length.toString()
     }
 ]);
+
+/* ── 엑셀/보고서 다운로드 ── */
+const { user } = useAuth();
+const { generateReport } = usePdfReport();
+
+/** 보고서/엑셀 다운로드 진행 중 상태 (버튼 loading 표시용) */
+const reportLoading = ref(false);
+
+/* ── 신청서 조회 PDF 뷰어 ── */
+/** ApplicationViewerDialog 표시 여부 */
+const showApplicationViewer = ref(false);
+/** 조회할 신청관리번호 */
+const viewerApfMngNo = ref('');
+
+/**
+ * 신청서 조회 다이얼로그 열기
+ * @param apfMngNo - applicationInfo.apfMngNo
+ */
+const openApplicationViewer = (apfMngNo: string) => {
+    viewerApfMngNo.value = apfMngNo;
+    showApplicationViewer.value = true;
+};
+
+/**
+ * 워크시트 데이터를 XLSX 파일로 다운로드
+ *
+ * @param rows - 행 데이터 배열 (첫 번째 행을 헤더로 사용)
+ * @param sheetName - 시트명
+ * @param fileName - 다운로드 파일명 (.xlsx 포함)
+ */
+const downloadExcel = (rows: Record<string, any>[], sheetName: string, fileName: string) => {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, fileName);
+};
+
+/**
+ * 전체 탭 엑셀 다운로드
+ * 현재 필터링된 통합 목록(filteredAll)을 엑셀로 저장합니다.
+ */
+const downloadAllExcel = () => {
+    const rows = filteredAll.value.map(item => ({
+        '구분': item._type,
+        '사업명/계약명': item.name,
+        '신규/계속': item.category,
+        '총 예산(원)': item.totalBg,
+        '자본예산(원)': item.assetBg,
+        '일반관리비(원)': item.costBg,
+        '담당부서': item.deptNm,
+        '담당자': item.managerNm,
+        '시작일': item.sttDt,
+        '종료일': item.endDt,
+        '결재현황': item.apfSts
+    }));
+    downloadExcel(rows, '전체예산목록', `전체예산목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+/**
+ * 정보화사업 탭 엑셀 다운로드
+ * 현재 필터링된 정보화사업 목록(filteredProjects)을 엑셀로 저장합니다.
+ */
+const downloadProjectsExcel = () => {
+    const rows = filteredProjects.value.map((p: Project) => ({
+        '사업명': p.prjNm,
+        '신규/계속': p.prjTp,
+        '총 예산(원)': p.prjBg,
+        '자본예산(원)': p.assetBg || 0,
+        '일반관리비(원)': p.costBg || 0,
+        '주관부서': p.svnDpmNm,
+        '담당자': p.svnDpmCgprNm,
+        '시작일': p.sttDt,
+        '종료일': p.endDt,
+        '상태': p.prjSts,
+        '결재현황': p.applicationInfo?.apfSts
+    }));
+    downloadExcel(rows, '정보화사업목록', `정보화사업목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+/**
+ * 전산업무비 탭 엑셀 다운로드
+ * 현재 필터링된 전산업무비 목록(filteredCosts)을 엑셀로 저장합니다.
+ */
+const downloadCostsExcel = () => {
+    const rows = filteredCosts.value.map((c: ItCost) => ({
+        '계약명': c.cttNm,
+        '비목명': c.ioeNm,
+        '신규/계속': c.cttTp,
+        '총 예산(원)': c.itMngcBg,
+        '자본예산(원)': c.assetBg || 0,
+        '계약상대처': c.cttOpp,
+        '추진부서': c.pulDpmNm,
+        '담당자': c.pulCgprNm,
+        '지급예정월': c.fstDfrDt,
+        '결재현황': c.apfSts
+    }));
+    downloadExcel(rows, '전산업무비목록', `전산업무비목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+/* ── 보고서 다운로드 ── */
+
+/**
+ * 보고서 PDF 다운로드
+ * 현재 필터링된 항목(정보화사업 + 전산업무비)에 대해 예산편성 신청서 PDF를 생성합니다.
+ * 기안자는 현재 로그인 사용자로 자동 설정하고, 팀장/부서장은 미지정으로 처리합니다.
+ *
+ * @param tabIdx - 현재 탭 인덱스 (0: 전체, 1: 정보화사업, 2: 전산업무비)
+ */
+const downloadReport = async (tabIdx: number) => {
+    reportLoading.value = true;
+    try {
+        /* 현재 탭에 따라 대상 ID 결정 */
+        let projectIdList: string[] = [];
+        let costList: ItCost[] = [];
+
+        if (tabIdx === 0) {
+            /* 전체 탭: 통합 목록에서 유형별 분리 */
+            projectIdList = filteredAll.value.filter(i => i._type === '사업').map(i => i._id);
+            costList = filteredCosts.value.filter(c =>
+                filteredAll.value.some(i => i._type === '비용' && i._id === c.itMngcNo)
+            );
+        } else if (tabIdx === 1) {
+            /* 정보화사업 탭 */
+            projectIdList = filteredProjects.value.map((p: Project) => p.prjMngNo);
+        } else {
+            /* 전산업무비 탭 */
+            costList = filteredCosts.value;
+        }
+
+        /* 정보화사업 상세 데이터 일괄 조회 (품목 포함) */
+        let projectDetails: ProjectDetail[] = [];
+        if (projectIdList.length > 0) {
+            projectDetails = await fetchProjectsBulk(projectIdList);
+        }
+
+        /* 결재선: 기안자는 로그인 사용자, 팀장/부서장은 미지정 */
+        const today = new Date().toLocaleDateString('ko-KR', {
+            year: 'numeric', month: '2-digit', day: '2-digit'
+        }).replace(/\. /g, '.').replace(/\.$/, '');
+
+        const approvalLine = {
+            drafter: { name: user.value?.empNm || '', rank: '', date: today, id: user.value?.eno || '' },
+            teamLead: { name: '', rank: '', date: '', id: '' },
+            deptHead: { name: '', rank: '', date: '', id: '' }
+        };
+
+        /* PDF 생성 후 새 탭에서 열기 */
+        const pdfUrl = await generateReport(projectDetails, approvalLine, costList);
+        window.open(pdfUrl, '_blank');
+    } catch (e) {
+        console.error('보고서 생성 중 오류:', e);
+        alert('보고서 생성 중 오류가 발생했습니다.');
+    } finally {
+        reportLoading.value = false;
+    }
+};
+
+/* ── 결재 진행 상황 타임라인 다이얼로그 ── */
+const showTimelineDialog = ref(false);
+/** 타임라인에 전달할 선택된 결재 항목 데이터 (applicationInfo) */
+const selectedTimelineData = ref<any>(null);
+
+/**
+ * 결재 진행 상황 타임라인 열기
+ * 각 항목의 applicationInfo 객체를 타임라인 컴포넌트에 전달합니다.
+ * @param data - 결재 항목 (UnifiedBudgetItem, Project, ItCost 중 하나)
+ */
+const openTimeline = (data: any) => {
+    if (!data.applicationInfo) return;
+    selectedTimelineData.value = data.applicationInfo;
+    showTimelineDialog.value = true;
+};
+
 </script>
 
 <template>
     <div class="space-y-6">
 
-        <!-- 페이지 헤더: 제목 + 예산 단위 선택 -->
+        <!-- 페이지 헤더: 제목 + 선택 현황 인라인 칩 + 예산 단위 선택 + 결재신청 -->
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
+            <!-- 좌측: 제목 + 선택 현황 인라인 칩 (레이아웃 밀림 없음) -->
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
+                <!-- 선택 시에만 노출되는 인라인 칩 (v-if이지만 헤더 행 안에 있어 레이아웃 영향 없음) -->
+                <div v-if="hasSelection"
+                    class="flex items-center gap-1.5 text-sm text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
+                    <i class="pi pi-check-square text-purple-500 dark:text-purple-400 text-xs"></i>
+                    <span v-if="selectedProjectCount > 0" class="font-semibold">사업 {{ selectedProjectCount }}건</span>
+                    <span v-if="selectedProjectCount > 0 && selectedCostCount > 0"
+                        class="text-purple-300 dark:text-purple-600">·</span>
+                    <span v-if="selectedCostCount > 0" class="font-semibold">비용 {{ selectedCostCount }}건</span>
+                    <!-- 선택 초기화 버튼 -->
+                    <i class="pi pi-times text-xs text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 ml-0.5 cursor-pointer"
+                        @click="clearSelection"></i>
+                </div>
+            </div>
+            <!-- 우측: 예산 단위 선택 + 결재신청 -->
             <div class="flex items-center gap-4">
                 <!-- 예산 단위 SelectButton (원/천원/백만원/억원) -->
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-selector" />
+                <!-- 결재신청: 어느 탭에서든 선택 후 활성화 -->
+                <Button label="결재신청" icon="pi pi-check-square" severity="help" @click="requestApproval"
+                    :disabled="!hasSelection"
+                    :badge="hasSelection ? String(selectedProjectCount + selectedCostCount) : undefined" />
             </div>
         </div>
 
-        <!-- 예산 요약 카드 (3열 그리드) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            <!-- 정보화사업 예산 합계 카드 (인디고 테마) -->
-            <div
-                class="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-4">
-                <div class="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                    <i class="pi pi-desktop text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">정보화사업 예산</p>
-                    <p class="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                        {{ formatBudget(totalProjectBudget) }}
-                        <span class="text-sm font-normal text-zinc-500">{{ selectedUnit }}</span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- 전산업무비 예산 합계 카드 (에메랄드 테마) -->
-            <div
-                class="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-4">
-                <div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                    <i class="pi pi-wallet text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">전산업무비 예산</p>
-                    <p class="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                        {{ formatBudget(totalCostBudget) }}
-                        <span class="text-sm font-normal text-zinc-500">{{ selectedUnit }}</span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- 전체 예산 합계 카드 (그라디언트 강조 테마) -->
-            <div
-                class="bg-gradient-to-r from-indigo-500 to-purple-600 p-5 rounded-xl shadow-sm flex items-center gap-4">
-                <div class="p-3 rounded-xl bg-white/20 text-white">
-                    <i class="pi pi-chart-bar text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-indigo-100">전체 예산 합계</p>
-                    <p class="text-xl font-bold text-white">
-                        {{ formatBudget(totalProjectBudget + totalCostBudget) }}
-                        <span class="text-sm font-normal text-indigo-200">{{ selectedUnit }}</span>
-                    </p>
-                </div>
-            </div>
-        </div>
+        <!-- 예산 현황 요약 카드 -->
+        <BudgetSummaryCards :projects="projects" :costs="costs" :selectedUnit="selectedUnit" />
 
         <!-- 탭 영역 (전체 / 정보화사업 / 전산업무비) -->
-        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div
+            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
             <TabView v-model:activeIndex="activeTab" :pt="{
                 nav: { class: 'border-b border-zinc-200 dark:border-zinc-800' },
                 tabpanel: { header: { class: '' } }
@@ -295,21 +823,51 @@ const tabItems = computed(() => [
                         </div>
                     </template>
 
-                    <div class="p-4 space-y-4">
-                        <!-- 전체 검색 바 -->
-                        <div class="flex items-center gap-3">
-                            <IconField class="flex-1">
-                                <InputIcon class="pi pi-search" />
-                                <InputText v-model="allSearch" placeholder="사업명/계약명, 담당부서, 담당자 검색..." class="w-full" />
-                            </IconField>
+                    <div class="flex flex-col">
+                        <!-- 전체 검색 바 + 선택 현황 인라인 -->
+                        <div class="p-4 flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800">
+                            <!-- 페이지네이터 + 검색 바 묶음: xl 기준 화면 절반 -->
+                            <div class="flex flex-1 items-center gap-3 xl:flex-none xl:w-1/2">
+                                <!-- 페이지 크기 선택 (검색 바 왼쪽) -->
+                                <Select v-model="allPageSize" :options="pageSizeOptions" optionLabel="label"
+                                    optionValue="value" class="shrink-0" />
+                                <IconField class="flex-1">
+                                    <InputIcon class="pi pi-search" />
+                                    <InputText v-model="allSearch" placeholder="사업명/계약명, 담당부서, 담당자 검색..."
+                                        class="w-full" />
+                                </IconField>
+                            </div>
+                            <!-- 선택 현황: 검색 바 우측 인라인 (별도 행 불필요) -->
+                            <span v-if="selectedAll.length > 0"
+                                class="text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                                <i class="pi pi-check-circle mr-1 text-zinc-400"></i>{{ selectedAll.length }}건 선택됨
+                            </span>
+                            <!-- 엑셀·PDF·조회 버튼 (공통 컴포넌트) -->
+                            <BudgetTableActions class="ml-auto" :reportLoading="reportLoading"
+                                :hasFilters="hasAllFilters" @excel="downloadAllExcel" @pdf="downloadReport(0)"
+                                @filter="openDrawer(0)" />
                         </div>
 
-                        <!-- 전체 통합 DataTable -->
-                        <DataTable :value="filteredAll" paginator :rows="10" sortField="lstChgDtm" :sortOrder="-1"
-                            dataKey="_id" tableStyle="min-width: 50rem" :pt="{
+                        <!-- 전체 통합 DataTable (커스텀 체크박스 다중 선택) -->
+                        <DataTable :value="filteredAll" paginator :rows="allPageSize" dataKey="_id"
+                            sortField="lstChgDtm" :sortOrder="-1" tableStyle="min-width: 50rem"
+                            :rowClass="(data: any) => data.apfSts ? 'row-apf-locked' : ''" :pt="{
                                 headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                             }">
+                            <!-- 커스텀 체크박스 컬럼: PrimeVue 내부 select-all 로직 우회 -->
+                            <Column headerStyle="width: 3rem">
+                                <template #header>
+                                    <Checkbox binary :modelValue="allHeaderChecked"
+                                        :indeterminate="allHeaderIndeterminate"
+                                        @update:modelValue="toggleAllSelectAll" />
+                                </template>
+                                <template #body="{ data }">
+                                    <Checkbox binary :modelValue="isRowInSelectedAll(data)" :disabled="!!data.apfSts"
+                                        @update:modelValue="(val: boolean) => toggleRowInAll(data, val)" />
+                                </template>
+                            </Column>
+
                             <!-- 구분: 정보화사업/전산업무비 태그 -->
                             <Column field="_type" header="구분" sortable style="width: 100px">
                                 <template #body="slotProps">
@@ -362,11 +920,21 @@ const tabItems = computed(() => [
                             <Column field="sttDt" header="시작일" sortable></Column>
                             <!-- 종료일 -->
                             <Column field="endDt" header="종료일" sortable></Column>
-                            <!-- 결재현황 태그 -->
-                            <Column field="apfSts" header="결재현황" sortable>
+                            <!-- 결재현황 태그 + 신청서 조회 버튼 -->
+                            <Column field="apfSts" header="결재현황" sortable style="min-width: 150px">
                                 <template #body="slotProps">
-                                    <Tag v-if="slotProps.data.apfSts" :value="slotProps.data.apfSts"
-                                        :class="getApprovalTagClass(slotProps.data.apfSts)" class="border-0" rounded />
+                                    <div v-if="slotProps.data.apfSts" class="flex items-center gap-2">
+                                        <Tag :value="slotProps.data.apfSts"
+                                            :class="[getApprovalTagClass(slotProps.data.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
+                                            class="border-0" rounded @click="openTimeline(slotProps.data)"
+                                            v-tooltip="'결재 진행 상황 보기'" />
+                                        <!-- 신청서 조회 버튼: applicationInfo.apfMngNo가 있을 때만 표시 -->
+                                        <Button v-if="slotProps.data.applicationInfo?.apfMngNo"
+                                            icon="pi pi-file-pdf" size="small" severity="secondary" text rounded
+                                            title="신청서 조회"
+                                            @click="openApplicationViewer(slotProps.data.applicationInfo.apfMngNo)"
+                                            v-tooltip="'신청서 조회'" />
+                                    </div>
                                     <span v-else class="text-zinc-400">-</span>
                                 </template>
                             </Column>
@@ -386,26 +954,64 @@ const tabItems = computed(() => [
                         </div>
                     </template>
 
-                    <div class="p-4 space-y-4">
-                        <!-- 정보화사업 검색 바 -->
-                        <div class="flex items-center gap-3">
-                            <IconField class="flex-1">
-                                <InputIcon class="pi pi-search" />
-                                <InputText v-model="projectSearch" placeholder="사업명, 주관부서, IT부서 검색..." class="w-full" />
-                            </IconField>
+                    <div class="flex flex-col">
+                        <!-- 정보화사업 검색 바 + 선택 현황 인라인 -->
+                        <div class="p-4 flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800">
+                            <!-- 페이지네이터 + 검색 바 묶음: xl 기준 화면 절반 -->
+                            <div class="flex flex-1 items-center gap-3 xl:flex-none xl:w-1/2">
+                                <!-- 페이지 크기 선택 (검색 바 왼쪽) -->
+                                <Select v-model="projectPageSize" :options="pageSizeOptions" optionLabel="label"
+                                    optionValue="value" class="shrink-0" />
+                                <IconField class="flex-1">
+                                    <InputIcon class="pi pi-search" />
+                                    <InputText v-model="projectSearch" placeholder="사업명, 주관부서, IT부서 검색..."
+                                        class="w-full" />
+                                </IconField>
+                            </div>
+                            <!-- 선택 현황: 검색 바 우측 인라인 (별도 행 불필요) -->
+                            <span v-if="selectedProjects.length > 0"
+                                class="text-sm text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                                <i class="pi pi-check-circle mr-1"></i>{{ selectedProjects.length }}건 선택됨
+                            </span>
                             <Button label="사업 목록" icon="pi pi-list" severity="secondary" outlined
                                 @click="navigateTo('/info/projects')" />
+                            <!-- 엑셀 다운로드 -->
+                            <Button icon="pi pi-file-excel" severity="success" outlined title="엑셀 다운로드" class="shrink-0"
+                                @click="downloadProjectsExcel" />
+                            <!-- 보고서 다운로드 -->
+                            <Button icon="pi pi-file-pdf" severity="danger" outlined title="보고서 다운로드" class="shrink-0"
+                                :loading="reportLoading" @click="downloadReport(1)" />
+                            <!-- 조회 버튼 (검색 행 오른쪽 끝) -->
+                            <Button label="조회" icon="pi pi-search" severity="secondary" outlined
+                                :badge="hasProjectFilters ? '●' : undefined"
+                                :badgeSeverity="hasProjectFilters ? 'danger' : undefined" @click="openDrawer(1)"
+                                class="shrink-0" />
                         </div>
 
-                        <!-- 정보화사업 DataTable -->
+                        <!-- 정보화사업 DataTable (커스텀 체크박스 다중 선택) -->
                         <div v-if="projectsError" class="p-4 text-red-500">
                             데이터를 불러오는 중 오류가 발생했습니다: {{ projectsError.message }}
                         </div>
-                        <DataTable v-else :value="filteredProjects" paginator :rows="10" sortField="lstChgDtm"
-                            :sortOrder="-1" dataKey="prjMngNo" tableStyle="min-width: 50rem" :pt="{
+                        <DataTable v-else :value="filteredProjects" paginator :rows="projectPageSize" dataKey="prjMngNo"
+                            sortField="lstChgDtm" :sortOrder="-1" tableStyle="min-width: 50rem"
+                            :rowClass="(data: any) => data.apfSts ? 'row-apf-locked' : ''" :pt="{
                                 headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                             }">
+                            <!-- 커스텀 체크박스 컬럼 -->
+                            <Column headerStyle="width: 3rem">
+                                <template #header>
+                                    <Checkbox binary :modelValue="projHeaderChecked"
+                                        :indeterminate="projHeaderIndeterminate"
+                                        @update:modelValue="toggleProjSelectAll" />
+                                </template>
+                                <template #body="{ data }">
+                                    <Checkbox binary :modelValue="isRowInSelectedProjects(data)"
+                                        :disabled="!!data.apfSts"
+                                        @update:modelValue="(val: boolean) => toggleRowInProjects(data, val)" />
+                                </template>
+                            </Column>
+
                             <!-- 사업명: 상세 페이지 링크 -->
                             <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
                                 <template #body="slotProps">
@@ -448,11 +1054,22 @@ const tabItems = computed(() => [
                             <Column field="sttDt" header="시작일" sortable></Column>
                             <!-- 종료일 -->
                             <Column field="endDt" header="종료일" sortable></Column>
-                            <!-- 결재현황 태그 -->
-                            <Column field="apfSts" header="결재현황" sortable>
+                            <!-- 결재현황 태그 + 신청서 조회 버튼 -->
+                            <Column field="apfSts" header="결재현황" sortable style="min-width: 150px">
                                 <template #body="slotProps">
-                                    <Tag :value="slotProps.data.apfSts"
-                                        :class="getApprovalTagClass(slotProps.data.apfSts)" class="border-0" rounded />
+                                    <div v-if="slotProps.data.apfSts" class="flex items-center gap-2">
+                                        <Tag :value="slotProps.data.apfSts"
+                                            :class="[getApprovalTagClass(slotProps.data.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
+                                            class="border-0" rounded @click="openTimeline(slotProps.data)"
+                                            v-tooltip="'결재 진행 상황 보기'" />
+                                        <!-- 신청서 조회 버튼: applicationInfo.apfMngNo가 있을 때만 표시 -->
+                                        <Button v-if="slotProps.data.applicationInfo?.apfMngNo"
+                                            icon="pi pi-file-pdf" size="small" severity="secondary" text rounded
+                                            title="신청서 조회"
+                                            @click="openApplicationViewer(slotProps.data.applicationInfo.apfMngNo)"
+                                            v-tooltip="'신청서 조회'" />
+                                    </div>
+                                    <span v-else class="text-zinc-400">-</span>
                                 </template>
                             </Column>
                         </DataTable>
@@ -471,26 +1088,63 @@ const tabItems = computed(() => [
                         </div>
                     </template>
 
-                    <div class="p-4 space-y-4">
-                        <!-- 전산업무비 검색 바 -->
-                        <div class="flex items-center gap-3">
-                            <IconField class="flex-1">
-                                <InputIcon class="pi pi-search" />
-                                <InputText v-model="costSearch" placeholder="비목명, 계약명, 계약상대처 검색..." class="w-full" />
-                            </IconField>
+                    <div class="flex flex-col">
+                        <!-- 전산업무비 검색 바 + 선택 현황 인라인 -->
+                        <div class="p-4 flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800">
+                            <!-- 페이지네이터 + 검색 바 묶음: xl 기준 화면 절반 -->
+                            <div class="flex flex-1 items-center gap-3 xl:flex-none xl:w-1/2">
+                                <!-- 페이지 크기 선택 (검색 바 왼쪽) -->
+                                <Select v-model="costPageSize" :options="pageSizeOptions" optionLabel="label"
+                                    optionValue="value" class="shrink-0" />
+                                <IconField class="flex-1">
+                                    <InputIcon class="pi pi-search" />
+                                    <InputText v-model="costSearch" placeholder="비목명, 계약명, 계약상대처 검색..."
+                                        class="w-full" />
+                                </IconField>
+                            </div>
+                            <!-- 선택 현황: 검색 바 우측 인라인 (별도 행 불필요) -->
+                            <span v-if="selectedCosts.length > 0"
+                                class="text-sm text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                <i class="pi pi-check-circle mr-1"></i>{{ selectedCosts.length }}건 선택됨
+                            </span>
                             <Button label="전산업무비 목록" icon="pi pi-list" severity="secondary" outlined
                                 @click="navigateTo('/info/cost')" />
+                            <!-- 엑셀 다운로드 -->
+                            <Button icon="pi pi-file-excel" severity="success" outlined title="엑셀 다운로드" class="shrink-0"
+                                @click="downloadCostsExcel" />
+                            <!-- 보고서 다운로드 -->
+                            <Button icon="pi pi-file-pdf" severity="danger" outlined title="보고서 다운로드" class="shrink-0"
+                                :loading="reportLoading" @click="downloadReport(2)" />
+                            <!-- 조회 버튼 (검색 행 오른쪽 끝) -->
+                            <Button label="조회" icon="pi pi-search" severity="secondary" outlined
+                                :badge="hasCostFilters ? '●' : undefined"
+                                :badgeSeverity="hasCostFilters ? 'danger' : undefined" @click="openDrawer(2)"
+                                class="shrink-0" />
                         </div>
 
-                        <!-- 전산업무비 DataTable -->
+                        <!-- 전산업무비 DataTable (체크박스 다중 선택 포함) -->
                         <div v-if="costsError" class="p-4 text-red-500">
                             데이터를 불러오는 중 오류가 발생했습니다: {{ costsError.message }}
                         </div>
-                        <DataTable v-else :value="filteredCosts" paginator :rows="10" sortField="lstChgDtm"
-                            :sortOrder="-1" dataKey="itMngcNo" tableStyle="min-width: 50rem" :pt="{
+                        <DataTable v-else :value="filteredCosts" paginator :rows="costPageSize" dataKey="itMngcNo"
+                            sortField="lstChgDtm" :sortOrder="-1" tableStyle="min-width: 50rem"
+                            :rowClass="(data: any) => data.apfSts ? 'row-apf-locked' : ''" :pt="{
                                 headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                             }">
+                            <!-- 커스텀 체크박스 컬럼 -->
+                            <Column headerStyle="width: 3rem">
+                                <template #header>
+                                    <Checkbox binary :modelValue="costHeaderChecked"
+                                        :indeterminate="costHeaderIndeterminate"
+                                        @update:modelValue="toggleCostSelectAll" />
+                                </template>
+                                <template #body="{ data }">
+                                    <Checkbox binary :modelValue="isRowInSelectedCosts(data)" :disabled="!!data.apfSts"
+                                        @update:modelValue="(val: boolean) => toggleRowInCosts(data, val)" />
+                                </template>
+                            </Column>
+
                             <!-- 계약명: 상세 페이지 링크 -->
                             <Column field="cttNm" header="계약명" sortable headerClass="font-bold">
                                 <template #body="slotProps">
@@ -500,6 +1154,8 @@ const tabItems = computed(() => [
                                     </NuxtLink>
                                 </template>
                             </Column>
+                            <!-- 비목명 -->
+                            <Column field="ioeNm" header="비목명" sortable></Column>
                             <!-- 신규/계속 -->
                             <Column field="cttTp" header="신규/계속" sortable></Column>
                             <!-- 총 예산 -->
@@ -514,25 +1170,27 @@ const tabItems = computed(() => [
                                     <span>{{ formatBudget(slotProps.data.assetBg || 0) }}</span>
                                 </template>
                             </Column>
-                            <!-- 일반관리비 -->
-                            <Column field="itMngcBg" :header="`일반관리비 (${selectedUnit})`" sortable>
-                                <template #body="slotProps">
-                                    <span>{{ formatBudget(slotProps.data.itMngcBg || 0) }}</span>
-                                </template>
-                            </Column>
                             <!-- 담당부서 -->
                             <Column field="pulDpmNm" header="담당부서" sortable></Column>
                             <!-- 담당자 -->
                             <Column field="pulCgprNm" header="담당자" sortable></Column>
-                            <!-- 시작일 -->
-                            <Column field="fstDfrDt" header="시작일" sortable></Column>
-                            <!-- 종료일 -->
-                            <Column field="fstDfrDt" header="종료일" sortable></Column>
-                            <!-- 결재현황 태그 -->
-                            <Column field="apfSts" header="결재현황" sortable>
+                            <!-- 지급예정월 -->
+                            <Column field="fstDfrDt" header="지급예정월" sortable></Column>
+                            <!-- 결재현황 태그 + 신청서 조회 버튼 -->
+                            <Column field="apfSts" header="결재현황" sortable style="min-width: 150px">
                                 <template #body="slotProps">
-                                    <Tag v-if="slotProps.data.apfSts" :value="slotProps.data.apfSts"
-                                        :class="getApprovalTagClass(slotProps.data.apfSts)" class="border-0" rounded />
+                                    <div v-if="slotProps.data.apfSts" class="flex items-center gap-2">
+                                        <Tag :value="slotProps.data.apfSts"
+                                            :class="[getApprovalTagClass(slotProps.data.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
+                                            class="border-0" rounded @click="openTimeline(slotProps.data)"
+                                            v-tooltip="'결재 진행 상황 보기'" />
+                                        <!-- 신청서 조회 버튼: applicationInfo.apfMngNo가 있을 때만 표시 -->
+                                        <Button v-if="slotProps.data.applicationInfo?.apfMngNo"
+                                            icon="pi pi-file-pdf" size="small" severity="secondary" text rounded
+                                            title="신청서 조회"
+                                            @click="openApplicationViewer(slotProps.data.applicationInfo.apfMngNo)"
+                                            v-tooltip="'신청서 조회'" />
+                                    </div>
                                     <span v-else class="text-zinc-400">-</span>
                                 </template>
                             </Column>
@@ -542,6 +1200,210 @@ const tabItems = computed(() => [
             </TabView>
         </div>
     </div>
+
+    <!-- ====================================================
+         상세 조회 Drawer (오른쪽 슬라이드)
+         drawerActiveTab에 따라 전체/정보화사업/전산업무비 필터 표시
+         ==================================================== -->
+    <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[600px]">
+        <div class="flex flex-col gap-6">
+
+            <!-- ── 전체 탭 필터 ── -->
+            <template v-if="drawerActiveTab === 0">
+                <!-- 구분 (사업/비용) -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">구분</label>
+                    <AutoComplete v-model="allFilters.type" :suggestions="filteredAllTypes" @complete="searchAllType"
+                        multiple dropdown placeholder="사업 / 비용 선택 (다중)" fluid />
+                </div>
+                <!-- 담당부서 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">담당부서</label>
+                    <AutoComplete v-model="allFilters.deptNm" :suggestions="filteredAllDeptNms"
+                        @complete="searchAllDeptNm" multiple dropdown placeholder="담당부서 선택 (다중)" fluid />
+                </div>
+                <!-- 예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">총 예산 (원)</label>
+                    <InputNumber v-model="allFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="allFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 자본예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">자본예산 (원)</label>
+                    <InputNumber v-model="allFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="allFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 일반관리비 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">일반관리비 (원)</label>
+                    <InputNumber v-model="allFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="allFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 결재현황 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">결재현황</label>
+                    <AutoComplete v-model="allFilters.apfSts" :suggestions="filteredAllApfSts"
+                        @complete="searchAllApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
+                </div>
+                <!-- 액션 버튼 -->
+                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetAllFilters"
+                        class="flex-1" />
+                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
+                </div>
+            </template>
+
+            <!-- ── 정보화사업 탭 필터 ── -->
+            <template v-else-if="drawerActiveTab === 1">
+                <!-- 주관부문 및 본부 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">주관부문 및 본부</label>
+                    <AutoComplete v-model="projectFilters.major_hdq" :suggestions="filteredProjMajorHdqs"
+                        @complete="searchProjMajorHdq" multiple dropdown placeholder="주관부문 선택 (다중)" fluid />
+                </div>
+                <!-- 주관부서 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">주관부서</label>
+                    <AutoComplete v-model="projectFilters.major_department" :suggestions="filteredProjMajorDepts"
+                        @complete="searchProjMajorDept" multiple dropdown placeholder="주관부서 선택 (다중)" fluid />
+                </div>
+                <!-- IT부서 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">IT부서</label>
+                    <AutoComplete v-model="projectFilters.it_department" :suggestions="filteredProjItDepts"
+                        @complete="searchProjItDept" multiple dropdown placeholder="IT부서 선택 (다중)" fluid />
+                </div>
+                <!-- 총 예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">총 예산 (원)</label>
+                    <InputNumber v-model="projectFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="projectFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 자본예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">자본예산 (원)</label>
+                    <InputNumber v-model="projectFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="projectFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 일반관리비 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">일반관리비 (원)</label>
+                    <InputNumber v-model="projectFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="projectFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 사업 기간 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">사업 기간</label>
+                    <DatePicker v-model="projectFilters.startDate" placeholder="시작일" showIcon fluid
+                        dateFormat="yy-mm-dd" />
+                    <DatePicker v-model="projectFilters.endDate" placeholder="종료일" showIcon fluid
+                        dateFormat="yy-mm-dd" />
+                </div>
+                <!-- 진행 상태 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">진행 상태</label>
+                    <AutoComplete v-model="projectFilters.status" :suggestions="filteredProjStatuses"
+                        @complete="searchProjStatus" multiple dropdown placeholder="상태 선택 (다중)" fluid />
+                </div>
+                <!-- 결재현황 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">결재현황</label>
+                    <AutoComplete v-model="projectFilters.apfSts" :suggestions="filteredProjApfSts"
+                        @complete="searchProjApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
+                </div>
+                <!-- 액션 버튼 -->
+                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetProjectFilters"
+                        class="flex-1" />
+                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
+                </div>
+            </template>
+
+            <!-- ── 전산업무비 탭 필터 ── -->
+            <template v-else>
+                <!-- 비목명 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">비목명</label>
+                    <AutoComplete v-model="costFilters.ioeNm" :suggestions="filteredCostIoeNms"
+                        @complete="searchCostIoeNm" multiple dropdown placeholder="비목명 선택 (다중)" fluid />
+                </div>
+                <!-- 계약구분 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">계약구분</label>
+                    <AutoComplete v-model="costFilters.cttTp" :suggestions="filteredCostCttTps"
+                        @complete="searchCostCttTp" multiple dropdown placeholder="계약구분 선택 (다중)" fluid />
+                </div>
+                <!-- 계약상대처 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">계약상대처</label>
+                    <AutoComplete v-model="costFilters.cttOpp" :suggestions="filteredCostCttOpps"
+                        @complete="searchCostCttOpp" multiple dropdown placeholder="계약상대처 선택 (다중)" fluid />
+                </div>
+                <!-- 추진부서 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">추진부서</label>
+                    <AutoComplete v-model="costFilters.pulDpmNm" :suggestions="filteredCostPulDpmNms"
+                        @complete="searchCostPulDpmNm" multiple dropdown placeholder="추진부서 선택 (다중)" fluid />
+                </div>
+                <!-- 총 예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">총 예산 (원)</label>
+                    <InputNumber v-model="costFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="costFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 자본예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">자본예산 (원)</label>
+                    <InputNumber v-model="costFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="costFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 일반관리비 범위 (= 총예산 - 자본예산) -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">일반관리비 (원)</label>
+                    <InputNumber v-model="costFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                    <InputNumber v-model="costFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
+                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                </div>
+                <!-- 결재현황 -->
+                <div class="flex flex-col gap-2">
+                    <label class="font-semibold">결재현황</label>
+                    <AutoComplete v-model="costFilters.apfSts" :suggestions="filteredCostApfSts"
+                        @complete="searchCostApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
+                </div>
+                <!-- 액션 버튼 -->
+                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetCostFilters"
+                        class="flex-1" />
+                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
+                </div>
+            </template>
+
+        </div>
+    </Drawer>
+
+    <!-- 결재 진행 상황 타임라인 컴포넌트 -->
+    <ApprovalTimeline v-model:visible="showTimelineDialog" :approvalData="selectedTimelineData" />
+
+    <!-- 신청서 조회 PDF 뷰어 다이얼로그 (재사용 컴포넌트) -->
+    <ApplicationViewerDialog v-model:visible="showApplicationViewer" :apfMngNo="viewerApfMngNo" />
 </template>
 
 <style scoped>

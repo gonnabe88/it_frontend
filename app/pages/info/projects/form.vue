@@ -55,7 +55,7 @@ const { fetchProject, createProject, updateProject } = useProjects();
 // fetchRates() (= refresh) 중복 호출 불필요 → 2회 호출 및 40X 오류 방지
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 
-const title = '사업정보 입력';
+const title = '정보화사업 예산 작성';
 definePageMeta({
     title
 });
@@ -106,7 +106,7 @@ const form = ref({
     itDpm: '',         // IT부서코드
     itDpmNm: '',       // IT부서명 (직원 검색에서 자동 세팅)
     prjBg: 0,
-    prjSts: '예산 신청',
+    prjSts: '예산 작성',
     sttDt: null as Date | null,
     endDt: null as Date | null,
     prjDes: '',
@@ -156,8 +156,7 @@ const ynOptions = ['Y', 'N'];
 const prjTypeOptions = ['신규', '계속'];
 const statusOptions = PROJECT_STAGES;
 
-/* ── 부서 목록 (Mock 데이터 - 향후 API 연결 예정) ── */
-const majorHdqs = ['글로벌사업부문', '경영지원부문', 'IT운영부문', '정보보호부문', '디지털혁신부문'];
+
 
 /**
  * ── 직원 검색 다이얼로그 상태 관리 ──
@@ -173,12 +172,12 @@ const activeDialogField = ref<
 
 /** 필드별 다이얼로그 헤더 — activeDialogField에서 파생되므로 별도 ref 불필요 */
 const FIELD_HEADERS = {
-    svnDpm:     '주관부서 직원 검색',
-    svnDpmTlr:  '주관부서 담당팀장 검색',
+    svnDpm: '주관부서 직원 검색',
+    svnDpmTlr: '주관부서 담당팀장 검색',
     svnDpmCgpr: '주관부서 담당자 검색',
-    itDpm:      'IT부서 직원 검색',
-    itDpmTlr:   'IT부서 담당팀장 검색',
-    itDpmCgpr:  'IT부서 담당자 검색',
+    itDpm: 'IT부서 직원 검색',
+    itDpmTlr: 'IT부서 담당팀장 검색',
+    itDpmCgpr: 'IT부서 담당자 검색',
 } as const;
 const employeeDialogHeader = computed(() => FIELD_HEADERS[activeDialogField.value]);
 
@@ -188,12 +187,12 @@ const employeeDialogHeader = computed(() => FIELD_HEADERS[activeDialogField.valu
  * 담당자필드(Tlr, Cgpr): eno(사원번호) + usrNm(이름)
  */
 const FIELD_CONFIG = {
-    svnDpm:     { valueKey: 'orgCode', labelKey: 'bbrNm' },
-    svnDpmTlr:  { valueKey: 'eno',     labelKey: 'usrNm' },
-    svnDpmCgpr: { valueKey: 'eno',     labelKey: 'usrNm' },
-    itDpm:      { valueKey: 'orgCode', labelKey: 'bbrNm' },
-    itDpmTlr:   { valueKey: 'eno',     labelKey: 'usrNm' },
-    itDpmCgpr:  { valueKey: 'eno',     labelKey: 'usrNm' },
+    svnDpm: { valueKey: 'orgCode', labelKey: 'bbrNm' },
+    svnDpmTlr: { valueKey: 'eno', labelKey: 'usrNm' },
+    svnDpmCgpr: { valueKey: 'eno', labelKey: 'usrNm' },
+    itDpm: { valueKey: 'orgCode', labelKey: 'bbrNm' },
+    itDpmTlr: { valueKey: 'eno', labelKey: 'usrNm' },
+    itDpmCgpr: { valueKey: 'eno', labelKey: 'usrNm' },
 } as const;
 
 /**
@@ -217,6 +216,41 @@ interface EmployeeSelectResult extends OrgUser {
 }
 
 /**
+ * 담당팀장 선택 시 해당 팀장의 부서 정보를 조회하여 폼에 자동 세팅
+ * /api/users/{eno} API를 호출하여 응답의 부서코드(bbrC), 부서명(bbrNm),
+ * 상위부서명(prlmHrkOgzCNm)을 관련 폼 필드에 반영합니다.
+ *
+ * [필드별 세팅 범위]
+ *  - svn(주관부서 담당팀장): svnDpm(부서코드) + svnDpmNm(부서명) + svnHdq(주관부문)
+ *  - it(IT부서 담당팀장):    itDpm(부서코드) + itDpmNm(부서명)
+ *
+ * @param eno - 사원번호
+ * @param field - 'svn'(주관부서) 또는 'it'(IT부서)
+ */
+const fetchTlrDeptInfo = async (eno: string, field: 'svn' | 'it') => {
+    if (!eno) return;
+    try {
+        const config = useRuntimeConfig();
+        const { $apiFetch } = useNuxtApp();
+        const userData = await $apiFetch<any>(`${config.public.apiBase}/api/users/${eno}`);
+        if (!userData) return;
+
+        if (field === 'svn') {
+            // 주관부서 담당팀장 → 주관부서(코드/명) + 주관부문(상위부서명) 자동 세팅
+            if (userData.bbrC) form.value.svnDpm = userData.bbrC;
+            if (userData.bbrNm) form.value.svnDpmNm = userData.bbrNm;
+            if (userData.prlmHrkOgzCNm) form.value.svnHdq = userData.prlmHrkOgzCNm;
+        } else {
+            // IT부서 담당팀장 → IT부서(코드/명) 자동 세팅
+            if (userData.bbrC) form.value.itDpm = userData.bbrC;
+            if (userData.bbrNm) form.value.itDpmNm = userData.bbrNm;
+        }
+    } catch (e) {
+        console.error('담당팀장 부서정보 조회 실패', e);
+    }
+};
+
+/**
  * 직원 선택 완료 핸들러
  * EmployeeSearchDialog의 @select 이벤트로 전달받은 직원 정보를
  * FIELD_CONFIG 매핑에 따라 해당 폼 필드에 세팅합니다.
@@ -224,6 +258,10 @@ interface EmployeeSelectResult extends OrgUser {
  * [타입 안전성]
  * (form.value as any) 타입 단언 대신, 필드별 명시적 setter 맵을 사용하여
  * TypeScript가 폼 필드 존재 여부를 검증할 수 있도록 합니다.
+ *
+ * [담당팀장 선택 시 부서 자동 세팅]
+ * svnDpmTlr(주관부서 담당팀장) → fetchTlrDeptInfo('svn')으로 주관부서 + 주관부문 자동 세팅
+ * itDpmTlr(IT부서 담당팀장)    → fetchTlrDeptInfo('it')으로 IT부서 자동 세팅
  *
  * @param user - EmployeeSearchDialog에서 emit된 직원 정보
  */
@@ -235,12 +273,12 @@ const onEmployeeSelected = (user: EmployeeSelectResult) => {
 
     // 필드별 타입 안전한 setter 맵 (TypeScript가 form.value 필드 존재를 검증)
     const setters: Record<typeof activeDialogField.value, () => void> = {
-        svnDpm:     () => { form.value.svnDpm = value;     form.value.svnDpmNm = label;     },
-        svnDpmTlr:  () => { form.value.svnDpmTlr = value;  form.value.svnDpmTlrNm = label;  },
+        svnDpm: () => { form.value.svnDpm = value; form.value.svnDpmNm = label; },
+        svnDpmTlr: () => { form.value.svnDpmTlr = value; form.value.svnDpmTlrNm = label; fetchTlrDeptInfo(value, 'svn'); },
         svnDpmCgpr: () => { form.value.svnDpmCgpr = value; form.value.svnDpmCgprNm = label; },
-        itDpm:      () => { form.value.itDpm = value;      form.value.itDpmNm = label;      },
-        itDpmTlr:   () => { form.value.itDpmTlr = value;   form.value.itDpmTlrNm = label;   },
-        itDpmCgpr:  () => { form.value.itDpmCgpr = value;  form.value.itDpmCgprNm = label;  },
+        itDpm: () => { form.value.itDpm = value; form.value.itDpmNm = label; },
+        itDpmTlr: () => { form.value.itDpmTlr = value; form.value.itDpmTlrNm = label; fetchTlrDeptInfo(value, 'it'); },
+        itDpmCgpr: () => { form.value.itDpmCgpr = value; form.value.itDpmCgprNm = label; },
     };
     setters[activeDialogField.value]();
 };
@@ -486,7 +524,7 @@ const cancel = () => {
         <div
             class="sticky -top-6 z-20 -mt-6 -mx-6 px-6 py-4 sm:-mx-8 sm:px-8 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-4">
-                {{ isEditMode ? '사업 정보 수정' : '신규 사업 등록' }}
+                {{ isEditMode ? '정보화사업 정보 수정' : '신규 정보화사업 등록' }}
                 <!-- 수정 모드에서만 상태 변경 드롭다운을 헤더 영역에 노출 -->
                 <div v-if="isEditMode" class="flex items-center gap-2 text-base font-normal">
                     <span class="text-zinc-500 text-sm">| 진행 상태 :</span>
@@ -644,26 +682,22 @@ const cancel = () => {
                     <span class="text-xl font-semibold">담당부서</span>
                 </div>
 
-                <!-- 주관부문 선택 (드롭다운, 기존 방식 유지) -->
+                <!-- 주관부문 (담당팀장 선택 시 API 응답의 상위부서명 자동 세팅, 수동 편집 불가) -->
                 <div class="flex gap-6">
                     <div class="flex flex-col gap-2">
                         <label class="font-semibold">주관부문</label>
-                        <Select v-model="form.svnHdq" :options="majorHdqs" placeholder="주관부문 선택" editable
-                            class="w-80" />
+                        <InputText v-model="form.svnHdq" placeholder="담당팀장 선택 시 자동 입력" fluid readonly
+                            class="w-80 bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                 </div>
 
                 <!-- 주관부서 + 팀장/담당자 (직원 검색 다이얼로그 연동) -->
                 <div class="flex gap-6">
-                    <!-- 주관부서: 부서명 표시 + 검색 버튼 -->
+                    <!-- 주관부서: 담당팀장 선택 시 자동 세팅 (readonly) -->
                     <div class="flex flex-col gap-2 w-60">
                         <label class="font-semibold">주관부서</label>
-                        <div class="flex gap-1">
-                            <InputText :modelValue="form.svnDpmNm || form.svnDpm" placeholder="부서 검색" fluid readonly
-                                class="cursor-pointer" @click="openEmployeeDialog('svnDpm')" />
-                            <Button icon="pi pi-search" severity="secondary"
-                                @click="openEmployeeDialog('svnDpm')" />
-                        </div>
+                        <InputText :modelValue="form.svnDpmNm || form.svnDpm" placeholder="담당팀장 선택 시 자동 입력" fluid
+                            readonly class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <!-- 주관부서 담당팀장 -->
                     <div class="flex flex-col gap-2 flex-1">
@@ -672,8 +706,7 @@ const cancel = () => {
                             <InputText :modelValue="form.svnDpmTlrNm ? `${form.svnDpmTlrNm} (${form.svnDpmTlr})` : ''"
                                 placeholder="직원 검색" fluid readonly class="cursor-pointer"
                                 @click="openEmployeeDialog('svnDpmTlr')" />
-                            <Button icon="pi pi-search" severity="secondary"
-                                @click="openEmployeeDialog('svnDpmTlr')" />
+                            <Button icon="pi pi-search" severity="secondary" @click="openEmployeeDialog('svnDpmTlr')" />
                         </div>
                     </div>
                     <!-- 주관부서 담당자 -->
@@ -692,15 +725,11 @@ const cancel = () => {
 
                 <!-- IT부서 + 팀장/담당자 (직원 검색 다이얼로그 연동) -->
                 <div class="flex gap-6">
-                    <!-- IT부서: 부서명 표시 + 검색 버튼 -->
+                    <!-- IT부서: 담당팀장 선택 시 자동 세팅 (readonly) -->
                     <div class="flex flex-col gap-2 w-60">
                         <label class="font-semibold">IT부서</label>
-                        <div class="flex gap-1">
-                            <InputText :modelValue="form.itDpmNm || form.itDpm" placeholder="부서 검색" fluid readonly
-                                class="cursor-pointer" @click="openEmployeeDialog('itDpm')" />
-                            <Button icon="pi pi-search" severity="secondary"
-                                @click="openEmployeeDialog('itDpm')" />
-                        </div>
+                        <InputText :modelValue="form.itDpmNm || form.itDpm" placeholder="담당팀장 선택 시 자동 입력" fluid readonly
+                            class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <!-- IT부서 담당팀장 -->
                     <div class="flex flex-col gap-2 flex-1">
@@ -709,8 +738,7 @@ const cancel = () => {
                             <InputText :modelValue="form.itDpmTlrNm ? `${form.itDpmTlrNm} (${form.itDpmTlr})` : ''"
                                 placeholder="직원 검색" fluid readonly class="cursor-pointer"
                                 @click="openEmployeeDialog('itDpmTlr')" />
-                            <Button icon="pi pi-search" severity="secondary"
-                                @click="openEmployeeDialog('itDpmTlr')" />
+                            <Button icon="pi pi-search" severity="secondary" @click="openEmployeeDialog('itDpmTlr')" />
                         </div>
                     </div>
                     <!-- IT부서 담당자 -->
@@ -720,8 +748,7 @@ const cancel = () => {
                             <InputText :modelValue="form.itDpmCgprNm ? `${form.itDpmCgprNm} (${form.itDpmCgpr})` : ''"
                                 placeholder="직원 검색" fluid readonly class="cursor-pointer"
                                 @click="openEmployeeDialog('itDpmCgpr')" />
-                            <Button icon="pi pi-search" severity="secondary"
-                                @click="openEmployeeDialog('itDpmCgpr')" />
+                            <Button icon="pi pi-search" severity="secondary" @click="openEmployeeDialog('itDpmCgpr')" />
                         </div>
                     </div>
                 </div>

@@ -1,11 +1,11 @@
 <!--
 ================================================================================
-[pages/budget/index.vue] 예산 신청 유형 선택 페이지
+[pages/budget/index.vue] 예산 작성 유형 선택 페이지
 ================================================================================
 예산을 신청하기 전, 신청 유형을 선택하는 카드 선택 UI 페이지입니다.
-세 가지 예산 신청 유형 카드를 클릭하면 해당 등록 폼으로 이동합니다.
+세 가지 예산 작성 유형 카드를 클릭하면 해당 등록 폼으로 이동합니다.
 
-[예산 신청 유형]
+[예산 작성 유형]
   1. 정보화사업 → /info/projects/form
      - 자본예산 (기계장치HW, 기타무형자산SW, 개발비)
      - 전산임차료 (AI 서비스 이용료)
@@ -27,7 +27,7 @@
 <script setup lang="ts">
 /* 페이지 탭 제목 설정 */
 definePageMeta({
-    title: '예산 신청'
+    title: '예산 작성'
 });
 </script>
 
@@ -36,7 +36,7 @@ definePageMeta({
     <div class="flex flex-col items-center justify-center h-full overflow-hidden">
         <div id="budget" class="flex flex-col items-center justify-center">
 
-            <!-- 예산 신청 유형 카드 3개 (3열 그리드) -->
+            <!-- 예산 작성 유형 카드 3개 (3열 그리드) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-7xl px-4">
 
                 <!-- 1. 정보화사업 카드 (인디고 테마) -->

@@ -20,6 +20,28 @@ import type { UseFetchOptions } from 'nuxt/app';
 import { useToast } from 'primevue/usetoast';
 
 /**
+ * 토큰 갱신 진행 중 여부 플래그 (모듈 레벨 - 모든 useApiFetch 인스턴스 공유)
+ * 동시에 여러 401 응답이 발생할 경우 토큰 갱신이 중복으로 실행되는 것을 방지합니다.
+ */
+let isRefreshing = false;
+
+/**
+ * 토큰 갱신 성공 시 증가하는 신호 (모듈 레벨 - 모든 useApiFetch 인스턴스 공유)
+ * useFetch의 watch 옵션에 연결되어 있어, 이 값이 변경되면
+ * 현재 페이지에서 활성화된 모든 useApiFetch 인스턴스가 자동으로 재요청을 실행합니다.
+ *
+ * [문제 해결]
+ * 토큰이 만료된 상태에서 페이지 진입 시:
+ *  1. API 호출 → 401 응답
+ *  2. refresh() 성공 (새 쿠키 세팅)
+ *  3. tokenRefreshSignal 증가 → useFetch watch 트리거 → 자동 재요청 ✅
+ *
+ * [이전 동작]
+ *  3. refresh() 후 아무것도 하지 않음 → 데이터 미수신 ❌
+ */
+const tokenRefreshSignal = ref(0);
+
+/**
  * 인증이 적용된 useFetch 래퍼 함수
  *
  * @template T - API 응답 데이터 타입
@@ -43,14 +65,23 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
     // 사용자 친화적 에러 메시지 표시용 Toast 서비스
     const toast = useToast();
 
-    // 동시에 여러 401 응답이 발생할 경우 토큰 갱신을 중복 실행하지 않기 위한 플래그
-    let isRefreshing = false;
+    // 호출자가 전달한 watch 옵션과 tokenRefreshSignal을 병합합니다.
+    // watch: false 인 경우(watch 비활성화 의도)에도 tokenRefreshSignal은 항상 포함합니다.
+    const callerWatch = options.watch === false
+        ? []
+        : Array.isArray(options.watch)
+            ? options.watch
+            : options.watch
+                ? [options.watch]
+                : [];
 
     const params = {
         // 기존 옵션을 스프레드하여 덮어쓰기
         ...options,
         // 클라이언트 사이드에서만 실행 (SSR 비활성화)
         server: false,
+        // tokenRefreshSignal 변경 시 자동 재요청하도록 watch 설정
+        watch: [tokenRefreshSignal, ...callerWatch],
         /**
          * httpOnly 쿠키 자동 전송을 위한 credentials 설정
          * 브라우저가 accessToken 쿠키를 모든 요청에 자동으로 포함합니다.
@@ -89,7 +120,10 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
                 isRefreshing = true;
                 try {
                     const refreshed = await refresh();
-                    if (!refreshed) {
+                    if (refreshed) {
+                        // 토큰 갱신 성공 → 신호 증가로 모든 useApiFetch 인스턴스 자동 재요청 유발
+                        tokenRefreshSignal.value++;
+                    } else {
                         // 토큰 갱신 실패 시 로그아웃 및 로그인 페이지로 이동
                         await logout();
                         navigateTo('/login');

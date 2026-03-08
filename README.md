@@ -3,7 +3,7 @@
 ## 1. 시스템 개요
 
 IT Portal은 정보화사업 및 전산업무비 예산을 통합 관리하는 내부 업무 시스템입니다.  
-사업 등록 → 예산 신청 → 결재 → 집행 → 성과평가에 이르는 전체 생명주기를 지원합니다.
+사업 등록 → 예산 작성 → 결재 → 집행 → 성과평가에 이르는 전체 생명주기를 지원합니다.
 
 ## 2. 기술 스택
 
@@ -43,7 +43,7 @@ app/
 ├── pages/               # 파일 기반 라우팅
 │   ├── approval/        # 전자결재 목록 + 결재 처리
 │   ├── audit/           # IT 자체감사 대시보드
-│   ├── budget/          # 예산 신청 유형 선택 + 통합 목록
+│   ├── budget/          # 예산 작성 유형 선택 + 통합 목록
 │   ├── diagnosis/       # 사전진단 설문
 │   ├── info/
 │   │   ├── cost/        # 전산업무비 (목록/상세/등록폼)
@@ -146,6 +146,57 @@ npm run postinstall
 npm run dev
 ```
 
+## 7.1 테스트 실행
+
+### 단위 테스트 (Vitest)
+
+```bash
+# 전체 단위 테스트 실행 (1.4초 내 완료)
+npm test
+
+# 파일 변경 감지 + 자동 재실행 (개발 중 사용)
+npm run test:watch
+
+# 코드 커버리지 리포트 생성 (coverage/ 디렉토리)
+npm run test:coverage
+```
+
+### E2E 테스트 (Playwright)
+
+```bash
+# E2E 테스트 실행 (dev 서버 자동 기동)
+npm run test:e2e
+
+# Playwright 인터랙티브 UI 모드 (테스트 디버깅)
+npm run test:e2e:ui
+```
+
+### 테스트 구조
+
+```
+tests/
+├── unit/                            # Vitest 단위 테스트 (68개 케이스)
+│   ├── utils/common.test.ts         # formatBudget, getApprovalTagClass 등 유틸 함수
+│   ├── stores/auth.test.ts          # useAuthStore (login, logout, restoreSession, refresh)
+│   └── composables/useApiFetch.test.ts  # watch 병합, credentials, 옵션 전달 검증
+└── e2e/                             # Playwright E2E 테스트 (10개 시나리오)
+    ├── helpers/mockApi.ts           # 공통 Mock 헬퍼 (mockLoginApi, mockApi, setLoggedIn)
+    ├── auth.spec.ts                 # 로그인 성공/실패 플로우
+    ├── projects.spec.ts             # 정보화사업 목록 조회
+    ├── cost.spec.ts                 # 전산업무비 목록 조회
+    └── approval.spec.ts             # 전자결재 목록 조회
+```
+
+### Mock 전략
+
+- **단위 테스트**: `vi.stubGlobal('$fetch', mockFetch)`로 API 호출 대체, `Object.assign(process, { client: true })`로 클라이언트 환경 시뮬레이션
+- **E2E 테스트**: `page.route()`로 API 응답 Mock, `page.addInitScript()`로 localStorage user 주입 (백엔드 없이 실행 가능)
+
+### Nuxt auto-import 관련 주의사항
+
+Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테스트 파일에서 `ref`, `computed`, `defineStore` 등을 명시적으로 import합니다.
+`useRuntimeConfig`, `navigateTo` 등 Nuxt 전용 API는 `vi.stubGlobal()`로 Mock 처리합니다.
+
 ## 8. 코딩 컨벤션 요약
 
 - 모든 코드 주석은 **한국어**로 작성합니다.
@@ -161,6 +212,7 @@ npm run dev
 
 | 날짜 | 항목 | 비고 |
 |------|------|------|
+| 2026-03-08 | 프론트엔드 테스트 환경 구축 | Vitest(단위 68개) + Playwright(E2E 10개), `npm test` / `npm run test:e2e` |
 | 2026-03-04 | 직원 검색 다이얼로그 연동 | `form.vue` 6개 필드(주관/IT 부서·팀장·담당자) |
 | 2026-03-04 | 한글 IME placeholder 수정 | `RichEditor.vue` compositionstart/end 처리 |
 | 2026-03-03 | JPA 복합키 리팩토링 | `ProjectId` @IdClass 적용 (백엔드) |

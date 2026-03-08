@@ -233,7 +233,7 @@ const submitApproval = async () => {
         /* 2. 프로젝트별 결재 신청 요청 구성 */
         const applicationPromises = projects.value.map((project) => {
             const request: CreateApplicationRequest = {
-                apfNm: '전산예산 신청', // 신청서명
+                apfNm: '전산예산 작성', // 신청서명
                 apfDtlCone: JSON.stringify({
                     projects: [project],
                     approvalLine: {

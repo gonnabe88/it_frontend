@@ -134,7 +134,7 @@ const filteredCosts = computed(() => {
             </div>
 
             <!-- 전산업무비 목록 테이블 -->
-            <DataTable v-else :value="filteredCosts" paginator :rows="10" v-model:selection="selectedCosts"
+            <DataTable v-else :value="filteredCosts" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" v-model:selection="selectedCosts"
                 sortField="itMngcNo" :sortOrder="-1" dataKey="itMngcNo" tableStyle="min-width: 50rem" :pt="{
                     headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                     bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
