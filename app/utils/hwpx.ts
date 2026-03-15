@@ -630,6 +630,5 @@ export const htmlToHwpxBlob = async (html: string): Promise<Blob> => {
         type: 'blob',
         mimeType: 'application/hwp+zip',
         compression: 'DEFLATE',
-        createFolders: false,
     });
 };
