@@ -1,0 +1,202 @@
+<!--
+================================================================================
+[pages/info/documents/index.vue] 요구사항 정의서 목록 페이지
+================================================================================
+요구사항 정의서 전체 목록을 조회하고 관리하는 페이지입니다.
+
+[주요 기능]
+  - 전체 목록 DataTable 조회
+  - 제목 기준 검색 필터
+  - 신규 등록 버튼 → /info/documents/form 이동
+  - 행 클릭 → /info/documents/{id} 상세 페이지 이동
+  - 삭제 버튼 (확인 다이얼로그 포함)
+
+[라우팅]
+  - 목록:   /info/documents
+  - 상세:   /info/documents/{docMngNo}
+  - 등록:   /info/documents/form
+================================================================================
+-->
+<script setup lang="ts">
+import { useDocuments } from '~/composables/useDocuments';
+import type { RequirementDocument } from '~/composables/useDocuments';
+
+const title = '요구사항 정의서';
+definePageMeta({ title });
+
+const { fetchDocuments, deleteDocument } = useDocuments();
+const toast = useToast();
+const confirm = useConfirm();
+
+/* ── 데이터 로드 ── */
+const { data: documentsData, pending, error, refresh } = await fetchDocuments();
+
+/** 목록 (null 안전 처리) */
+const documents = computed(() => documentsData.value || []);
+
+/* ── 검색 필터 ── */
+const searchText = ref('');
+
+const filteredDocuments = computed(() => {
+    if (!searchText.value) return documents.value;
+    const q = searchText.value.toLowerCase();
+    return documents.value.filter(d =>
+        d.reqNm?.toLowerCase().includes(q) ||
+        d.docMngNo?.toLowerCase().includes(q)
+    );
+});
+
+/* ── 삭제 처리 ── */
+const isDeleting = ref(false);
+
+/**
+ * 삭제 확인 다이얼로그 후 삭제 실행
+ * @param doc - 삭제할 문서
+ */
+const onDeleteClick = (event: Event, doc: RequirementDocument) => {
+    confirm.require({
+        target: event.currentTarget as HTMLElement,
+        message: `"${doc.reqNm}" 문서를 삭제하시겠습니까?`,
+        header: '삭제 확인',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-danger',
+        acceptLabel: '삭제',
+        rejectLabel: '취소',
+        accept: async () => {
+            isDeleting.value = true;
+            try {
+                await deleteDocument(doc.docMngNo);
+                toast.add({ severity: 'success', summary: '삭제 완료', detail: '문서가 삭제되었습니다.', life: 3000 });
+                await refresh();
+            } catch {
+                toast.add({ severity: 'error', summary: '삭제 실패', detail: '삭제 중 오류가 발생했습니다.', life: 4000 });
+            } finally {
+                isDeleting.value = false;
+            }
+        }
+    });
+};
+
+/* ── 날짜 포맷 ── */
+const formatDate = (str: string) => str?.substring(0, 10) || '-';
+</script>
+
+<template>
+    <div class="space-y-6">
+
+        <!-- 페이지 헤더 -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">IT 정보화사업 요구사항 정의서를 작성하고 관리합니다.</p>
+            </div>
+            <Button label="신규 작성" icon="pi pi-plus" @click="navigateTo('/info/documents/form')" />
+        </div>
+
+        <!-- 검색 + 테이블 카드 -->
+        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+
+            <!-- 검색 영역 -->
+            <div class="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+                <div class="relative flex-1 max-w-sm">
+                    <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm"></i>
+                    <InputText v-model="searchText" placeholder="문서 제목 검색..." class="pl-9 w-full" />
+                </div>
+                <Button icon="pi pi-refresh" severity="secondary" outlined @click="() => refresh()" :loading="pending"
+                    v-tooltip="'새로고침'" />
+            </div>
+
+            <!-- 오류 표시 -->
+            <div v-if="error" class="p-6 text-center">
+                <i class="pi pi-exclamation-circle text-4xl text-red-400 mb-3 block"></i>
+                <p class="text-red-500">데이터를 불러오는 중 오류가 발생했습니다.</p>
+                <p class="text-sm text-zinc-400 mt-1">{{ error.message }}</p>
+            </div>
+
+            <!-- DataTable -->
+            <DataTable v-else :value="filteredDocuments" :loading="pending"
+                paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]"
+                dataKey="docMngNo" sortField="fstEnrDtm" :sortOrder="-1"
+                :pt="{
+                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800/50' },
+                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer' }
+                }"
+                @row-click="(e: any) => navigateTo(`/info/documents/${e.data.docMngNo}`)">
+
+                <!-- 문서번호 -->
+                <Column field="docMngNo" header="문서번호" sortable style="width: 14%">
+                    <template #body="{ data }">
+                        <span class="text-xs font-mono text-zinc-500">{{ data.docMngNo }}</span>
+                    </template>
+                </Column>
+
+                <!-- 요구사항명 -->
+                <Column field="reqNm" header="요구사항명" sortable>
+                    <template #body="{ data }">
+                        <span class="font-medium text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400">
+                            {{ data.reqNm }}
+                        </span>
+                    </template>
+                </Column>
+
+                <!-- 요청구분 -->
+                <Column field="reqDtt" header="요청구분" style="width: 12%">
+                    <template #body="{ data }">
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">{{ data.reqDtt || '-' }}</span>
+                    </template>
+                </Column>
+
+                <!-- 업무구분 -->
+                <Column field="bzDtt" header="업무구분" style="width: 12%">
+                    <template #body="{ data }">
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">{{ data.bzDtt || '-' }}</span>
+                    </template>
+                </Column>
+
+                <!-- 완료기한 -->
+                <Column field="fsgTlm" header="완료기한" sortable style="width: 10%">
+                    <template #body="{ data }">
+                        <span :class="data.fsgTlm && data.fsgTlm < new Date().toISOString().slice(0,10) ? 'text-red-500 font-semibold' : ''">
+                            {{ formatDate(data.fsgTlm) }}
+                        </span>
+                    </template>
+                </Column>
+
+                <!-- 등록일시 -->
+                <Column field="fstEnrDtm" header="등록일시" sortable style="width: 13%">
+                    <template #body="{ data }">
+                        <span class="text-sm text-zinc-500">{{ data.fstEnrDtm?.substring(0, 16).replace('T', ' ') }}</span>
+                    </template>
+                </Column>
+
+                <!-- 액션 버튼 -->
+                <Column header="" style="width: 8%">
+                    <template #body="{ data }">
+                        <div class="flex gap-1.5">
+                            <Button icon="pi pi-pencil" size="small" text rounded
+                                @click.stop="navigateTo(`/info/documents/${data.docMngNo}`)"
+                                v-tooltip="'편집'" />
+                            <Button icon="pi pi-trash" size="small" text rounded severity="danger"
+                                :loading="isDeleting"
+                                @click.stop="(e: Event) => onDeleteClick(e, data)"
+                                v-tooltip="'삭제'" />
+                        </div>
+                    </template>
+                </Column>
+
+                <!-- 빈 상태 -->
+                <template #empty>
+                    <div class="py-12 text-center text-zinc-400">
+                        <i class="pi pi-file text-4xl mb-3 block"></i>
+                        <p>등록된 요구사항 정의서가 없습니다.</p>
+                        <Button label="첫 문서 작성하기" icon="pi pi-plus" class="mt-3" size="small"
+                            @click="navigateTo('/info/documents/form')" />
+                    </div>
+                </template>
+            </DataTable>
+        </div>
+    </div>
+
+    <ConfirmPopup />
+    <Toast />
+</template>

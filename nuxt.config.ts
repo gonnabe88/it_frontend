@@ -37,8 +37,22 @@ export default defineNuxtConfig({
   /* ── 개발 도구 설정 ── */
   devtools: {
     enabled: true,
+    // timeline은 메모리를 많이 소비하므로 비활성화
     timeline: {
-      enabled: true
+      enabled: false
+    }
+  },
+
+  /* ── Vite 번들러 메모리 최적화 ── */
+  vite: {
+    optimizeDeps: {
+      // CJS 의존성을 가진 패키지들을 Vite가 ESM으로 사전 번들링합니다.
+      // exclude 시 내부 CJS 모듈이 브라우저에 그대로 전달되어 명명 내보내기 오류가 발생합니다.
+      include: ['react', 'react-dom', 'react/jsx-runtime', '@excalidraw/excalidraw', 'quill'],
+    },
+    // 개발 환경에서 CSS 소스맵 비활성화 (메모리 절약)
+    css: {
+      devSourcemap: false
     }
   },
 
@@ -47,6 +61,7 @@ export default defineNuxtConfig({
     '@primevue/nuxt-module', // PrimeVue UI 컴포넌트 자동 임포트
     '@pinia/nuxt'            // Pinia 상태관리 모듈
   ],
+
 
   /* ── Pinia 스토어 자동 인식 디렉토리 ── */
   pinia: {
@@ -87,8 +102,9 @@ export default defineNuxtConfig({
 
   /* ── 글로벌 CSS 파일 ── */
   css: [
-    'primeicons/primeicons.css', // PrimeVue 아이콘 폰트
-    '~/assets/css/main.css'      // Tailwind CSS + 커스텀 유틸리티 클래스
+    'primeicons/primeicons.css',                           // PrimeVue 아이콘 폰트
+    '~/assets/css/main.css',                               // Tailwind CSS + 커스텀 유틸리티 클래스
+    '@excalidraw/excalidraw/index.css'                     // Excalidraw UI 스타일
   ],
 
   /* ── PostCSS 플러그인: Tailwind CSS + 자동 벤더 프리픽스 ── */
