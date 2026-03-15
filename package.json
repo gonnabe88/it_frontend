@@ -41,6 +41,7 @@
     "autoprefixer": "^10.4.23",
     "better-sqlite3": "^12.8.0",
     "isomorphic-dompurify": "^3.0.0",
+    "jszip": "^3.10.1",
     "nuxt": "^4.0.0",
     "pdfmake": "^0.3.3",
     "pinia": "^3.0.4",

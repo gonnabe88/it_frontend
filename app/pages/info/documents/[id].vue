@@ -24,6 +24,7 @@ definePageMeta({ title });
 
 const { fetchDocument, updateDocument, deleteDocument } = useDocuments();
 const { fetchFiles, uploadFile, uploadFilesBulk, deleteFile, getPreviewUrl, getDownloadUrl } = useFiles();
+const { exportToHwpx, isExporting } = useHwpxExport();
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -402,6 +403,10 @@ onUnmounted(() => {
                 <div class="flex gap-2">
                     <!-- 읽기 모드 액션 -->
                     <template v-if="!isEditing">
+                        <Button label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
+                            :loading="isExporting"
+                            :disabled="!doc.reqCone"
+                            @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
                         <Button label="편집" icon="pi pi-pencil" @click="startEdit" />
                         <Button label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
                             @click="onDelete" />

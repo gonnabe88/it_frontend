@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-15T15:29:17.220Z",
+  "lastUpdated": "2026-03-15T16:56:16.375Z",
   "activeFeatures": [
     "it_frontend",
     "unit",
@@ -24,9 +24,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-07T16:21:56.632Z",
-        "lastUpdated": "2026-03-15T15:29:17.219Z"
+        "lastUpdated": "2026-03-15T16:56:16.375Z"
       },
-      "lastFile": "C:\\it\\it_frontend\\nuxt.config.ts"
+      "lastFile": "C:\\it\\it_frontend\\app\\utils\\hwpx.ts"
     },
     "unit": {
       "phase": "do",
@@ -63,9 +63,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-07T16:23:36.885Z",
-        "lastUpdated": "2026-03-15T11:59:41.918Z"
+        "lastUpdated": "2026-03-15T15:51:59.730Z"
       },
-      "lastFile": "C:\\it\\it_frontend\\app\\composables\\useFiles.ts"
+      "lastFile": "C:\\it\\it_frontend\\app\\composables\\useHwpxExport.ts"
     },
     "helpers": {
       "phase": "do",
@@ -142,7 +142,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-14T08:01:50.846Z",
-        "lastUpdated": "2026-03-15T15:09:05.837Z"
+        "lastUpdated": "2026-03-15T15:52:15.198Z"
       },
       "lastFile": "C:\\it\\it_frontend\\app\\pages\\info\\documents\\[id].vue"
     }
@@ -155,7 +155,7 @@
   "session": {
     "startedAt": "2026-03-07T15:52:46.492Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-15T15:29:17.220Z"
+    "lastActivity": "2026-03-15T16:56:16.375Z"
   },
   "history": [
     {
@@ -1162,6 +1162,90 @@
     },
     {
       "timestamp": "2026-03-15T15:29:17.219Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T15:51:46.043Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T15:51:59.730Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T15:52:07.944Z",
+      "feature": "documents",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T15:52:15.198Z",
+      "feature": "documents",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:00:08.787Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:13:25.535Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:15:54.514Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:24:52.200Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:24:58.942Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:43:44.817Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:51:14.412Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:54:08.319Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:54:14.588Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-15T16:56:16.375Z",
       "feature": "it_frontend",
       "phase": "do",
       "action": "updated"

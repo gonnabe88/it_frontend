@@ -12,7 +12,9 @@
       "Bash(timeout 120 npm run:*)",
       "Bash(python:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npx nuxt:*)"
+      "Bash(npx nuxt:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)"
     ]
   },
   "language": "korean"
