@@ -143,7 +143,8 @@ watch(menuItems, (items) => {
                 <img src="~/assets/logo.png" alt="Logo" class="w-8 h-8 object-contain dark:invert" />
                 <Transition name="fade">
                     <span v-if="!collapsed"
-                        class="font-bold text-xl tracking-wider text-primary-600 dark:text-primary-400">IT PORTAL</span>
+                        class="font-bold text-xl tracking-wider text-primary-600 dark:text-primary-400">정보화
+                        Portal</span>
                 </Transition>
             </div>
 
