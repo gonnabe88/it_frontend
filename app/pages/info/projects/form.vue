@@ -83,7 +83,8 @@ const isEditMode = computed(() => !!projectId);
  *  gclAmt         ↔ gclAmt  (소계)
  */
 interface ResourceItem {
-    category: string;        // 품목구분 (API: gclDtt)
+    category: string;        // 품목구분 대분류 (API: gclDtt 앞부분)
+    subCategory: string;     // 품목구분 소분류 (API: gclDtt 뒷부분, 해당 대분류만 존재)
     item: string;            // 품목명 (API: gclNm)
     quantity: number;        // 수량 (API: gclQtt)
     currency: string;        // 통화 (API: cur)
@@ -148,7 +149,79 @@ const currentYear = new Date().getFullYear();
 const yearOptions = [currentYear - 1, currentYear, currentYear + 1];
 
 /* ── 드롭다운 선택지 옵션 ── */
-const resourceCategoryOptions = ['개발비', '기계장치', '기타무형자산', '전산임차료', '전산제비'];
+const resourceCategoryOptions = ['개발비', '기계장치', '기타무형자산', '전산용역비', '전산임차료', '전산제비'];
+
+/**
+ * 2단계 선택이 필요한 구분별 소분류 옵션 맵
+ * 해당 대분류가 선택되면 마우스 오버 시 오른쪽으로 소분류 flyout이 표시됩니다.
+ */
+const resourceSubCategoryMap: Record<string, string[]> = {
+    '개발비': ['일반', '감리/컨설팅'],
+    '기타무형자산': ['일반', 'SW라이선스'],
+    '전산용역비': ['외주(운영,관제 등)', '자문/심사'],
+};
+
+/* ── 구분 cascading dropdown 상태 ── */
+
+/** 현재 열려있는 드롭다운의 행 인덱스 (null이면 모두 닫힘) */
+const activeCatDropdownIndex = ref<number | null>(null);
+
+/** 1단계 드롭다운에서 현재 마우스가 올려진 대분류 */
+const hoveredMainCategory = ref<string>('');
+
+/** Teleport로 body에 렌더링할 드롭다운의 fixed 위치 및 개방 방향 */
+const catDropdownPos = ref({ top: 0, bottom: 0, left: 0, width: 0, openUpward: false });
+
+/**
+ * 구분 드롭다운 열기
+ * 트리거 버튼의 DOMRect를 기반으로 fixed 위치를 계산합니다.
+ * 아래 공간이 부족하면 위로 열리도록 방향을 자동 결정합니다.
+ */
+const openCatDropdown = (index: number, event: MouseEvent) => {
+    const btn = event.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    /* 항목 수 × 옵션 예상 높이(34px) + 패널 상하 패딩(8px) */
+    const estimatedHeight = resourceCategoryOptions.length * 34 + 8;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < estimatedHeight + 8;
+    catDropdownPos.value = {
+        top: rect.bottom + 4,
+        bottom: window.innerHeight - rect.top + 4,
+        left: rect.left,
+        width: Math.max(rect.width, 140),
+        openUpward,
+    };
+    activeCatDropdownIndex.value = activeCatDropdownIndex.value === index ? null : index;
+    hoveredMainCategory.value = '';
+};
+
+/** 구분 드롭다운 닫기 */
+const closeCatDropdown = () => {
+    activeCatDropdownIndex.value = null;
+    hoveredMainCategory.value = '';
+};
+
+/**
+ * 대분류 항목 클릭 처리
+ * 소분류가 있는 항목은 클릭으로 직접 선택 불가 (소분류에서만 선택 가능).
+ * 소분류가 없는 항목만 즉시 선택 후 드롭다운을 닫습니다.
+ */
+const selectMainCat = (rowData: ResourceItem, cat: string) => {
+    if (resourceSubCategoryMap[cat]) return; // 소분류 존재 시 클릭 무시
+    rowData.category = cat;
+    rowData.subCategory = '';
+    closeCatDropdown();
+};
+
+/**
+ * 소분류 항목 클릭 처리
+ * 대분류와 소분류를 모두 세팅하고 드롭다운을 닫습니다.
+ */
+const selectSubCat = (rowData: ResourceItem, cat: string, sub: string) => {
+    rowData.category = cat;
+    rowData.subCategory = sub;
+    closeCatDropdown();
+};
 const currencyOptions = computed(() => Object.keys(exchangeRates.value));
 const paymentCycleOptions = ['월', '분기', '반기', '년'];
 const ynOptions = ['Y', 'N'];
@@ -296,8 +369,14 @@ onMounted(async () => {
                 const project = data.value;
 
                 /* API 응답의 items를 UI resourceItems 모델로 변환 */
-                const mappedItems = (project.items || []).map((item: any) => ({
-                    category: item.gclDtt, // 품목구분
+                const mappedItems = (project.items || []).map((item: any) => {
+                    /* gclDtt가 "개발비 > 일반" 형식이면 대분류/소분류로 분리 */
+                    const parts = (item.gclDtt || '').split(' > ');
+                    const mainCat = parts[0] || '';
+                    const subCat = parts[1] || '';
+                    return {
+                    category: mainCat, // 품목구분 대분류
+                    subCategory: subCat, // 품목구분 소분류
                     item: item.gclNm, // 품목명
                     quantity: item.gclQtt, // 수량
                     currency: item.cur, // 통화
@@ -310,7 +389,8 @@ onMounted(async () => {
                     /* UI 계산 필드 복원 */
                     gclAmt: item.gclAmt || 0, // 소계
                     xcr: item.xcr // 저장된 환율 복원
-                }));
+                    };
+                });
 
                 /* API 응답을 폼에 병합 (날짜 필드는 Date 객체로 변환) */
                 form.value = {
@@ -363,7 +443,8 @@ const formatDate = (date: Date | null): string => {
 const executeSave = async () => {
     /* 1. UI의 resourceItems를 API 스펙인 items로 역변환 */
     const items = form.value.resourceItems.map(item => ({
-        gclDtt: item.category, // 품목구분
+        /* 소분류가 있으면 "대분류 > 소분류" 형식으로 결합 */
+        gclDtt: item.subCategory ? `${item.category} > ${item.subCategory}` : item.category, // 품목구분
         gclNm: item.item, // 품목명
         gclQtt: item.quantity, // 수량
         cur: item.currency, // 통화
@@ -455,6 +536,7 @@ const saveProject = () => {
 const addResourceRow = () => {
     form.value.resourceItems.push({
         category: '개발비',
+        subCategory: '', // 소분류 초기값 (2단계 선택 시 설정)
         item: '',
         quantity: 0,
         currency: 'KRW',
@@ -819,12 +901,114 @@ const cancel = () => {
                                 </div>
                             </template>
 
-                            <!-- 구분: 카테고리 드롭다운 -->
+                            <!-- 구분: 2단계 cascading flyout 드롭다운 -->
                             <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center"
-                                style="min-width: 120px">
-                                <template #body="{ data }">
-                                    <Select v-model="data.category" :options="resourceCategoryOptions" placeholder="선택"
-                                        class="w-full" />
+                                style="min-width: 160px">
+                                <template #body="{ data, index }">
+                                    <!-- 외부 클릭 시 드롭다운 닫기용 transparent overlay -->
+                                    <Teleport to="body">
+                                        <div
+                                            v-if="activeCatDropdownIndex === index"
+                                            class="fixed inset-0 z-40"
+                                            @click="closeCatDropdown"
+                                        />
+                                    </Teleport>
+
+                                    <!-- 트리거 버튼: PrimeVue Select CSS 변수를 그대로 사용해 주변 폼과 동일한 높이/폰트 유지 -->
+                                    <button
+                                        type="button"
+                                        class="w-full flex items-center justify-between gap-1 cursor-pointer"
+                                        style="
+                                            padding: var(--p-select-padding-y) var(--p-select-padding-x);
+                                            font-size: inherit;
+                                            font-family: inherit;
+                                            line-height: 1.5;
+                                            color: var(--p-select-color);
+                                            background: var(--p-select-background);
+                                            border: 1px solid var(--p-select-border-color);
+                                            border-radius: var(--p-select-border-radius);
+                                            box-shadow: var(--p-select-shadow);
+                                            outline: none;
+                                            transition: border-color var(--p-select-transition-duration, 0.15s);
+                                        "
+                                        @mouseenter="($event.currentTarget as HTMLElement).style.borderColor = 'var(--p-select-hover-border-color)'"
+                                        @mouseleave="($event.currentTarget as HTMLElement).style.borderColor = activeCatDropdownIndex === index ? 'var(--p-select-focus-border-color)' : 'var(--p-select-border-color)'"
+                                        @focus="($event.currentTarget as HTMLElement).style.borderColor = 'var(--p-select-focus-border-color)'"
+                                        @blur="($event.currentTarget as HTMLElement).style.borderColor = 'var(--p-select-border-color)'"
+                                        @click.stop="openCatDropdown(index, $event)"
+                                    >
+                                        <span class="truncate text-left flex-1">
+                                            <template v-if="data.category">
+                                                {{ data.category }}
+                                                <template v-if="data.subCategory">
+                                                    <span style="color: var(--p-select-placeholder-color)" class="mx-0.5">›</span>
+                                                    {{ data.subCategory }}
+                                                </template>
+                                            </template>
+                                            <span v-else style="color: var(--p-select-placeholder-color)">선택</span>
+                                        </span>
+                                        <!-- PrimeVue Select dropdown 아이콘 색상 변수 사용 -->
+                                        <i class="pi pi-chevron-down flex-shrink-0"
+                                            style="font-size: 0.75rem; color: var(--p-select-dropdown-color, var(--p-form-field-icon-color))"
+                                            :class="{ 'rotate-180': activeCatDropdownIndex === index }"
+                                            :style="{ transition: 'transform var(--p-select-transition-duration, 0.15s)' }" />
+                                    </button>
+
+                                    <!-- 1단계 드롭다운 패널 (Teleport → body, fixed 위치) -->
+                                    <Teleport to="body">
+                                        <div
+                                            v-if="activeCatDropdownIndex === index"
+                                            class="cat-dropdown-panel fixed z-50"
+                                            :style="{
+                                                ...(catDropdownPos.openUpward
+                                                    ? { bottom: catDropdownPos.bottom + 'px' }
+                                                    : { top: catDropdownPos.top + 'px' }),
+                                                left: catDropdownPos.left + 'px',
+                                                minWidth: catDropdownPos.width + 'px'
+                                            }"
+                                            @click.stop
+                                        >
+                                            <div
+                                                v-for="cat in resourceCategoryOptions"
+                                                :key="cat"
+                                                class="cat-dropdown-option"
+                                                :class="{
+                                                    /* 소분류 없는 항목: 직접 선택된 경우 */
+                                                    'is-selected': !resourceSubCategoryMap[cat] && data.category === cat,
+                                                    /* 소분류 있는 항목: 하위 항목이 현재 선택된 경우 (클릭 불가) */
+                                                    'is-parent-active': !!resourceSubCategoryMap[cat] && data.category === cat,
+                                                }"
+                                                @mouseenter="hoveredMainCategory = cat"
+                                                @click.stop="selectMainCat(data, cat)"
+                                            >
+                                                <span>{{ cat }}</span>
+                                                <!-- 소분류가 있는 항목은 화살표 표시 -->
+                                                <i
+                                                    v-if="resourceSubCategoryMap[cat]"
+                                                    class="pi pi-chevron-right ml-2 flex-shrink-0"
+                                                    style="font-size: 0.65rem; color: var(--p-select-option-color); opacity: 0.5;"
+                                                />
+
+                                                <!-- 2단계 소분류 flyout (hover 시 오른쪽으로 나타남) -->
+                                                <div
+                                                    v-if="resourceSubCategoryMap[cat] && hoveredMainCategory === cat"
+                                                    class="cat-dropdown-panel absolute left-full top-0 ml-1"
+                                                    style="z-index: 51; min-width: 160px;"
+                                                    @click.stop
+                                                >
+                                                    <div
+                                                        v-for="sub in resourceSubCategoryMap[cat]"
+                                                        :key="sub"
+                                                        class="cat-dropdown-option"
+                                                        :class="{ 'is-selected': data.category === cat && data.subCategory === sub }"
+                                                        @click.stop="selectSubCat(data, cat, sub)"
+                                                    >
+                                                        {{ sub }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Teleport>
                                 </template>
                             </Column>
 
@@ -937,5 +1121,61 @@ const cancel = () => {
 /** 소요자원 테이블 헤더 콘텐츠 중앙 정렬 */
 :deep(.resource-table .p-datatable-thead > tr > th .p-column-header-content) {
     justify-content: center;
+}
+</style>
+
+<style>
+/**
+ * 구분 cascading dropdown 패널 & 옵션 스타일
+ * Teleport to="body"로 렌더링되어 scoped CSS가 미적용되므로 전역 스타일로 정의합니다.
+ * PrimeVue Select overlay/option CSS 변수를 그대로 사용해 주변 Select와 동일한 외형을 유지합니다.
+ */
+.cat-dropdown-panel {
+    background: var(--p-select-overlay-background);
+    border: 1px solid var(--p-select-overlay-border-color);
+    border-radius: var(--p-select-overlay-border-radius);
+    box-shadow: var(--p-select-overlay-shadow);
+    padding: var(--p-select-list-padding, 0.25rem 0.25rem);
+}
+
+.cat-dropdown-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--p-select-option-padding);
+    border-radius: var(--p-select-option-border-radius);
+    color: var(--p-select-option-color);
+    font-size: inherit;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    white-space: nowrap;
+}
+
+.cat-dropdown-option:hover {
+    background: var(--p-select-option-focus-background);
+    color: var(--p-select-option-focus-color);
+}
+
+/* 직접 선택된 항목 */
+.cat-dropdown-option.is-selected {
+    background: var(--p-select-option-selected-background);
+    color: var(--p-select-option-selected-color);
+}
+
+.cat-dropdown-option.is-selected:hover {
+    background: var(--p-select-option-selected-focus-background);
+    color: var(--p-select-option-selected-focus-color);
+}
+
+/* 하위 항목이 선택된 부모 (클릭 불가 — hover 스타일은 일반 항목과 동일) */
+.cat-dropdown-option.is-parent-active {
+    color: var(--p-select-option-selected-color);
+    font-weight: 500;
+}
+
+.cat-dropdown-option.is-parent-active:hover {
+    background: var(--p-select-option-focus-background);
+    color: var(--p-select-option-focus-color);
 }
 </style>

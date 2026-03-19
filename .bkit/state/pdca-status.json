@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-15T16:58:59.154Z",
+  "lastUpdated": "2026-03-19T23:20:15.847Z",
   "activeFeatures": [
     "it_frontend",
     "unit",
@@ -11,7 +11,8 @@
     "프론트엔드 테스트 구성 Gap 분석",
     "budget",
     "approval",
-    "documents"
+    "documents",
+    "projects"
   ],
   "primaryFeature": "it_frontend",
   "features": {
@@ -145,6 +146,19 @@
         "lastUpdated": "2026-03-15T15:52:15.198Z"
       },
       "lastFile": "C:\\it\\it_frontend\\app\\pages\\info\\documents\\[id].vue"
+    },
+    "projects": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-19T22:59:23.479Z",
+        "lastUpdated": "2026-03-19T23:20:15.846Z"
+      },
+      "lastFile": "C:\\it\\it_frontend\\app\\pages\\info\\projects\\form.vue"
     }
   },
   "pipeline": {
@@ -155,7 +169,7 @@
   "session": {
     "startedAt": "2026-03-07T15:52:46.492Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-15T16:58:59.154Z"
+    "lastActivity": "2026-03-19T23:20:15.847Z"
   },
   "history": [
     {
@@ -1253,6 +1267,108 @@
     {
       "timestamp": "2026-03-15T16:58:59.153Z",
       "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T22:59:23.479Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T22:59:44.078Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T22:59:54.557Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:00:09.034Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:00:15.672Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:00:23.757Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:00:33.898Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:00:52.263Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:04:56.102Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:05:19.495Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:12:21.160Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:16:30.226Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:16:51.642Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:17:17.112Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:19:56.488Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:20:06.051Z",
+      "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-19T23:20:15.846Z",
+      "feature": "projects",
       "phase": "do",
       "action": "updated"
     }

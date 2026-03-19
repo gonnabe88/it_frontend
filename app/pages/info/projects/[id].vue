@@ -155,10 +155,13 @@ const totalItemsAmount = computed(() => {
  * @returns PrimeVue Tag severity 값
  */
 const getCategorySeverity = (category: string) => {
-    switch (category) {
+    /* "대분류 > 소분류" 형식이면 대분류만 추출하여 severity 결정 */
+    const mainCat = category?.split(' > ')[0] ?? category;
+    switch (mainCat) {
         case '개발비': return 'info';
         case '기계장치': return 'warning';
         case '기타무형자산': return 'success';
+        case '전산용역비': return 'contrast';
         case '전산임차료': return 'danger';
         case '전산제비': return 'secondary';
         default: return 'secondary';
