@@ -47,9 +47,9 @@ definePageMeta({
     title
 });
 
-/* ── 데이터 로드 ── */
+/* ── 데이터 로드 (일반 정보화사업만: ornYn=N, 기존 데이터 포함) ── */
 const { fetchProjects } = useProjects();
-const { data: projectsData, error } = await fetchProjects();
+const { data: projectsData, error } = await fetchProjects({ ornYn: 'N' });
 
 /** 정보화사업 목록 (null 안전 처리) */
 const projects = computed(() => projectsData.value || []);

@@ -50,7 +50,7 @@ const costs = computed(() => costsData.value || []);
  */
 interface UnifiedBudgetItem {
     _id: string;
-    _type: string;       // '사업' | '비용'
+    _type: string;       // '사업' | '비용' | '경상'
     _link: string;
     name: string;
     category: string;
@@ -72,7 +72,7 @@ interface UnifiedBudgetItem {
 const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
     const projectItems: UnifiedBudgetItem[] = projects.value.map((p: Project) => ({
         _id: p.prjMngNo,
-        _type: '사업',
+        _type: (p as any).ornYn === 'Y' ? '경상' : '사업',
         _link: `/info/projects/${p.prjMngNo}`,
         name: p.prjNm,
         category: p.prjTp,
@@ -181,6 +181,11 @@ const selectedProjectCount = computed(() =>
     selectedItems.value.filter(i => i._type === '사업').length
 );
 
+/** 선택된 경상사업 건수 */
+const selectedOrdinaryCount = computed(() =>
+    selectedItems.value.filter(i => i._type === '경상').length
+);
+
 /** 선택된 전산업무비 건수 */
 const selectedCostCount = computed(() =>
     selectedItems.value.filter(i => i._type === '비용').length
@@ -209,7 +214,7 @@ const requestApproval = () => {
 
     if (process.client) {
         const projectIds = selectedItems.value
-            .filter(i => i._type === '사업')
+            .filter(i => i._type === '사업' || i._type === '경상')
             .map(i => i._id);
         const costIds = selectedItems.value
             .filter(i => i._type === '비용')
@@ -223,14 +228,27 @@ const requestApproval = () => {
 };
 
 /**
- * BudgetSummaryCards에 전달할 정보화사업 목록
+ * BudgetSummaryCards에 전달할 정보화사업 목록 (경상사업 제외)
  * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
  */
 const cardProjects = computed(() =>
     hasSelection.value
         ? projects.value.filter(p =>
+            (p as any).ornYn !== 'Y' &&
             selectedItems.value.some(i => i._type === '사업' && i._id === p.prjMngNo))
-        : projects.value
+        : projects.value.filter(p => (p as any).ornYn !== 'Y')
+);
+
+/**
+ * BudgetSummaryCards에 전달할 경상사업 목록
+ * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
+ */
+const cardOrdinary = computed(() =>
+    hasSelection.value
+        ? projects.value.filter(p =>
+            (p as any).ornYn === 'Y' &&
+            selectedItems.value.some(i => i._type === '경상' && i._id === p.prjMngNo))
+        : projects.value.filter(p => (p as any).ornYn === 'Y')
 );
 
 /**
@@ -286,7 +304,7 @@ const hasFilters = computed(() =>
 );
 
 /** 구분 AutoComplete 옵션 */
-const typeOptions = ['사업', '비용'];
+const typeOptions = ['사업', '비용', '경상'];
 
 /** 담당부서 AutoComplete 검색 결과 */
 const deptSuggestions = ref<string[]>([]);
@@ -374,7 +392,7 @@ const { generateReport } = usePdfReport();
 const downloadPdf = async () => {
     reportLoading.value = true;
     try {
-        const projectIds = filteredItems.value.filter(i => i._type === '사업').map(i => i._id);
+        const projectIds = filteredItems.value.filter(i => i._type === '사업' || i._type === '경상').map(i => i._id);
         const costIds = filteredItems.value.filter(i => i._type === '비용').map(i => i._id);
 
         const projectDetails: ProjectDetail[] = projectIds.length
@@ -426,7 +444,10 @@ const downloadPdf = async () => {
                     class="flex items-center gap-1.5 text-sm text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
                     <i class="pi pi-check-square text-purple-500 dark:text-purple-400 text-xs"></i>
                     <span v-if="selectedProjectCount > 0" class="font-semibold">사업 {{ selectedProjectCount }}건</span>
-                    <span v-if="selectedProjectCount > 0 && selectedCostCount > 0"
+                    <span v-if="selectedProjectCount > 0 && selectedOrdinaryCount > 0"
+                        class="text-purple-300 dark:text-purple-600">·</span>
+                    <span v-if="selectedOrdinaryCount > 0" class="font-semibold">경상 {{ selectedOrdinaryCount }}건</span>
+                    <span v-if="(selectedProjectCount > 0 || selectedOrdinaryCount > 0) && selectedCostCount > 0"
                         class="text-purple-300 dark:text-purple-600">·</span>
                     <span v-if="selectedCostCount > 0" class="font-semibold">비용 {{ selectedCostCount }}건</span>
                     <i class="pi pi-times text-xs text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 ml-0.5 cursor-pointer"
@@ -442,7 +463,7 @@ const downloadPdf = async () => {
         </div>
 
         <!-- 예산 현황 요약 카드 -->
-        <BudgetSummaryCards :projects="cardProjects" :costs="cardCosts" :selectedUnit="selectedUnit" />
+        <BudgetSummaryCards :projects="cardProjects" :costs="cardCosts" :ordinary="cardOrdinary" :selectedUnit="selectedUnit" />
 
         <!-- 통합 DataTable -->
         <div
@@ -494,12 +515,14 @@ const downloadPdf = async () => {
                     </template>
                 </Column>
 
-                <!-- 구분: 사업 / 비용 태그 -->
+                <!-- 구분: 사업 / 비용 / 경상 태그 -->
                 <Column field="_type" header="구분" sortable style="width: 100px">
                     <template #body="slotProps">
                         <Tag :value="slotProps.data._type" :class="slotProps.data._type === '사업'
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                            : slotProps.data._type === '경상'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
                             class="border-0" rounded />
                     </template>
                 </Column>

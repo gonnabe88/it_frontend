@@ -16,7 +16,7 @@
      - 전산여비 (IT 업무추진 여비)
      - 전산제비 (회선사용료, 유지보수 등)
 
-  3. 경상사업 → /info/recurring/form (향후 구현 예정)
+  3. 경상사업 → /info/projects/ordinary/form
      - 국내: 도면 설계(CADian), Adobe CCT 등
      - 해외: 신규 채용에 따른 PC 구입, 노후 PC 교체 등
 
@@ -115,8 +115,8 @@ definePageMeta({
                     </div>
                 </div>
 
-                <!-- 3. 경상사업 카드 (레드 테마, 향후 구현 예정) -->
-                <div @click="navigateTo('/info/recurring/form')"
+                <!-- 3. 경상사업 카드 (레드 테마) -->
+                <div @click="navigateTo('/info/projects/ordinary/form')"
                     class="group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:border-red-500 dark:hover:border-red-500 transition-all duration-300 cursor-pointer flex flex-col items-center text-center h-100">
 
                     <!-- 아이콘 영역 (고정 높이) -->
