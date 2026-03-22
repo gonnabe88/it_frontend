@@ -51,6 +51,7 @@ const menuItems = computed(() => {
     // Default: Info
     return [
         { label: '홈', icon: 'pi pi-home', to: '/info' },
+        { label: '가이드', icon: 'pi pi-book', to: '/guide' },
         { label: '요구사항 정의서', icon: 'pi pi-file-edit', to: '/info/documents' },
         { label: '사전진단', icon: 'pi pi-check-square', to: '/diagnosis' },
         {
