@@ -56,17 +56,27 @@ export interface BulkApprovalItem {
 }
 
 /**
+ * [OrcItem] 원본 데이터 연결 항목
+ * 단일 신청서가 복수의 원본 레코드(정보화사업, 전산관리비 등)를
+ * 연결할 때 orcItems 배열의 요소로 사용됩니다.
+ */
+export interface OrcItem {
+    orcTbCd: string;    // 원본 테이블코드 (예: 'BPRJTM', 'BITCOST')
+    orcPkVl: string;    // 원본 PK값 (예: 'PRJ-2026-0001', 'COST-2026-001')
+    orcSnoVl?: string;  // 원본 SNO값 (optional, 예: '1')
+}
+
+/**
  * [CreateApplicationRequest] 신청서 생성 요청 인터페이스
  * 새 전자결재 신청서를 생성할 때 서버로 전송하는 데이터 구조입니다.
+ * orcItems 배열로 복수의 원본 레코드를 단일 신청서에 연결합니다.
  */
 export interface CreateApplicationRequest {
     apfNm: string;           // 신청서명
     apfDtlCone?: string;     // 상세내용 (JSON 문자열, optional)
-    orcTbCd: string;         // 원본 테이블코드 (연관된 도메인 식별자)
-    orcPkVl: string;         // 원본 테이블의 PK값
-    orcSnoVl: string;        // 원본 테이블의 일련번호(sno) 값
+    orcItems?: OrcItem[];    // 원본 데이터 연결 항목 목록 (복수 원본 지원)
     rqsEno: string;          // 신청자 사원번호
-    rqsOpnn: string;         // 신청의견
+    rqsOpnn?: string;        // 신청의견 (optional)
     approverEnos: string[];  // 결재자 사원번호 목록 (배열 순서가 결재 순서)
 }
 
@@ -112,7 +122,7 @@ export const useApprovals = () => {
      *   rqsEno: '10001',
      *   rqsOpnn: '2026년도 IT 예산 편성 신청드립니다.',
      *   approverEnos: ['20001', '30001'],
-     *   orcTbCd: 'IT_PRJ', orcPkVl: 'PRJ-001', orcSnoVl: '1'
+     *   orcItems: [{ orcTbCd: 'BPRJTM', orcPkVl: 'PRJ-001', orcSnoVl: '1' }]
      * });
      */
     const createApplication = async (request: CreateApplicationRequest) => {

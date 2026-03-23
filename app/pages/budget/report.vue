@@ -22,10 +22,10 @@
 
 [결재 상신 로직 (submitApproval)]
   1. 팀장/부서장 미지정 시 경고 후 중단
-  2. 정보화사업별 → orcTbCd: 'BPRJTM', orcPkVl: prjMngNo
-     전산업무비별  → orcTbCd: 'BITCOST', orcPkVl: itMngcNo
-  3. Promise.all로 모든 건 동시 상신 처리
-  4. 성공 시 /budget/list 로 이동
+  2. orcItems 구성: 정보화사업 → orcTbCd:'BPROJM', 전산업무비 → orcTbCd:'BCOSTM'
+  3. apfDtlCone: { projects:[...], costs:[...], approvalLine } 단일 JSON
+  4. createApplication 1회 호출 → APF_MNG_NO 1개, CAPPLA N행
+  5. 성공 시 /budget/list 로 이동
 
 [라우팅]
   - 접근: /budget/report
@@ -38,7 +38,7 @@ import { type ProjectDetail, useProjects } from '~/composables/useProjects';
 import { type ItCost, useCost } from '~/composables/useCost';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { useApprovals, type CreateApplicationRequest } from '~/composables/useApprovals';
+import { useApprovals, type CreateApplicationRequest, type OrcItem } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
 import type { OrgUser } from '~/composables/useOrganization';
 
@@ -264,44 +264,43 @@ const submitApproval = async () => {
     ];
 
     try {
-        /* 2. 정보화사업별 결재 신청 요청 구성 */
-        const projectApplications = projects.value.map((project) => {
-            const request: CreateApplicationRequest = {
-                apfNm: '전산예산 작성',
-                apfDtlCone: JSON.stringify({
-                    projects: [project],
-                    approvalLine: savedApprovalLine
-                }),
-                orcTbCd: 'BPRJTM',          // 정보화사업 연계 테이블 코드
-                orcPkVl: project.prjMngNo,   // 프로젝트 관리번호
-                orcSnoVl: '1',
-                rqsEno: approvalLine.value.drafter.id,
-                rqsOpnn: project.prjNm,
-                approverEnos
-            };
-            return createApplication(request);
+        /* 2. 원본 데이터 연결 항목 구성 (정보화사업 + 전산업무비 통합) */
+        const orcItems: OrcItem[] = [
+            ...projects.value.map(p => ({
+                orcTbCd: 'BPROJM',           // 정보화사업 연계 테이블 코드 (ProjectService.setApplicationInfo 참조값과 일치)
+                orcPkVl: p.prjMngNo,         // 프로젝트 관리번호
+                orcSnoVl: '1'
+            })),
+            ...costs.value.map(c => ({
+                orcTbCd: 'BCOSTM',          // 전산업무비 연계 테이블 코드
+                orcPkVl: c.itMngcNo || '',   // 전산업무비 관리번호
+                orcSnoVl: '1'
+            }))
+        ];
+
+        /* 3. APF_DTL_CONE: 전체 목록 + 결재선을 하나의 JSON으로 통합 */
+        const apfDtlCone = JSON.stringify({
+            projects: projects.value,
+            costs: costs.value,
+            approvalLine: savedApprovalLine
         });
 
-        /* 3. 전산업무비별 결재 신청 요청 구성 */
-        const costApplications = costs.value.map((cost) => {
-            const request: CreateApplicationRequest = {
-                apfNm: '전산예산 작성',
-                apfDtlCone: JSON.stringify({
-                    costs: [cost],
-                    approvalLine: savedApprovalLine
-                }),
-                orcTbCd: 'BITCOST',               // 전산업무비 연계 테이블 코드
-                orcPkVl: cost.itMngcNo || '',     // 전산업무비 관리번호
-                orcSnoVl: '1',
-                rqsEno: approvalLine.value.drafter.id,
-                rqsOpnn: cost.cttNm,
-                approverEnos
-            };
-            return createApplication(request);
-        });
+        /* 4. 신청의견: 단일이면 항목명, 복수이면 "대표항목명 외 N건" */
+        const totalItems = projects.value.length + costs.value.length;
+        const firstItemName = projects.value[0]?.prjNm || costs.value[0]?.cttNm || '';
+        const rqsOpnn = totalItems === 1
+            ? firstItemName
+            : `${firstItemName} 외 ${totalItems - 1}건`;
 
-        /* 4. 모든 결재 상신 동시 처리 */
-        await Promise.all([...projectApplications, ...costApplications]);
+        /* 5. 단일 createApplication 호출로 통합 상신 */
+        await createApplication({
+            apfNm: '전산예산 작성',
+            apfDtlCone,
+            orcItems,
+            rqsEno: approvalLine.value.drafter.id,
+            rqsOpnn,
+            approverEnos
+        });
 
         alert(`${totalCount.value}건의 결재 상신이 완료되었습니다.`);
         navigateTo('/budget/list');
