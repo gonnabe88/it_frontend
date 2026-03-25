@@ -211,8 +211,10 @@ export const useAuthStore = defineStore('auth', () => {
      */
     const setAuth = (data: LoginResponse) => {
         user.value = {
-            eno:   data.eno,
-            empNm: data.empNm
+            eno:    data.eno,
+            empNm:  data.empNm,
+            athIds: data.athIds ?? ['ITPZZ001'], // null 방어: 미등록 사용자 기본값
+            bbrC:   data.bbrC ?? '',
         };
     };
 

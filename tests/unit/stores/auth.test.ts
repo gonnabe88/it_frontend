@@ -51,20 +51,27 @@ vi.stubGlobal('localStorage', localStorageMock);
 // stores/auth.ts를 직접 import하지 않고 동일한 로직을 인라인으로 정의
 // (Nuxt auto-import 환경 없이 테스트하기 위해 store 로직을 직접 구현)
 // ============================================================================
+interface User { eno: string; empNm: string; athIds: string[]; bbrC: string; }
+
 const useAuthStore = defineStore('auth', () => {
-    const user = ref<{ eno: string; empNm: string } | null>(null);
+    const user = ref<User | null>(null);
     const isAuthenticated = computed(() => !!user.value);
 
     const API_BASE_URL = 'http://localhost:8080/api/auth';
 
     const login = async (credentials: { eno: string; password: string }): Promise<void> => {
         try {
-            const response = await $fetch<{ eno: string; empNm: string }>(`${API_BASE_URL}/login`, {
+            const response = await $fetch<User>(`${API_BASE_URL}/login`, {
                 method: 'POST',
                 body: credentials,
                 credentials: 'include',
             });
-            user.value = { eno: response.eno, empNm: response.empNm };
+            user.value = {
+                eno:    response.eno,
+                empNm:  response.empNm,
+                athIds: response.athIds ?? ['ITPZZ001'],
+                bbrC:   response.bbrC ?? '',
+            };
             if (process.client) {
                 localStorage.setItem('user', JSON.stringify(user.value));
             }
@@ -112,6 +119,32 @@ const useAuthStore = defineStore('auth', () => {
 
     return { user, isAuthenticated, login, logout, refresh, restoreSession };
 });
+
+// ============================================================================
+// useAuth composable의 RBAC 헬퍼 함수 인라인 구현 (테스트용)
+// ============================================================================
+const ROLE = {
+    USER:         'ITPZZ001',
+    DEPT_MANAGER: 'ITPZZ002',
+    ADMIN:        'ITPAD001',
+} as const;
+
+const makeRbacHelpers = (user: User | null) => {
+    const isAdmin = () => user?.athIds?.includes(ROLE.ADMIN) ?? false;
+    const isDeptManager = () => user?.athIds?.some(id => id === ROLE.DEPT_MANAGER || id === ROLE.ADMIN) ?? false;
+    const isUser = () => !isAdmin() && !isDeptManager();
+    const hasRole = (athId: string) => user?.athIds?.includes(athId) ?? false;
+    const canModify = (creatorEno: string, resourceBbrC?: string): boolean => {
+        if (!user) return false;
+        if (isAdmin()) return true;
+        if (isDeptManager()) {
+            if (resourceBbrC) return user.bbrC === resourceBbrC;
+            return true;
+        }
+        return user.eno === creatorEno;
+    };
+    return { isAdmin, isDeptManager, isUser, hasRole, canModify };
+};
 
 // ============================================================================
 // 테스트
@@ -162,14 +195,24 @@ describe('useAuthStore', () => {
     describe('login', () => {
         it('로그인 성공 시 user 상태를 설정하고 localStorage에 저장한다', async () => {
             const store = useAuthStore();
-            mockFetch.mockResolvedValueOnce({ eno: 'E001', empNm: '홍길동' });
+            mockFetch.mockResolvedValueOnce({ eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' });
 
             await store.login({ eno: 'E001', password: 'pass123' });
 
-            expect(store.user).toEqual({ eno: 'E001', empNm: '홍길동' });
+            expect(store.user).toEqual({ eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' });
             expect(store.isAuthenticated).toBe(true);
             const stored = JSON.parse(localStorageMock.getItem('user') ?? '{}');
-            expect(stored).toEqual({ eno: 'E001', empNm: '홍길동' });
+            expect(stored).toEqual({ eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' });
+        });
+
+        it('로그인 응답에 athIds가 없으면 기본값 ITPZZ001이 설정된다', async () => {
+            const store = useAuthStore();
+            // athIds 없는 응답 (미등록 사용자)
+            mockFetch.mockResolvedValueOnce({ eno: 'E001', empNm: '홍길동', bbrC: 'D001' });
+
+            await store.login({ eno: 'E001', password: 'pass123' });
+
+            expect(store.user?.athIds).toEqual(['ITPZZ001']);
         });
 
         it('로그인 실패 시 에러를 throw하고 user는 null을 유지한다', async () => {
@@ -202,8 +245,8 @@ describe('useAuthStore', () => {
     describe('logout', () => {
         it('logout 호출 시 user를 null로 초기화하고 localStorage를 비운다', async () => {
             const store = useAuthStore();
-            store.user = { eno: 'E001', empNm: '홍길동' };
-            localStorageMock.setItem('user', JSON.stringify({ eno: 'E001', empNm: '홍길동' }));
+            store.user = { eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' };
+            localStorageMock.setItem('user', JSON.stringify({ eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' }));
 
             mockFetch.mockResolvedValueOnce(undefined);
             await store.logout();
@@ -215,7 +258,7 @@ describe('useAuthStore', () => {
 
         it('logout API 실패 시에도 클라이언트 상태를 초기화한다', async () => {
             const store = useAuthStore();
-            store.user = { eno: 'E001', empNm: '홍길동' };
+            store.user = { eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' };
             mockFetch.mockRejectedValueOnce(new Error('Network Error'));
 
             // 에러 throw 없이 처리되어야 함
@@ -238,7 +281,7 @@ describe('useAuthStore', () => {
 
         it('토큰 갱신 성공 시 true를 반환한다', async () => {
             const store = useAuthStore();
-            store.user = { eno: 'E001', empNm: '홍길동' };
+            store.user = { eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' };
             mockFetch.mockResolvedValueOnce(undefined);
 
             const result = await store.refresh();
@@ -247,7 +290,7 @@ describe('useAuthStore', () => {
 
         it('토큰 갱신 실패 시 false를 반환하고 logout을 호출한다', async () => {
             const store = useAuthStore();
-            store.user = { eno: 'E001', empNm: '홍길동' };
+            store.user = { eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' };
             // refresh API 실패
             mockFetch.mockRejectedValueOnce(new Error('refresh failed'));
             // logout API (내부 호출) 성공
@@ -270,8 +313,119 @@ describe('useAuthStore', () => {
 
         it('user가 설정되면 true를 반환한다', () => {
             const store = useAuthStore();
-            store.user = { eno: 'E001', empNm: '홍길동' };
+            store.user = { eno: 'E001', empNm: '홍길동', athIds: ['ITPZZ001'], bbrC: 'D001' };
             expect(store.isAuthenticated).toBe(true);
+        });
+    });
+});
+
+// ============================================================================
+// RBAC 권한 헬퍼 함수 테스트
+// ============================================================================
+describe('RBAC 권한 헬퍼 (useAuth)', () => {
+
+    // -------------------------------------------------------------------------
+    // isAdmin
+    // -------------------------------------------------------------------------
+    describe('isAdmin', () => {
+        it('ITPAD001을 보유한 경우 true를 반환한다', () => {
+            const { isAdmin } = makeRbacHelpers({ eno: 'E001', empNm: '관리자', athIds: ['ITPAD001'], bbrC: 'D001' });
+            expect(isAdmin()).toBe(true);
+        });
+
+        it('ITPZZ001만 보유한 경우 false를 반환한다', () => {
+            const { isAdmin } = makeRbacHelpers({ eno: 'E001', empNm: '일반', athIds: ['ITPZZ001'], bbrC: 'D001' });
+            expect(isAdmin()).toBe(false);
+        });
+
+        it('다중 자격등급 중 ITPAD001이 있으면 true를 반환한다', () => {
+            const { isAdmin } = makeRbacHelpers({ eno: 'E001', empNm: '복합', athIds: ['ITPZZ001', 'ITPAD001'], bbrC: 'D001' });
+            expect(isAdmin()).toBe(true);
+        });
+
+        it('user가 null이면 false를 반환한다', () => {
+            const { isAdmin } = makeRbacHelpers(null);
+            expect(isAdmin()).toBe(false);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // isDeptManager
+    // -------------------------------------------------------------------------
+    describe('isDeptManager', () => {
+        it('ITPZZ002를 보유한 경우 true를 반환한다', () => {
+            const { isDeptManager } = makeRbacHelpers({ eno: 'E001', empNm: '담당자', athIds: ['ITPZZ002'], bbrC: 'D001' });
+            expect(isDeptManager()).toBe(true);
+        });
+
+        it('ITPAD001을 보유한 경우 true를 반환한다 (관리자 포함)', () => {
+            const { isDeptManager } = makeRbacHelpers({ eno: 'E001', empNm: '관리자', athIds: ['ITPAD001'], bbrC: 'D001' });
+            expect(isDeptManager()).toBe(true);
+        });
+
+        it('ITPZZ001만 보유한 경우 false를 반환한다', () => {
+            const { isDeptManager } = makeRbacHelpers({ eno: 'E001', empNm: '일반', athIds: ['ITPZZ001'], bbrC: 'D001' });
+            expect(isDeptManager()).toBe(false);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // isUser
+    // -------------------------------------------------------------------------
+    describe('isUser', () => {
+        it('ITPZZ001만 보유한 경우 true를 반환한다', () => {
+            const { isUser } = makeRbacHelpers({ eno: 'E001', empNm: '일반', athIds: ['ITPZZ001'], bbrC: 'D001' });
+            expect(isUser()).toBe(true);
+        });
+
+        it('ITPZZ002를 보유한 경우 false를 반환한다', () => {
+            const { isUser } = makeRbacHelpers({ eno: 'E001', empNm: '담당자', athIds: ['ITPZZ002'], bbrC: 'D001' });
+            expect(isUser()).toBe(false);
+        });
+
+        it('ITPAD001을 보유한 경우 false를 반환한다', () => {
+            const { isUser } = makeRbacHelpers({ eno: 'E001', empNm: '관리자', athIds: ['ITPAD001'], bbrC: 'D001' });
+            expect(isUser()).toBe(false);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // canModify
+    // -------------------------------------------------------------------------
+    describe('canModify', () => {
+        it('미로그인 시 항상 false를 반환한다', () => {
+            const { canModify } = makeRbacHelpers(null);
+            expect(canModify('E001', 'D001')).toBe(false);
+        });
+
+        it('관리자는 다른 부서, 다른 작성자 리소스도 수정 가능하다', () => {
+            const { canModify } = makeRbacHelpers({ eno: 'E999', empNm: '관리자', athIds: ['ITPAD001'], bbrC: 'D999' });
+            expect(canModify('E001', 'D001')).toBe(true);
+        });
+
+        it('기획통할담당자는 소속 부서 리소스를 수정 가능하다', () => {
+            const { canModify } = makeRbacHelpers({ eno: 'E002', empNm: '담당자', athIds: ['ITPZZ002'], bbrC: 'D001' });
+            expect(canModify('E001', 'D001')).toBe(true);
+        });
+
+        it('기획통할담당자는 타 부서 리소스를 수정할 수 없다', () => {
+            const { canModify } = makeRbacHelpers({ eno: 'E002', empNm: '담당자', athIds: ['ITPZZ002'], bbrC: 'D001' });
+            expect(canModify('E001', 'D999')).toBe(false);
+        });
+
+        it('일반사용자는 본인 작성 리소스만 수정 가능하다', () => {
+            const { canModify } = makeRbacHelpers({ eno: 'E001', empNm: '일반', athIds: ['ITPZZ001'], bbrC: 'D001' });
+            expect(canModify('E001', 'D001')).toBe(true);
+        });
+
+        it('일반사용자는 타인 작성 리소스를 수정할 수 없다', () => {
+            const { canModify } = makeRbacHelpers({ eno: 'E001', empNm: '일반', athIds: ['ITPZZ001'], bbrC: 'D001' });
+            expect(canModify('E002', 'D001')).toBe(false);
+        });
+
+        it('다중 자격등급 사용자는 최고 권한이 적용된다 (ITPZZ001+ITPAD001 → 관리자)', () => {
+            const { canModify } = makeRbacHelpers({ eno: 'E001', empNm: '복합', athIds: ['ITPZZ001', 'ITPAD001'], bbrC: 'D001' });
+            expect(canModify('E999', 'D999')).toBe(true); // 관리자 권한으로 모두 허용
         });
     });
 });

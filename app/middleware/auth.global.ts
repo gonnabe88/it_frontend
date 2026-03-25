@@ -61,9 +61,21 @@ export default defineNuxtRouteMiddleware((to, from) => {
     /**
      * 일반 페이지 인증 가드
      * 인증되지 않은 사용자가 보호된 페이지에 접근하려 할 때 /login으로 리다이렉트합니다.
-     * 인증된 사용자는 아무런 제한 없이 접근 가능합니다.
      */
     if (!isAuthenticated.value) {
         return navigateTo('/login');
+    }
+
+    /**
+     * 관리자 전용 페이지(/admin/**) 접근 가드
+     * 시스템관리자(ITPAD001) 자격등급이 없는 사용자가 접근하면 홈으로 리다이렉트합니다.
+     * useAuth의 isAdmin() 헬퍼를 사용하여 athIds 배열 기반으로 확인합니다.
+     */
+    if (to.path.startsWith('/admin')) {
+        const { isAdmin } = useAuth();
+        if (!isAdmin()) {
+            // 권한 없는 사용자는 홈으로 리다이렉트 (403 대신 홈으로 안전하게 처리)
+            return navigateTo('/');
+        }
     }
 });

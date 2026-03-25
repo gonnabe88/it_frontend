@@ -7,6 +7,9 @@
  */
 const collapsed = ref(false);
 
+// RBAC 권한 헬퍼: 관리자 메뉴 표시 여부 판단에 사용
+const { isAdmin } = useAuth();
+
 onMounted(() => {
     // 브라우저 새로고침 후 이전 축소 상태 복원
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -80,7 +83,15 @@ const menuItems = computed(() => {
                 { label: '정보화추진협의회 운영', to: '/info/council/promotion' },
                 { label: '정보화추진위원회 운영', to: '/info/council/committee' }
             ]
-        }
+        },
+        // 시스템관리자(ITPAD001) 전용 메뉴: isAdmin() 조건으로 렌더링 여부를 결정합니다.
+        ...(isAdmin() ? [{
+            label: '시스템 관리', icon: 'pi pi-shield', adminOnly: true, items: [
+                { label: '사용자 관리', to: '/admin/users' },
+                { label: '자격등급 관리', to: '/admin/roles' },
+                { label: '코드 관리', to: '/admin/codes' }
+            ]
+        }] : [])
     ];
 });
 

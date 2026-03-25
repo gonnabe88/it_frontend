@@ -39,9 +39,23 @@ export interface LoginRequest {
  *          응답 body에는 사용자 정보만 포함됩니다.
  */
 export interface LoginResponse {
-    eno: string;   // 로그인한 사용자의 사원번호
-    empNm: string; // 로그인한 사용자의 사원명 (화면 표시용)
+    eno: string;      // 로그인한 사용자의 사원번호
+    empNm: string;    // 로그인한 사용자의 사원명 (화면 표시용)
+    athIds: string[]; // 자격등급 ID 목록 (다중 자격등급 지원)
+    bbrC: string;     // 소속 부서코드
 }
+
+/**
+ * 자격등급 ID 상수
+ * 백엔드 TAAABB_CAUTHI 테이블의 ATH_ID 값과 일치해야 합니다.
+ */
+export const ROLE = {
+    USER:         'ITPZZ001', // 일반사용자: 소속 부서 조회, 본인 작성 수정
+    DEPT_MANAGER: 'ITPZZ002', // 기획통할담당자: 소속 부서 조회/수정/삭제
+    ADMIN:        'ITPAD001', // 시스템관리자: 전체 접근, 관리자 메뉴 노출
+} as const;
+
+export type AthId = typeof ROLE[keyof typeof ROLE];
 
 /**
  * [User] 인증된 사용자 정보 인터페이스
@@ -52,6 +66,8 @@ export interface LoginResponse {
  * 조직도 등 상세 사용자 정보가 필요한 경우 useOrganization의 OrgUser를 사용하세요.
  */
 export interface User {
-    eno: string;   // 사원번호 (고유 식별자)
-    empNm: string; // 사원명 (상단 네비게이션 등 UI 표시용)
+    eno: string;      // 사원번호 (고유 식별자)
+    empNm: string;    // 사원명 (상단 네비게이션 등 UI 표시용)
+    athIds: string[]; // 자격등급 ID 목록 (다중 자격등급 지원)
+    bbrC: string;     // 소속 부서코드 (권한 범위 결정에 사용)
 }

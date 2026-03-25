@@ -48,6 +48,8 @@ const router = useRouter();
 const prjMngNo = route.params.id;
 
 const { fetchProject, deleteProject } = useProjects();
+// RBAC 권한 헬퍼: 수정/삭제 버튼 표시 여부 판단에 사용
+const { canModify } = useAuth();
 const { data: project, error } = await fetchProject(prjMngNo as string);
 const confirm = useConfirm();
 const toast = useToast();
@@ -344,11 +346,14 @@ onUnmounted(() => {
             <div class="flex gap-2 self-end md:self-center">
                 <Button label="목록" icon="pi pi-list" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
                     @click="navigateTo('/info/projects')" />
-                <!-- 결재 중이거나 완료된 경우 삭제 버튼 숨김 -->
-                <Button v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)" label="삭제"
+                <!-- 결재 중이거나 완료된 경우, 또는 수정 권한이 없는 경우 삭제 버튼 숨김 -->
+                <Button v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)
+                    && canModify(project.fstEnrUsid, project.svnDpm)" label="삭제"
                     icon="pi pi-trash" severity="danger" outlined class="bg-white dark:bg-zinc-900"
                     @click="handleDelete" />
-                <Button label="수정" icon="pi pi-pencil" class="shadow-lg shadow-indigo-500/20"
+                <!-- 수정 권한이 있는 경우에만 수정 버튼 표시 -->
+                <Button v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-pencil"
+                    class="shadow-lg shadow-indigo-500/20"
                     @click="navigateTo(`/info/projects/form?id=${project.prjMngNo}`)" />
             </div>
         </div>

@@ -98,6 +98,7 @@ export interface ProjectDetail extends Project {
     svnDpmTlrNm: string; // 주관부서 현업 담당팀장명 (사용자명 조회 결과)
     tchnTp: string;      // 기술유형 (웹, 모바일, AI 등)
     xptEff: string;      // 기대효과 (Expected Effect, HTML 형식 가능)
+    fstEnrUsid: string;  // 최초 등록 사용자 사번 (BaseEntity, 권한 판단에 사용)
     items?: ProjectItem[];// 품목 리스트 (예산 구성 항목, optional)
 }
 

@@ -1,6 +1,6 @@
 # 프로젝트 백로그 (Project Backlog)
 
-> 마지막 갱신일: 2026-03-08
+> 마지막 갱신일: 2026-03-25
 
 ## 🔴 우선순위 높음
 
@@ -22,6 +22,8 @@
 - [ ] `pages/info/projects/[id].vue` (769줄) — 섹션별 서브 컴포넌트 분리 검토
 - [ ] `composables/usePdfReport.ts` (638줄) — PDF 빌더 패턴 도입 또는 모듈 분리 검토
 - [ ] `pages/budget/list.vue` (560줄) — 탭별 콘텐츠를 별도 컴포넌트로 분리 검토
+- [ ] `components/TiptapEditor.vue` (2233줄) — 툴바 섹션, 표 조작, 다이얼로그 로직을 별도 composable/컴포넌트로 분리 검토
+- [ ] `components/TiptapEditor.vue` — Excalidraw 디버그 `console.log` 제거 (상용 배포 전)
 - [x] `pages/info/projects/form.vue` — `onEmployeeSelected`에서 `(form.value as any)` 타입 단언 사용 → 타입 안전한 방식으로 리팩토링
 
 ### 타입 안전성
@@ -67,3 +69,5 @@
 | `pages/info/projects/form.vue` — 주관부문·주관부서·IT부서 담당팀장 선택 시 `/api/users/{eno}` API 자동 세팅 | 2026-03-08 |
 | `components/AppHeader.vue` + `main.css` — View Transition API 기반 애니메이션 | 2026-03-08 |
 | `pages/approval/index.vue` — 결재 타임라인 `ApprovalTimeline.vue` 컴포넌트 분리 (110줄 감소) | 2026-03-08 |
+| 전체 소스 코드 주석 전수 점검 (60개 파일) — 한글 JSDoc/인라인 주석 표준 충족 확인 | 2026-03-25 |
+| `README.md` 최신화 — Tiptap/Excalidraw/HWPX/GeminiChat, httpOnly 쿠키 인증, 새 모듈 반영 | 2026-03-25 |
