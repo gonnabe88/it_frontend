@@ -204,6 +204,9 @@ npm run test:e2e
 
 # Playwright 인터랙티브 UI 모드 (테스트 디버깅)
 npm run test:e2e:ui
+
+# Playwright 브라우저 설치 (최초 1회)
+npx playwright install
 ```
 
 ### 테스트 구조
@@ -232,6 +235,22 @@ tests/
 Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테스트 파일에서 `ref`, `computed`, `defineStore` 등을 명시적으로 import합니다.
 `useRuntimeConfig`, `navigateTo` 등 Nuxt 전용 API는 `vi.stubGlobal()`로 Mock 처리합니다.
 
+## 7.2 백엔드 연동 패키지 구조 (2026-03-27 기준)
+
+백엔드(`it_backend`)는 domain-refactor를 통해 도메인 기반 레이어드 아키텍처로 전환되었습니다.
+**API 경로는 모두 유지**되었으므로 프론트엔드 API 호출 코드는 변경 불필요합니다.
+
+| 백엔드 도메인 | 패키지 | 주요 API |
+|------------|--------|---------|
+| 인증 | `common/system` | `/api/auth/**` |
+| 사용자·조직 | `common/iam` | `/api/users/**`, `/api/organizations` |
+| 신청서·결재 | `common/approval` | `/api/applications/**` |
+| 공통코드 | `common/code` | `/api/ccodem/**` |
+| 정보화사업 | `budget/project` | `/api/projects/**` |
+| 전산업무비 | `budget/cost` | `/api/costs/**`, `/api/guide-documents/**` |
+| 파일 관리 | `infra/file` | `/api/files/**` |
+| Gemini AI | `infra/ai` | `/api/gemini/generate` |
+
 ## 8. 코딩 컨벤션 요약
 
 - 모든 코드 주석은 **한국어**로 작성합니다.
@@ -247,6 +266,7 @@ Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테
 
 | 날짜 | 항목 | 비고 |
 |------|------|------|
+| 2026-03-27 | 백엔드 domain-refactor TypeScript 동기화 | 백엔드 패키지 구조 domain 기반 전환에 따른 타입 정의 확인. API 경로 변경 없음 |
 | 2026-03-25 | 전체 프로젝트 문서화 리프레시 | 소스 코드 주석 전수 점검(60개 파일), README.md 최신화 |
 | 2026-03-22 | Tiptap 에디터 관련 수정 | `__VLS_ctx.editor` undefined 오류 해결 |
 | 2026-03-14 | TOC 스크롤 기능 구현 | 목차 클릭 시 해당 섹션으로 부드러운 스크롤 |

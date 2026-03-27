@@ -84,6 +84,15 @@ import DOMPurify from 'isomorphic-dompurify';
 
 **Nuxt 4는 소스 루트가 `app/` 디렉토리입니다. 파일 생성 시 반드시 `app/` 하위에 위치시킵니다.**
 
+> **백엔드 패키지 구조 참고** (2026-03-27 domain-refactor 완료)
+> 백엔드 API 경로(`/api/**`)는 변경 없음. 백엔드 내부 클래스는 도메인 기반으로 재구조화됨:
+> - `common/system` — 인증 (AuthController, JwtUtil)
+> - `common/iam` — 사용자·조직 (UserRepository, OrganizationRepository)
+> - `budget/project` — 정보화사업 (ProjectController, ProjectService)
+> - `budget/cost` — 전산업무비 (CostController, CostService)
+> - `infra/file` — 파일 (FileController, FileService)
+> - `infra/ai` — Gemini AI (GeminiController, GeminiService)
+
 ```
 it_frontend/
 ├── app/                         ← 소스 루트 (Nuxt 4)

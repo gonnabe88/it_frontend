@@ -8,7 +8,7 @@ export default defineConfig({
     workers: 1,
     reporter: 'html',
     use: {
-        baseURL: 'http://localhost:3000',
+        baseURL: 'http://localhost:3002',
         // 실패 시 스크린샷 자동 저장
         screenshot: 'only-on-failure',
     },
@@ -17,8 +17,8 @@ export default defineConfig({
     ],
     // 테스트 전 dev 서버 자동 실행
     webServer: {
-        command: 'npm run dev',
-        url: 'http://localhost:3000',
+        command: 'npx nuxt dev --port 3002',
+        url: 'http://localhost:3002',
         // 이미 실행 중인 서버 재사용 (로컬 환경 속도 최적화)
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000

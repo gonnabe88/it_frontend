@@ -114,7 +114,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
                         <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             비밀번호
                         </label>
-                        <Password id="password" v-model="password" placeholder="비밀번호를 입력하세요" :feedback="false"
+                        <Password inputId="password" v-model="password" placeholder="비밀번호를 입력하세요" :feedback="false"
                             toggleMask class="w-full" :inputClass="'w-full'" :disabled="loading"
                             @keypress="handleKeyPress" />
                     </div>
