@@ -31,7 +31,7 @@ import { useGuideDocuments } from '~/composables/useGuideDocuments';
 import type { GuideDocument } from '~/composables/useGuideDocuments';
 import { useFiles } from '~/composables/useFiles';
 
-definePageMeta({ title: '가이드' });
+definePageMeta({ title: '사업 가이드' });
 
 const { fetchGuideDocuments, createGuideDocument, updateGuideDocument, deleteGuideDocument } = useGuideDocuments();
 const { uploadFile, updateFileMeta, getPreviewUrl } = useFiles();
@@ -306,7 +306,7 @@ onUnmounted(() => {
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">가이드</h1>
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">사업 가이드</h1>
                 <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
                     정보화사업 단계별 업무 가이드를 확인하세요.
                 </p>
@@ -318,19 +318,10 @@ onUnmounted(() => {
             </div>
             <!-- 조회 모드 액션 버튼 -->
             <div v-else class="flex gap-2">
-                <Button
-                    v-if="currentGuide"
-                    label="삭제"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    outlined
-                    @click="onDelete"
-                />
-                <Button
-                    :label="currentGuide ? '편집' : '가이드 작성'"
-                    :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'"
-                    @click="startEdit"
-                />
+                <Button v-if="currentGuide" label="삭제" icon="pi pi-trash" severity="danger" outlined
+                    @click="onDelete" />
+                <Button :label="currentGuide ? '편집' : '가이드 작성'" :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'"
+                    @click="startEdit" />
             </div>
         </div>
 
@@ -349,26 +340,21 @@ onUnmounted(() => {
             <!-- 타임라인 컨테이너 -->
             <div class="relative w-full px-2">
                 <!-- 전체 기준선 (회색): 첫 원 중심 ~ 마지막 원 중심 -->
-                <div
-                    class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700"
-                    :style="{
-                        top: '20px',
-                        left: `calc(100% / ${PROJECT_STAGES.length * 2})`,
-                        right: `calc(100% / ${PROJECT_STAGES.length * 2})`
-                    }">
+                <div class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700" :style="{
+                    top: '20px',
+                    left: `calc(100% / ${PROJECT_STAGES.length * 2})`,
+                    right: `calc(100% / ${PROJECT_STAGES.length * 2})`
+                }">
                 </div>
 
                 <div class="flex items-start justify-between w-full">
                     <!-- 각 단계 스텝 -->
-                    <div
-                        v-for="(step, index) in PROJECT_STAGES"
-                        :key="index"
+                    <div v-for="(step, index) in PROJECT_STAGES" :key="index"
                         class="relative flex flex-col items-center flex-1 group cursor-pointer"
                         @click="selectStage(step)">
 
                         <!-- 원형 마커: 선택됨(인디고 채움) / 가이드 있음(연인디고+체크) / 없음(회색) -->
-                        <div
-                            class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
                             :class="[
                                 selectedStage === step
                                     ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 scale-110 ring-4 ring-indigo-50 dark:ring-indigo-900/20'
@@ -425,10 +411,12 @@ onUnmounted(() => {
 
             <!-- 좌측(3/4): 가이드 내용 -->
             <div class="xl:col-span-3">
-                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                <div
+                    class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
 
                     <!-- 콘텐츠 헤더 -->
-                    <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                    <div
+                        class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
                         <div>
                             <h2 class="font-bold text-base text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                                 <i class="pi pi-book text-indigo-500"></i>
@@ -454,23 +442,16 @@ onUnmounted(() => {
                     <div class="p-4 guide-doc">
                         <ClientOnly>
                             <!-- 편집 모드: 이미지 업로드 활성화 -->
-                            <TiptapEditor
-                                v-if="isEditing"
-                                v-model="editContent"
+                            <TiptapEditor v-if="isEditing" v-model="editContent"
                                 placeholder="가이드 내용을 작성하세요. 툴바의 다이어그램 버튼으로 Excalidraw 그림을 삽입할 수 있습니다."
-                                :imageUploadFn="handleEditorImageUpload"
-                                @update:toc="handleUpdateToc"
-                            />
+                                :imageUploadFn="handleEditorImageUpload" @update:toc="handleUpdateToc" />
                             <!-- 조회 모드: 읽기 전용 (가이드 있는 경우) -->
-                            <TiptapEditor
-                                v-else-if="currentGuide"
-                                :modelValue="currentGuide.docCone || ''"
-                                :readonly="true"
-                                @update:toc="handleUpdateToc"
-                            />
+                            <TiptapEditor v-else-if="currentGuide" :modelValue="currentGuide.docCone || ''"
+                                :readonly="true" @update:toc="handleUpdateToc" />
                             <!-- 가이드 없음 (빈 상태) -->
                             <div v-else class="flex flex-col items-center justify-center py-20 text-center">
-                                <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                                <div
+                                    class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
                                     <i class="pi pi-file-edit text-2xl text-zinc-400"></i>
                                 </div>
                                 <h3 class="text-base font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
@@ -483,7 +464,8 @@ onUnmounted(() => {
                             </div>
 
                             <template #fallback>
-                                <div class="border border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center text-zinc-400">
+                                <div
+                                    class="border border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center text-zinc-400">
                                     <i class="pi pi-spin pi-spinner text-2xl mb-2 block"></i>
                                     에디터 로딩 중...
                                 </div>
@@ -491,7 +473,8 @@ onUnmounted(() => {
                         </ClientOnly>
 
                         <!-- 편집 모드 하단 저장/취소 버튼 -->
-                        <div v-if="isEditing" class="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <div v-if="isEditing"
+                            class="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                             <Button label="취소" severity="secondary" @click="cancelEdit" />
                             <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
                         </div>
@@ -503,34 +486,26 @@ onUnmounted(() => {
             <div class="xl:col-span-1 relative hidden xl:block">
                 <!-- 스티키 고정 박스 -->
                 <div class="sticky top-6 lg:pl-4">
-                    <h3 class="font-bold text-[14px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-3 flex items-center gap-2">
+                    <h3
+                        class="font-bold text-[14px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-3 flex items-center gap-2">
                         <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"></i> 바로가기 목차
                     </h3>
 
                     <!-- 목차가 비어있을 때 안내 문구 -->
-                    <div
-                        v-if="rawToc.length === 0"
-                        class="text-xs text-zinc-400 dark:text-zinc-600 italic px-3 ml-3">
+                    <div v-if="rawToc.length === 0" class="text-xs text-zinc-400 dark:text-zinc-600 italic px-3 ml-3">
                         본문에 제목을 작성하면 이곳에 목차가 자동 정렬됩니다.
                     </div>
 
                     <!-- 추출된 목차 목록 (평면 다단계 들여쓰기) -->
-                    <ul
-                        v-else
-                        class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-3 py-1">
-                        <li
-                            v-for="item in rawToc"
-                            :key="item.id"
-                            class="flex flex-col relative py-0.5">
+                    <ul v-else class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-3 py-1">
+                        <li v-for="item in rawToc" :key="item.id" class="flex flex-col relative py-0.5">
 
                             <!-- 활성화 인디케이터 (왼쪽 보더선) -->
-                            <div
-                                v-if="activeSection === item.id"
+                            <div v-if="activeSection === item.id"
                                 class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all">
                             </div>
 
-                            <div
-                                class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
+                            <div class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
                                 :class="[
                                     activeSection === item.id
                                         ? 'text-indigo-600 dark:text-indigo-400 font-bold'
@@ -541,8 +516,7 @@ onUnmounted(() => {
                                     item.level === 4 ? 'text-[13px] pl-10 opacity-80' : '',
                                     item.level === 5 ? 'text-[12px] pl-12 opacity-70' : '',
                                     item.level === 6 ? 'text-[12px] pl-14 opacity-60' : ''
-                                ]"
-                                @click="scrollTo(item.id)">
+                                ]" @click="scrollTo(item.id)">
                                 <span class="truncate" :title="item.text">{{ item.text }}</span>
                             </div>
                         </li>
