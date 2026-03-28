@@ -93,8 +93,8 @@ const handleKeyPress = (event: KeyboardEvent) => {
                     <div class="inline-flex items-center justify-center w-20 h-20 rounded mb-4">
                         <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" />
                     </div>
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">IT Portal</h1>
-                    <p class="text-gray-600 dark:text-gray-400">정보화사업 관리 시스템</p>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">IT 정보화 포탈</h1>
+                    <p class="text-gray-600 dark:text-gray-400">정보화 사업·예산·인력</p>
                 </div>
 
                 <!-- 로그인 폼 영역 -->
@@ -103,7 +103,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
                     <!-- 사원번호 입력 -->
                     <div>
                         <label for="eno" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            사원번호
+                            행번
                         </label>
                         <InputText id="eno" v-model="eno" placeholder="사원번호를 입력하세요" class="w-full" :disabled="loading"
                             @keypress="handleKeyPress" />
@@ -112,7 +112,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
                     <!-- 비밀번호 입력 (toggleMask: 비밀번호 표시/숨김 토글) -->
                     <div>
                         <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                            비밀번호
+                            ESSO 비밀번호
                         </label>
                         <Password inputId="password" v-model="password" placeholder="비밀번호를 입력하세요" :feedback="false"
                             toggleMask class="w-full" :inputClass="'w-full'" :disabled="loading"
@@ -134,13 +134,13 @@ const handleKeyPress = (event: KeyboardEvent) => {
 
                 <!-- 안내 문구 -->
                 <div class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-                    <p>문의사항은 IT 담당자에게 연락해주세요.</p>
+                    <p>문의사항은 IT기획부 IT기획팀에 연락해주세요.</p>
                 </div>
             </div>
 
             <!-- 저작권 푸터 -->
             <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                <p>&copy; 2024 IT Portal. All rights reserved.</p>
+                <p>&copy; 2026 IT기획부. All rights reserved.</p>
             </div>
         </div>
     </div>

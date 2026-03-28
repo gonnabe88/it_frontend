@@ -63,6 +63,12 @@ const menuItems = computed(() => {
             ]
         },
         {
+            label: '정보기술부문 계획', icon: 'pi pi-chart-bar', items: [
+                { label: '계획 조회', to: '/info/plan' },
+                { label: '계획 등록', to: '/info/plan/form' }
+            ]
+        },
+        {
             label: '정보화사업', icon: 'pi pi-briefcase', items: [
                 { label: '사업 목록', to: '/info/projects' },
                 { label: '사전 협의', to: '/info/consultation' },

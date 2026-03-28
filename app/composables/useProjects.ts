@@ -215,10 +215,35 @@ export const useProjects = () => {
         });
     };
 
+    /**
+     * 프로젝트 목록 일회성 조회 ($apiFetch 기반, 비반응형)
+     * 이벤트 핸들러 등 컴포넌트 setup 외부에서 사용합니다.
+     *
+     * @param query - 쿼리 파라미터 (예: { prjYy: '2025', ornYn: 'N' })
+     * @returns Project 배열 Promise
+     */
+    const fetchProjectsOnce = async (query?: Record<string, string>): Promise<Project[]> => {
+        const params = query ? `?${new URLSearchParams(query).toString()}` : '';
+        return await $apiFetch<Project[]>(`${API_BASE_URL}${params}`);
+    };
+
+    /**
+     * 프로젝트 상세 일회성 조회 ($apiFetch 기반, 비반응형)
+     * 이벤트 핸들러 등 컴포넌트 setup 외부에서 사용합니다.
+     *
+     * @param id - 프로젝트관리번호
+     * @returns ProjectDetail Promise
+     */
+    const fetchProjectDetailOnce = async (id: string | number): Promise<ProjectDetail> => {
+        return await $apiFetch<ProjectDetail>(`${API_BASE_URL}/${id}`);
+    };
+
     return {
         fetchProjects,
         fetchProject,
         fetchProjectsBulk,
+        fetchProjectsOnce,
+        fetchProjectDetailOnce,
         createProject,
         updateProject,
         deleteProject
