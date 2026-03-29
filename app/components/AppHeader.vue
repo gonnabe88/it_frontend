@@ -160,10 +160,19 @@ onMounted(() => {
 });
 
 const { tabs, addTab, removeTab, closeAll } = useTabs();
+const toast = useToast();
 
-// 라우트 변경 시 탭 추가
+// 라우트 변경 시 탭 추가 — 최대 10개 초과 시 Toast 경고 표시
 watch(() => route.path, () => {
-    addTab(route);
+    const added = addTab(route);
+    if (!added) {
+        toast.add({
+            severity: 'warn',
+            summary: '탭 개수 초과',
+            detail: '탭은 최대 10개까지만 활성화 가능합니다. 기존 탭을 닫고 열어주세요.',
+            life: 5000
+        });
+    }
 }, { immediate: true });
 
 const navigateToTab = (path: string) => {
@@ -172,6 +181,7 @@ const navigateToTab = (path: string) => {
 </script>
 
 <template>
+    <Toast position="top-right" />
     <div class="card">
         <MegaMenu :model="items" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
             style="border-radius: 0">

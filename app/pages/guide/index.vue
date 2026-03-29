@@ -303,105 +303,67 @@ onUnmounted(() => {
 <template>
     <div class="space-y-6 pb-20">
 
-        <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <div>
+        <!-- 페이지 헤더: 제목 + 정보화사업 단계 타임라인 통합 카드 -->
+        <div
+            class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md px-5 py-4 flex items-center gap-5 min-h-[80px]">
+
+            <!-- 좌: 제목/부제목 -->
+            <div class="shrink-0">
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">사업 가이드</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 whitespace-nowrap">
                     정보화사업 단계별 업무 가이드를 확인하세요.
                 </p>
             </div>
-            <!-- 편집 모드 액션 버튼 -->
-            <div v-if="isEditing" class="flex gap-2">
-                <Button label="취소" severity="secondary" @click="cancelEdit" />
-                <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
-            </div>
-            <!-- 조회 모드 액션 버튼 -->
-            <div v-else class="flex gap-2">
-                <Button v-if="currentGuide" label="삭제" icon="pi pi-trash" severity="danger" outlined
-                    @click="onDelete" />
-                <Button :label="currentGuide ? '편집' : '가이드 작성'" :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'"
-                    @click="startEdit" />
-            </div>
-        </div>
 
-        <!-- 상단: 정보화사업 단계 타임라인 (전체 폭) -->
-        <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md p-6">
-            <div class="flex items-center gap-2 mb-6">
-                <i class="pi pi-step-forward-alt text-indigo-500"></i>
-                <h2 class="font-bold text-base text-zinc-900 dark:text-zinc-100">정보화사업 단계</h2>
-                <!-- 선택된 단계 뱃지 -->
-                <span
-                    class="ml-auto text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800">
-                    {{ selectedStage }}
-                </span>
-            </div>
+            <!-- 구분선 -->
+            <div class="self-stretch w-px bg-zinc-100 dark:bg-zinc-800 shrink-0"></div>
 
-            <!-- 타임라인 컨테이너 -->
-            <div class="relative w-full px-2">
-                <!-- 전체 기준선 (회색): 첫 원 중심 ~ 마지막 원 중심 -->
-                <div class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700" :style="{
-                    top: '20px',
-                    left: `calc(100% / ${PROJECT_STAGES.length * 2})`,
-                    right: `calc(100% / ${PROJECT_STAGES.length * 2})`
-                }">
-                </div>
+            <!-- 우: 정보화사업 단계 타임라인 -->
+            <div class="flex-1 min-w-0">
+                <!-- 타임라인 컨테이너 -->
+                <div class="relative w-full px-2">
+                    <!-- 전체 기준선 (회색): 첫 원 중심 ~ 마지막 원 중심 -->
+                    <div class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700" :style="{
+                        top: '19px',
+                        left: `calc(100% / ${PROJECT_STAGES.length * 2})`,
+                        right: `calc(100% / ${PROJECT_STAGES.length * 2})`
+                    }">
+                    </div>
 
-                <div class="flex items-start justify-between w-full">
-                    <!-- 각 단계 스텝 -->
-                    <div v-for="(step, index) in PROJECT_STAGES" :key="index"
-                        class="relative flex flex-col items-center flex-1 group cursor-pointer"
-                        @click="selectStage(step)">
+                    <div class="flex items-start justify-between w-full">
+                        <!-- 각 단계 스텝 -->
+                        <div v-for="(step, index) in PROJECT_STAGES" :key="index"
+                            class="relative flex flex-col items-center flex-1 group cursor-pointer"
+                            @click="selectStage(step)">
 
-                        <!-- 원형 마커: 선택됨(인디고 채움) / 가이드 있음(연인디고+체크) / 없음(회색) -->
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
-                            :class="[
-                                selectedStage === step
-                                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 scale-110 ring-4 ring-indigo-50 dark:ring-indigo-900/20'
-                                    : guideDocuments?.find(d => d.docNm === step)
-                                        ? 'border-indigo-300 bg-indigo-50 text-indigo-500 dark:border-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400 hover:scale-105'
-                                        : 'border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500 bg-white dark:bg-zinc-900 hover:border-zinc-300 hover:scale-105'
-                            ]">
-
-                            <!-- 선택된 단계 -->
-                            <span v-if="selectedStage === step" class="text-[10px] font-bold tracking-tighter">선택</span>
-                            <!-- 가이드 있는 단계 -->
-                            <i v-else-if="guideDocuments?.find(d => d.docNm === step)" class="pi pi-check text-sm"></i>
-                            <!-- 가이드 없는 단계 -->
-                            <span v-else class="text-xs">{{ Number(index) + 1 }}</span>
-                        </div>
-
-                        <!-- 단계 라벨 텍스트 -->
-                        <div class="h-10 flex items-start justify-center w-full">
-                            <span
-                                class="text-[10px] sm:text-xs font-medium text-center break-keep leading-tight px-0.5 transition-colors duration-300 w-full"
+                            <!-- 원형 마커: 선택됨(인디고 채움) / 비선택(회색) -->
+                            <div class="w-[38px] h-[38px] rounded-full flex items-center justify-center font-bold border-2 transition-all duration-300 relative z-10 mb-2 shrink-0"
                                 :class="[
                                     selectedStage === step
-                                        ? 'text-indigo-700 dark:text-indigo-400 font-bold'
-                                        : guideDocuments?.find(d => d.docNm === step)
-                                            ? 'text-zinc-600 dark:text-zinc-400'
-                                            : 'text-zinc-300 dark:text-zinc-600'
+                                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 scale-110 ring-4 ring-indigo-50 dark:ring-indigo-900/20'
+                                        : 'border-zinc-200 text-zinc-400 dark:border-zinc-700 dark:text-zinc-500 bg-white dark:bg-zinc-900 hover:border-zinc-300 hover:scale-105'
                                 ]">
-                                {{ step }}
-                            </span>
+
+                                <!-- 선택된 단계: v 체크 아이콘 -->
+                                <i v-if="selectedStage === step" class="pi pi-check text-sm"></i>
+                                <!-- 비선택 단계: 순번 표시 (leading-none으로 폰트 하단 여백 제거) -->
+                                <span v-else class="text-xs leading-none">{{ Number(index) + 1 }}</span>
+                            </div>
+
+                            <!-- 단계 라벨 텍스트 (items-center로 광학적 상단 쏠림 보정) -->
+                            <div class="flex items-center justify-center w-full">
+                                <span
+                                    class="text-[12px] font-medium text-center break-keep leading-snug px-0.5 transition-colors duration-300 w-full"
+                                    :class="[
+                                        selectedStage === step
+                                            ? 'text-indigo-700 dark:text-indigo-400 font-bold'
+                                            : 'text-zinc-400 dark:text-zinc-600'
+                                    ]">
+                                    {{ step }}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- 범례 -->
-            <div class="flex items-center gap-5 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 justify-end">
-                <div class="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <div class="w-3 h-3 rounded-full bg-indigo-600"></div>
-                    <span>선택</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <div class="w-3 h-3 rounded-full bg-indigo-100 border border-indigo-300"></div>
-                    <span>가이드 있음</span>
-                </div>
-                <div class="flex items-center gap-1.5 text-xs text-zinc-400">
-                    <div class="w-3 h-3 rounded-full bg-white border border-zinc-300"></div>
-                    <span>가이드 없음</span>
                 </div>
             </div>
         </div>
@@ -417,7 +379,7 @@ onUnmounted(() => {
                     <!-- 콘텐츠 헤더 -->
                     <div
                         class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <div>
+                        <div class="flex-1">
                             <h2 class="font-bold text-base text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                                 <i class="pi pi-book text-indigo-500"></i>
                                 {{ selectedStage }}
@@ -435,6 +397,23 @@ onUnmounted(() => {
                                 마지막 수정: {{ formatDateTime(currentGuide.lstChgDtm) }}
                                 <span v-if="currentGuide.lstChgUsid">· {{ currentGuide.lstChgUsid }}</span>
                             </p>
+                        </div>
+
+                        <!-- 액션 버튼들을 콘텐츠 헤더 우측에 배치 -->
+                        <div class="shrink-0 ml-4">
+                            <!-- 편집 모드 섹션 -->
+                            <div v-if="isEditing" class="flex gap-2">
+                                <Button label="취소" severity="secondary" size="small" @click="cancelEdit" />
+                                <Button label="저장" icon="pi pi-save" size="small" :loading="isSaving" @click="onSave" />
+                            </div>
+                            <!-- 조회 모드 섹션 -->
+                            <div v-else class="flex gap-2">
+                                <Button v-if="currentGuide" label="삭제" icon="pi pi-trash" severity="danger" outlined
+                                    size="small" @click="onDelete" />
+                                <Button :label="currentGuide ? '편집' : '가이드 작성'"
+                                    :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'" size="small"
+                                    @click="startEdit" />
+                            </div>
                         </div>
                     </div>
 

@@ -504,6 +504,22 @@ const costPageSize = ref(10);
 /** 경상사업 탭 페이지당 표시 건수 */
 const ordinaryPageSize = ref(10);
 
+/** 현재 활성 탭의 pageSize — 단일 Select 컴포넌트에 바인딩 */
+const currentPageSize = computed({
+    get() {
+        if (activeTab.value === 1) return projectPageSize.value;
+        if (activeTab.value === 2) return costPageSize.value;
+        if (activeTab.value === 3) return ordinaryPageSize.value;
+        return allPageSize.value;
+    },
+    set(val: number) {
+        if (activeTab.value === 1) projectPageSize.value = val;
+        else if (activeTab.value === 2) costPageSize.value = val;
+        else if (activeTab.value === 3) ordinaryPageSize.value = val;
+        else allPageSize.value = val;
+    }
+});
+
 
 
 /**
@@ -756,11 +772,17 @@ const openTimeline = (data: any) => {
         <div
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
-            <!-- ── 탭 네비게이션 바 ── -->
+            <!-- ── 탭 네비게이션 바 (좌: 페이지크기 | 중앙: 탭 | 우: 검색/액션) ── -->
             <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
 
-                <!-- 탭 버튼 목록 (좌측, 검색 바와 1:1 비율) -->
-                <div class="flex flex-1">
+                <!-- 좌측: 페이지당 표시 건수 Select -->
+                <div class="flex items-center px-3 shrink-0">
+                    <Select v-model="currentPageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
+                        class="shrink-0" />
+                </div>
+
+                <!-- 탭 버튼 4종 -->
+                <div class="flex">
                     <!-- 전체 탭 -->
                     <button @click="activeTab = 0" :class="[
                         'flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap',
@@ -791,13 +813,13 @@ const openTimeline = (data: any) => {
                     <button @click="activeTab = 2" :class="[
                         'flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap',
                         activeTab === 2
-                            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                            ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
                             : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
                     ]">
                         <i class="pi pi-wallet text-xs"></i>
                         <span>전산업무비</span>
                         <Tag :value="costs.length"
-                            class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-0"
+                            class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0"
                             rounded />
                     </button>
                     <!-- 경상사업 탭 -->
@@ -815,79 +837,43 @@ const openTimeline = (data: any) => {
                     </button>
                 </div>
 
-                <!-- 세로 구분선 -->
-                <div class="w-px bg-zinc-200 dark:bg-zinc-700 my-2 shrink-0"></div>
-
-                <!-- 탭별 검색 바 (우측, flex-1) -->
-                <div class="flex-1 flex items-center gap-2 px-3 py-2 min-w-0">
-                    <!-- 전체 탭 검색 -->
+                <!-- 우측: 탭별 통합검색 + 액션 버튼 — 1/4 고정 -->
+                <div class="flex flex-1 items-center justify-end gap-2 px-3 py-2">
+                    <!-- 전체 탭 -->
                     <template v-if="activeTab === 0">
-                        <Select v-model="allPageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
-                            class="shrink-0" />
-                        <IconField class="w-auto shrink-0">
+                        <IconField class="w-[30rem] shrink-0">
                             <InputIcon class="pi pi-search" />
                             <InputText v-model="allSearch" placeholder="통합 검색..." class="w-full" />
                         </IconField>
-                        <BudgetTableActions class="ml-auto shrink-0" :reportLoading="reportLoading"
-                            :hasFilters="hasAllFilters" @excel="downloadAllExcel" @pdf="downloadReport(0)"
-                            @filter="openDrawer(0)" />
+                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasAllFilters"
+                            @excel="downloadAllExcel" @pdf="downloadReport(0)" @filter="openDrawer(0)" />
                     </template>
-                    <!-- 정보화사업 탭 검색 -->
+                    <!-- 정보화사업 탭 -->
                     <template v-else-if="activeTab === 1">
-                        <Select v-model="projectPageSize" :options="pageSizeOptions" optionLabel="label"
-                            optionValue="value" class="shrink-0" />
-                        <IconField class="w-40 shrink-0">
+                        <IconField class="w-[30rem] shrink-0">
                             <InputIcon class="pi pi-search" />
-                            <InputText v-model="projectSearch" placeholder="사업명, 주관부서, IT부서 검색..." class="w-full" />
+                            <InputText v-model="projectSearch" placeholder="사업명, 주관부서, IT부서..." class="w-full" />
                         </IconField>
-                        <Button label="사업 목록" icon="pi pi-list" severity="secondary" outlined size="small"
-                            class="shrink-0" @click="navigateTo('/info/projects')" />
-                        <Button icon="pi pi-file-excel" severity="success" outlined size="small" title="엑셀 다운로드"
-                            class="shrink-0" @click="downloadProjectsExcel" />
-                        <Button icon="pi pi-file-pdf" severity="danger" outlined size="small" title="보고서 다운로드"
-                            class="shrink-0" :loading="reportLoading" @click="downloadReport(1)" />
-                        <Button label="조회" icon="pi pi-search" severity="secondary" outlined size="small"
-                            :badge="hasProjectFilters ? '●' : undefined"
-                            :badgeSeverity="hasProjectFilters ? 'danger' : undefined" class="shrink-0"
-                            @click="openDrawer(1)" />
+                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasProjectFilters"
+                            @excel="downloadProjectsExcel" @pdf="downloadReport(1)" @filter="openDrawer(1)" />
                     </template>
-                    <!-- 전산업무비 탭 검색 -->
+                    <!-- 전산업무비 탭 -->
                     <template v-else-if="activeTab === 2">
-                        <Select v-model="costPageSize" :options="pageSizeOptions" optionLabel="label"
-                            optionValue="value" class="shrink-0" />
-                        <IconField class="w-40 shrink-0">
+                        <IconField class="w-[30rem] shrink-0">
                             <InputIcon class="pi pi-search" />
-                            <InputText v-model="costSearch" placeholder="비목명, 계약명, 계약상대처 검색..." class="w-full" />
+                            <InputText v-model="costSearch" placeholder="비목명, 계약명, 계약상대처..." class="w-full" />
                         </IconField>
-                        <Button label="전산업무비 목록" icon="pi pi-list" severity="secondary" outlined size="small"
-                            class="shrink-0" @click="navigateTo('/info/cost')" />
-                        <Button icon="pi pi-file-excel" severity="success" outlined size="small" title="엑셀 다운로드"
-                            class="shrink-0" @click="downloadCostsExcel" />
-                        <Button icon="pi pi-file-pdf" severity="danger" outlined size="small" title="보고서 다운로드"
-                            class="shrink-0" :loading="reportLoading" @click="downloadReport(2)" />
-                        <Button label="조회" icon="pi pi-search" severity="secondary" outlined size="small"
-                            :badge="hasCostFilters ? '●' : undefined"
-                            :badgeSeverity="hasCostFilters ? 'danger' : undefined" class="shrink-0"
-                            @click="openDrawer(2)" />
+                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasCostFilters"
+                            @excel="downloadCostsExcel" @pdf="downloadReport(2)" @filter="openDrawer(2)" />
                     </template>
-                    <!-- 경상사업 탭 검색 -->
+                    <!-- 경상사업 탭 -->
                     <template v-else>
-                        <Select v-model="ordinaryPageSize" :options="pageSizeOptions" optionLabel="label"
-                            optionValue="value" class="shrink-0" />
-                        <IconField class="w-40 shrink-0">
+                        <IconField class="w-[30rem] shrink-0">
                             <InputIcon class="pi pi-search" />
                             <InputText v-model="ordinarySearch" placeholder="사업명, 담당부서 검색..." class="w-full" />
                         </IconField>
-                        <Button label="경상사업 목록" icon="pi pi-list" severity="secondary" outlined size="small"
-                            class="shrink-0" @click="navigateTo('/info/projects/ordinary')" />
-                        <Button icon="pi pi-file-excel" severity="success" outlined size="small" title="엑셀 다운로드"
-                            class="shrink-0" @click="downloadOrdinaryExcel" />
-                        <Button icon="pi pi-file-pdf" severity="danger" outlined size="small" title="보고서 다운로드"
-                            class="shrink-0" :loading="reportLoading" @click="downloadReport(3)" />
-                        <Button label="조회" icon="pi pi-search" severity="secondary" outlined size="small"
-                            :badge="hasOrdinaryFilters ? '●' : undefined"
-                            :badgeSeverity="hasOrdinaryFilters ? 'danger' : undefined" class="shrink-0"
-                            @click="openDrawer(3)" />
+                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasOrdinaryFilters"
+                            @excel="downloadOrdinaryExcel" @pdf="downloadReport(3)" @filter="openDrawer(3)" />
                     </template>
                 </div>
             </div>

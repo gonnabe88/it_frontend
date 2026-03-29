@@ -1,105 +1,70 @@
-<!--
-================================================================================
-[pages/info/projects/form.vue] 정보화사업 등록/수정 폼 페이지
-================================================================================
-신규 정보화사업을 등록하거나 기존 사업을 수정하는 입력 폼입니다.
-쿼리 파라미터 ?id가 있으면 수정 모드, 없으면 신규 등록 모드로 동작합니다.
-
-[동작 모드]
-  - 신규 등록: ?id 없음 → 빈 폼으로 시작
-  - 수정 모드: ?id=prjMngNo → 해당 사업 정보 API 로드 후 폼에 바인딩
-
-[폼 섹션 구성]
-  1. 사업명: 유형(신규/계속) + 상태(수정 모드만 표시) + 사업명 텍스트
-  2. 사업 개요: RichEditor 설명 + 현황/필요성/기대효과/미추진시문제점 Textarea (4개)
-  3. 사업 범위: RichEditor (전산 요구사항)
-  4. 진행 상황: 추진 경과 / 향후 계획 Textarea (2개)
-  5. 사업 구분: 업무구분/사업유형/기술유형/주요사용자
-  6. 편성 기준: 중복여부(Y/N) / 법규상 완료시기 DatePicker
-  7. 담당부서: 주관부문 → 주관부서(팀장/담당자) → IT부서(팀장/담당자)
-  8. 추진시기 및 소요예산: 예산/전결권/보고상태 + 시작일/종료일/추진가능성
-  9. 소요자원 상세내용: DataTable 인라인 편집 (행 추가/삭제)
-
-[소요자원 데이터 변환]
-  - 로드 시: API 응답 items → UI resourceItems 변환
-    (gclDtt → category, gclNm → item, gclQtt → quantity 등)
-  - 저장 시: UI resourceItems → API items 역변환
-    (category → gclDtt, item → gclNm 등)
-  - fstDfrDt, sttDt, endDt, lblFsgTlm: Date 객체 → YYYY-MM-DD 문자열 변환
-
-[단가 자동 계산]
-  - watch(resourceItems): gclAmt(소계) ÷ quantity(수량)으로 unitPrice 자동 계산
-  - gclAmt나 quantity가 0이면 unitPrice = 0
-
-[라우팅]
-  - 접근(신규): /info/projects/form
-  - 접근(수정): /info/projects/form?id=:prjMngNo
-  - 저장 완료 후: /info/projects
-  - 취소 시: router.back()
-================================================================================
--->
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+/**
+ * ============================================================================
+ * [pages/info/projects/form.vue] 정보화사업 등록/수정 폼 페이지
+ * ============================================================================
+ * 신규 정보화사업을 등록하거나 기존 사업을 수정하는 입력 폼입니다.
+ * 쿼리 파라미터 ?id가 있으면 수정 모드, 없으면 신규 등록 모드로 동작합니다.
+ *
+ * [동작 모드]
+ *   - 신규 등록: ?id 없음 → 빈 폼으로 시작
+ *   - 수정 모드: ?id=prjMngNo → 해당 사업 정보 API 로드 후 폼에 바인딩
+ *
+ * [폼 섹션 구성]
+ *   1. 사업명: 유형(신규/계속) + 상태(수정 모드만 표시) + 사업명 텍스트
+ *   2. 사업 개요: RichEditor 설명 + 현황/필요성/기대효과/미추진시문제점 Textarea (4개)
+ *   3. 사업 범위: RichEditor (전산 요구사항)
+ *   4. 진행 상황: 추진 경과 / 향후 계획 Textarea (2개)
+ *   5. 사업 구분: 업무구분/사업유형/기술유형/주요사용자
+ *   6. 편성 기준: 중복여부(Y/N) / 법규상 완료시기 DatePicker
+ *   7. 담당부서: 주관부문 → 주관부서(팀장/담당자) → IT부서(팀장/담당자)
+ *   8. 추진시기 및 소요예산: 예산/전결권/보고상태 + 시작일/종료일/추진가능성
+ *   9. 소요자원 상세내용: DataTable 인라인 편집 (행 추가/삭제)
+ *
+ * [소요자원 데이터 변환]
+ *   - 로드 시: API 응답 items → UI resourceItems 변환
+ *     (gclDtt → category, gclNm → item, gclQtt → quantity 등)
+ *   - 저장 시: UI resourceItems → API items 역변환
+ *     (category → gclDtt, item → gclNm 등)
+ *   - fstDfrDt, sttDt, endDt, lblFsgTlm: Date 객체 → YYYY-MM-DD 문자열 변환
+ *
+ * [단가 자동 계산]
+ *   - watch(resourceItems): gclAmt(소계) ÷ quantity(수량)으로 unitPrice 자동 계산
+ *   - gclAmt나 quantity가 0이면 unitPrice = 0
+ *
+ * [라우팅]
+ *   - 접근(신규): /info/projects/form
+ *   - 접근(수정): /info/projects/form?id=:prjMngNo
+ *   - 저장 완료 후: /info/projects
+ *   - 취소 시: router.back()
+ * ============================================================================
+ */
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useProjects } from '~/composables/useProjects';
 import type { Project } from '~/composables/useProjects';
 import { PROJECT_STAGES, getApprovalAuthority } from '~/utils/common';
 import { useCurrencyRates } from '~/composables/useCurrencyRates';
+import { useProjectOptions } from '~/composables/useProjectOptions';
 import { useDateRangeValidation } from '~/composables/useDateRangeValidation';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import type { OrgUser } from '~/composables/useOrganization';
+import ResourceTableSection from '~/components/projects/ResourceTableSection.vue';
+import type { ResourceItem } from '~/components/projects/ResourceTableSection.vue';
 
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
 const { fetchProject, fetchProjectsOnce, fetchProjectDetailOnce, createProject, updateProject } = useProjects();
-// useCurrencyRates() 내부에서 useApiFetch가 자동으로 초기 fetch를 실행하므로
-// fetchRates() (= refresh) 중복 호출 불필요 → 2회 호출 및 40X 오류 방지
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 
 const title = '정보화사업 예산 작성';
-definePageMeta({
-    title
-});
+definePageMeta({ title });
 
 /** 수정 모드의 사업 관리번호 (신규 등록 시 null) */
 const projectId = route.query.id ? (route.query.id as string) : null;
 /** 수정 모드 여부 (projectId 존재 시 true) */
 const isEditMode = computed(() => !!projectId);
-
-/**
- * 소요자원 항목 인터페이스 (UI 모델)
- * API 응답의 item 필드를 UI에서 사용하기 위해 변환한 구조입니다.
- * 저장 시 executeSave()에서 API 스펙(gclDtt, gclNm 등)으로 역변환됩니다.
- *
- * [API 필드 매핑]
- *  category       ↔ gclDtt  (품목구분)
- *  item           ↔ gclNm   (품목명)
- *  quantity       ↔ gclQtt  (수량)
- *  currency       ↔ cur     (통화)
- *  basis          ↔ bgFdtn  (예산산출근거)
- *  introDate      ↔ itdDt   (도입시기)
- *  paymentCycle   ↔ dfrCle  (지급주기)
- *  infoProtection ↔ infPrtYn (정보보호여부)
- *  integratedInfra↔ itrInfrYn (통합인프라여부)
- *  gclAmt         ↔ gclAmt  (소계)
- */
-interface ResourceItem {
-    category: string;        // 품목구분 대분류 (API: gclDtt 앞부분)
-    subCategory: string;     // 품목구분 소분류 (API: gclDtt 뒷부분, 해당 대분류만 존재)
-    item: string;            // 품목명 (API: gclNm)
-    quantity: number;        // 수량 (API: gclQtt)
-    currency: string;        // 통화 (API: cur)
-    basis: string;           // 예산산출근거 (API: bgFdtn)
-    introDate: Date | null;  // 도입시기 (API: itdDt)
-    paymentCycle: string;    // 지급주기 (API: dfrCle)
-    infoProtection: string;  // 정보보호여부 (API: infPrtYn)
-    integratedInfra: string; // 통합인프라여부 (API: itrInfrYn)
-    gclAmt: number;          // 소계 (API: gclAmt)
-    unitPrice?: number;      // 단가 (UI 계산 필드: gclAmt ÷ quantity)
-    xcr?: number;            // 환율 (API: xcr, 수정 모드에서 복원)
-    gclMngNo?: string | null; // 품목 관리번호 (API: gclMngNo, 수정 모드에서 복원)
-}
 
 /** 폼 데이터 상태 (신규/수정 공통) */
 const form = ref({
@@ -186,82 +151,9 @@ const handleEndDtInput = (event: Event) => {
 /**
  * 사업연도(prjYy) 선택지 옵션 생성 (현재 연도 기준: 올해, 내년)
  */
-const currentYear = new Date().getFullYear();
-const yearOptions = [currentYear, currentYear + 1];
+const { yearOptions, prjTypeOptions } = useProjectOptions();
 
-/* ── 구분 CascadeSelect 옵션 ── */
-
-/** CascadeSelect 옵션 노드 타입 */
-interface CategoryOption {
-    label: string;
-    category: string;
-    subCategory: string;
-    items?: CategoryOption[];
-}
-
-/**
- * 구분 CascadeSelect 트리 옵션
- * 소분류가 있는 대분류는 items 배열을 가지며, 없는 항목은 leaf 노드로 직접 선택됩니다.
- */
-const resourceCategorySelectOptions: CategoryOption[] = [
-    {
-        label: '개발비', category: '개발비', subCategory: '',
-        items: [
-            { label: '일반', category: '개발비', subCategory: '일반' },
-            { label: '감리/컨설팅', category: '개발비', subCategory: '감리/컨설팅' },
-        ],
-    },
-    { label: '기계장치', category: '기계장치', subCategory: '' },
-    {
-        label: '기타무형자산', category: '기타무형자산', subCategory: '',
-        items: [
-            { label: '일반', category: '기타무형자산', subCategory: '일반' },
-            { label: 'SW라이선스', category: '기타무형자산', subCategory: 'SW라이선스' },
-        ],
-    },
-    {
-        label: '전산용역비', category: '전산용역비', subCategory: '',
-        items: [
-            { label: '외주(운영,관제 등)', category: '전산용역비', subCategory: '외주(운영,관제 등)' },
-            { label: '자문/심사', category: '전산용역비', subCategory: '자문/심사' },
-        ],
-    },
-    { label: '전산임차료', category: '전산임차료', subCategory: '' },
-    { label: '전산제비', category: '전산제비', subCategory: '' },
-];
-
-/**
- * category + subCategory 값으로 CascadeSelect 선택값 노드를 찾아 반환합니다.
- * 소분류 있는 대분류는 leaf 노드(소분류)에서, 없는 대분류는 루트 노드에서 탐색합니다.
- * 일치하는 노드가 없으면 null 반환 (CascadeSelect placeholder 표시).
- */
-const findCategoryOption = (category: string, subCategory: string): CategoryOption | null => {
-    for (const opt of resourceCategorySelectOptions) {
-        if (opt.items) {
-            if (subCategory) {
-                const sub = opt.items.find(s => s.category === category && s.subCategory === subCategory);
-                if (sub) return sub;
-            }
-        } else {
-            if (opt.category === category) return opt;
-        }
-    }
-    return null;
-};
-
-/**
- * CascadeSelect 변경 이벤트 처리
- * 선택된 노드의 category / subCategory를 행 데이터에 반영합니다.
- */
-const onCategorySelect = (rowData: ResourceItem, value: CategoryOption) => {
-    rowData.category = value.category;
-    rowData.subCategory = value.subCategory;
-};
 const currencyOptions = computed(() => Object.keys(exchangeRates.value));
-const paymentCycleOptions = ['월', '분기', '반기', '년'];
-const ynOptions = ['Y', 'N'];
-
-const prjTypeOptions = ['신규', '계속'];
 const statusOptions = PROJECT_STAGES;
 
 /** 법규상 완료시기 해당사항 없음 체크 (true이면 DatePicker 비활성화 & 값 초기화) */
@@ -787,42 +679,6 @@ watch(() => form.value.prjDtt, (val) => {
     if (val === '계속') continueProjectAC.value = form.value.prjNm;
 });
 
-/**
- * 소요자원 행 추가
- * 기본값으로 초기화된 빈 소요자원 항목을 resourceItems에 추가합니다.
- */
-const addResourceRow = () => {
-    form.value.resourceItems.push({
-        category: '개발비',
-        subCategory: '', // 소분류 초기값 (2단계 선택 시 설정)
-        item: '',
-        quantity: 0,
-        currency: 'KRW',
-        gclAmt: 0,
-        basis: '',
-        introDate: null,
-        paymentCycle: '',
-        infoProtection: 'N',
-        integratedInfra: 'N'
-    });
-};
-
-/**
- * 소요자원 행 삭제
- * 지정된 인덱스의 항목을 resourceItems에서 제거합니다.
- *
- * @param index - 삭제할 행의 인덱스
- */
-const removeResourceRow = (index: number) => {
-    form.value.resourceItems.splice(index, 1);
-};
-
-/** 소요자원 테이블 넓게 보기 토글 상태 */
-const isResourceTableExpanded = ref(false);
-const toggleResourceTableSize = () => {
-    isResourceTableExpanded.value = !isResourceTableExpanded.value;
-};
-
 /** 주관/IT 부서 동일 여부 제어 */
 const isItSameAsSvn = ref(false);
 watch([isItSameAsSvn, () => form.value.svnDpm, () => form.value.svnDpmTlr, () => form.value.svnDpmCgpr], ([checked]) => {
@@ -1212,176 +1068,9 @@ const cancel = () => {
             </div>
         </div>
 
-        <!-- 소요자원 상세내용 카드 (토글 폭 사용) -->
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3 transition-all duration-300"
-            :class="isResourceTableExpanded ? 'w-full' : 'max-w-[1440px] mx-auto w-full'">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h3 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">소요자원 상세내용<span
-                            class="text-red-500">*</span></h3>
-                    <Button :icon="isResourceTableExpanded ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
-                        variant="text" severity="secondary" rounded @click="toggleResourceTableSize"
-                        v-tooltip.top="isResourceTableExpanded ? '기본 폭으로' : '넓게 보기'" />
-                </div>
-                <Button label="품목 추가" icon="pi pi-plus" size="small" @click="addResourceRow" />
-            </div>
-            <p v-if="formErrors.resourceItems" class="text-red-500 text-xs">소요자원을 1개 이상 등록해주세요.</p>
-
-            <div class="overflow-x-auto">
-                <DataTable :value="form.resourceItems" resizableColumns columnResizeMode="fit" showGridlines
-                    size="small" class="resource-table">
-                    <template #empty>
-                        <div class="flex flex-col items-center justify-center text-zinc-500" style="min-height: 350px;">
-                            등록된 소요자원이 없습니다. 품목 추가 버튼을 눌러 등록해주세요.
-                        </div>
-                    </template>
-
-                    <!-- 구분: CascadeSelect (대분류 → 소분류 2단계) -->
-                    <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 160px;">
-                        <template #body="{ data }">
-                            <CascadeSelect :model-value="findCategoryOption(data.category, data.subCategory)"
-                                :options="resourceCategorySelectOptions" optionLabel="label" optionGroupLabel="label"
-                                optionGroupChildren="items" placeholder="선택" fluid
-                                @change="onCategorySelect(data, $event.value)">
-                                <!-- 선택된 값: 대분류 > 소분류 형식으로 표시 -->
-                                <template #value="{ value }">
-                                    <template v-if="value">
-                                        {{ value.category }}
-                                        <template v-if="value.subCategory">
-                                            <span class="opacity-40 mx-0.5">›</span>{{ value.subCategory }}
-                                        </template>
-                                    </template>
-                                    <span v-else style="color: var(--p-cascadeselect-placeholder-color)">선택</span>
-                                </template>
-                            </CascadeSelect>
-                        </template>
-                    </Column>
-
-                    <!-- 항목: 자동 줄바꿈 Textarea -->
-                    <Column header="항목" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 200px">
-                        <template #body="{ data }">
-                            <Textarea v-model="data.item" rows="1" autoResize class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 수량 -->
-                    <Column header="수량" headerClass="text-center justify-center [&>div]:justify-center"
-                        bodyClass="col-quantity" style="min-width: 120px">
-                        <template #body="{ data }">
-                            <InputNumber v-model="data.quantity" :min="0" class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 통화: KRW/USD/EUR 등 -->
-                    <Column header="통화" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 80px">
-                        <template #body="{ data }">
-                            <Select v-model="data.currency" :options="currencyOptions" class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 소계: 직접 입력 → 단가 자동 역산 -->
-                    <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center"
-                        bodyClass="col-subtotal" style="min-width: 120px">
-                        <template #body="{ data }">
-                            <InputNumber v-model="data.gclAmt" mode="currency" :currency="data.currency || 'KRW'"
-                                locale="ko-KR" class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 산정근거 -->
-                    <Column header="산정근거" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 150px">
-                        <template #body="{ data }">
-                            <Textarea v-model="data.basis" rows="1" autoResize class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 도입시기/지급주기: 구분에 따라 다른 입력 컴포넌트 표시 -->
-                    <Column header="도입시기/지급주기" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 200px">
-                        <template #body="{ data }">
-                            <!-- 자본예산: 도입시기 DatePicker (월 단위) -->
-                            <div v-if="['개발비', '기계장치', '기타무형자산'].includes(data.category)">
-                                <DatePicker v-model="data.introDate" view="month" dateFormat="yy-mm" showIcon fluid
-                                    placeholder="도입시기" class="w-full" />
-                            </div>
-                            <!-- 임차료/제비: 지급주기 드롭다운 -->
-                            <div v-else-if="['전산임차료', '전산제비'].includes(data.category)">
-                                <Select v-model="data.paymentCycle" :options="paymentCycleOptions" placeholder="지급주기"
-                                    class="w-full" />
-                            </div>
-                        </template>
-                    </Column>
-
-                    <!-- 정보보호 여부 (Y/N) -->
-                    <Column header="정보보호" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 80px">
-                        <template #body="{ data }">
-                            <Select v-model="data.infoProtection" :options="ynOptions" class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 통합인프라 여부 (Y/N) -->
-                    <Column header="통합인프라" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="min-width: 80px">
-                        <template #body="{ data }">
-                            <Select v-model="data.integratedInfra" :options="ynOptions" class="w-full" />
-                        </template>
-                    </Column>
-
-                    <!-- 행 삭제 버튼 -->
-                    <Column header="" headerClass="text-center justify-center [&>div]:justify-center"
-                        style="width: 50px">
-                        <template #body="{ index }">
-                            <Button icon="pi pi-trash" text severity="danger" @click="removeResourceRow(index)" />
-                        </template>
-                    </Column>
-                </DataTable>
-            </div>
-
-            <!-- 최종 액션 버튼 (플로팅 그룹) -->
-        </div>
+        <!-- 소요자원 상세내용 (공통 컴포넌트) -->
+        <ResourceTableSection v-model="form.resourceItems" :currencyOptions="currencyOptions"
+            :error="formErrors.resourceItems" />
     </div>
 </template>
 
-<style scoped>
-/** 소요자원 테이블 헤더 배경색 및 텍스트 색상 (라이트/다크 모드) */
-.resource-table :deep(.p-datatable-thead > tr > th) {
-    background-color: #f4f4f5 !important;
-    /* zinc-100 */
-    color: #27272a !important;
-    /* zinc-800 */
-}
-
-/** 소요자원 테이블 헤더 콘텐츠 중앙 정렬 */
-:deep(.resource-table .p-datatable-thead > tr > th .p-column-header-content) {
-    justify-content: center;
-}
-
-/** 소요자원 테이블 최소 높이 (tbody는 table-row-group이라 min-height 미적용 → table-container에 적용) */
-:deep(.resource-table .p-datatable-table-container) {
-    min-height: 400px;
-}
-
-/** 수량/소계 컬럼 InputNumber: PrimeVue 기본 min-width 강제 제거 */
-:deep(.resource-table .col-quantity .p-inputnumber),
-:deep(.resource-table .col-quantity .p-inputnumber-input),
-:deep(.resource-table .col-subtotal .p-inputnumber),
-:deep(.resource-table .col-subtotal .p-inputnumber-input) {
-    min-width: 0 !important;
-    width: 100% !important;
-}
-</style>
-
-<style>
-/** 다크모드 전역 스타일 강제 적용 (Vue scoped CSS 무시 버그 우회) */
-html.dark .resource-table .p-datatable-thead>tr>th {
-    background-color: #27272a !important;
-    /* zinc-800 */
-    color: #e4e4e7 !important;
-    /* zinc-200 */
-}
-</style>

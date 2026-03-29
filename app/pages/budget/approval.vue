@@ -463,36 +463,33 @@ const downloadPdf = async () => {
         </div>
 
         <!-- 예산 현황 요약 카드 -->
-        <BudgetSummaryCards :projects="cardProjects" :costs="cardCosts" :ordinary="cardOrdinary" :selectedUnit="selectedUnit" />
+        <BudgetSummaryCards :projects="cardProjects" :costs="cardCosts" :ordinary="cardOrdinary"
+            :selectedUnit="selectedUnit" />
 
         <!-- 통합 DataTable -->
         <div
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
-            <!-- 검색 바 -->
-            <div class="p-4 flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800">
-                <!-- 페이지 크기 + 검색어 입력 -->
-                <div class="flex flex-1 items-center gap-3 xl:flex-none xl:w-1/2">
+            <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
+            <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
+                <!-- 좌측: 페이지당 표시 건수 -->
+                <div class="flex items-center px-3 shrink-0">
                     <Select v-model="pageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
                         class="shrink-0" />
-                    <IconField class="flex-1">
+                </div>
+
+                <!-- 여백 (flex-1) -->
+                <div class="flex-1"></div>
+
+                <!-- 우측: 통합검색 + 액션 버튼 -->
+                <div class="flex items-center gap-2 px-3 py-2 shrink-0">
+                    <IconField class="w-[30rem] shrink-0">
                         <InputIcon class="pi pi-search" />
                         <InputText v-model="search" placeholder="사업명/계약명, 담당부서, 담당자 검색..." class="w-full" />
                     </IconField>
+                    <BudgetTableActions :reportLoading="reportLoading" :hasFilters="hasFilters" @excel="downloadExcel"
+                        @pdf="downloadPdf" @filter="visibleDrawer = true" />
                 </div>
-                <!-- 선택 현황 안내 -->
-                <span v-if="selectedItems.length > 0"
-                    class="text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                    <i class="pi pi-check-circle mr-1 text-zinc-400"></i>{{ selectedItems.length }}건 선택됨
-                </span>
-                <!-- 안내 문구: 이미 결재 진행 중인 항목 -->
-                <div class="flex items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-500">
-                    <i class="pi pi-lock text-xs"></i>
-                    <span>결재 진행 중 항목은 선택 불가</span>
-                </div>
-                <!-- 엑셀·PDF·조회 버튼 (공통 컴포넌트) -->
-                <BudgetTableActions class="ml-auto" :reportLoading="reportLoading" :hasFilters="hasFilters"
-                    @excel="downloadExcel" @pdf="downloadPdf" @filter="visibleDrawer = true" />
             </div>
 
             <!-- 통합 DataTable -->

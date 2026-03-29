@@ -14,8 +14,8 @@ Tiptap 기반의 완전한 기능을 갖춘 리치 텍스트 에디터 컴포넌
   Highlight         : 형광펜 (다중 색상)
   TextAlign         : 텍스트 정렬 (좌/중/우/양쪽)
   Link              : 하이퍼링크
-  Image             : 이미지 삽입 (URL + 파일 업로드)
-  Table             : 표 (행/열 추가·삭제, 병합)
+  Image             : 이미지 삽입 (URL + 파일 업로드) — ResizableImage로 대체
+  Table             : 표 (행/열 추가·삭제, 병합) — CustomTable로 대체
   TaskList/TaskItem : 체크리스트
   CharacterCount    : 글자 수 통계
   Placeholder       : 빈 에디터 힌트
@@ -23,15 +23,21 @@ Tiptap 기반의 완전한 기능을 갖춘 리치 텍스트 에디터 컴포넌
   Subscript         : 아래첨자
   Superscript       : 위첨자
 
-[Excalidraw 연동]
-  - 툴바 "다이어그램" 버튼 → Excalidraw 편집 다이얼로그 열기
-  - 완성된 그림은 SVG로 직렬화하여 에디터 내 커스텀 노드로 삽입
-  - 기존 다이어그램 노드 hover 시 "편집" 버튼으로 재편집 가능
+[커스텀 확장 (extensions/tiptap-extensions.ts)]
+  ResizableImage     : 크기/정렬 조정 가능한 이미지
+  ExcalidrawExtension: 다이어그램 커스텀 노드
+  CustomTable        : 너비 저장 지원 표
+  CustomTableCell    : 배경색·정렬 지원 셀
+  CustomTableHeader  : 배경색·정렬 지원 헤더 셀
+  CustomHeading      : id·scroll-margin 지원 제목
+
+[컴포넌트 구조 (Design Ref: §2 Clean Architecture)]
+  TiptapEditor.vue  : 에디터 코어 (확장 등록, 이벤트, 표 플로팅 툴바)
+  TiptapToolbar.vue : 툴바 UI 및 다이얼로그 (링크·이미지·Excalidraw)
 ================================================================================
 -->
 <script setup lang="ts">
-import { useEditor, EditorContent, VueNodeViewRenderer } from '@tiptap/vue-3';
-import { Node as TiptapNode } from '@tiptap/core';
+import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -39,9 +45,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
-import ResizableImageNodeViewComponent from './ResizableImageNodeView.vue';
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import CharacterCount from '@tiptap/extension-character-count';
@@ -49,48 +53,28 @@ import Placeholder from '@tiptap/extension-placeholder';
 import FontFamily from '@tiptap/extension-font-family';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
-import ExcalidrawNodeViewComponent from './ExcalidrawNodeView.vue';
+// Design Ref: §11 module-3 — CodeBlockLowlight (FR-03): syntax highlighting
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { createLowlight, common } from 'lowlight';
 
-// ── ResizableImage 커스텀 확장 ──
-// @tiptap/extension-image를 확장하여 너비(width), 정렬(align) 속성 및 NodeView를 추가합니다.
-const ResizableImage = Image.extend({
-    addAttributes() {
-        return {
-            ...this.parent?.(),
-            /**
-             * 이미지 너비 (px 단위 숫자)
-             * null이면 원본 크기(max-width: 100%) 유지
-             */
-            width: {
-                default: null,
-                parseHTML: (el) => {
-                    const w = el.getAttribute('width') ?? el.style.width;
-                    if (!w) return null;
-                    const num = Number.parseInt(w);
-                    return Number.isNaN(num) ? null : num;
-                },
-                renderHTML: (attrs) => {
-                    if (!attrs.width) return {};
-                    return { width: String(attrs.width), style: `width: ${attrs.width}px; max-width: 100%;` };
-                }
-            },
-            /**
-             * 이미지 정렬
-             * 'left' | 'center' | 'right'
-             */
-            align: {
-                default: 'left',
-                parseHTML: (el) => (el.getAttribute('data-align') as 'left' | 'center' | 'right') ?? 'left',
-                renderHTML: (attrs) => ({ 'data-align': attrs.align ?? 'left' })
-            }
-        };
-    },
-    addNodeView() {
-        // as any: Vue 컴포넌트 props 타입이 NodeViewProps와 완전히 일치하지 않아 발생하는 TS 오류 억제
-        return VueNodeViewRenderer(ResizableImageNodeViewComponent as any);
-    }
-}).configure({ inline: false, allowBase64: true });
+// Design Ref: §2 — 커스텀 확장은 extensions/tiptap-extensions.ts에서 중앙 관리
+import {
+    ResizableImage,
+    ExcalidrawExtension,
+    CustomTable,
+    CustomTableCell,
+    CustomTableHeader,
+    CustomHeading,
+    FontSize,
+    normalizeColwidths,
+    injectColwidthsFromColgroup
+} from './extensions/tiptap-extensions';
 
+/** lowlight 인스턴스: 일반적으로 사용하는 언어 번들 포함 */
+const lowlight = createLowlight(common);
+import TiptapToolbar from './TiptapToolbar.vue';
+
+// ── Props ──
 const props = defineProps<{
     /** 에디터 HTML 내용 (v-model) */
     modelValue: string;
@@ -112,219 +96,6 @@ const emit = defineEmits<{
     'update:modelValue': [value: string];
     'update:toc': [toc: Array<{ id: string; level: number; text: string }>];
 }>();
-
-// ── Excalidraw 다이얼로그 ──
-const { isOpen: isExcalidrawOpen, initialSceneData, open: openExcalidraw, close: closeExcalidraw, confirm: confirmExcalidraw } = useExcalidrawDialog();
-const excalidrawWrapperRef = ref<any>(null);
-
-// ── Excalidraw 파싱 유틸리티 ──
-/** HTML 요소에서 Excalidraw 데이터를 추출하는 함수 */
-const extractExcalidrawAttrs = (el: HTMLElement | null, img: HTMLImageElement | null) => {
-    let sceneData: string | null = null;
-    let svgContent = '';
-
-    // 1. data-scene 속성에서 추출 시도 (가장 빠르고 정상적인 경우)
-    const rawDataScene = el?.getAttribute('data-scene');
-    if (rawDataScene) {
-        try {
-            sceneData = decodeURIComponent(atob(rawDataScene));
-        } catch {
-            sceneData = rawDataScene; // 레거시 비인코딩 데이터
-        }
-    }
-
-    // 2. img src에서 SVG 및 주석 추출
-    if (img?.src?.startsWith('data:image/svg+xml')) {
-        try {
-            // URL 디코딩하여 원본 SVG 문자열 확보
-            svgContent = decodeURIComponent(img.src.replace('data:image/svg+xml;charset=utf-8,', ''));
-
-            // data-scene 속성이 유실된 경우 (백엔드 sanitization 등), SVG 내부 주석에서 추출 시도
-            if (!sceneData) {
-                const match = svgContent.match(/<!-- excalidraw-scene-data:(.*?) -->/);
-                if (match && match[1]) {
-                    try {
-                        sceneData = decodeURIComponent(atob(match[1]));
-                    } catch {
-                        sceneData = match[1];
-                    }
-                }
-            }
-        } catch { /* 파싱 실패 시 무시 */ }
-    }
-
-    // 디버그 (문제 해결 후 제거)
-    console.log('[ExcalidrawExt extract] rawDataScene:', rawDataScene?.substring(0, 50), 'sceneData from SVG:', !!sceneData);
-
-    return { sceneData, svgContent };
-};
-
-// ── Excalidraw Tiptap 커스텀 노드 확장 ──
-const ExcalidrawExtension = TiptapNode.create({
-    name: 'excalidraw',
-    group: 'block',
-    atom: true,
-    draggable: true,
-
-    addAttributes() {
-        return {
-            /** 에디터 내 미리보기용 SVG 문자열 */
-            svgContent: { default: '' },
-            /** 재편집을 위한 Excalidraw 장면 JSON 문자열 */
-            sceneData: { default: null }
-        };
-    },
-
-    parseHTML() {
-        return [
-            {
-                tag: 'figure[data-type="excalidraw"]',
-                getAttrs: (element) => {
-                    const el = element as HTMLElement;
-                    const img = el.querySelector('img');
-                    return extractExcalidrawAttrs(el, img);
-                }
-            },
-            {
-                // 백엔드 sanitizer에 의해 <figure>가 잘리고 <img>만 남은 경우 대비
-                tag: 'img[src^="data:image/svg+xml"]',
-                getAttrs: (element) => {
-                    const img = element as HTMLImageElement;
-                    const attrs = extractExcalidrawAttrs(null, img);
-                    // excalidraw-scene-data 주석이 확인된 경우에만 excalidraw 노드로 인식
-                    if (attrs.sceneData) return attrs;
-                    return false;
-                }
-            }
-        ];
-    },
-
-    renderHTML({ node }) {
-        // sceneData를 Base64로 인코딩
-        const encodedScene = node.attrs.sceneData
-            ? btoa(encodeURIComponent(node.attrs.sceneData))
-            : '';
-
-        // SVG 문자열 끝에 주석 형태로 sceneData 삽입 (백엔드 sanitization 우회)
-        let finalSvgContent = node.attrs.svgContent || '';
-        if (encodedScene && finalSvgContent.includes('</svg>')) {
-            finalSvgContent = finalSvgContent.replace('</svg>', `<!-- excalidraw-scene-data:${encodedScene} --></svg>`);
-        }
-
-        return [
-            'figure',
-            {
-                'data-type': 'excalidraw',
-                // 호환성 및 프론트에서 빠른 로드를 위해 data-scene 속성도 유지
-                'data-scene': encodedScene,
-                style: 'margin: 1rem 0;'
-            },
-            [
-                'img',
-                {
-                    src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(finalSvgContent)}`,
-                    style: 'max-width: 100%; display: block;',
-                    alt: 'Excalidraw 다이어그램'
-                }
-            ]
-        ];
-    },
-
-    addNodeView() {
-        // as any: Vue 컴포넌트 props 타입이 NodeViewProps와 완전히 일치하지 않아 발생하는 TS 오류 억제
-        return VueNodeViewRenderer(ExcalidrawNodeViewComponent as any);
-    }
-});
-
-// ── Custom TableCell / TableHeader 확장 ──
-// 기본 TableCell·TableHeader에 셀 배경색(backgroundColor) 속성을 추가합니다.
-// setCellAttribute('backgroundColor', color) 명령으로 적용합니다.
-// ── CustomTable: 표 전체 너비 속성 영구 저장 ──
-// Tiptap의 TableView는 colwidth에서 table.style.width를 동적으로 계산하지만,
-// editor.getHTML()은 이 DOM 스타일을 직렬화하지 않아 저장 후 복원 시 너비가 사라집니다.
-// width 속성을 ProseMirror 스키마에 추가하여 <table style="width:Xpx"> 형태로 저장합니다.
-const CustomTable = Table.extend({
-    addAttributes() {
-        return {
-            ...this.parent?.(),
-            width: {
-                default: null,
-                // parseHTML: 저장된 HTML의 table 요소 style.width를 읽어 복원
-                parseHTML: (element) => element.style.width || null,
-                // renderHTML: 직렬화 시 style 속성으로 출력 (CSS width: 100%보다 우선)
-                renderHTML: (attributes) => {
-                    if (!attributes.width) return {};
-                    return { style: `width: ${attributes.width}` };
-                }
-            }
-        };
-    }
-});
-
-const CustomTableCell = TableCell.extend({
-    addAttributes() {
-        return {
-            ...this.parent?.(),
-            /**
-             * 셀 배경색 (CSS color 문자열)
-             * renderHTML: style 속성으로 직렬화되어 HTML에 저장됩니다.
-             */
-            backgroundColor: {
-                default: null,
-                parseHTML: (element) => element.style.backgroundColor || null,
-                renderHTML: (attributes) => {
-                    if (!attributes.backgroundColor) return {};
-                    return { style: `background-color: ${attributes.backgroundColor}` };
-                }
-            }
-        };
-    }
-});
-
-const CustomTableHeader = TableHeader.extend({
-    addAttributes() {
-        return {
-            ...this.parent?.(),
-            /** 헤더 셀 배경색 */
-            backgroundColor: {
-                default: null,
-                parseHTML: (element) => element.style.backgroundColor || null,
-                renderHTML: (attributes) => {
-                    if (!attributes.backgroundColor) return {};
-                    return { style: `background-color: ${attributes.backgroundColor}` };
-                }
-            }
-        };
-    }
-});
-
-// ── Custom Heading Extension ──
-// 기본 Heading 확장에 고유 id 생성 및 렌더링 기능 추가
-import Heading from '@tiptap/extension-heading';
-
-const CustomHeading = Heading.extend({
-    addAttributes() {
-        return {
-            ...this.parent?.(),
-            id: {
-                default: null,
-                parseHTML: element => element.getAttribute('id'),
-                renderHTML: attributes => {
-                    if (!attributes.id) {
-                        return {
-                            id: `heading-${Math.random().toString(36).substr(2, 9)}`,
-                            style: 'scroll-margin-top: 100px;'
-                        };
-                    }
-                    return {
-                        id: attributes.id,
-                        style: 'scroll-margin-top: 100px;'
-                    };
-                },
-            },
-        };
-    },
-});
 
 // TOC 추출 함수
 const extractTOC = (editorInstance: any) => {
@@ -379,15 +150,18 @@ const fileToBase64 = (file: File): Promise<string> =>
 const editor = useEditor({
     extensions: [
         StarterKit.configure({
-            // Heading은 CustomHeading으로 대체하므로 기본 확장에서는 비활성화
+            // Heading은 CustomHeading으로 대체
             heading: false,
+            // codeBlock은 CodeBlockLowlight로 대체 (FR-03)
+            codeBlock: false,
         }),
         CustomHeading,
         Underline,
         TextStyle,
         Color,
         Highlight.configure({ multicolor: true }),
-        TextAlign.configure({ types: ['heading', 'paragraph'] }),
+        // Design Ref: §2.3 — TableCell/TableHeader 정렬 저장 지원 (FR-01)
+        TextAlign.configure({ types: ['heading', 'paragraph', 'tableCell', 'tableHeader'] }),
         Link.configure({ openOnClick: false, autolink: true }),
         ResizableImage, // 크기/정렬 조정 가능한 커스텀 이미지 확장
         CustomTable.configure({ resizable: true }),
@@ -399,8 +173,12 @@ const editor = useEditor({
         CharacterCount,
         Placeholder.configure({ placeholder: props.placeholder || '내용을 입력하세요...' }),
         FontFamily,
+        // Design Ref: §11 module-3 — FontSize 커스텀 마크 (FR-04)
+        FontSize,
         Subscript,
         Superscript,
+        // Design Ref: §11 module-3 — CodeBlockLowlight syntax highlighting (FR-03)
+        CodeBlockLowlight.configure({ lowlight }),
         ExcalidrawExtension
     ],
     // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환 (브라우저 환경에서만 실행)
@@ -411,7 +189,8 @@ const editor = useEditor({
         extractTOC(editor);
         // 편집 모드에서만 colwidth 정규화 실행 (조회 모드에서는 저장된 값을 그대로 사용)
         nextTick(() => {
-            if (!props.readonly) normalizeColwidths();
+            // normalizeColwidths는 tiptap-extensions.ts에서 import, editor 인스턴스를 직접 전달
+            if (!props.readonly && editor) normalizeColwidths(editor);
             applyTableWidths();
         });
     },
@@ -543,229 +322,11 @@ watch(() => props.readonly, (val) => {
     nextTick(applyTableWidths);
 });
 
-// ── 링크 다이얼로그 ──
-const linkDialogVisible = ref(false);
-const linkUrl = ref('');
-const linkOpenInNewTab = ref(true);
-
-/** 링크 다이얼로그 열기 (선택된 텍스트에 기존 링크 URL 미리 채움) */
-const openLinkDialog = () => {
-    const existing = editor.value?.getAttributes('link');
-    linkUrl.value = existing?.href || '';
-    linkOpenInNewTab.value = existing?.target === '_blank';
-    linkDialogVisible.value = true;
-};
-
-/** 링크 적용 (URL이 없으면 링크 제거) */
-const applyLink = () => {
-    if (!editor.value) return;
-    if (linkUrl.value) {
-        editor.value.chain().focus().setLink({
-            href: linkUrl.value,
-            target: linkOpenInNewTab.value ? '_blank' : null
-        }).run();
-    } else {
-        editor.value.chain().focus().unsetLink().run();
-    }
-    linkDialogVisible.value = false;
-};
-
-// ── 이미지 다이얼로그 ──
-const imageDialogVisible = ref(false);
-const imageUrl = ref('');
-const imageAlt = ref('');
-const imageFileInput = ref<HTMLInputElement | null>(null);
-const imageTab = ref<'url' | 'file'>('url');
-/** 이미지 업로드 진행 중 여부 (API 업로드 시 로딩 표시용) */
-const isUploadingImage = ref(false);
-
-/** 이미지 다이얼로그 열기 */
-const openImageDialog = () => {
-    imageUrl.value = '';
-    imageAlt.value = '';
-    imageTab.value = 'url';
-    imageDialogVisible.value = true;
-};
-
-/** URL로 이미지 삽입 */
-const applyImageUrl = () => {
-    if (!editor.value || !imageUrl.value) return;
-    editor.value.chain().focus().setImage({ src: imageUrl.value, alt: imageAlt.value }).run();
-    imageDialogVisible.value = false;
-};
-
-/**
- * 파일 업로드로 이미지 삽입
- * imageUploadFn prop이 제공된 경우 API 업로드를 수행하고,
- * 그렇지 않은 경우 base64로 변환하여 에디터에 직접 삽입합니다.
- */
-const handleImageFileChange = async (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (props.imageUploadFn) {
-        // API 업로드 모드: imageUploadFn으로 서버에 업로드 후 URL 삽입
-        isUploadingImage.value = true;
-        try {
-            const src = await props.imageUploadFn(file);
-            editor.value?.chain().focus().setImage({ src, alt: file.name }).run();
-            imageDialogVisible.value = false;
-        } catch (e) {
-            console.error('[TiptapEditor] 이미지 업로드 실패:', e);
-            // 업로드 실패 시 에러는 부모 컴포넌트의 imageUploadFn에서 처리
-        } finally {
-            isUploadingImage.value = false;
-            // 동일 파일 재선택을 위해 input 초기화
-            input.value = '';
-        }
-    } else {
-        // 기본 모드: base64 변환하여 문서에 직접 포함
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target?.result as string;
-            editor.value?.chain().focus().setImage({ src: dataUrl, alt: file.name }).run();
-            imageDialogVisible.value = false;
-        };
-        reader.readAsDataURL(file);
-    }
-};
-
-// ── 색상 팔레트 ──
-/** 글자색 팔레트 표시 여부 */
-const colorPaletteVisible = ref(false);
-/** 배경색(형광펜) 팔레트 표시 여부 */
-const highlightPaletteVisible = ref(false);
-
-/**
- * 프리셋 색상 팔레트 (8열 × 6행 = 48색)
- * 열: 흑백/회색, 빨강, 주황, 노랑/녹색, 청록/파랑, 남색/보라, 분홍
- * 행: 짙은색 → 옅은색 순
- */
-const COLOR_PALETTE: string[][] = [
-    // 흑백 / 회색 계열
-    ['#000000', '#1F2937', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#FFFFFF'],
-    // 빨강 / 주황 계열
-    ['#7F1D1D', '#B91C1C', '#EF4444', '#F97316', '#FB923C', '#FCA5A5', '#FED7AA', '#FFF7ED'],
-    // 노랑 / 노란녹색 계열
-    ['#78350F', '#B45309', '#D97706', '#EAB308', '#FCD34D', '#FDE68A', '#FEF08A', '#FEFCE8'],
-    // 녹색 / 청록 계열
-    ['#14532D', '#15803D', '#16A34A', '#22C55E', '#4ADE80', '#86EFAC', '#BBF7D0', '#DCFCE7'],
-    // 파랑 / 남색 계열
-    ['#1E3A8A', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
-    // 보라 / 분홍 계열
-    ['#4C1D95', '#6D28D9', '#8B5CF6', '#A855F7', '#EC4899', '#F472B6', '#F9A8D4', '#FCE7F3'],
-];
-
-/** 현재 커서 위치의 글자 색상 (버튼 미리보기용) */
-const currentTextColor = computed(() =>
-    editor.value?.getAttributes('textStyle')?.color || '#000000'
-);
-
-/** 현재 커서 위치의 배경 하이라이트 색상 (버튼 미리보기용) */
-const currentHighlightColor = computed(() =>
-    editor.value?.getAttributes('highlight')?.color || '#FDE047'
-);
-
-/** 글자 색상 적용 */
-const applyTextColor = (color: string) => {
-    editor.value?.chain().focus().setColor(color).run();
-    colorPaletteVisible.value = false;
-};
-
-/** 글자 색상 제거 */
-const removeTextColor = () => {
-    editor.value?.chain().focus().unsetColor().run();
-    colorPaletteVisible.value = false;
-};
-
-/** 배경(형광펜) 색상 적용 */
-const applyHighlightColor = (color: string) => {
-    editor.value?.chain().focus().setHighlight({ color }).run();
-    highlightPaletteVisible.value = false;
-};
-
-/** 배경(형광펜) 색상 제거 */
-const removeHighlightColor = () => {
-    editor.value?.chain().focus().unsetHighlight().run();
-    highlightPaletteVisible.value = false;
-};
-
-// ── 폰트 패밀리 ──
-const fontOptions = [
-    { label: '기본 폰트', value: '' },
-    { label: '나눔고딕', value: "'NanumGothic', sans-serif" },
-    { label: '맑은 고딕', value: "'Malgun Gothic', sans-serif" },
-    { label: 'Georgia', value: 'Georgia, serif' },
-    { label: 'Verdana', value: 'Verdana, sans-serif' },
-    { label: 'Courier New', value: "'Courier New', monospace" }
-];
-const selectedFont = ref('');
-
-const applyFontFamily = (font: string) => {
-    if (!font) {
-        editor.value?.chain().focus().unsetFontFamily().run();
-    } else {
-        editor.value?.chain().focus().setFontFamily(font).run();
-    }
-    selectedFont.value = font;
-};
-
-// ── 표 조작 ──
-/**
- * 3x3 표 삽입 (헤더 행 포함)
- * 삽입 후 모든 셀에 균등 colwidth를 설정합니다.
- * colwidth가 전 셀에 있어야 fixedWidth=true가 되어 table.style.width가 저장됩니다.
- */
-const insertTable = () => {
-    const COLS = 3;
-    /** 최초 삽입 테이블 고정 폭 (px) */
-    const TABLE_WIDTH = 450;
-    const colWidth = Math.floor(TABLE_WIDTH / COLS); // 150px per col
-    editor.value?.chain().focus().insertTable({ rows: 3, cols: COLS, withHeaderRow: true }).run();
-
-    // 삽입 직후 DOM이 반영된 뒤 colwidth 초기화
-    nextTick(() => {
-        if (!editor.value) return;
-        const view = editor.value.view;
-
-        const { selection } = view.state;
-        const $anchor = selection.$anchor;
-        const tr = view.state.tr;
-        let patched = false;
-
-        // 현재 커서 위치에서 상위 table 노드 탐색
-        for (let depth = $anchor.depth; depth >= 0; depth--) {
-            const node = $anchor.node(depth);
-            if (node.type.name !== 'table') continue;
-
-            const tableStart = $anchor.start(depth);
-            // table 내 모든 셀에 colwidth 초기화
-            node.descendants((cell, pos) => {
-                if (cell.type.name !== 'tableCell' && cell.type.name !== 'tableHeader') return;
-                if (cell.attrs.colwidth) return; // 이미 설정된 경우 스킵
-                tr.setNodeMarkup(tableStart + pos, null, {
-                    ...cell.attrs,
-                    colwidth: [colWidth]
-                });
-                patched = true;
-            });
-            break;
-        }
-        if (patched) {
-            view.dispatch(tr.setMeta('addToHistory', false));
-        }
-    });
-};
-
-// ── 셀 서식 ──
+// ── 셀 서식 (표 플로팅 툴바에서 사용) ──
 /** 셀 배경색 color input 참조 */
 const cellBgInputRef = ref<HTMLInputElement | null>(null);
 
-/**
- * 현재 커서가 위치한 셀의 배경색을 반환합니다.
- * color input의 초기값 표시에 사용합니다.
- */
+/** 현재 커서가 위치한 셀의 배경색을 반환합니다. */
 const currentCellBg = computed<string>(() => {
     if (!editor.value?.isActive('table')) return '#ffffff';
     const attrs = editor.value.getAttributes('tableCell');
@@ -773,44 +334,24 @@ const currentCellBg = computed<string>(() => {
     return attrs.backgroundColor || headerAttrs.backgroundColor || '#ffffff';
 });
 
-/**
- * 셀 배경색 적용 핸들러
- * tableCell과 tableHeader 모두에 setCellAttribute로 적용합니다.
- */
+/** 셀 배경색 적용 핸들러 */
 const handleCellBgChange = (event: Event) => {
     const color = (event.target as HTMLInputElement).value;
     editor.value?.chain().focus().setCellAttribute('backgroundColor', color).run();
 };
 
-/**
- * 셀 배경색 제거
- * null을 설정하면 renderHTML에서 style 속성을 생략합니다.
- */
+/** 셀 배경색 제거 */
 const clearCellBg = () => {
     editor.value?.chain().focus().setCellAttribute('backgroundColor', null).run();
 };
 
-/**
- * 저장된 CustomTable.width 속성을 DOM의 table.style.width에 직접 적용합니다.
- *
- * TableView.updateColumns()는 모든 셀의 colwidth 합산으로 table.style.width를 설정하지만,
- * 일부 셀에 colwidth가 없으면 width를 비워(fixedWidth=false) CSS width:100%가 적용됩니다.
- * 또한 readonly 전환 / setContent 등으로 NodeView가 재렌더링될 때마다 이 계산이 반복됩니다.
- *
- * 이 함수는 트랜잭션 처리 완료 후(nextTick) 노드 속성에 저장된 width를
- * DOM에 강제 적용하여 CSS width:100%보다 우선시킵니다.
- */
-/**
- * 컬럼 리사이즈 중 여부 플래그
- * column-resize-handle mousedown 시 true, mouseup 시 false.
- * applyTableWidths는 리사이즈 중엔 실행하지 않아야 Tiptap의
- * 실시간 리사이즈 피드백(table.style.width 동적 변경)과 충돌하지 않습니다.
- */
+/** 컬럼 리사이즈 중 여부 플래그 */
 let _isResizingTable = false;
 
+/**
+ * 저장된 CustomTable.width 속성을 DOM의 table.style.width에 직접 적용합니다.
+ */
 const applyTableWidths = () => {
-    // 리사이즈 드래그 중에는 Tiptap이 table.style.width를 실시간으로 조정하므로
-    // 저장된 width로 복원하면 표가 튀는 현상이 발생합니다.
     if (_isResizingTable) return;
     if (!editor.value || editor.value.isDestroyed) return;
     const view = editor.value.view;
@@ -820,7 +361,6 @@ const applyTableWidths = () => {
         if (!node.attrs.width) return;
 
         try {
-            // nodeDOM(pos)는 TableView의 dom 요소 (div.tableWrapper)를 반환
             const wrapperEl = view.nodeDOM(pos) as HTMLElement | null;
             if (!wrapperEl) return;
 
@@ -829,7 +369,6 @@ const applyTableWidths = () => {
                 : wrapperEl.querySelector('table')) as HTMLTableElement | null;
             if (!tableEl) return;
 
-            // updateColumns()가 비운 경우에도 저장된 너비로 복원
             if (tableEl.style.width !== node.attrs.width) {
                 tableEl.style.width = node.attrs.width;
             }
@@ -845,9 +384,7 @@ const tableFloatX = ref(0);
 /** 플로팅 툴바 fixed Y 좌표 (px) */
 const tableFloatY = ref(0);
 
-/**
- * 현재 커서가 속한 <table> DOM 요소를 반환합니다.
- */
+/** 현재 커서가 속한 table DOM 요소를 반환합니다. */
 const getTableElement = (): HTMLTableElement | null => {
     if (!editor.value) return null;
     const { from } = editor.value.state.selection;
@@ -860,9 +397,7 @@ const getTableElement = (): HTMLTableElement | null => {
 };
 
 /**
- * 플로팅 툴바 위치 갱신
- * table 요소의 getBoundingClientRect()로 fixed 좌표를 계산합니다.
- * 표 상단에 공간이 있으면 위쪽, 없으면 표 상단에 오버레이합니다.
+ * 플로팅 툴바 위치 갱신 (table 요소 기준 fixed 좌표)
  */
 const updateTableFloat = () => {
     if (!editor.value?.isActive('table')) {
@@ -876,7 +411,6 @@ const updateTableFloat = () => {
     }
     const rect = tableEl.getBoundingClientRect();
     const TOOLBAR_H = 40;
-    // 위에 충분한 공간이 있으면 표 위에, 없으면 표 상단에 살짝 오버레이
     const top = rect.top >= TOOLBAR_H + 8
         ? rect.top - TOOLBAR_H - 4
         : rect.top + 4;
@@ -892,10 +426,6 @@ let _scrollEl: Element | null = null;
 /**
  * 컬럼 리사이즈 완료(mouseup) 시 각 table의 실제 렌더링 너비를
  * CustomTable의 width 속성으로 동기화합니다.
- *
- * TableView의 updateColumns()는 모든 셀에 colwidth가 있을 때만
- * table.style.width를 설정(fixedWidth=true)합니다.
- * 이 값을 ProseMirror 스키마에 저장해야 editor.getHTML()이 width를 직렬화합니다.
  */
 const syncTableWidths = () => {
     if (!editor.value || editor.value.isDestroyed) return;
@@ -904,234 +434,39 @@ const syncTableWidths = () => {
     let changed = false;
     const tr = view.state.tr;
 
-    // 문서의 모든 table 노드를 순회하여 DOM 너비 캡처
     view.state.doc.descendants((node, pos) => {
         if (node.type.name !== 'table') return;
 
         try {
-            // nodeDOM(pos)는 TableView의 dom 요소 (div.tableWrapper)를 반환
             const wrapperEl = view.nodeDOM(pos) as HTMLElement | null;
             if (!wrapperEl) return;
 
-            // tableWrapper 안의 실제 <table> 요소
             const tableEl = (wrapperEl.tagName === 'TABLE'
                 ? wrapperEl
                 : wrapperEl.querySelector('table')) as HTMLTableElement | null;
             if (!tableEl) return;
 
-            // table.style.width는 fixedWidth=true일 때만 Tiptap이 설정 (예: "500px")
             const domWidth = tableEl.style.width;
             if (!domWidth) return;
 
-            // 변경이 있을 때만 트랜잭션 추가
             if (node.attrs.width !== domWidth) {
                 tr.setNodeMarkup(pos, null, { ...node.attrs, width: domWidth });
                 changed = true;
             }
-        } catch {
-            // pos → DOM 매핑 실패 시 무시
-        }
+        } catch { /* pos → DOM 매핑 실패 시 무시 */ }
     });
 
     if (changed) {
-        // addToHistory: false → Undo 스택에 포함하지 않음 (리사이즈 undo와 분리)
-        view.dispatch(tr.setMeta('addToHistory', false));
-    }
-};
-
-/**
- * HTML 문자열 내 <table>의 <colgroup><col style="width:Xpx"> 값을
- * 각 셀의 colwidth 속성으로 주입합니다.
- *
- * [필요 이유]
- * Tiptap은 setContent() 후 updateColumns()를 즉시 실행하여
- * <col style="width:Xpx"> → <col style="min-width:25px"> 로 덮어씁니다.
- * 따라서 setContent 전에 colgroup 너비를 셀 colwidth 속성으로 변환해야
- * ProseMirror 노드에 너비 정보가 보존됩니다.
- * 이미 colwidth 속성이 있는 셀은 건드리지 않습니다.
- */
-function injectColwidthsFromColgroup(html: string): string {
-    // colgroup이 없으면 변환 불필요
-    if (!html || !html.includes('<colgroup>')) return html;
-    // 브라우저 DOMParser로 HTML 파싱
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    doc.querySelectorAll('table').forEach((table) => {
-        const cols = table.querySelectorAll('colgroup col');
-        if (!cols.length) return;
-        // <col style="width:Xpx"> 에서 너비 배열 추출
-        const colWidths: number[] = [];
-        cols.forEach((col) => {
-            const w = Number.parseInt((col as HTMLElement).style.width, 10);
-            colWidths.push(w > 0 ? w : 0);
-        });
-        // 유효한 너비가 하나도 없으면 건너뜀
-        if (colWidths.every(w => w === 0)) return;
-        // 모든 행의 셀에 colwidth 주입 (이미 있으면 유지)
-        table.querySelectorAll('tr').forEach((row) => {
-            let colIdx = 0;
-            row.querySelectorAll('th, td').forEach((cell) => {
-                const colspan = Number.parseInt((cell as HTMLElement).getAttribute('colspan') || '1', 10);
-                if (!cell.hasAttribute('colwidth')) {
-                    const widths: number[] = [];
-                    for (let c = 0; c < colspan; c++) {
-                        widths.push(colWidths[colIdx + c] || 0);
-                    }
-                    if (widths.some(w => w > 0)) {
-                        cell.setAttribute('colwidth', widths.join(','));
-                    }
-                }
-                colIdx += colspan;
-            });
-        });
-    });
-    return doc.body.innerHTML;
-}
-
-/**
- * 모든 표 셀에 colwidth를 보장하여 Tiptap이 고정폭(fixedWidth=true) 모드로 동작하게 합니다.
- *
- * [동작 원리]
- * Tiptap의 updateColumns()는 모든 셀에 colwidth가 있을 때만(fixedWidth=true)
- * table.style.width를 명시적 px 값으로 설정합니다.
- * colwidth가 없는 셀이 하나라도 있으면 fixedWidth=false → table.style.width를 비워
- * CSS의 width:100%가 적용되어 표가 컨테이너를 꽉 채우는 '반응형'처럼 보입니다.
- *
- * [호출 시점]
- * - 컬럼 추가·삭제, 행 추가, 셀 분리 등 구조 변경 직후 (신규 셀은 colwidth 없음)
- * - injectColwidthsFromColgroup 전처리로 처리되지 못한 레거시 셀 보완용
- */
-const normalizeColwidths = () => {
-    if (!editor.value || editor.value.isDestroyed) return;
-    const view = editor.value.view;
-    const tr = view.state.tr;
-    let patched = false;
-
-    view.state.doc.descendants((tableNode, tablePos) => {
-        if (tableNode.type.name !== 'table') return;
-
-        try {
-            // ── 1. 첫 번째 행 기준으로 총 컬럼 수 산정 ──
-            // Node.forEach는 return false를 지원하지 않으므로 플래그로 첫 행만 처리합니다.
-            let totalCols = 0;
-            let firstRowParsed = false;
-            tableNode.forEach((row: any) => {
-                if (!firstRowParsed && row.type.name === 'tableRow') {
-                    firstRowParsed = true;
-                    row.forEach((cell: any) => { totalCols += (cell.attrs.colspan || 1); });
-                }
-            });
-            if (totalCols === 0) return;
-
-            // ── 2. 컬럼별 참조 너비 구축 (colwidth가 모두 있는 첫 번째 행 사용) ──
-            // 행 추가·열 추가 후 새 셀에만 colwidth가 없는 상황에서
-            // 기존 열의 너비를 그대로 물려받아야 합니다.
-            // 예) col0=150, col1=200, col2=293인 표에 행을 추가하면
-            //     새 셀도 150, 200, 293을 부여해야 합니다.
-            const referenceColWidths: number[] = new Array(totalCols).fill(0);
-            let referenceFound = false;
-            tableNode.forEach((row: any) => {
-                if (referenceFound || row.type.name !== 'tableRow') return;
-                const widths: number[] = [];
-                let allValid = true;
-                row.forEach((cell: any) => {
-                    const cw = Array.isArray(cell.attrs.colwidth) && (cell.attrs.colwidth[0] ?? 0) > 0
-                        ? cell.attrs.colwidth[0] as number : 0;
-                    widths.push(cw);
-                    if (cw <= 0) allValid = false;
-                });
-                if (allValid && widths.length === totalCols) {
-                    widths.forEach((w, i) => { referenceColWidths[i] = w; });
-                    referenceFound = true;
-                }
-            });
-
-            // ── 3. 참조 행이 없으면 colgroup DOM → 균등 폴백 순서로 시도 ──
-            // HTML 저장 시 colwidth는 셀 속성 대신 <colgroup><col style="width:Xpx"> 로만
-            // 직렬화되는 경우가 있으므로, DOM의 <col> 요소에서 너비를 우선 읽습니다.
-            // colgroup에서도 읽을 수 없는 경우(최초 삽입된 빈 표 등)에만 균등 폴백합니다.
-            let fallbackColWidth = 0;
-            if (!referenceFound) {
-                const wrapperEl = view.nodeDOM(tablePos) as HTMLElement | null;
-                const tableEl = (wrapperEl?.tagName === 'TABLE'
-                    ? wrapperEl
-                    : wrapperEl?.querySelector('table')) as HTMLTableElement | null;
-
-                // 3-a. <colgroup> <col style="width:Xpx"> 에서 너비 읽기
-                const colEls = tableEl?.querySelectorAll('colgroup col');
-                if (colEls && colEls.length === totalCols) {
-                    const colgroupWidths: number[] = [];
-                    let allValid = true;
-                    colEls.forEach((col) => {
-                        const px = Number.parseInt((col as HTMLElement).style.width, 10);
-                        if (px > 0) { colgroupWidths.push(px); }
-                        else { allValid = false; }
-                    });
-                    if (allValid && colgroupWidths.length === totalCols) {
-                        // colgroup 너비를 참조 너비로 사용 (균등 폴백 없이 원래 너비 유지)
-                        colgroupWidths.forEach((w, i) => { referenceColWidths[i] = w; });
-                        referenceFound = true;
-                    }
-                }
-
-                // 3-b. colgroup에서도 읽지 못한 경우에만 균등 폴백
-                if (!referenceFound) {
-                    const tableWidth = tableEl?.offsetWidth || (view.dom as HTMLElement).offsetWidth || 600;
-                    fallbackColWidth = Math.floor(tableWidth / totalCols);
-                }
-            }
-
-            // ── 4. colwidth 없는 셀에만 컬럼별 너비 부여 ──
-            // tableNode.forEach(row, rowOffset) + row.forEach(cell, cellOffset) 로
-            // 절대 위치를 계산합니다: tablePos + 1(표 토큰) + rowOffset + 1(행 토큰) + cellOffset
-            let tablePatched = false;
-            tableNode.forEach((row: any, rowOffset: number) => {
-                if (row.type.name !== 'tableRow') return;
-                let colIdx = 0;
-                row.forEach((cell: any, cellOffset: number) => {
-                    if (cell.type.name !== 'tableCell' && cell.type.name !== 'tableHeader') return;
-                    const hasColwidth = Array.isArray(cell.attrs.colwidth)
-                        && cell.attrs.colwidth.length > 0
-                        && cell.attrs.colwidth.some((w: number) => w > 0);
-                    if (!hasColwidth) {
-                        const colspan = cell.attrs.colspan || 1;
-                        // colspan > 1인 셀은 해당 범위의 참조 너비를 합산합니다.
-                        const colWidths: number[] = [];
-                        for (let c = 0; c < colspan; c++) {
-                            colWidths.push(referenceFound
-                                ? (referenceColWidths[colIdx + c] || fallbackColWidth)
-                                : fallbackColWidth);
-                        }
-                        const absPos = tablePos + 1 + rowOffset + 1 + cellOffset;
-                        tr.setNodeMarkup(absPos, null, { ...cell.attrs, colwidth: colWidths });
-                        tablePatched = true;
-                        patched = true;
-                    }
-                    colIdx += (cell.attrs.colspan || 1);
-                });
-            });
-
-            // 새로 colwidth를 채운 표의 저장된 너비(node.attrs.width)를 초기화합니다.
-            // updateColumns()가 새 colwidth 합산을 기준으로 너비를 재계산하도록 합니다.
-            if (tablePatched && tableNode.attrs.width) {
-                tr.setNodeMarkup(tablePos, null, { ...tableNode.attrs, width: null });
-            }
-        } catch { /* DOM 접근 실패 시 무시 */ }
-    });
-
-    if (patched) {
         view.dispatch(tr.setMeta('addToHistory', false));
     }
 };
 
 /**
  * 표 구조 변경 커맨드를 실행하고 즉시 colwidth를 정규화합니다.
- * 컬럼 추가, 행 추가, 셀 분리 등으로 생긴 새 셀에는 colwidth가 없어
- * fixedWidth=false → 반응형 동작이 되므로 nextTick에서 정규화합니다.
  */
 const tableOp = (fn: () => void) => {
     fn();
-    nextTick(normalizeColwidths);
+    nextTick(() => { if (editor.value) normalizeColwidths(editor.value); });
 };
 
 // 리사이즈 핸들 mousedown → _isResizingTable = true (capture 단계로 조기 감지)
@@ -1148,9 +483,7 @@ const _onTableResizeEnd = () => {
 onMounted(() => {
     _scrollEl = document.querySelector('main');
     _scrollEl?.addEventListener('scroll', updateTableFloat, { passive: true });
-    // 리사이즈 시작/종료 감지 (capture로 Tiptap보다 먼저 실행)
     window.addEventListener('mousedown', _onTableResizeStart, true);
-    // 리사이즈 종료: false 먼저(capture), syncTableWidths 이후(bubble)
     window.addEventListener('mouseup', _onTableResizeEnd, true);
     window.addEventListener('mouseup', syncTableWidths);
 });
@@ -1160,33 +493,6 @@ onUnmounted(() => {
     window.removeEventListener('mousedown', _onTableResizeStart, true);
     window.removeEventListener('mouseup', _onTableResizeEnd, true);
     window.removeEventListener('mouseup', syncTableWidths);
-});
-
-// ── Excalidraw 다이어그램 삽입 ──
-/** 신규 다이어그램 삽입 (빈 캔버스로 다이얼로그 열기) */
-const insertExcalidraw = () => {
-    openExcalidraw(null, (data) => {
-        editor.value?.chain().focus().insertContent({
-            type: 'excalidraw',
-            attrs: {
-                svgContent: data.svgContent,
-                sceneData: data.sceneData
-            }
-        }).run();
-    });
-};
-
-/** Excalidraw 다이얼로그에서 저장 버튼 클릭 */
-const handleExcalidrawSave = async () => {
-    const data = await excalidrawWrapperRef.value?.exportData();
-    if (data) {
-        confirmExcalidraw(data);
-    }
-};
-
-/** 초기 장면 데이터 파싱 (ExcalidrawWrapper에 전달용) */
-const parsedExcalidrawInitialData = computed(() => {
-    return initialSceneData.value || null;
 });
 
 // ── 글자 수 통계 ──
@@ -1215,258 +521,8 @@ onBeforeUnmount(() => {
             </div>
         </Transition>
 
-        <!-- ── 툴바 ── -->
-        <div v-if="!readonly && editor"
-            class="tiptap-toolbar border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-2 flex flex-wrap gap-1">
-
-            <!-- 제목 (Heading) -->
-            <div class="toolbar-group flex gap-0.5">
-                <button v-for="level in [1, 2, 3, 4]" :key="level" class="tbar-btn font-bold text-xs"
-                    :class="{ 'tbar-btn-active': editor.isActive('heading', { level }) }"
-                    @click="editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 }).run()"
-                    :title="`제목 ${level}`">
-                    H{{ level }}
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 텍스트 서식 -->
-            <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('bold') }"
-                    @click="editor.chain().focus().toggleBold().run()" title="굵게 (Ctrl+B)">
-                    <strong>B</strong>
-                </button>
-                <button class="tbar-btn italic" :class="{ 'tbar-btn-active': editor.isActive('italic') }"
-                    @click="editor.chain().focus().toggleItalic().run()" title="기울임 (Ctrl+I)">
-                    I
-                </button>
-                <button class="tbar-btn underline" :class="{ 'tbar-btn-active': editor.isActive('underline') }"
-                    @click="editor.chain().focus().toggleUnderline().run()" title="밑줄 (Ctrl+U)">
-                    U
-                </button>
-                <button class="tbar-btn line-through" :class="{ 'tbar-btn-active': editor.isActive('strike') }"
-                    @click="editor.chain().focus().toggleStrike().run()" title="취소선">
-                    S
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 위첨자/아래첨자 -->
-            <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn text-xs" :class="{ 'tbar-btn-active': editor.isActive('subscript') }"
-                    @click="editor.chain().focus().toggleSubscript().run()" title="아래첨자">
-                    X<sub>2</sub>
-                </button>
-                <button class="tbar-btn text-xs" :class="{ 'tbar-btn-active': editor.isActive('superscript') }"
-                    @click="editor.chain().focus().toggleSuperscript().run()" title="위첨자">
-                    X<sup>2</sup>
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 글자/배경 색상 -->
-            <div class="toolbar-group flex gap-0.5 items-center">
-                <!-- 글자 색상 팔레트 -->
-                <div class="relative">
-                    <button class="tbar-btn flex flex-col items-center justify-center gap-0 min-w-[28px]"
-                        title="글자 색상"
-                        @click.stop="colorPaletteVisible = !colorPaletteVisible; highlightPaletteVisible = false">
-                        <span class="text-[11px] font-bold leading-tight">A</span>
-                        <span class="w-4 h-[3px] rounded-sm"
-                            :style="{ backgroundColor: currentTextColor }"></span>
-                    </button>
-                    <!-- 글자색 팔레트 패널 -->
-                    <div v-if="colorPaletteVisible"
-                        class="absolute top-full left-0 z-50 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl p-2"
-                        style="width: 190px;">
-                        <button
-                            class="w-full text-left text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 py-1 px-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 mb-1"
-                            @click="removeTextColor">
-                            <i class="pi pi-times text-[10px] mr-1"></i>색상 제거
-                        </button>
-                        <div class="grid gap-[2px]" style="grid-template-columns: repeat(8, 1fr);">
-                            <template v-for="(row, ri) in COLOR_PALETTE" :key="ri">
-                                <button v-for="color in row" :key="color"
-                                    class="rounded-sm hover:scale-110 transition-transform border border-transparent hover:border-zinc-400 dark:hover:border-zinc-300"
-                                    style="width: 20px; height: 20px;"
-                                    :style="{ backgroundColor: color }"
-                                    :title="color"
-                                    @click="applyTextColor(color)" />
-                            </template>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 배경(형광펜) 색상 팔레트 -->
-                <div class="relative">
-                    <button class="tbar-btn flex flex-col items-center justify-center gap-0 min-w-[28px]"
-                        title="배경 색상"
-                        :class="{ 'tbar-btn-active': editor.isActive('highlight') }"
-                        @click.stop="highlightPaletteVisible = !highlightPaletteVisible; colorPaletteVisible = false">
-                        <i class="pi pi-pen-to-square text-[11px] leading-tight"></i>
-                        <span class="w-4 h-[3px] rounded-sm"
-                            :style="{ backgroundColor: currentHighlightColor }"></span>
-                    </button>
-                    <!-- 배경색 팔레트 패널 -->
-                    <div v-if="highlightPaletteVisible"
-                        class="absolute top-full left-0 z-50 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl p-2"
-                        style="width: 190px;">
-                        <button
-                            class="w-full text-left text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 py-1 px-2 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 mb-1"
-                            @click="removeHighlightColor">
-                            <i class="pi pi-times text-[10px] mr-1"></i>색상 제거
-                        </button>
-                        <div class="grid gap-[2px]" style="grid-template-columns: repeat(8, 1fr);">
-                            <template v-for="(row, ri) in COLOR_PALETTE" :key="ri">
-                                <button v-for="color in row" :key="color"
-                                    class="rounded-sm hover:scale-110 transition-transform border border-transparent hover:border-zinc-400 dark:hover:border-zinc-300"
-                                    style="width: 20px; height: 20px;"
-                                    :style="{ backgroundColor: color }"
-                                    :title="color"
-                                    @click="applyHighlightColor(color)" />
-                            </template>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 팔레트 외부 클릭 시 닫기 -->
-                <Teleport to="body">
-                    <div v-if="colorPaletteVisible || highlightPaletteVisible"
-                        class="fixed inset-0 z-40"
-                        @click="colorPaletteVisible = false; highlightPaletteVisible = false" />
-                </Teleport>
-
-                <!-- 모든 서식 지우기 -->
-                <button class="tbar-btn" @click="editor.chain().focus().unsetAllMarks().clearNodes().run()"
-                    title="서식 지우기">
-                    <i class="pi pi-eraser text-xs"></i>
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 텍스트 정렬 -->
-            <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive({ textAlign: 'left' }) }"
-                    @click="editor.chain().focus().setTextAlign('left').run()" title="왼쪽 정렬">
-                    <i class="pi pi-align-left text-xs"></i>
-                </button>
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive({ textAlign: 'center' }) }"
-                    @click="editor.chain().focus().setTextAlign('center').run()" title="가운데 정렬">
-                    <i class="pi pi-align-center text-xs"></i>
-                </button>
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive({ textAlign: 'right' }) }"
-                    @click="editor.chain().focus().setTextAlign('right').run()" title="오른쪽 정렬">
-                    <i class="pi pi-align-right text-xs"></i>
-                </button>
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive({ textAlign: 'justify' }) }"
-                    @click="editor.chain().focus().setTextAlign('justify').run()" title="양쪽 정렬">
-                    <i class="pi pi-align-justify text-xs"></i>
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 목록 -->
-            <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('bulletList') }"
-                    @click="editor.chain().focus().toggleBulletList().run()" title="글머리 기호">
-                    <i class="pi pi-list text-xs"></i>
-                </button>
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('orderedList') }"
-                    @click="editor.chain().focus().toggleOrderedList().run()" title="번호 목록">
-                    <span class="text-xs font-bold">1.</span>
-                </button>
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('taskList') }"
-                    @click="editor.chain().focus().toggleTaskList().run()" title="체크리스트">
-                    <i class="pi pi-check-square text-xs"></i>
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 인용/코드 -->
-            <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('blockquote') }"
-                    @click="editor.chain().focus().toggleBlockquote().run()" title="인용문">
-                    <i class="pi pi-comment text-xs"></i>
-                </button>
-                <button class="tbar-btn font-mono text-xs" :class="{ 'tbar-btn-active': editor.isActive('code') }"
-                    @click="editor.chain().focus().toggleCode().run()" title="인라인 코드">
-                    &lt;/&gt;
-                </button>
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('codeBlock') }"
-                    @click="editor.chain().focus().toggleCodeBlock().run()" title="코드 블록">
-                    <i class="pi pi-code text-xs"></i>
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- 삽입 -->
-            <div class="toolbar-group flex gap-0.5">
-                <!-- 링크 -->
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('link') }" @click="openLinkDialog"
-                    title="링크 삽입">
-                    <i class="pi pi-link text-xs"></i>
-                </button>
-                <!-- 링크 제거 -->
-                <button v-if="editor.isActive('link')" class="tbar-btn"
-                    @click="editor.chain().focus().unsetLink().run()" title="링크 제거">
-                    <i class="pi pi-times text-xs"></i>
-                </button>
-                <!-- 이미지 -->
-                <button class="tbar-btn" @click="openImageDialog" title="이미지 삽입">
-                    <i class="pi pi-image text-xs"></i>
-                </button>
-                <!-- 표 -->
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('table') }" @click="insertTable"
-                    title="표 삽입 (3×3)">
-                    <i class="pi pi-table text-xs"></i>
-                </button>
-                <!-- 구분선 -->
-                <button class="tbar-btn" @click="editor.chain().focus().setHorizontalRule().run()" title="구분선">
-                    <span class="text-xs">—</span>
-                </button>
-            </div>
-
-            <!-- 표 안에서는 표 관련 버튼 미표시 (플로팅 툴바로 대체) -->
-
-            <div class="tbar-divider" />
-
-            <!-- 폰트 패밀리 -->
-            <select class="tbar-select" :value="selectedFont"
-                @change="applyFontFamily(($event.target as HTMLSelectElement).value)" title="폰트 선택">
-                <option v-for="f in fontOptions" :key="f.value" :value="f.value">{{ f.label }}</option>
-            </select>
-
-            <div class="tbar-divider" />
-
-            <!-- 실행 취소 / 다시 실행 -->
-            <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn" @click="editor.chain().focus().undo().run()" :disabled="!editor.can().undo()"
-                    title="실행 취소 (Ctrl+Z)">
-                    <i class="pi pi-undo text-xs"></i>
-                </button>
-                <button class="tbar-btn" @click="editor.chain().focus().redo().run()" :disabled="!editor.can().redo()"
-                    title="다시 실행 (Ctrl+Y)">
-                    <i class="pi pi-refresh text-xs"></i>
-                </button>
-            </div>
-
-            <div class="tbar-divider" />
-
-            <!-- Excalidraw 다이어그램 삽입 버튼 -->
-            <button
-                class="tbar-btn bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700 flex items-center gap-1.5 px-2"
-                @click="insertExcalidraw" title="Excalidraw 다이어그램 삽입">
-                <i class="pi pi-palette text-xs"></i>
-                <span class="text-xs">다이어그램</span>
-            </button>
-        </div>
+        <!-- ── 툴바 (TiptapToolbar.vue로 분리 — Design Ref: §2 Clean Architecture) ── -->
+        <TiptapToolbar v-if="!readonly && editor" :editor="editor" :imageUploadFn="props.imageUploadFn" />
 
         <!-- ── 에디터 본문 ── -->
         <EditorContent v-if="editor" :editor="editor" class="tiptap-content" />
@@ -1700,126 +756,10 @@ onBeforeUnmount(() => {
         </Transition>
     </Teleport>
 
-    <!-- ── 링크 삽입 다이얼로그 ── -->
-    <Dialog v-model:visible="linkDialogVisible" modal header="링크 삽입" :style="{ width: '420px' }">
-        <div class="flex flex-col gap-4">
-            <div class="flex flex-col gap-1.5">
-                <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">URL</label>
-                <InputText v-model="linkUrl" placeholder="https://example.com" @keydown.enter="applyLink" />
-            </div>
-            <div class="flex items-center gap-2">
-                <Checkbox v-model="linkOpenInNewTab" :binary="true" inputId="linkNewTab" />
-                <label for="linkNewTab" class="text-sm text-zinc-600 dark:text-zinc-400">새 탭에서 열기</label>
-            </div>
-        </div>
-        <template #footer>
-            <Button label="취소" severity="secondary" @click="linkDialogVisible = false" />
-            <Button label="적용" icon="pi pi-check" @click="applyLink" />
-        </template>
-    </Dialog>
-
-    <!-- ── 이미지 삽입 다이얼로그 ── -->
-    <Dialog v-model:visible="imageDialogVisible" modal header="이미지 삽입" :style="{ width: '480px' }">
-        <div class="flex flex-col gap-4">
-            <!-- URL 탭 / 파일 탭 -->
-            <div class="flex border-b border-zinc-200 dark:border-zinc-700">
-                <button class="px-4 py-2 text-sm font-medium transition-colors"
-                    :class="imageTab === 'url' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400' : 'text-zinc-500 hover:text-zinc-700'"
-                    @click="imageTab = 'url'">URL</button>
-                <button class="px-4 py-2 text-sm font-medium transition-colors"
-                    :class="imageTab === 'file' ? 'border-b-2 border-indigo-600 text-indigo-700 dark:text-indigo-400' : 'text-zinc-500 hover:text-zinc-700'"
-                    @click="imageTab = 'file'">파일 업로드</button>
-            </div>
-
-            <!-- URL 입력 -->
-            <template v-if="imageTab === 'url'">
-                <div class="flex flex-col gap-1.5">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">이미지 URL</label>
-                    <InputText v-model="imageUrl" placeholder="https://example.com/image.png"
-                        @keydown.enter="applyImageUrl" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">대체 텍스트 (선택)</label>
-                    <InputText v-model="imageAlt" placeholder="이미지 설명" />
-                </div>
-            </template>
-
-            <!-- 파일 업로드 -->
-            <template v-else>
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">이미지 파일 선택</label>
-
-                    <!-- 업로드 진행 중 표시 -->
-                    <div v-if="isUploadingImage"
-                        class="flex items-center gap-2 text-sm text-zinc-500 py-4 justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
-                        <i class="pi pi-spin pi-spinner text-indigo-500"></i>
-                        <span>이미지 업로드 중...</span>
-                    </div>
-
-                    <!-- 파일 선택 input -->
-                    <input v-else ref="imageFileInput" type="file" accept="image/*"
-                        class="block w-full text-sm text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
-                        @change="handleImageFileChange" />
-
-                    <p class="text-xs text-zinc-400">
-                        PNG, JPG, GIF, SVG 지원.
-                        {{ props.imageUploadFn ? '파일은 서버에 업로드되며 URL로 참조됩니다.' : '파일은 base64로 변환되어 문서에 포함됩니다.' }}
-                    </p>
-                </div>
-            </template>
-        </div>
-        <template #footer>
-            <Button label="취소" severity="secondary" @click="imageDialogVisible = false" />
-            <Button v-if="imageTab === 'url'" label="삽입" icon="pi pi-image" @click="applyImageUrl"
-                :disabled="!imageUrl" />
-        </template>
-    </Dialog>
-
-    <!-- ── Excalidraw 편집 다이얼로그 ── -->
-    <!-- computed는 읽기전용이므로 v-model 대신 :visible + @update:visible 조합 사용 -->
-    <Dialog :visible="isExcalidrawOpen" @update:visible="(val) => { if (!val) closeExcalidraw(); }" modal
-        header="다이어그램 편집" :style="{ width: '92vw', maxWidth: '1400px' }"
-        :contentStyle="{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column' }"
-        @hide="closeExcalidraw">
-        <!-- ClientOnly에 class를 주면 실제 DOM 요소 없어 높이 상속이 안 되므로 div로 감쌈 -->
-        <div class="flex-1 min-h-0 h-full">
-            <ClientOnly>
-                <ExcalidrawWrapper v-if="isExcalidrawOpen" ref="excalidrawWrapperRef"
-                    :initialSceneData="parsedExcalidrawInitialData" class="block h-full" />
-                <template #fallback>
-                    <div class="flex items-center justify-center h-full text-zinc-400">
-                        <div class="text-center">
-                            <i class="pi pi-spin pi-spinner text-3xl mb-3 block"></i>
-                            <span>Excalidraw 로딩 중...</span>
-                        </div>
-                    </div>
-                </template>
-            </ClientOnly>
-        </div>
-        <template #footer>
-            <Button label="취소" severity="secondary" icon="pi pi-times" @click="closeExcalidraw" />
-            <Button label="다이어그램 저장" icon="pi pi-check" @click="handleExcalidrawSave" />
-        </template>
-    </Dialog>
 </template>
 
 <style scoped>
-/* ── 툴바 버튼 기본 스타일 ── */
-.tbar-btn {
-    @apply px-2 py-1.5 rounded text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:bg-zinc-300 dark:active:bg-zinc-600 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed min-w-[28px] text-center;
-}
-
-.tbar-btn-active {
-    @apply bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300;
-}
-
-.tbar-divider {
-    @apply w-px bg-zinc-200 dark:bg-zinc-700 self-stretch mx-1;
-}
-
-.tbar-select {
-    @apply text-sm text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-600 outline-none;
-}
+/* tbar-btn, tbar-btn-active, tbar-divider, tbar-select 스타일은 TiptapToolbar.vue로 이동됨 */
 
 /* ── 에디터 본문 영역 ── */
 :deep(.tiptap-content .ProseMirror) {
@@ -1900,23 +840,37 @@ onBeforeUnmount(() => {
     @apply mb-1;
 }
 
-/* 체크리스트 */
+/* 체크리스트 (FR-02: list-style 덮어쓰기 방지용 !important) */
 :deep(.tiptap-content .ProseMirror ul[data-type="taskList"]) {
-    list-style: none;
+    list-style: none !important;
     padding-left: 0.5rem;
 }
 
 :deep(.tiptap-content .ProseMirror ul[data-type="taskList"] li) {
-    display: flex;
+    display: flex !important;
     align-items: flex-start;
     gap: 0.5rem;
     margin-bottom: 0.25rem;
+    /* 불릿/숫자 기호 완전 제거 */
+    list-style: none !important;
+}
+
+:deep(.tiptap-content .ProseMirror ul[data-type="taskList"] li::before) {
+    /* guide-doc 등 외부 CSS의 list 기호 삽입 방지 */
+    content: none !important;
 }
 
 :deep(.tiptap-content .ProseMirror ul[data-type="taskList"] li > label) {
     margin-top: 0.1rem;
     user-select: none;
     flex-shrink: 0;
+}
+
+:deep(.tiptap-content .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]) {
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+    accent-color: #6366f1;
 }
 
 :deep(.tiptap-content .ProseMirror ul[data-type="taskList"] li > div) {

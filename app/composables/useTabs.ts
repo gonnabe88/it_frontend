@@ -58,9 +58,8 @@ export const useTabs = () => {
      *  2. 경로가 '/'인 경우 '홈'
      *  3. 경로의 마지막 세그먼트 (예: /info/projects → 'projects')
      *
-     * 탭 개수가 10개를 초과하면 가장 오래된 탭(첫 번째)을 자동으로 제거합니다.
-     *
      * @param newRoute - 추가할 라우트 정보 (path, fullPath, meta 포함)
+     * @returns 탭이 정상 추가(또는 이미 존재)되면 true, 최대 개수 초과로 차단되면 false
      *
      * @example
      * // router.afterEach 훅에서 호출
@@ -69,35 +68,31 @@ export const useTabs = () => {
      *   addTab(to);
      * });
      */
-    const addTab = (newRoute: any) => {
+    const addTab = (newRoute: any): boolean => {
         // path 기준으로 중복 탭 여부 확인 (쿼리가 달라도 같은 path면 중복)
         const existingTab = tabs.value.find(t => t.path === newRoute.path);
-        if (!existingTab) {
-            // 탭 제목 결정 로직 (우선순위: meta.title > 홈('/') > 경로 마지막 세그먼트)
-            let title = '새 탭';
-            if (newRoute.meta && newRoute.meta.title) {
-                // 페이지에서 definePageMeta({ title: '...' })로 지정한 제목 사용
-                title = newRoute.meta.title as string;
-            } else if (newRoute.path === '/') {
-                title = '홈';
-            } else {
-                // 경로의 마지막 부분을 제목으로 사용 (예: /info/projects → 'projects')
-                // 한글 매핑이 필요하면 페이지별 meta.title을 지정하는 것이 권장됨
-                const parts = newRoute.path.split('/').filter(Boolean);
-                title = parts.length > 0 ? parts[parts.length - 1] : '홈';
-            }
+        if (existingTab) return true;
 
-            // 탭 최대 10개 제한: 초과 시 가장 오래된 탭(배열 첫 번째)을 제거
-            if (tabs.value.length > 10) {
-                tabs.value.shift();
-            }
+        // 탭 최대 10개 제한: 초과 시 추가 차단 후 false 반환
+        if (tabs.value.length >= 10) return false;
 
-            tabs.value.push({
-                title,
-                path: newRoute.path,
-                fullPath: newRoute.fullPath
-            });
+        // 탭 제목 결정 로직 (우선순위: meta.title > 홈('/') > 경로 마지막 세그먼트)
+        let title = '새 탭';
+        if (newRoute.meta && newRoute.meta.title) {
+            title = newRoute.meta.title as string;
+        } else if (newRoute.path === '/') {
+            title = '홈';
+        } else {
+            const parts = newRoute.path.split('/').filter(Boolean);
+            title = parts.length > 0 ? parts[parts.length - 1] : '홈';
         }
+
+        tabs.value.push({
+            title,
+            path: newRoute.path,
+            fullPath: newRoute.fullPath
+        });
+        return true;
     };
 
     /**
