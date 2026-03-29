@@ -42,7 +42,18 @@ export default defineNuxtConfig({
       enabled: false
     }
   },
+  hooks: {
+    ready() { // 'modules:done'보다 더 이른 시점인 'ready' 권장
+      const editorPath = 'C:\\Users\\gonna\\AppData\\Local\\Programs\\Antigravity\\code.exe';
 
+      // launch-editor가 참조하는 기본 변수들
+      process.env.LAUNCH_EDITOR = editorPath;
+      process.env.EDITOR = editorPath;
+
+      // VS Code 기반임을 속이기 위해 환경 변수에 속성 부여 (일부 라이브러리 대응)
+      process.env.NODE_ENV_EDITOR = 'code';
+    }
+  },
   /* ── Vite 번들러 메모리 최적화 ── */
   vite: {
     optimizeDeps: {
@@ -50,14 +61,15 @@ export default defineNuxtConfig({
       // exclude 시 내부 CJS 모듈이 브라우저에 그대로 전달되어 명명 내보내기 오류가 발생합니다.
       include: ['react', 'react-dom', 'react/jsx-runtime', '@excalidraw/excalidraw', 'quill'],
     },
-    // 개발 환경에서 CSS 소스맵 비활성화 (메모리 절약)
+    // 2. CSS 추적을 위해 소스맵 활성화 (메모리 여유가 있다면)
     css: {
-      devSourcemap: false
-    }
-  },
+      devSourcemap: true 
+    },
+  },  
 
   /* ── Nuxt 모듈 등록 ── */
   modules: [
+    '@nuxtjs/tailwindcss',
     '@primevue/nuxt-module', // PrimeVue UI 컴포넌트 자동 임포트
     '@pinia/nuxt'            // Pinia 상태관리 모듈
   ],

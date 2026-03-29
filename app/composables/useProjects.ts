@@ -27,6 +27,7 @@ export interface Project {
     prjMngNo: string;  // 프로젝트관리번호 (PK, 서버에서 채번)
     prjNm: string;     // 프로젝트명
     prjTp: string;     // 프로젝트유형 (신규개발, 고도화, 유지보수 등)
+    prjDtt: string;    // 사업구분 (신규, 계속)
     svnDpm: string;    // 주관부서 (프로젝트를 주도하는 현업 부서)
     svnDpmNm: string;  // 주관부서명 (조직명 조회 결과)
     itDpm: string;     // IT담당부서 (IT 측 담당 부서)
