@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
+import { useOrganization, type OrgUser } from '~/composables/useOrganization';
 
 const props = defineProps({
     visible: {

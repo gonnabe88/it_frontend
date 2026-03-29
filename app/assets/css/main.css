@@ -358,6 +358,17 @@ select,
 }
 
 /* ========================================================================
+   PrimeVue CascadeSelect 버그 수정
+   Aura 테마에서 .p-cascadeselect-option에 position: relative가 없어
+   level2 서브패널(position: absolute; top: 0)이 메인 오버레이 기준으로
+   계산되어 항상 최상단에 표시되는 문제 수정.
+   오버레이는 <Portal>로 <body>에 teleport되므로 반드시 전역 CSS로 적용해야 함.
+   ======================================================================== */
+.p-cascadeselect-option {
+    position: relative;
+}
+
+/* ========================================================================
    다크모드 전환 애니메이션 (View Transition API)
    AppHeader.vue의 toggleTheme()에서 startViewTransition과 함께 사용됩니다.
    양방향(라이트↔다크) 부드러운 크로스페이드 전환을 적용합니다.

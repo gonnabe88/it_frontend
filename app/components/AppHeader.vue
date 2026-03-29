@@ -269,6 +269,7 @@ const navigateToTab = (path: string) => {
 /* 드롭다운 시작 위치 조정 */
 :deep(.p-megamenu-overlay) {
     margin-top: 1rem;
+    z-index: 9999 !important;
     /* Animation using global keyframe */
     animation: menu-slide-fade-in 0.3s ease-out forwards !important;
     transform-origin: top !important;

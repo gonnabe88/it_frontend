@@ -45,7 +45,7 @@ export const useHwpxExport = () => {
             anchor.download = safeFilename;
             document.body.appendChild(anchor);
             anchor.click();
-            document.body.removeChild(anchor);
+            anchor.remove();
             URL.revokeObjectURL(url);
         } finally {
             isExporting.value = false;

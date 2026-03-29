@@ -31,7 +31,7 @@ Tiptap 기반의 완전한 기능을 갖춘 리치 텍스트 에디터 컴포넌
 -->
 <script setup lang="ts">
 import { useEditor, EditorContent, VueNodeViewRenderer } from '@tiptap/vue-3';
-import { Node as TiptapNode, mergeAttributes } from '@tiptap/core';
+import { Node as TiptapNode } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
@@ -66,8 +66,8 @@ const ResizableImage = Image.extend({
                 parseHTML: (el) => {
                     const w = el.getAttribute('width') ?? el.style.width;
                     if (!w) return null;
-                    const num = parseInt(w);
-                    return isNaN(num) ? null : num;
+                    const num = Number.parseInt(w);
+                    return Number.isNaN(num) ? null : num;
                 },
                 renderHTML: (attrs) => {
                     if (!attrs.width) return {};
@@ -410,7 +410,10 @@ const editor = useEditor({
         // 초기 로드 시 한 번 TOC 추출
         extractTOC(editor);
         // 편집 모드에서만 colwidth 정규화 실행 (조회 모드에서는 저장된 값을 그대로 사용)
-        nextTick(() => { if (!props.readonly) normalizeColwidths(); applyTableWidths(); });
+        nextTick(() => {
+            if (!props.readonly) normalizeColwidths();
+            applyTableWidths();
+        });
     },
     onUpdate: ({ editor }) => {
         // 내용 변경 시 부모에 HTML 및 TOC 전달
@@ -959,7 +962,7 @@ function injectColwidthsFromColgroup(html: string): string {
         // <col style="width:Xpx"> 에서 너비 배열 추출
         const colWidths: number[] = [];
         cols.forEach((col) => {
-            const w = parseInt((col as HTMLElement).style.width, 10);
+            const w = Number.parseInt((col as HTMLElement).style.width, 10);
             colWidths.push(w > 0 ? w : 0);
         });
         // 유효한 너비가 하나도 없으면 건너뜀
@@ -968,7 +971,7 @@ function injectColwidthsFromColgroup(html: string): string {
         table.querySelectorAll('tr').forEach((row) => {
             let colIdx = 0;
             row.querySelectorAll('th, td').forEach((cell) => {
-                const colspan = parseInt((cell as HTMLElement).getAttribute('colspan') || '1', 10);
+                const colspan = Number.parseInt((cell as HTMLElement).getAttribute('colspan') || '1', 10);
                 if (!cell.hasAttribute('colwidth')) {
                     const widths: number[] = [];
                     for (let c = 0; c < colspan; c++) {
@@ -1060,7 +1063,7 @@ const normalizeColwidths = () => {
                     const colgroupWidths: number[] = [];
                     let allValid = true;
                     colEls.forEach((col) => {
-                        const px = parseInt((col as HTMLElement).style.width, 10);
+                        const px = Number.parseInt((col as HTMLElement).style.width, 10);
                         if (px > 0) { colgroupWidths.push(px); }
                         else { allValid = false; }
                     });

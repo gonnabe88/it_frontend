@@ -680,7 +680,7 @@ export const usePdfReport = () => {
                                 ],
                                 [
                                     { text: '추진가능성',         style: 'label', fillColor: colors.headerBg },
-                                    { text: htmlToText(project.prjPulPtt),  colSpan: 3 }, {}, {}
+                                    { text: project.prjPulPtt != null ? String(project.prjPulPtt) : '-',  colSpan: 3 }, {}, {}
                                 ]
                             ]
                         },

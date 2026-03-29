@@ -87,7 +87,7 @@ export interface ProjectDetail extends Project {
     ncs: string;         // 필요성 (Needs, HTML 형식 가능)
     plm: string;         // 문제점 (현황의 문제점, HTML 형식 가능)
     prjDes: string;      // 사업내용 (Description, HTML 형식 가능)
-    prjPulPtt: string;   // 추진가능성 (HTML 형식 가능)
+    prjPulPtt: number | null; // 추진가능성 (0~100 정수, NUMBER(3,0))
     prjRng: string;      // 사업범위 (Scope, HTML 형식 가능)
     pulPsg: string;      // 추진경과 (HTML 형식 가능)
     pulRsn: string;      // 추진사유 (HTML 형식 가능)

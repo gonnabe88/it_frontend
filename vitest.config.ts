@@ -4,6 +4,13 @@ import { resolve } from 'path';
 
 export default defineConfig({
     plugins: [vue()],
+    server: {
+        deps: {
+            // quill은 모듈 로드 시 document에 접근하므로 Node.js native ESM이 아닌
+            // Vite 파이프라인을 통해 처리해야 happy-dom 환경이 적용됨
+            inline: ['quill'],
+        }
+    },
     test: {
         // 브라우저 환경 시뮬레이션 (DOM API, localStorage 등 지원)
         environment: 'happy-dom',

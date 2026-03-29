@@ -132,7 +132,8 @@ const form = ref({
     mnUsr: '', // 주요사용자
     ncs: '', // 필요성
     plm: '', // 미추진 시 문제점
-    prjPulPtt: '', // 프로젝트추진가능성
+    ornYn: 'N', // 경상여부 (신규 등록 기본값 'N')
+    prjPulPtt: null as number | null, // 프로젝트추진가능성 (0~100 정수)
     prjRng: '', // 사업범위
     pulPsg: '', // 추진경과
     rprSts: '', // 보고상태
@@ -1204,8 +1205,8 @@ const cancel = () => {
                         </div>
                     </div>
                     <div class="flex flex-col gap-2 flex-1">
-                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업추진 가능성</label>
-                        <InputText v-model="form.prjPulPtt" fluid />
+                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업추진 가능성 (%, 0~100)</label>
+                        <InputNumber v-model="form.prjPulPtt" :min="0" :max="100" :useGrouping="false" fluid />
                     </div>
                 </div>
             </div>

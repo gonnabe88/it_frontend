@@ -42,7 +42,7 @@ function isValidDateText(text: string): boolean {
     if (!DATE_REGEX.test(text)) return false;
     // 2월 31일 같이 형식은 맞지만 존재하지 않는 날짜 방지
     const d = new Date(text);
-    return d instanceof Date && !isNaN(d.getTime());
+    return d instanceof Date && !Number.isNaN(d.getTime());
 }
 
 /**
@@ -109,11 +109,9 @@ export function useDateRangeValidation(
         end.setHours(0, 0, 0, 0);
         if (end < stt) {
             endError.value = '종료일은 시작일보다 크거나 같아야 합니다.';
-        } else {
+        } else if (endError.value === '종료일은 시작일보다 크거나 같아야 합니다.') {
             // 기존에 범위 에러가 있었으면 해소
-            if (endError.value === '종료일은 시작일보다 크거나 같아야 합니다.') {
-                endError.value = '';
-            }
+            endError.value = '';
         }
     };
 

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useProjects } from '~/composables/useProjects';
+import { useCost } from '~/composables/useCost';
+
 /**
  * 사이드바 축소 상태
  * - SSR 하이드레이션 불일치 방지를 위해 기본값은 false로 초기화합니다.
@@ -9,6 +12,24 @@ const collapsed = ref(false);
 
 // RBAC 권한 헬퍼: 관리자 메뉴 표시 여부 판단에 사용
 const { isAdmin } = useAuth();
+
+/* ── 결재 상신 배지: 결재 대기 중인 항목 수 ── */
+const { fetchProjects } = useProjects();
+const { fetchCosts } = useCost();
+
+// apfSts=none: 아직 결재 상신하지 않은 항목(미상신)만 조회
+const { data: pendingProjectsData } = fetchProjects({ apfSts: 'none' });
+const { data: pendingCostsData } = fetchCosts({ apfSts: 'none' });
+
+/**
+ * 결재 상신 가능한 항목 수 (정보화사업 + 전산업무비)
+ * 사이드바의 [결재 상신] 메뉴 옆 배지에 표시됩니다.
+ */
+const approvalCount = computed(() => {
+    const projects = pendingProjectsData.value?.length ?? 0;
+    const costs = pendingCostsData.value?.length ?? 0;
+    return projects + costs;
+});
 
 onMounted(() => {
     // 브라우저 새로고침 후 이전 축소 상태 복원
@@ -125,7 +146,7 @@ const handleGroupClick = (item: any) => {
 const onEnter = (el: Element) => {
     const element = el as HTMLElement;
     element.style.height = '0';
-    element.offsetHeight; // trigger reflow
+    void element.offsetHeight; // trigger reflow
     element.style.height = element.scrollHeight + 'px';
 };
 
@@ -136,7 +157,7 @@ const onAfterEnter = (el: Element) => {
 const onLeave = (el: Element) => {
     const element = el as HTMLElement;
     element.style.height = element.scrollHeight + 'px';
-    element.offsetHeight; // trigger reflow
+    void element.offsetHeight; // trigger reflow
     element.style.height = '0';
 };
 
@@ -212,9 +233,15 @@ watch(menuItems, (items) => {
                                 class="ml-6 mt-1 space-y-1 border-l border-zinc-200 dark:border-zinc-700 pl-2 overflow-hidden">
                                 <li v-for="sub in item.items" :key="sub.label">
                                     <NuxtLink :to="sub.to"
-                                        class="block py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
+                                        class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
                                         active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
-                                        {{ sub.label }}
+                                        <span>{{ sub.label }}</span>
+                                        <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
+                                        <span
+                                            v-if="sub.to === '/budget/approval' && approvalCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
+                                            {{ approvalCount > 99 ? '99+' : approvalCount }}
+                                        </span>
                                     </NuxtLink>
                                 </li>
                             </ul>
