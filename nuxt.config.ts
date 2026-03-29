@@ -54,18 +54,30 @@ export default defineNuxtConfig({
       process.env.NODE_ENV_EDITOR = 'code';
     }
   },
+  /* ── Vue 컴파일러: Web Component 등록 ── */
+  vue: {
+    compilerOptions: {
+      // mathlive의 <math-field>를 Vue 컴포넌트가 아닌 Web Component로 인식
+      isCustomElement: (tag: string) => tag === 'math-field'
+    }
+  },
+
   /* ── Vite 번들러 메모리 최적화 ── */
   vite: {
     optimizeDeps: {
       // CJS 의존성을 가진 패키지들을 Vite가 ESM으로 사전 번들링합니다.
       // exclude 시 내부 CJS 모듈이 브라우저에 그대로 전달되어 명명 내보내기 오류가 발생합니다.
       include: ['react', 'react-dom', 'react/jsx-runtime', '@excalidraw/excalidraw', 'quill'],
+      // mathlive는 브라우저 전용(customElements 등) — 사전 번들링 제외
+      exclude: ['mathlive'],
     },
-    // 2. CSS 추적을 위해 소스맵 활성화 (메모리 여유가 있다면)
+    // 주의: vite.ssr.external에 mathlive를 추가하면 Node.js가 require('mathlive')를 시도하고
+    // customElements.define()이 Node.js에 없어 "worker exited with code 0" 크래시 발생
+    // → NodeView 컴포넌트의 onMounted에서 @vite-ignore 동적 import로만 로드
     css: {
-      devSourcemap: true 
+      devSourcemap: true
     },
-  },  
+  },
 
   /* ── Nuxt 모듈 등록 ── */
   modules: [

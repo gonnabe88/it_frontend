@@ -20,6 +20,7 @@ Design Ref: §4 — TiptapToolbar 분리 (module-2 리팩토링)
 -->
 <script setup lang="ts">
 import type { Editor } from '@tiptap/core';
+import type { AttachmentItem } from './extensions/tiptap-extensions';
 
 const props = defineProps<{
     /** Tiptap 에디터 인스턴스 */
@@ -29,6 +30,15 @@ const props = defineProps<{
      * 제공 시: 파일을 API로 업로드하고 반환된 URL을 에디터에 삽입합니다.
      */
     imageUploadFn?: (file: File) => Promise<string>;
+    /**
+     * 첨부파일 업로드 핸들러 (FR-05-1,2)
+     * 파일 첨부 버튼 클릭 후 파일 선택 시 호출됩니다.
+     */
+    fileUploadFn?: (file: File) => Promise<{ flMngNo: string; flNm: string; flSz: number }>;
+    /**
+     * 현재 문서의 첨부파일 목록 (파일 첨부 다이얼로그 기존 파일 표시용)
+     */
+    attachmentList?: AttachmentItem[];
 }>();
 
 // ── 색상 팔레트 ──
@@ -256,6 +266,79 @@ const handleImageFileChange = async (event: Event) => {
         };
         reader.readAsDataURL(file);
     }
+};
+
+// ── 파일 첨부 (FR-05-2) ──
+/** 파일 첨부 다이얼로그 표시 여부 */
+const fileAttachDialogVisible = ref(false);
+/** 파일 입력 ref */
+const fileAttachInputRef = ref<HTMLInputElement | null>(null);
+/** 파일 업로드 중 여부 */
+const isUploadingFile = ref(false);
+
+/**
+ * "파일 첨부" 버튼 클릭 → 파일 선택 input 클릭
+ * fileUploadFn이 없으면 버튼을 비활성화합니다.
+ */
+const openFileAttach = () => {
+    if (!props.fileUploadFn) return;
+    fileAttachInputRef.value?.click();
+};
+
+/**
+ * 파일 선택 후 업로드하고 attachment 노드를 삽입합니다.
+ * Design Ref: §5.2, §8 — fileUploadFn 호출 + insertContent
+ */
+const handleFileAttachChange = async (event: Event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file || !props.fileUploadFn) return;
+
+    isUploadingFile.value = true;
+    try {
+        const result = await props.fileUploadFn(file);
+        props.editor?.chain().focus().insertContent({
+            type: 'attachment',
+            attrs: {
+                fileId:   result.flMngNo,
+                fileName: result.flNm,
+                fileSize: result.flSz,
+            }
+        }).run();
+    } finally {
+        isUploadingFile.value = false;
+        // 같은 파일을 다시 선택할 수 있도록 input 초기화
+        if (fileAttachInputRef.value) fileAttachInputRef.value.value = '';
+    }
+};
+
+// ── LaTeX 수식 삽입 (FR-07) ──
+/** 수식 타입 선택 팝오버 표시 여부 */
+const mathMenuVisible = ref(false);
+
+/** 수식 메뉴 외부 클릭 시 닫기 */
+const _onClickOutsideMathMenu = (e: MouseEvent) => {
+    mathMenuVisible.value = false;
+};
+onMounted(() => document.addEventListener('click', _onClickOutsideMathMenu));
+onUnmounted(() => document.removeEventListener('click', _onClickOutsideMathMenu));
+
+/**
+ * 인라인 수식 삽입
+ * 빈 LaTeX 문자열로 inlineMath 노드를 삽입합니다.
+ * 노드가 삽입되면 mathlive <math-field>에 자동 포커스됩니다.
+ */
+const insertInlineMath = () => {
+    mathMenuVisible.value = false;
+    props.editor?.chain().focus().insertInlineMath('').run();
+};
+
+/**
+ * 블록 수식 삽입
+ * 빈 LaTeX 문자열로 blockMath 노드를 삽입합니다.
+ */
+const insertBlockMath = () => {
+    mathMenuVisible.value = false;
+    props.editor?.chain().focus().insertBlockMath('').run();
 };
 
 // ── Excalidraw 다이어그램 삽입 ──
@@ -539,6 +622,56 @@ const parsedExcalidrawInitialData = computed(() => {
                 <i class="pi pi-palette text-xs"></i>
                 <span class="text-xs">다이어그램</span>
             </button>
+
+            <!-- FR-07: LaTeX 수식 삽입 버튼 -->
+            <div class="relative">
+                <button
+                    class="tbar-btn bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-700 flex items-center gap-1.5 px-2"
+                    title="수식 삽입 (LaTeX)"
+                    @click.stop="mathMenuVisible = !mathMenuVisible">
+                    <span class="text-xs font-bold italic">∑</span>
+                    <span class="text-xs">수식</span>
+                    <i class="pi pi-chevron-down text-[9px]" />
+                </button>
+                <!-- 수식 타입 선택 드롭다운 -->
+                <div
+                    v-if="mathMenuVisible"
+                    class="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg shadow-lg py-1 min-w-[130px]"
+                    @click.stop>
+                    <button
+                        class="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-2"
+                        @click="insertInlineMath">
+                        <span class="font-mono text-violet-600">$...$</span>
+                        <span>인라인 수식</span>
+                    </button>
+                    <button
+                        class="w-full px-3 py-1.5 text-xs text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 flex items-center gap-2"
+                        @click="insertBlockMath">
+                        <span class="font-mono text-violet-600">$$...$$</span>
+                        <span>블록 수식</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FR-05-2: 파일 첨부 버튼 -->
+            <button
+                v-if="fileUploadFn"
+                class="tbar-btn bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700 flex items-center gap-1.5 px-2"
+                :class="{ 'opacity-50 cursor-not-allowed': isUploadingFile }"
+                :disabled="isUploadingFile"
+                title="파일 첨부 (FR-05)"
+                @click="openFileAttach">
+                <i v-if="isUploadingFile" class="pi pi-spin pi-spinner text-xs" />
+                <i v-else class="pi pi-paperclip text-xs" />
+                <span class="text-xs">{{ isUploadingFile ? '업로드 중...' : '파일 첨부' }}</span>
+            </button>
+            <!-- 숨겨진 파일 input: 모든 파일 형식 허용 -->
+            <input
+                ref="fileAttachInputRef"
+                type="file"
+                class="hidden"
+                @change="handleFileAttachChange"
+            />
         </div>
 
         <!-- ── 링크 삽입 다이얼로그 ── -->

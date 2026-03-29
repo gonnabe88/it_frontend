@@ -66,9 +66,14 @@ import {
     CustomTableHeader,
     CustomHeading,
     FontSize,
+    AttachmentExtension,
+    createAttachmentSuggestion,
+    InlineMathExtension,
+    BlockMathExtension,
     normalizeColwidths,
     injectColwidthsFromColgroup
 } from './extensions/tiptap-extensions';
+import type { AttachmentItem } from './extensions/tiptap-extensions';
 
 /** lowlight 인스턴스: 일반적으로 사용하는 언어 번들 포함 */
 const lowlight = createLowlight(common);
@@ -90,6 +95,16 @@ const props = defineProps<{
      * @returns 에디터에 삽입할 이미지 URL (예: /api/files/{id}/preview)
      */
     imageUploadFn?: (file: File) => Promise<string>;
+    /**
+     * 첨부파일 업로드 핸들러 (FR-05-1)
+     * TiptapToolbar의 "파일 첨부" 버튼 클릭 시 호출됩니다.
+     */
+    fileUploadFn?: (file: File) => Promise<{ flMngNo: string; flNm: string; flSz: number }>;
+    /**
+     * 현재 문서의 첨부파일 목록 (FR-05-3 자동완성용)
+     * '![' 입력 시 이 목록을 기반으로 Suggestion 팝업을 표시합니다.
+     */
+    attachmentList?: AttachmentItem[];
 }>();
 
 const emit = defineEmits<{
@@ -146,6 +161,20 @@ const fileToBase64 = (file: File): Promise<string> =>
         reader.readAsDataURL(file);
     });
 
+// ── 첨부파일 Suggestion 팝업 상태 (FR-05-3) ──
+/**
+ * AttachmentSuggestion의 팝업 상태를 Vue로 제어합니다.
+ * createAttachmentSuggestion()이 이 객체를 closure로 캡처하여 mutation 합니다.
+ * Design Ref: §2.2 — AttachmentSuggestion render 흐름
+ */
+const attachSuggest = reactive({
+    active: false,
+    items: [] as AttachmentItem[],
+    rect: null as DOMRect | null,
+    selectedIndex: 0,
+    command: null as ((item: AttachmentItem) => void) | null,
+});
+
 // ── Tiptap 에디터 초기화 ──
 const editor = useEditor({
     extensions: [
@@ -179,7 +208,15 @@ const editor = useEditor({
         Superscript,
         // Design Ref: §11 module-3 — CodeBlockLowlight syntax highlighting (FR-03)
         CodeBlockLowlight.configure({ lowlight }),
-        ExcalidrawExtension
+        ExcalidrawExtension,
+        // Design Ref: §2.2, §5 — 인라인 첨부파일 노드 + '![' Suggestion 자동완성 (FR-05)
+        AttachmentExtension.configure({
+            suggestion: createAttachmentSuggestion(attachSuggest),
+        }),
+        // Design Ref: §FR-07 — LaTeX 수식 노드 (인라인/블록)
+        // mathlive <math-field> Web Component는 onMounted에서 동적 임포트됩니다.
+        InlineMathExtension,
+        BlockMathExtension,
     ],
     // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환 (브라우저 환경에서만 실행)
     content: process.client ? injectColwidthsFromColgroup(props.modelValue || '') : (props.modelValue || ''),
@@ -322,27 +359,100 @@ watch(() => props.readonly, (val) => {
     nextTick(applyTableWidths);
 });
 
+/**
+ * attachmentList prop 변경 시 editor.storage에 동기화합니다.
+ * Suggestion의 items 함수가 editor.storage.attachment.attachmentList를 참조합니다.
+ * Design Ref: §2.2 — AttachmentExtension.addStorage()
+ */
+watch(() => props.attachmentList, (list) => {
+    const storage = editor.value?.storage as Record<string, any> | undefined;
+    if (storage?.attachment) {
+        storage.attachment.attachmentList = list ?? [];
+    }
+}, { immediate: true });
+
 // ── 셀 서식 (표 플로팅 툴바에서 사용) ──
-/** 셀 배경색 color input 참조 */
-const cellBgInputRef = ref<HTMLInputElement | null>(null);
+
+/**
+ * 16색 팔레트 (FR-06-3: 기존 RGB picker 교체)
+ * null 항목은 "배경 없음" 지우개 버튼으로 처리합니다.
+ */
+const TABLE_CELL_PALETTE = [
+    '#ffffff', '#f1f5f9', '#e0e7ff', '#dbeafe', '#dcfce7',
+    '#fef9c3', '#ffe4e6', '#f3e8ff', '#ffedd5', '#fce7f3',
+    '#1e1b4b', '#1e3a5f', '#14532d', '#7c2d12', '#4a1d96',
+    '#334155',
+] as const;
+
+/** 배경색 팔레트 팝오버 표시 여부 */
+const cellBgPaletteVisible = ref(false);
 
 /** 현재 커서가 위치한 셀의 배경색을 반환합니다. */
-const currentCellBg = computed<string>(() => {
-    if (!editor.value?.isActive('table')) return '#ffffff';
+const currentCellBg = computed<string | null>(() => {
+    if (!editor.value?.isActive('table')) return null;
     const attrs = editor.value.getAttributes('tableCell');
     const headerAttrs = editor.value.getAttributes('tableHeader');
-    return attrs.backgroundColor || headerAttrs.backgroundColor || '#ffffff';
+    return attrs.backgroundColor || headerAttrs.backgroundColor || null;
 });
 
-/** 셀 배경색 적용 핸들러 */
-const handleCellBgChange = (event: Event) => {
-    const color = (event.target as HTMLInputElement).value;
+/** 셀 배경색 팔레트에서 색상 선택 */
+const applyCellBgColor = (color: string | null) => {
     editor.value?.chain().focus().setCellAttribute('backgroundColor', color).run();
+    cellBgPaletteVisible.value = false;
 };
 
-/** 셀 배경색 제거 */
-const clearCellBg = () => {
-    editor.value?.chain().focus().setCellAttribute('backgroundColor', null).run();
+// ── 테두리 스타일 (FR-06-2) ──
+
+/** 테두리 스타일 옵션 */
+const BORDER_STYLES = [
+    { value: null,     label: '없음', title: '테두리 없음' },
+    { value: 'solid',  label: '─',   title: '실선' },
+    { value: 'dashed', label: '╌',   title: '점선' },
+    { value: 'double', label: '═',   title: '이중선' },
+] as const;
+
+/** 현재 셀의 테두리 스타일 */
+const currentCellBorderStyle = computed<string | null>(() => {
+    if (!editor.value?.isActive('table')) return null;
+    const attrs = editor.value.getAttributes('tableCell');
+    const headerAttrs = editor.value.getAttributes('tableHeader');
+    return attrs.borderStyle || headerAttrs.borderStyle || null;
+});
+
+/** 셀 테두리 스타일 적용 */
+const applyCellBorderStyle = (style: string | null) => {
+    editor.value?.chain().focus().setCellAttribute('borderStyle', style).run();
+};
+
+// ── 테이블 레이아웃 (FR-06-4) ──
+
+/** 현재 테이블 레이아웃 ('fixed' | 'auto') */
+const currentTableLayout = computed<string>(() => {
+    if (!editor.value?.isActive('table')) return 'fixed';
+    return editor.value.getAttributes('table').tableLayout ?? 'fixed';
+});
+
+/** 테이블 레이아웃 토글 (fixed ↔ auto) */
+const toggleTableLayout = () => {
+    const next = currentTableLayout.value === 'fixed' ? 'auto' : 'fixed';
+    editor.value?.chain().focus().updateAttributes('table', { tableLayout: next }).run();
+};
+
+// ── 셀 높이 (FR-06-5) ──
+
+/** 현재 셀의 min-height 값 (숫자 부분만, px 단위) */
+const currentCellMinHeight = computed<number>(() => {
+    if (!editor.value?.isActive('table')) return 0;
+    const attrs = editor.value.getAttributes('tableCell');
+    const headerAttrs = editor.value.getAttributes('tableHeader');
+    const raw = attrs.minHeight || headerAttrs.minHeight || '';
+    return raw ? parseInt(raw, 10) : 0;
+});
+
+/** 셀 min-height 적용 (0이면 제거) */
+const applyCellMinHeight = (px: number) => {
+    const val = px > 0 ? `${px}px` : null;
+    editor.value?.chain().focus().setCellAttribute('minHeight', val).run();
 };
 
 /** 컬럼 리사이즈 중 여부 플래그 */
@@ -480,9 +590,18 @@ const _onTableResizeEnd = () => {
     _isResizingTable = false;
 };
 
+/** 팔레트 팝오버 바깥 클릭 시 닫기 */
+const _onClickOutsidePalette = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.tf-color-btn') && !target.closest('.tiptap-table-float')) {
+        cellBgPaletteVisible.value = false;
+    }
+};
+
 onMounted(() => {
     _scrollEl = document.querySelector('main');
     _scrollEl?.addEventListener('scroll', updateTableFloat, { passive: true });
+    document.addEventListener('mousedown', _onClickOutsidePalette, true);
     window.addEventListener('mousedown', _onTableResizeStart, true);
     window.addEventListener('mouseup', _onTableResizeEnd, true);
     window.addEventListener('mouseup', syncTableWidths);
@@ -491,6 +610,7 @@ onMounted(() => {
 onUnmounted(() => {
     _scrollEl?.removeEventListener('scroll', updateTableFloat);
     window.removeEventListener('mousedown', _onTableResizeStart, true);
+    document.removeEventListener('mousedown', _onClickOutsidePalette, true);
     window.removeEventListener('mouseup', _onTableResizeEnd, true);
     window.removeEventListener('mouseup', syncTableWidths);
 });
@@ -522,7 +642,13 @@ onBeforeUnmount(() => {
         </Transition>
 
         <!-- ── 툴바 (TiptapToolbar.vue로 분리 — Design Ref: §2 Clean Architecture) ── -->
-        <TiptapToolbar v-if="!readonly && editor" :editor="editor" :imageUploadFn="props.imageUploadFn" />
+        <TiptapToolbar
+            v-if="!readonly && editor"
+            :editor="editor"
+            :imageUploadFn="props.imageUploadFn"
+            :fileUploadFn="props.fileUploadFn"
+            :attachmentList="props.attachmentList"
+        />
 
         <!-- ── 에디터 본문 ── -->
         <EditorContent v-if="editor" :editor="editor" class="tiptap-content" />
@@ -732,17 +858,87 @@ onBeforeUnmount(() => {
 
                 <span class="tf-divider" />
 
-                <!-- 셀 배경색 -->
-                <div class="tf-group">
-                    <button class="tf-btn tf-color-btn" @mousedown.prevent="cellBgInputRef?.click()" title="셀 배경색">
+                <!-- FR-06-3: 셀 배경색 팔레트 (16색) -->
+                <div class="tf-group" style="position: relative;">
+                    <button class="tf-btn tf-color-btn"
+                        @mousedown.prevent="cellBgPaletteVisible = !cellBgPaletteVisible"
+                        title="셀 배경색">
                         <i class="pi pi-palette"></i>
-                        <span class="tf-color-dot" :style="{ backgroundColor: currentCellBg }"></span>
-                        <input ref="cellBgInputRef" type="color" :value="currentCellBg" class="tf-color-input"
-                            @input="handleCellBgChange" />
+                        <span class="tf-color-dot"
+                            :style="{ backgroundColor: currentCellBg ?? 'transparent', border: currentCellBg ? 'none' : '1px dashed #aaa' }">
+                        </span>
                     </button>
-                    <button class="tf-btn" @mousedown.prevent="clearCellBg" title="셀 배경색 제거">
-                        <i class="pi pi-eraser"></i>
+                    <!-- 팔레트 팝오버 -->
+                    <div v-if="cellBgPaletteVisible"
+                        class="tiptap-table-float"
+                        style="position: absolute; top: calc(100% + 4px); left: 0; width: 130px; padding: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; z-index: 100;"
+                        @mousedown.prevent>
+                        <button v-for="color in TABLE_CELL_PALETTE" :key="color"
+                            class="tf-palette-swatch"
+                            :style="{ backgroundColor: color }"
+                            :title="color"
+                            @mousedown.prevent="applyCellBgColor(color)" />
+                        <!-- 배경 없음(지우개) -->
+                        <button class="tf-palette-swatch tf-palette-clear"
+                            title="배경 없음"
+                            @mousedown.prevent="applyCellBgColor(null)">
+                            <i class="pi pi-times" style="font-size: 9px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <span class="tf-divider" />
+
+                <!-- FR-06-2: 테두리 스타일 (없음/실선/점선/이중선) -->
+                <div class="tf-group">
+                    <button v-for="bs in BORDER_STYLES" :key="String(bs.value)"
+                        class="tf-btn"
+                        :class="{ 'tf-btn-active': currentCellBorderStyle === bs.value }"
+                        :title="bs.title"
+                        @mousedown.prevent="applyCellBorderStyle(bs.value)">
+                        <span style="font-size: 11px; font-weight: 600; line-height: 1;">{{ bs.label }}</span>
                     </button>
+                </div>
+
+                <span class="tf-divider" />
+
+                <!-- FR-06-4: 레이아웃 토글 (반응형 / 고정형) -->
+                <div class="tf-group">
+                    <button class="tf-btn"
+                        :class="{ 'tf-btn-active': currentTableLayout === 'auto' }"
+                        :title="currentTableLayout === 'fixed' ? '반응형으로 전환 (auto)' : '고정형으로 전환 (fixed)'"
+                        @mousedown.prevent="toggleTableLayout">
+                        <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- 표 외곽 -->
+                            <rect x="1" y="2" width="12" height="10" rx="1" />
+                            <!-- 가변 열 표시: 세로선 2개가 균등하지 않음 -->
+                            <line x1="5" y1="2" x2="5" y2="12" />
+                            <line x1="9" y1="2" x2="9" y2="12" />
+                            <!-- 반응형 화살표 힌트 -->
+                            <polyline points="2.5,7 4,5.5 4,8.5" v-if="currentTableLayout === 'fixed'" />
+                            <polyline points="11.5,7 10,5.5 10,8.5" v-if="currentTableLayout === 'fixed'" />
+                        </svg>
+                    </button>
+                </div>
+
+                <span class="tf-divider" />
+
+                <!-- FR-06-5: 셀 최소 높이 -->
+                <div class="tf-group" style="align-items: center;">
+                    <input
+                        type="number"
+                        class="tf-height-input"
+                        :value="currentCellMinHeight || ''"
+                        min="0"
+                        max="500"
+                        step="10"
+                        placeholder="높이"
+                        title="셀 최소 높이 (px)"
+                        @mousedown.prevent
+                        @change="(e) => applyCellMinHeight(Number((e.target as HTMLInputElement).value))"
+                    />
+                    <span style="font-size: 10px; color: #888; margin-left: 1px;">px</span>
                 </div>
 
                 <span class="tf-divider" />
@@ -756,10 +952,37 @@ onBeforeUnmount(() => {
         </Transition>
     </Teleport>
 
+    <!-- ── 첨부파일 Suggestion 팝업 (FR-05-3, FR-05-4) ── -->
+    <!-- 에디터 포커스를 유지하기 위해 mousedown.prevent 적용 -->
+    <Teleport to="body">
+        <Transition name="table-float">
+            <div
+                v-if="attachSuggest.active && attachSuggest.items.length"
+                class="tiptap-attach-suggest"
+                :style="{
+                    top: (attachSuggest.rect?.bottom ?? 0) + 4 + 'px',
+                    left: (attachSuggest.rect?.left ?? 0) + 'px',
+                }"
+                @mousedown.prevent
+            >
+                <div
+                    v-for="(item, idx) in attachSuggest.items"
+                    :key="item.flMngNo"
+                    class="attach-suggest-item"
+                    :class="{ 'attach-suggest-item--active': idx === attachSuggest.selectedIndex }"
+                    @mousedown.prevent="attachSuggest.command?.(item)"
+                >
+                    <i class="pi pi-paperclip text-indigo-400" style="font-size: 11px;" />
+                    <span class="truncate">{{ item.flNm }}</span>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
+
 </template>
 
 <style scoped>
-/* tbar-btn, tbar-btn-active, tbar-divider, tbar-select 스타일은 TiptapToolbar.vue로 이동됨 */
+/* tbar-btn, tf-btn-active, tbar-divider, tbar-select 스타일은 TiptapToolbar.vue로 이동됨 */
 
 /* ── 에디터 본문 영역 ── */
 :deep(.tiptap-content .ProseMirror) {
@@ -956,6 +1179,21 @@ onBeforeUnmount(() => {
     background-color: rgba(55, 53, 47, 0.025);
 }
 
+/* FR-06-2: 테두리 스타일 — data-border-style 어트리뷰트 기반 CSS */
+:deep(.tiptap-content .ProseMirror td[data-border-style="solid"]),
+:deep(.tiptap-content .ProseMirror th[data-border-style="solid"]) {
+    border-style: solid !important;
+}
+:deep(.tiptap-content .ProseMirror td[data-border-style="dashed"]),
+:deep(.tiptap-content .ProseMirror th[data-border-style="dashed"]) {
+    border-style: dashed !important;
+}
+:deep(.tiptap-content .ProseMirror td[data-border-style="double"]),
+:deep(.tiptap-content .ProseMirror th[data-border-style="double"]) {
+    border-style: double !important;
+    border-width: 3px !important;
+}
+
 /* 다크모드 — 표 외곽선 */
 .dark :deep(.tiptap-content .ProseMirror table) {
     border-color: rgba(255, 255, 255, 0.1);
@@ -1089,6 +1327,16 @@ onBeforeUnmount(() => {
     color: #111827;
 }
 
+/* 활성 버튼 강조 (테두리 스타일, 레이아웃 토글 등) */
+.tf-btn.tf-btn-active {
+    background: rgba(99, 102, 241, 0.12);
+    color: #4f46e5;
+}
+:global(.dark) .tf-btn.tf-btn-active {
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+}
+
 /* 다크모드 버튼 */
 :global(.dark) .tf-btn {
     color: #d1d5db;
@@ -1148,16 +1396,49 @@ onBeforeUnmount(() => {
     flex-shrink: 0;
 }
 
-/* color input — 투명하게 절대 위치 처리하여 버튼 클릭으로 트리거 */
-.tf-color-input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    width: 100%;
-    height: 100%;
+/* FR-06-3: 팔레트 색상 스와치 버튼 */
+.tf-palette-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     cursor: pointer;
-    border: none;
-    padding: 0;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.tf-palette-swatch:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+/* 배경 없음(지우개) 스와치 */
+.tf-palette-swatch.tf-palette-clear {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+}
+
+/* FR-06-5: 셀 높이 입력 */
+.tf-height-input {
+    width: 44px;
+    height: 24px;
+    font-size: 11px;
+    text-align: center;
+    border: 1px solid rgba(55, 53, 47, 0.2);
+    border-radius: 4px;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    padding: 0 2px;
+}
+.tf-height-input:focus {
+    border-color: rgba(99, 102, 241, 0.6);
+}
+/* 숫자 스피너 숨김 */
+.tf-height-input::-webkit-outer-spin-button,
+.tf-height-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 /* 그룹 구분선 */
@@ -1173,6 +1454,51 @@ onBeforeUnmount(() => {
 
 :global(.dark) .tf-divider {
     background: rgba(255, 255, 255, 0.1);
+}
+
+/* FR-05-3: 첨부파일 Suggestion 팝업 */
+.tiptap-attach-suggest {
+    position: fixed;
+    z-index: 9999;
+    min-width: 200px;
+    max-width: 320px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid rgba(55, 53, 47, 0.15);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+}
+:global(.dark) .tiptap-attach-suggest {
+    background: #1e1e1e;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.attach-suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #374151;
+    transition: background 0.1s;
+    overflow: hidden;
+}
+:global(.dark) .attach-suggest-item {
+    color: #d1d5db;
+}
+.attach-suggest-item--active,
+.attach-suggest-item:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+}
+:global(.dark) .attach-suggest-item--active,
+:global(.dark) .attach-suggest-item:hover {
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
 }
 
 /* 플로팅 툴바 페이드 트랜지션 */

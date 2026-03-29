@@ -9,11 +9,12 @@
  * [내보내는 확장]
  *   ResizableImage     : 크기/정렬 조정 가능한 이미지
  *   ExcalidrawExtension: 다이어그램 커스텀 노드
- *   CustomTable        : 너비 저장 지원 표
- *   CustomTableCell    : 배경색·정렬 지원 셀
- *   CustomTableHeader  : 배경색·정렬 지원 헤더 셀
+ *   CustomTable        : 너비·레이아웃 저장 지원 표 (FR-06-4)
+ *   CustomTableCell    : 배경색·정렬·테두리·높이 지원 셀 (FR-06-2,3,5)
+ *   CustomTableHeader  : 배경색·정렬·테두리·높이 지원 헤더 셀 (FR-06-2,3,5)
  *   CustomHeading      : id·scroll-margin 지원 제목
  *   FontSize           : 글자 크기 (FR-04, TextStyle 기반 커스텀 마크)
+ *   AttachmentExtension: 인라인 첨부파일 노드 + Suggestion 자동완성 (FR-05)
  *
  * [내보내는 유틸리티]
  *   normalizeColwidths       : 표 셀 colwidth 정규화
@@ -22,12 +23,16 @@
 
 import { Node as TiptapNode, Mark, mergeAttributes } from '@tiptap/core';
 import { VueNodeViewRenderer } from '@tiptap/vue-3';
+import Suggestion from '@tiptap/suggestion';
 import Image from '@tiptap/extension-image';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import Heading from '@tiptap/extension-heading';
 import type { Editor } from '@tiptap/core';
 import ResizableImageNodeViewComponent from '../ResizableImageNodeView.vue';
 import ExcalidrawNodeViewComponent from '../ExcalidrawNodeView.vue';
+import AttachmentNodeViewComponent from '../AttachmentNodeView.vue';
+import InlineMathNodeViewComponent from '../InlineMathNodeView.vue';
+import BlockMathNodeViewComponent from '../BlockMathNodeView.vue';
 
 // ── ResizableImage ──
 // @tiptap/extension-image를 확장하여 너비(width), 정렬(align) 속성 및 NodeView를 추가합니다.
@@ -188,7 +193,7 @@ export const ExcalidrawExtension = TiptapNode.create({
 });
 
 // ── CustomTable ──
-// 표 전체 너비 속성(width) 영구 저장 지원
+// 표 전체 너비(width) + 레이아웃(tableLayout) 속성 영구 저장 지원
 export const CustomTable = Table.extend({
     addAttributes() {
         return {
@@ -199,12 +204,25 @@ export const CustomTable = Table.extend({
              */
             width: {
                 default: null,
-                // parseHTML: 저장된 HTML의 table 요소 style.width를 읽어 복원
                 parseHTML: (element) => element.style.width || null,
-                // renderHTML: 직렬화 시 style 속성으로 출력
                 renderHTML: (attributes) => {
                     if (!attributes.width) return {};
                     return { style: `width: ${attributes.width}` };
+                }
+            },
+            /**
+             * 표 레이아웃 방식 (FR-06-4)
+             * - 'auto' : 반응형 — 셀 내용에 따라 열 너비 자동 결정
+             * - 'fixed': 고정형 — colwidth 기반 고정 너비 유지
+             */
+            tableLayout: {
+                default: 'fixed',
+                parseHTML: (element) => element.getAttribute('data-table-layout') || 'fixed',
+                renderHTML: (attributes) => {
+                    return {
+                        'data-table-layout': attributes.tableLayout ?? 'fixed',
+                        style: `table-layout: ${attributes.tableLayout ?? 'fixed'}`
+                    };
                 }
             }
         };
@@ -212,13 +230,14 @@ export const CustomTable = Table.extend({
 });
 
 // ── CustomTableCell ──
-// 셀 배경색(backgroundColor)과 텍스트 정렬(textAlign) 속성 추가
+// 셀 배경색(backgroundColor)·정렬(textAlign)·테두리(borderStyle)·높이(minHeight) 속성 추가
 export const CustomTableCell = TableCell.extend({
     addAttributes() {
         return {
             ...this.parent?.(),
             /**
-             * 셀 배경색 (CSS color 문자열)
+             * 셀 배경색 (CSS color 문자열 or null)
+             * FR-06-3: 팔레트 16색에서 선택 후 저장
              */
             backgroundColor: {
                 default: null,
@@ -239,18 +258,43 @@ export const CustomTableCell = TableCell.extend({
                     if (!attributes.textAlign) return {};
                     return { style: `text-align: ${attributes.textAlign}` };
                 }
+            },
+            /**
+             * 테두리 스타일 (FR-06-2)
+             * 값: 'solid' | 'dashed' | 'double' | null(없음)
+             * data-border-style 어트리뷰트로 저장 → CSS selector로 스타일 적용
+             */
+            borderStyle: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('data-border-style') || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderStyle) return {};
+                    return { 'data-border-style': attributes.borderStyle };
+                }
+            },
+            /**
+             * 셀 최소 높이 (FR-06-5)
+             * 값: CSS 길이 문자열 (예: '60px') or null
+             */
+            minHeight: {
+                default: null,
+                parseHTML: (element) => element.style.minHeight || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.minHeight) return {};
+                    return { style: `min-height: ${attributes.minHeight}` };
+                }
             }
         };
     }
 });
 
 // ── CustomTableHeader ──
-// 헤더 셀 배경색(backgroundColor)과 텍스트 정렬(textAlign) 속성 추가
+// 헤더 셀 배경색·정렬·테두리·높이 속성 추가 (CustomTableCell과 동일 속성 세트)
 export const CustomTableHeader = TableHeader.extend({
     addAttributes() {
         return {
             ...this.parent?.(),
-            /** 헤더 셀 배경색 */
+            /** 헤더 셀 배경색 (FR-06-3) */
             backgroundColor: {
                 default: null,
                 parseHTML: (element) => element.style.backgroundColor || null,
@@ -266,6 +310,24 @@ export const CustomTableHeader = TableHeader.extend({
                 renderHTML: (attributes) => {
                     if (!attributes.textAlign) return {};
                     return { style: `text-align: ${attributes.textAlign}` };
+                }
+            },
+            /** 테두리 스타일 (FR-06-2) */
+            borderStyle: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('data-border-style') || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderStyle) return {};
+                    return { 'data-border-style': attributes.borderStyle };
+                }
+            },
+            /** 셀 최소 높이 (FR-06-5) */
+            minHeight: {
+                default: null,
+                parseHTML: (element) => element.style.minHeight || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.minHeight) return {};
+                    return { style: `min-height: ${attributes.minHeight}` };
                 }
             }
         };
@@ -549,6 +611,381 @@ declare module '@tiptap/core' {
             setFontSize: (fontSize: string) => ReturnType;
             /** 선택 영역의 글자 크기 제거 */
             unsetFontSize: () => ReturnType;
+        };
+    }
+}
+
+// ── AttachmentExtension ──
+// 인라인 첨부파일 커스텀 노드 (FR-05)
+// Tiptap Suggestion을 통한 '![' 자동완성 및 AttachmentNodeView로 렌더링됩니다.
+//
+// [Suggestion 흐름]
+//   사용자가 '!' 다음에 '[' 입력 → char='[', allow로 '!' 선행 확인 → 팝업 표시
+//   파일 선택 → '![query' 삭제 후 attachment 노드 삽입
+//
+// [attachmentList 동기화]
+//   TiptapEditor.vue에서 watch → editor.storage.attachment.attachmentList 업데이트
+//
+// [TiptapEditor.vue 사용 예시]
+//   AttachmentExtension.configure({ suggestion: createAttachmentSuggestion(attachSuggest) })
+
+/** 첨부파일 아이템 타입 (useFiles.FileRecord의 부분 집합) */
+export interface AttachmentItem {
+    flMngNo: string;
+    flNm: string;
+    flSz: number;
+}
+
+/**
+ * AttachmentSuggestion 설정 팩토리
+ * TiptapEditor.vue에서 reactive 상태를 주입하여 팝업을 제어합니다.
+ *
+ * @param suggestionState - 팝업 UI를 제어하는 Vue reactive 객체 (TiptapEditor.vue에서 제공)
+ */
+export const createAttachmentSuggestion = (suggestionState: {
+    active: boolean;
+    items: AttachmentItem[];
+    rect: DOMRect | null;
+    selectedIndex: number;
+    command: ((item: AttachmentItem) => void) | null;
+}) => ({
+    /**
+     * 트리거 문자: '['
+     * allow 콜백에서 직전 문자가 '!'인 경우에만 활성화합니다.
+     */
+    char: '[',
+
+    /**
+     * '!' 선행 확인: '![' 패턴에서만 Suggestion을 활성화합니다.
+     * Design Ref: §2.2 — AttachmentSuggestion char='!['
+     */
+    allow: ({ state, range }: any) => {
+        const pos = range.from - 1; // '[' 직전 위치 (= '!' 위치)
+        if (pos < 0) return false;
+        // textBetween(pos, pos+1): pos에 있는 문자 1개를 읽음 → '!' 여부 확인
+        // 이전: textBetween(pos-1, pos) — '!' 이전 문자를 읽는 버그
+        const charAtPos = state.doc.textBetween(Math.max(0, pos), pos + 1);
+        return charAtPos === '!';
+    },
+
+    /**
+     * 쿼리 기반 파일 목록 필터링
+     * editor.storage.attachment.attachmentList는 TiptapEditor.vue의 watch로 동적 업데이트됩니다.
+     */
+    items: ({ query, editor }: any) => {
+        const list: AttachmentItem[] = editor.storage?.attachment?.attachmentList ?? [];
+        if (!query) return list.slice(0, 8);
+        const q = query.toLowerCase();
+        return list.filter(f => f.flNm.toLowerCase().includes(q)).slice(0, 8);
+    },
+
+    /**
+     * 파일 선택 시 '![query' 전체를 삭제하고 attachment 노드를 삽입합니다.
+     * range.from은 '[' 위치이므로 -1 하여 '!' 포함 삭제합니다.
+     */
+    command: ({ editor, range, props }: any) => {
+        editor
+            .chain()
+            .focus()
+            .deleteRange({ from: range.from - 1, to: range.to })
+            .insertContentAt(range.from - 1, {
+                type: 'attachment',
+                attrs: {
+                    fileId:   props.flMngNo,
+                    fileName: props.flNm,
+                    fileSize: props.flSz,
+                }
+            })
+            .run();
+    },
+
+    /** 팝업 상태를 Vue reactive 객체에 동기화합니다. */
+    render: () => ({
+        onStart: (p: any) => {
+            suggestionState.active = true;
+            suggestionState.items = p.items;
+            suggestionState.rect = p.clientRect?.() ?? null;
+            suggestionState.selectedIndex = 0;
+            suggestionState.command = p.command;
+        },
+        onUpdate: (p: any) => {
+            suggestionState.items = p.items;
+            suggestionState.rect = p.clientRect?.() ?? null;
+        },
+        onKeyDown: ({ event }: any) => {
+            if (!suggestionState.active || !suggestionState.items.length) return false;
+            if (event.key === 'ArrowDown') {
+                suggestionState.selectedIndex =
+                    (suggestionState.selectedIndex + 1) % suggestionState.items.length;
+                return true;
+            }
+            if (event.key === 'ArrowUp') {
+                suggestionState.selectedIndex =
+                    (suggestionState.selectedIndex - 1 + suggestionState.items.length) % suggestionState.items.length;
+                return true;
+            }
+            if (event.key === 'Enter') {
+                const item = suggestionState.items[suggestionState.selectedIndex];
+                if (item && suggestionState.command) {
+                    suggestionState.command(item);
+                    return true;
+                }
+            }
+            if (event.key === 'Escape') {
+                suggestionState.active = false;
+                return true;
+            }
+            return false;
+        },
+        onExit: () => {
+            suggestionState.active = false;
+        },
+    }),
+});
+
+/** AttachmentExtension: 인라인 첨부파일 노드 */
+export const AttachmentExtension = TiptapNode.create({
+    name: 'attachment',
+    group: 'inline',
+    inline: true,
+    atom: true,  // 단일 원자 노드 — 커서가 내부로 진입하지 않습니다.
+
+    addStorage() {
+        /**
+         * attachmentList: TiptapEditor.vue에서 watch를 통해 동적으로 업데이트됩니다.
+         * Suggestion items 함수에서 editor.storage.attachment.attachmentList로 접근합니다.
+         */
+        return {
+            attachmentList: [] as AttachmentItem[]
+        };
+    },
+
+    addOptions() {
+        return {
+            suggestion: {} as Record<string, any>
+        };
+    },
+
+    addAttributes() {
+        return {
+            /** 파일 관리번호 (flMngNo) — 다운로드 URL에 사용 */
+            fileId: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('data-file-id') || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.fileId) return {};
+                    return { 'data-file-id': attributes.fileId };
+                }
+            },
+            /** 표시용 파일명 */
+            fileName: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-file-name') || '',
+                renderHTML: (attributes) => ({
+                    'data-file-name': attributes.fileName ?? ''
+                })
+            },
+            /** 파일 크기 (bytes) — 표시용 */
+            fileSize: {
+                default: null,
+                parseHTML: (element) => {
+                    const v = element.getAttribute('data-file-size');
+                    return v ? Number(v) : null;
+                },
+                renderHTML: (attributes) => {
+                    if (!attributes.fileSize) return {};
+                    return { 'data-file-size': String(attributes.fileSize) };
+                }
+            }
+        };
+    },
+
+    parseHTML() {
+        return [{ tag: 'span[data-type="attachment"]' }];
+    },
+
+    renderHTML({ node }) {
+        return ['span', mergeAttributes({
+            'data-type':      'attachment',
+            'data-file-id':   node.attrs.fileId,
+            'data-file-name': node.attrs.fileName,
+            'data-file-size': node.attrs.fileSize != null ? String(node.attrs.fileSize) : '',
+        })];
+    },
+
+    addNodeView() {
+        return VueNodeViewRenderer(AttachmentNodeViewComponent as any);
+    },
+
+    addProseMirrorPlugins() {
+        return [
+            Suggestion({
+                editor: this.editor,
+                ...this.options.suggestion,
+            }),
+        ];
+    },
+});
+
+// TypeScript: attachment 노드 삽입 커맨드 타입 확장 (필요 시)
+declare module '@tiptap/core' {
+    interface Commands<ReturnType> {
+        attachment: {
+            /** 커서 위치에 첨부파일 노드를 삽입합니다. */
+            insertAttachment: (attrs: { fileId: string; fileName: string; fileSize?: number }) => ReturnType;
+        };
+    }
+}
+
+// ── InlineMathExtension (FR-07) ──
+// 인라인 수식 커스텀 노드 ($...$)
+// mathlive의 <math-field> Web Component로 렌더링합니다.
+//
+// [저장 형식]
+//   <span data-type="inline-math" data-latex="..."></span>
+//
+// [NodeView]
+//   InlineMathNodeView.vue: 편집 모드 = editable math-field, 조회 모드 = readonly math-field
+export const InlineMathExtension = TiptapNode.create({
+    name: 'inlineMath',
+    group: 'inline',
+    inline: true,
+    atom: true, // 커서가 내부로 진입하지 않음
+
+    addOptions() {
+        return {
+            /** HTMLAttributes: 렌더링 시 추가 속성 기본값 */
+            HTMLAttributes: {}
+        };
+    },
+
+    addAttributes() {
+        return {
+            /**
+             * LaTeX 수식 문자열 (예: "E=mc^2")
+             * data-latex 어트리뷰트로 HTML에 저장되어 저장-로드 왕복 시 복원됩니다.
+             */
+            latex: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-latex') || '',
+                renderHTML: (attributes) => ({
+                    'data-latex': attributes.latex ?? ''
+                })
+            }
+        };
+    },
+
+    parseHTML() {
+        return [{ tag: 'span[data-type="inline-math"]' }];
+    },
+
+    renderHTML({ node }) {
+        return ['span', mergeAttributes(this.options.HTMLAttributes, {
+            'data-type': 'inline-math',
+            'data-latex': node.attrs.latex ?? '',
+            class: 'math-inline-node',
+        })];
+    },
+
+    addNodeView() {
+        return VueNodeViewRenderer(InlineMathNodeViewComponent as any);
+    },
+
+    addCommands() {
+        return {
+            /**
+             * 커서 위치에 인라인 수식 노드를 삽입합니다.
+             * @param latex - LaTeX 문자열 (빈 문자열이면 빈 수식 노드)
+             */
+            insertInlineMath: (latex: string = '') => ({ commands }) => {
+                return commands.insertContent({
+                    type: this.name,
+                    attrs: { latex }
+                });
+            }
+        };
+    }
+});
+
+// ── BlockMathExtension (FR-07) ──
+// 블록 수식 커스텀 노드 ($$...$$)
+// mathlive의 <math-field> Web Component로 렌더링합니다.
+//
+// [저장 형식]
+//   <div data-type="block-math" data-latex="..."></div>
+//
+// [NodeView]
+//   BlockMathNodeView.vue: 편집 모드 = editable math-field, 조회 모드 = readonly math-field
+export const BlockMathExtension = TiptapNode.create({
+    name: 'blockMath',
+    group: 'block',
+    atom: true, // 커서가 내부로 진입하지 않음
+    draggable: true,
+
+    addOptions() {
+        return {
+            HTMLAttributes: {}
+        };
+    },
+
+    addAttributes() {
+        return {
+            /**
+             * LaTeX 수식 문자열 (블록 수식용)
+             * data-latex 어트리뷰트로 HTML에 저장됩니다.
+             */
+            latex: {
+                default: '',
+                parseHTML: (element) => element.getAttribute('data-latex') || '',
+                renderHTML: (attributes) => ({
+                    'data-latex': attributes.latex ?? ''
+                })
+            }
+        };
+    },
+
+    parseHTML() {
+        return [{ tag: 'div[data-type="block-math"]' }];
+    },
+
+    renderHTML({ node }) {
+        return ['div', mergeAttributes(this.options.HTMLAttributes, {
+            'data-type': 'block-math',
+            'data-latex': node.attrs.latex ?? '',
+            class: 'math-block-node',
+        })];
+    },
+
+    addNodeView() {
+        return VueNodeViewRenderer(BlockMathNodeViewComponent as any);
+    },
+
+    addCommands() {
+        return {
+            /**
+             * 커서 위치에 블록 수식 노드를 삽입합니다.
+             * @param latex - LaTeX 문자열 (빈 문자열이면 빈 수식 노드)
+             */
+            insertBlockMath: (latex: string = '') => ({ commands }) => {
+                return commands.insertContent({
+                    type: this.name,
+                    attrs: { latex }
+                });
+            }
+        };
+    }
+});
+
+// TypeScript: 수식 노드 삽입 커맨드 타입 확장
+declare module '@tiptap/core' {
+    interface Commands<ReturnType> {
+        inlineMath: {
+            /** 커서 위치에 인라인 수식 노드를 삽입합니다. */
+            insertInlineMath: (latex?: string) => ReturnType;
+        };
+        blockMath: {
+            /** 커서 위치에 블록 수식 노드를 삽입합니다. */
+            insertBlockMath: (latex?: string) => ReturnType;
         };
     }
 }

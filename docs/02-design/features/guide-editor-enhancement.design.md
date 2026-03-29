@@ -30,7 +30,7 @@ TiptapEditor를 단계적으로 강화합니다. 6개 모듈로 분리하여 세
 | **module-3** | **FR-03, FR-04** | **CodeBlock Lowlight + FontSize** | **🔄 진행 중** |
 | module-4 | FR-06 | 표 고급 기능 (배경색·헤더 토글) | ⏳ 대기 |
 | module-5 | FR-05 | 파일 첨부 | ⏳ 대기 |
-| module-6 | FR-07 | LaTeX 수식 (mathlive) | ⏳ 대기 |
+| module-6 | FR-07 | LaTeX 수식 (mathlive) | ✅ 완료 |
 
 ---
 

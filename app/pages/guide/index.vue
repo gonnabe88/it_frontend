@@ -30,11 +30,15 @@ import { PROJECT_STAGES } from '~/utils/common';
 import { useGuideDocuments } from '~/composables/useGuideDocuments';
 import type { GuideDocument } from '~/composables/useGuideDocuments';
 import { useFiles } from '~/composables/useFiles';
+import type { FileRecord } from '~/composables/useFiles';
 
 definePageMeta({ title: '사업 가이드' });
 
 const { fetchGuideDocuments, createGuideDocument, updateGuideDocument, deleteGuideDocument } = useGuideDocuments();
 const { uploadFile, updateFileMeta, getPreviewUrl } = useFiles();
+// $apiFetch: 비동기 이벤트 핸들러 내에서 안전한 명령형 fetch (useApiFetch 대신 사용)
+const { $apiFetch } = useNuxtApp();
+const runtimeConfig = useRuntimeConfig();
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -94,7 +98,10 @@ const selectStage = (stage: string) => {
 const startEdit = () => {
     editContent.value = currentGuide.value?.docCone ?? '';
     pendingImageIds.value = [];
+    pendingFileIds.value = [];
     isEditing.value = true;
+    // 편집 시작 시 첨부파일 목록 갱신 (Suggestion 자동완성용)
+    refreshAttachments();
 };
 
 /**
@@ -105,6 +112,7 @@ const cancelEdit = () => {
     isEditing.value = false;
     editContent.value = '';
     pendingImageIds.value = [];
+    pendingFileIds.value = [];
 };
 
 /* ── 이미지 업로드 관련 상태 ── */
@@ -113,6 +121,50 @@ const cancelEdit = () => {
  * 문서 저장 후 orcPkVl을 실제 docMngNo로 업데이트합니다.
  */
 const pendingImageIds = ref<string[]>([]);
+
+/* ── 첨부파일 관련 상태 (FR-05) ── */
+/**
+ * 신규 문서 작성 시 에디터에서 업로드된 첨부파일 파일관리번호 목록
+ * 문서 저장 후 orcPkVl을 실제 docMngNo로 업데이트합니다.
+ */
+const pendingFileIds = ref<string[]>([]);
+
+/**
+ * 현재 가이드 문서에 연결된 첨부파일 목록
+ * Suggestion 자동완성(FR-05-3) 및 파일 첨부 다이얼로그에서 사용합니다.
+ * docMngNo가 바뀔 때마다 갱신합니다.
+ */
+const attachmentListData = ref<Array<{ flMngNo: string; flNm: string; flSz: number }>>([]);
+
+/**
+ * 현재 문서의 첨부파일 목록 조회
+ * useApiFetch(useFetch 래퍼) 대신 $apiFetch를 사용합니다.
+ * useApiFetch는 setup 컨텍스트에서만 호출 가능하지만,
+ * $apiFetch는 비동기 이벤트 핸들러에서도 안전하게 호출됩니다.
+ */
+const refreshAttachments = async () => {
+    const docMngNo = currentGuide.value?.docMngNo;
+    if (!docMngNo) {
+        attachmentListData.value = [];
+        return;
+    }
+    try {
+        const files = await $apiFetch<FileRecord[]>(
+            `${runtimeConfig.public.apiBase}/api/files`,
+            { query: { orcDtt: '가이드문서', orcPkVl: docMngNo } }
+        );
+        attachmentListData.value = (files ?? [])
+            .filter(f => f.flDtt === '첨부파일')
+            .map(f => ({
+                flMngNo: f.flMngNo,
+                flNm: f.orcFlNm,
+                flSz: 0, // FileRecord에 flSz 없음 → 0으로 초기화
+            }));
+    } catch {
+        // 목록 조회 실패는 조용히 무시 (Suggestion 자동완성이 빈 목록으로 동작)
+        attachmentListData.value = [];
+    }
+};
 
 /**
  * Tiptap 에디터 이미지 업로드 핸들러
@@ -136,6 +188,42 @@ const handleEditorImageUpload = async (file: File): Promise<string> => {
             severity: 'error',
             summary: '이미지 업로드 실패',
             detail: e?.data?.message || '이미지 업로드 중 오류가 발생했습니다.',
+            life: 4000
+        });
+        throw e;
+    }
+};
+
+/**
+ * Tiptap 에디터 첨부파일 업로드 핸들러 (FR-05-1)
+ * TiptapToolbar의 "파일 첨부" 버튼 클릭 시 호출됩니다.
+ * 신규 문서인 경우 pendingFileIds에 추적하여 저장 후 orcPkVl을 업데이트합니다.
+ *
+ * Design Ref: §8 — guide/index.vue 신규 Props 전달
+ * @param file - 업로드할 파일
+ * @returns { flMngNo, flNm, flSz } — attachment 노드 속성
+ */
+const handleEditorFileUpload = async (file: File): Promise<{ flMngNo: string; flNm: string; flSz: number }> => {
+    try {
+        const orcPkVl = currentGuide.value?.docMngNo ?? '';
+        const result = await uploadFile(file, '첨부파일', orcPkVl, '가이드문서');
+        if (!currentGuide.value) {
+            // 신규 문서: 저장 후 orcPkVl 업데이트를 위해 추적
+            pendingFileIds.value.push(result.flMngNo);
+        } else {
+            // 기존 문서: 즉시 목록 갱신 (Suggestion 자동완성에 반영)
+            await refreshAttachments();
+        }
+        return {
+            flMngNo: result.flMngNo,
+            flNm: result.orcFlNm,
+            flSz: 0,
+        };
+    } catch (e: any) {
+        toast.add({
+            severity: 'error',
+            summary: '첨부파일 업로드 실패',
+            detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.',
             life: 4000
         });
         throw e;
@@ -167,8 +255,9 @@ const onSave = async () => {
                 docCone: editContent.value
             });
 
-            // 에디터 내 이미지의 orcPkVl을 실제 docMngNo로 업데이트
-            for (const flMngNo of pendingImageIds.value) {
+            // 에디터 내 이미지·첨부파일의 orcPkVl을 실제 docMngNo로 업데이트
+            const allPendingIds = [...pendingImageIds.value, ...pendingFileIds.value];
+            for (const flMngNo of allPendingIds) {
                 await updateFileMeta(flMngNo, { orcPkVl: newDocMngNo });
             }
 
@@ -235,6 +324,11 @@ const formatDateTime = (dtm?: string): string => {
         return dtm;
     }
 };
+
+// 선택된 단계(문서) 변경 시 첨부파일 목록 갱신
+watch(currentGuide, () => {
+    if (!isEditing.value) refreshAttachments();
+});
 
 /* ── TOC 상태 관리 ── */
 const rawToc = ref<Array<{ id: string; level: number; text: string }>>([]);
@@ -420,10 +514,13 @@ onUnmounted(() => {
                     <!-- 에디터 영역 (guide-doc: 공공기관 문서 헤딩 스타일 적용 범위) -->
                     <div class="p-4 guide-doc">
                         <ClientOnly>
-                            <!-- 편집 모드: 이미지 업로드 활성화 -->
+                            <!-- 편집 모드: 이미지·파일 업로드 활성화 (FR-05) -->
                             <TiptapEditor v-if="isEditing" v-model="editContent"
                                 placeholder="가이드 내용을 작성하세요. 툴바의 다이어그램 버튼으로 Excalidraw 그림을 삽입할 수 있습니다."
-                                :imageUploadFn="handleEditorImageUpload" @update:toc="handleUpdateToc" />
+                                :imageUploadFn="handleEditorImageUpload"
+                                :fileUploadFn="handleEditorFileUpload"
+                                :attachmentList="attachmentListData"
+                                @update:toc="handleUpdateToc" />
                             <!-- 조회 모드: 읽기 전용 (가이드 있는 경우) -->
                             <TiptapEditor v-else-if="currentGuide" :modelValue="currentGuide.docCone || ''"
                                 :readonly="true" @update:toc="handleUpdateToc" />
