@@ -21,6 +21,7 @@ Design Ref: §4 — TiptapToolbar 분리 (module-2 리팩토링)
 <script setup lang="ts">
 import type { Editor } from '@tiptap/core';
 import type { AttachmentItem } from './extensions/tiptap-extensions';
+import { formatFileSize } from '~/utils/common';
 
 const props = defineProps<{
     /** Tiptap 에디터 인스턴스 */
@@ -333,65 +334,49 @@ const handleFileAttachChange = async (event: Event) => {
     }
 };
 
-/** 파일 크기 포맷 (Bytes -> KB, MB) */
-const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-};
+const confirm = useConfirm();
+const toast = useToast();
 
 /**
  * 첨부파일 삭제 처리 (FR-05-4)
  * 확인 창을 거쳐 삭제를 진행하며, 성공 시 본문 내의 관련 노드도 자동 제거합니다.
  */
-const confirmDeleteAttachment = async (file: AttachmentItem) => {
+const confirmDeleteAttachment = (file: AttachmentItem) => {
     if (!props.fileDeleteFn) return;
 
-    const confirmed = window.confirm(`'${file.flNm}' 파일을 삭제하시겠습니까?\n서버에서 삭제되며 본문 내의 관련 내용도 모두 제거됩니다.`);
-    if (!confirmed) return;
+    confirm.require({
+        message: `'${file.flNm}' 파일을 삭제하시겠습니까?\n서버에서 삭제되며 본문 내의 관련 내용도 모두 제거됩니다.`,
+        header: '파일 삭제',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClass: 'p-button-danger',
+        acceptLabel: '삭제',
+        rejectLabel: '취소',
+        accept: async () => {
+            try {
+                // 1. 서버 삭제 요청
+                await props.fileDeleteFn!(file.flMngNo);
 
-    try {
-        // 1. 서버 삭제 요청
-        await props.fileDeleteFn(file.flMngNo);
-
-        // 2. 에디터 본문 내의 해당 파일 노드들 자동 제거 (동기화)
-        if (props.editor) {
-            const { state, dispatch } = props.editor.view;
-            const tr = state.tr;
-            let deleted = false;
-
-            state.doc.descendants((node, pos) => {
-                if (node.type.name === 'attachment' && node.attrs.fileId === file.flMngNo) {
-                    // pos는 노드의 위치입니다. 
-                    // 이미 삭제가 일어났다면 pos가 변할 수 있으므로 뒤에서부터 지우거나
-                    // 단순하게 filter를 쓸 수 있지만, 여기서는 pos를 정확히 계산하기 위해
-                    // tr.delete를 사용하되, multiple nodes의 경우 pos 관리가 필요함.
-                    // Tiptap에서는 간단히 editor.commands.deleteNode()를 루프에서 쓰는 방식도 있음.
+                // 2. 에디터 본문 내의 해당 파일 노드들 자동 제거 (뒤에서부터 삭제해야 인덱스가 깨지지 않음)
+                if (props.editor) {
+                    props.editor.commands.command(({ tr, state }) => {
+                        const positions: number[] = [];
+                        state.doc.descendants((node, pos) => {
+                            if (node.type.name === 'attachment' && node.attrs.fileId === file.flMngNo) {
+                                positions.push(pos);
+                            }
+                        });
+                        positions.reverse().forEach(pos => {
+                            tr.delete(pos, pos + 1);
+                        });
+                        return true;
+                    });
                 }
-            });
-
-            // 가장 안전한 방식: editor.commands를 활용한 필터링 삭제
-            props.editor.commands.command(({ tr, state, dispatch }) => {
-                const positions: number[] = [];
-                state.doc.descendants((node, pos) => {
-                    if (node.type.name === 'attachment' && node.attrs.fileId === file.flMngNo) {
-                        positions.push(pos);
-                    }
-                });
-
-                // 뒤에서부터 지워야 인덱스가 깨지지 않음
-                positions.reverse().forEach(pos => {
-                    tr.delete(pos, pos + 1);
-                });
-                return true;
-            });
+            } catch (e) {
+                console.error('[TiptapToolbar] 파일 삭제 실패:', e);
+                toast.add({ severity: 'error', summary: '삭제 실패', detail: '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
+            }
         }
-    } catch (e) {
-        console.error('[TiptapToolbar] 파일 삭제 실패:', e);
-        alert('파일 삭제 중 오류가 발생했습니다.');
-    }
+    });
 };
 
 // ── LaTeX 수식 삽입 (FR-07) ──
@@ -399,11 +384,11 @@ const confirmDeleteAttachment = async (file: AttachmentItem) => {
 const mathMenuVisible = ref(false);
 
 /** 수식 메뉴 외부 클릭 시 닫기 */
-const _onClickOutsideMathMenu = (e: MouseEvent) => {
+const onClickOutsideMathMenu = () => {
     mathMenuVisible.value = false;
 };
-onMounted(() => document.addEventListener('click', _onClickOutsideMathMenu));
-onUnmounted(() => document.removeEventListener('click', _onClickOutsideMathMenu));
+onMounted(() => document.addEventListener('click', onClickOutsideMathMenu));
+onUnmounted(() => document.removeEventListener('click', onClickOutsideMathMenu));
 
 /**
  * 인라인 수식 삽입

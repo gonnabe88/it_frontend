@@ -208,3 +208,22 @@ export const COST_STAGES = [
  * @param status - 전산업무비 상태 문자열 (Cost.costSts)
  */
 export const getCostTagClass = (status: string) => STATUS_TAG_CLASS_MAP[status] ?? 'kdb-tag-gray';
+
+/**
+ * 파일 크기를 사람이 읽기 쉬운 단위로 변환
+ * @param bytes - 파일 크기 (바이트). null/undefined는 빈 문자열 반환.
+ * @returns '1.2 KB', '3.5 MB' 형태의 문자열 (0 bytes → '0 B')
+ *
+ * @example
+ * formatFileSize(0)        // → '0 B'
+ * formatFileSize(1536)     // → '1.5 KB'
+ * formatFileSize(1572864)  // → '1.5 MB'
+ */
+export const formatFileSize = (bytes: number | null | undefined): string => {
+    if (bytes == null) return '';
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};

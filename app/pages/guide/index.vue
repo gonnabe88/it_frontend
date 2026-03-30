@@ -282,11 +282,9 @@ const onSave = async () => {
                 docCone: editContent.value
             });
 
-            // 에디터 내 이미지·첨부파일의 orcPkVl을 실제 docMngNo로 업데이트
+            // 에디터 내 이미지·첨부파일의 orcPkVl을 실제 docMngNo로 병렬 업데이트
             const allPendingIds = [...pendingImageIds.value, ...pendingFileIds.value];
-            for (const flMngNo of allPendingIds) {
-                await updateFileMeta(flMngNo, { orcPkVl: newDocMngNo });
-            }
+            await Promise.all(allPendingIds.map(flMngNo => updateFileMeta(flMngNo, { orcPkVl: newDocMngNo })));
 
             toast.add({ severity: 'success', summary: '저장 완료', detail: '가이드가 등록되었습니다.', life: 3000 });
         }
@@ -383,38 +381,24 @@ const scrollTo = (id: string) => {
 
 /* ── IntersectionObserver: 스크롤 시 목차 활성화 동기화 ── */
 let observer: IntersectionObserver | null = null;
-const observerElements = ref<Set<Element>>(new Set());
+let observerElements = new Set<Element>();
 
 // DOM 렌더링 후 h1~h6 요소를 추적하도록 목차 변경 시마다 갱신
 watch(rawToc, async () => {
     await nextTick();
     if (observer) {
-        observerElements.value.forEach(el => observer?.unobserve(el));
-        observerElements.value.clear();
+        observerElements.forEach(el => observer?.unobserve(el));
+        observerElements.clear();
     }
 
     rawToc.value.forEach(item => {
         const el = document.getElementById(item.id);
         if (el) {
             observer?.observe(el);
-            observerElements.value.add(el);
+            observerElements.add(el);
         }
     });
 }, { deep: true });
-
-onMounted(() => {
-    observer = new IntersectionObserver(
-        (entries) => {
-            // 화면에 보이는 헤딩 중 첫 번째를 활성 섹션으로 지정
-            const visibleEntries = entries.filter(e => e.isIntersecting);
-            if (visibleEntries.length > 0) {
-                const id = visibleEntries[0]?.target?.id;
-                if (id) activeSection.value = id;
-            }
-        },
-        { rootMargin: '-10% 0px -80% 0px' }
-    );
-});
 
 /* ── 전체 화면 모드 (Fullscreen) ── */
 const isFullscreen = ref(false);
@@ -430,20 +414,30 @@ const handleKeydown = (e: KeyboardEvent) => {
 };
 
 onMounted(() => {
-    // Intersection Observer 연결
-    const headings = document.querySelectorAll('.guide-doc h1, .guide-doc h2, .guide-doc h3, .guide-doc h4');
-    headings.forEach(h => observer?.observe(h));
+    observer = new IntersectionObserver(
+        (entries) => {
+            // 화면에 보이는 헤딩 중 첫 번째를 활성 섹션으로 지정
+            const visibleEntries = entries.filter(e => e.isIntersecting);
+            if (visibleEntries.length > 0) {
+                const id = visibleEntries[0]?.target?.id;
+                if (id) activeSection.value = id;
+            }
+        },
+        { rootMargin: '-10% 0px -80% 0px' }
+    );
 
-    if (typeof window !== 'undefined') {
-        window.addEventListener('keydown', handleKeydown);
-    }
+    // 초기 렌더링된 헤딩 관찰 시작 (watch(rawToc)이 이후 변경을 처리)
+    document.querySelectorAll('.guide-doc h1, .guide-doc h2, .guide-doc h3, .guide-doc h4').forEach(h => {
+        observer?.observe(h);
+        observerElements.add(h);
+    });
+
+    window.addEventListener('keydown', handleKeydown);
 });
 
 onUnmounted(() => {
     if (observer) observer.disconnect();
-    if (typeof window !== 'undefined') {
-        window.removeEventListener('keydown', handleKeydown);
-    }
+    window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
