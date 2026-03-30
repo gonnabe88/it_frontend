@@ -28,6 +28,9 @@ import Image from '@tiptap/extension-image';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import Heading from '@tiptap/extension-heading';
 import type { Editor } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { TableMap } from '@tiptap/pm/tables';
 import ResizableImageNodeViewComponent from '../ResizableImageNodeView.vue';
 import ExcalidrawNodeViewComponent from '../ExcalidrawNodeView.vue';
 import AttachmentNodeViewComponent from '../AttachmentNodeView.vue';
@@ -192,6 +195,221 @@ export const ExcalidrawExtension = TiptapNode.create({
     }
 });
 
+/**
+ * ── RowResizing Plugin ──
+ * 모든 표 셀(td, th) 하단에 리사이즈 핸들을 추가하고, 
+ * 드래그를 통해 해당 행의 모든 셀의 높이를 조절합니다.
+ */
+const RowResizingPluginKey = new PluginKey('row-resizing');
+
+export const RowResizingPlugin = () => {
+    let dragging: {
+        tablePos: number;
+        startRow: number;
+        endRow: number;
+        startY: number;
+        startHeight: number;
+        cellNodes: { pos: number; node: any }[];
+    } | null = null;
+
+    return new Plugin({
+        key: RowResizingPluginKey,
+        state: {
+            init() { return DecorationSet.empty; },
+            apply(tr, set) {
+                const decorations: Decoration[] = [];
+                tr.doc.descendants((node, pos) => {
+                    if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+                        decorations.push(
+                            Decoration.widget(pos + node.nodeSize - 1, () => {
+                                const handle = document.createElement('div');
+                                handle.className = 'row-resize-handle';
+                                return handle;
+                            }, { side: -1 })
+                        );
+                    }
+                });
+                return DecorationSet.create(tr.doc, decorations);
+            }
+        },
+        props: {
+            decorations(state) { return this.getState(state); },
+            handleDOMEvents: {
+                /**
+                 * 드래그 중 ProseMirror의 내부 mousemove 처리(텍스트 선택 등)를 차단합니다.
+                 * 이를 통해 ProseMirror가 상태 업데이트를 발생시켜 TD의 인라인 스타일을
+                 * 덮어쓰는 것을 방지합니다. (열 너비 리사이징은 <col> 요소를 사용하여
+                 * ProseMirror와 충돌이 없지만, 행 높이는 <td> 요소에 직접 적용하므로 필수)
+                 */
+                mousemove(_view, _event) {
+                    if (dragging) return true; // ProseMirror 내부 처리 차단
+                    return false;
+                },
+                mouseup(_view, _event) {
+                    if (dragging) return true; // ProseMirror 내부 처리 차단
+                    return false;
+                },
+                mousedown(view, event) {
+                    const target = event.target as HTMLElement;
+                    if (!target.classList.contains('row-resize-handle')) return false;
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    // ── DOM 탐색: event.target에서 순수 DOM으로 셀/행/테이블 찾기 ──
+                    // ProseMirror의 view.nodeDOM() 대신 순수 DOM 탐색을 사용하여
+                    // ProseMirror의 DOM 추적과 완전히 분리합니다.
+                    const cellDOM = target.closest('td, th') as HTMLElement;
+                    if (!cellDOM) return false;
+                    const trDOM = cellDOM.closest('tr') as HTMLTableRowElement;
+                    if (!trDOM) return false;
+                    const tableDOM = cellDOM.closest('table') as HTMLTableElement;
+                    if (!tableDOM) return false;
+
+                    // ProseMirror 위치 정보 (mouseup 시 트랜잭션에 필요)
+                    const pos = view.posAtDOM(cellDOM, 0);
+                    const $pos = view.state.doc.resolve(pos);
+
+                    let cellNode = null, cellPos = -1;
+                    for (let d = $pos.depth; d > 0; d--) {
+                        if ($pos.node(d).type.name === 'tableCell' || $pos.node(d).type.name === 'tableHeader') {
+                            cellNode = $pos.node(d); cellPos = $pos.before(d); break;
+                        }
+                    }
+                    if (!cellNode || cellPos === -1) return false;
+
+                    let tableNode = null, tablePos = -1;
+                    for (let d = $pos.depth; d > 0; d--) {
+                        if ($pos.node(d).type.name === 'table') {
+                            tableNode = $pos.node(d); tablePos = $pos.before(d); break;
+                        }
+                    }
+                    if (!tableNode || tablePos === -1) return false;
+
+                    const map = TableMap.get(tableNode);
+                    const tableContentStart = tablePos + 1;
+                    const rect = map.findCell(cellPos - tableContentStart);
+
+                    // mouseup 시 트랜잭션을 위한 ProseMirror 노드 정보 수집
+                    const cellNodes: { pos: number; node: any }[] = [];
+                    const _m = map.map, _w = map.width;
+                    for (let r = rect.top; r < rect.bottom; r++) {
+                        for (let c = 0; c < _w; c++) {
+                            const cp = _m[r * _w + c];
+                            if (cp == null) continue;
+                            const cNode = tableNode.nodeAt(cp);
+                            if (cNode) {
+                                const absolutePos = tableContentStart + cp;
+                                if (!cellNodes.find(n => n.pos === absolutePos)) {
+                                    cellNodes.push({ pos: absolutePos, node: cNode });
+                                }
+                            }
+                        }
+                    }
+
+                    // ── 실시간 피드백: 순수 DOM 참조 캐싱 ──
+                    const startHeight = cellDOM.offsetHeight;
+                    // 같은 행의 모든 td/th DOM 참조 (순수 DOM 탐색)
+                    const cachedCellDOMs = Array.from(trDOM.querySelectorAll<HTMLElement>('td, th'));
+
+                    // 동적 <style> 태그를 사용하여 ProseMirror의 인라인 스타일 덮어쓰기를 방지
+                    const resizeStyleId = 'row-resize-active-style';
+                    let styleEl = document.getElementById(resizeStyleId) as HTMLStyleElement | null;
+                    if (!styleEl) {
+                        styleEl = document.createElement('style');
+                        styleEl.id = resizeStyleId;
+                        document.head.appendChild(styleEl);
+                    }
+
+                    dragging = { tablePos, startRow: rect.top, endRow: rect.bottom, startY: event.clientY, startHeight, cellNodes };
+                    document.body.classList.add('is-resizing-row');
+                    // 리사이징 중인 행을 CSS로 타겟팅하기 위한 식별자 추가
+                    trDOM.setAttribute('data-row-resizing', 'true');
+
+                    // ── 드래그 가이드 라인 생성 ──
+                    // position: fixed로 뷰포트 기준 위치를 사용하여 스크롤·overflow 영향을 받지 않습니다.
+                    const tableRect = tableDOM.getBoundingClientRect();
+                    const lineEl = document.createElement('div');
+                    lineEl.style.cssText = [
+                        'position: fixed',
+                        `left: ${tableRect.left}px`,
+                        `width: ${tableRect.width}px`,
+                        `top: ${event.clientY}px`,
+                        'height: 2px',
+                        'background-color: #6366f1',
+                        'z-index: 9999',
+                        'pointer-events: none',
+                        'opacity: 0.8',
+                    ].join('; ');
+                    document.body.appendChild(lineEl);
+
+                    const onMouseMove = (moveEvent: MouseEvent) => {
+                        if (!dragging) return;
+                        const diff = moveEvent.clientY - dragging.startY;
+                        const newHeight = Math.max(25, dragging.startHeight + diff);
+                        const heightPx = `${newHeight}px`;
+
+                        // 가이드 라인을 마우스 Y 위치에 맞춰 이동
+                        lineEl.style.top = `${moveEvent.clientY}px`;
+
+                        // 직접 DOM 스타일 설정 (PM 재조정이 없는 경우 즉각 반영)
+                        trDOM.style.height = heightPx;
+                        for (const el of cachedCellDOMs) {
+                            el.style.height = heightPx;
+                        }
+
+                        // !important CSS 규칙으로 ProseMirror DOM 재조정 시 인라인 스타일 덮어쓰기 차단
+                        // ProseMirror가 td의 inline style을 재설정해도 !important 규칙이 시각적 높이를 유지합니다.
+                        if (styleEl) {
+                            styleEl.textContent = `
+                                body.is-resizing-row tr[data-row-resizing] > td,
+                                body.is-resizing-row tr[data-row-resizing] > th {
+                                    height: ${heightPx} !important;
+                                    min-height: ${heightPx} !important;
+                                    transition: none !important;
+                                }
+                            `;
+                        }
+                    };
+
+                    const onMouseUp = (upEvent: MouseEvent) => {
+                        document.body.classList.remove('is-resizing-row');
+
+                        // 가이드 라인 제거
+                        lineEl.remove();
+
+                        if (dragging) {
+                            const finalDiff = upEvent.clientY - dragging.startY;
+                            const finalHeight = Math.max(25, dragging.startHeight + finalDiff);
+
+                            // ProseMirror 트랜잭션으로 최종 높이를 모델에 영구 반영
+                            const tr = view.state.tr;
+                            dragging.cellNodes.forEach(({ pos: cPos, node: cNode }) => {
+                                tr.setNodeMarkup(cPos, null, { ...cNode.attrs, minHeight: `${finalHeight}px` });
+                            });
+                            view.dispatch(tr.setMeta('addToHistory', true));
+                        }
+
+                        // dispatch 완료 후 동적 스타일·data 속성 제거 (PM 재렌더링이 인라인 스타일을 확정한 뒤 안전하게 제거)
+                        trDOM.removeAttribute('data-row-resizing');
+                        if (styleEl && styleEl.parentNode) {
+                            styleEl.parentNode.removeChild(styleEl);
+                        }
+
+                        dragging = null;
+                        window.removeEventListener('mousemove', onMouseMove);
+                        window.removeEventListener('mouseup', onMouseUp);
+                    };
+
+                    window.addEventListener('mousemove', onMouseMove);
+                    window.addEventListener('mouseup', onMouseUp);
+                    return true;
+                }
+            }
+        }
+    });
+};
+
 // ── CustomTable ──
 // 표 전체 너비(width) + 레이아웃(tableLayout) 속성 영구 저장 지원
 export const CustomTable = Table.extend({
@@ -200,14 +418,21 @@ export const CustomTable = Table.extend({
             ...this.parent?.(),
             /**
              * 표 전체 너비 (예: "450px", "100%")
-             * renderHTML: style 속성으로 직렬화되어 HTML에 저장됩니다.
+             * Tiptap의 NodeView가 스타일 변화를 즉시 감지할 수 있도록 
+             * 이 속성에서 table-layout 스타일까지 함께 병합하여 렌더링합니다.
              */
             width: {
                 default: null,
                 parseHTML: (element) => element.style.width || null,
                 renderHTML: (attributes) => {
-                    if (!attributes.width) return {};
-                    return { style: `width: ${attributes.width}` };
+                    const styles: string[] = [];
+                    if (attributes.width) styles.push(`width: ${attributes.width}`);
+                    if (attributes.tableLayout) styles.push(`table-layout: ${attributes.tableLayout}`);
+
+                    return {
+                        'data-width': attributes.width,
+                        style: styles.length > 0 ? styles.join('; ') : null
+                    };
                 }
             },
             /**
@@ -219,13 +444,41 @@ export const CustomTable = Table.extend({
                 default: 'fixed',
                 parseHTML: (element) => element.getAttribute('data-table-layout') || 'fixed',
                 renderHTML: (attributes) => {
-                    return {
-                        'data-table-layout': attributes.tableLayout ?? 'fixed',
-                        style: `table-layout: ${attributes.tableLayout ?? 'fixed'}`
-                    };
+                    return { 'data-table-layout': attributes.tableLayout ?? 'fixed' };
                 }
             }
         };
+    },
+
+    /**
+     * 표 노드 렌더링 오버라이드
+     * width와 tableLayout 속성을 병합하여 하나의 style 어트리뷰트로 출력합니다.
+     * Tiptap의 mergeAttributes는 동일 키(style)를 덮어쓰기 때문에 여기서 통합 관리가 필요합니다.
+     */
+    renderHTML({ node, HTMLAttributes }) {
+        const { width, tableLayout } = node.attrs;
+        const styles: string[] = [];
+        if (width) styles.push(`width: ${width}`);
+        if (tableLayout) styles.push(`table-layout: ${tableLayout}`);
+
+        return [
+            'div',
+            { class: 'tableWrapper' },
+            [
+                'table',
+                mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+                    style: styles.length > 0 ? styles.join('; ') : null
+                }),
+                ['tbody', 0]
+            ]
+        ];
+    },
+
+    addProseMirrorPlugins() {
+        return [
+            ...(this.parent?.() || []),
+            RowResizingPlugin(),
+        ];
     }
 });
 
@@ -261,27 +514,178 @@ export const CustomTableCell = TableCell.extend({
             },
             /**
              * 테두리 스타일 (FR-06-2)
-             * 값: 'solid' | 'dashed' | 'double' | null(없음)
-             * data-border-style 어트리뷰트로 저장 → CSS selector로 스타일 적용
+             * 값: 'solid' | 'dashed' | 'dotted' | 'double' | null(없음)
              */
             borderStyle: {
                 default: null,
-                parseHTML: (element) => element.getAttribute('data-border-style') || null,
+                parseHTML: (element) => element.style.borderStyle || null,
                 renderHTML: (attributes) => {
                     if (!attributes.borderStyle) return {};
-                    return { 'data-border-style': attributes.borderStyle };
+                    return { style: `border-style: ${attributes.borderStyle}` };
+                }
+            },
+            /**
+             * 테두리 두께 (FR-06-2 개선)
+             * 값: '1px', '2px' 등
+             */
+            borderWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderWidth) return {};
+                    return { style: `border-width: ${attributes.borderWidth}` };
+                }
+            },
+            /**
+             * 테두리 색상 (FR-06-2 개선)
+             * 값: Hex 코드 (예: '#000000')
+             */
+            borderColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderColor) return {};
+                    return { style: `border-color: ${attributes.borderColor}` };
+                }
+            },
+            /* ── 개별 방향 테두리 (상/하/좌/우) ── */
+            borderTopStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderTopStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderTopStyle) return {};
+                    return { style: `border-top-style: ${attributes.borderTopStyle}` };
+                }
+            },
+            borderTopWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderTopWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderTopWidth) return {};
+                    return { style: `border-top-width: ${attributes.borderTopWidth}` };
+                }
+            },
+            borderTopColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderTopColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderTopColor) return {};
+                    return { style: `border-top-color: ${attributes.borderTopColor}` };
+                }
+            },
+            borderRightStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderRightStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderRightStyle) return {};
+                    return { style: `border-right-style: ${attributes.borderRightStyle}` };
+                }
+            },
+            borderRightWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderRightWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderRightWidth) return {};
+                    return { style: `border-right-width: ${attributes.borderRightWidth}` };
+                }
+            },
+            borderRightColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderRightColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderRightColor) return {};
+                    return { style: `border-right-color: ${attributes.borderRightColor}` };
+                }
+            },
+            borderBottomStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderBottomStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderBottomStyle) return {};
+                    return { style: `border-bottom-style: ${attributes.borderBottomStyle}` };
+                }
+            },
+            borderBottomWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderBottomWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderBottomWidth) return {};
+                    return { style: `border-bottom-width: ${attributes.borderBottomWidth}` };
+                }
+            },
+            borderBottomColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderBottomColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderBottomColor) return {};
+                    return { style: `border-bottom-color: ${attributes.borderBottomColor}` };
+                }
+            },
+            borderLeftStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderLeftStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderLeftStyle) return {};
+                    return { style: `border-left-style: ${attributes.borderLeftStyle}` };
+                }
+            },
+            borderLeftWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderLeftWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderLeftWidth) return {};
+                    return { style: `border-left-width: ${attributes.borderLeftWidth}` };
+                }
+            },
+            borderLeftColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderLeftColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderLeftColor) return {};
+                    return { style: `border-left-color: ${attributes.borderLeftColor}` };
                 }
             },
             /**
              * 셀 최소 높이 (FR-06-5)
              * 값: CSS 길이 문자열 (예: '60px') or null
+             * 표 셀에서는 'height'가 실질적인 최소 높이 역할을 하므로 height로 렌더링합니다.
              */
             minHeight: {
                 default: null,
-                parseHTML: (element) => element.style.minHeight || null,
+                parseHTML: (element) => element.style.height || element.style.minHeight || null,
                 renderHTML: (attributes) => {
                     if (!attributes.minHeight) return {};
-                    return { style: `min-height: ${attributes.minHeight}` };
+                    return { style: `height: ${attributes.minHeight}` };
+                }
+            },
+            /**
+             * 열 너비 (부모 TableCell 속성 오버라이드)
+             * TipTap은 colwidth 값을 <colgroup><col> 요소로만 DOM에 반영하므로
+             * getHTML() 출력에는 CSS width가 포함되지 않습니다.
+             * v-html(DOMPurify) 환경에서는 비표준 colwidth 속성이 제거되어 너비가 손실됩니다.
+             * → renderHTML에서 style="width: Xpx"를 함께 출력하여 v-html 조회 시에도 너비 유지.
+             */
+            colwidth: {
+                default: null,
+                parseHTML: (element) => {
+                    // 1순위: TipTap 표준 colwidth 속성
+                    const colwidthAttr = element.getAttribute('colwidth');
+                    if (colwidthAttr) {
+                        const widths = colwidthAttr.split(',').map(Number).filter((w: number) => w > 0);
+                        if (widths.length) return widths;
+                    }
+                    // 2순위: DOMPurify가 colwidth를 제거한 경우 style.width에서 복원
+                    const styleWidth = parseInt(element.style.width, 10);
+                    if (styleWidth > 0) return [styleWidth];
+                    return null;
+                },
+                renderHTML: (attributes) => {
+                    if (!Array.isArray(attributes.colwidth) || !attributes.colwidth.length) return {};
+                    const totalWidth = (attributes.colwidth as number[]).reduce((s: number, w: number) => s + (w || 0), 0);
+                    // colwidth 속성(TipTap 내부용) + style width(v-html/브라우저 렌더링용) 동시 출력
+                    return totalWidth > 0
+                        ? { colwidth: (attributes.colwidth as number[]).join(','), style: `width: ${totalWidth}px` }
+                        : { colwidth: (attributes.colwidth as number[]).join(',') };
                 }
             }
         };
@@ -315,19 +719,155 @@ export const CustomTableHeader = TableHeader.extend({
             /** 테두리 스타일 (FR-06-2) */
             borderStyle: {
                 default: null,
-                parseHTML: (element) => element.getAttribute('data-border-style') || null,
+                parseHTML: (element) => element.style.borderStyle || null,
                 renderHTML: (attributes) => {
                     if (!attributes.borderStyle) return {};
-                    return { 'data-border-style': attributes.borderStyle };
+                    return { style: `border-style: ${attributes.borderStyle}` };
+                }
+            },
+            /** 테두리 두께 (FR-06-2 개선) */
+            borderWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderWidth) return {};
+                    return { style: `border-width: ${attributes.borderWidth}` };
+                }
+            },
+            /** 테두리 색상 (FR-06-2 개선) */
+            borderColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderColor) return {};
+                    return { style: `border-color: ${attributes.borderColor}` };
+                }
+            },
+            /* ── 개별 방향 테두리 (상/하/좌/우) ── */
+            borderTopStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderTopStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderTopStyle) return {};
+                    return { style: `border-top-style: ${attributes.borderTopStyle}` };
+                }
+            },
+            borderTopWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderTopWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderTopWidth) return {};
+                    return { style: `border-top-width: ${attributes.borderTopWidth}` };
+                }
+            },
+            borderTopColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderTopColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderTopColor) return {};
+                    return { style: `border-top-color: ${attributes.borderTopColor}` };
+                }
+            },
+            borderRightStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderRightStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderRightStyle) return {};
+                    return { style: `border-right-style: ${attributes.borderRightStyle}` };
+                }
+            },
+            borderRightWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderRightWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderRightWidth) return {};
+                    return { style: `border-right-width: ${attributes.borderRightWidth}` };
+                }
+            },
+            borderRightColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderRightColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderRightColor) return {};
+                    return { style: `border-right-color: ${attributes.borderRightColor}` };
+                }
+            },
+            borderBottomStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderBottomStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderBottomStyle) return {};
+                    return { style: `border-bottom-style: ${attributes.borderBottomStyle}` };
+                }
+            },
+            borderBottomWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderBottomWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderBottomWidth) return {};
+                    return { style: `border-bottom-width: ${attributes.borderBottomWidth}` };
+                }
+            },
+            borderBottomColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderBottomColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderBottomColor) return {};
+                    return { style: `border-bottom-color: ${attributes.borderBottomColor}` };
+                }
+            },
+            borderLeftStyle: {
+                default: null,
+                parseHTML: (element) => element.style.borderLeftStyle || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderLeftStyle) return {};
+                    return { style: `border-left-style: ${attributes.borderLeftStyle}` };
+                }
+            },
+            borderLeftWidth: {
+                default: null,
+                parseHTML: (element) => element.style.borderLeftWidth || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderLeftWidth) return {};
+                    return { style: `border-left-width: ${attributes.borderLeftWidth}` };
+                }
+            },
+            borderLeftColor: {
+                default: null,
+                parseHTML: (element) => element.style.borderLeftColor || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.borderLeftColor) return {};
+                    return { style: `border-left-color: ${attributes.borderLeftColor}` };
                 }
             },
             /** 셀 최소 높이 (FR-06-5) */
             minHeight: {
                 default: null,
-                parseHTML: (element) => element.style.minHeight || null,
+                parseHTML: (element) => element.style.height || element.style.minHeight || null,
                 renderHTML: (attributes) => {
                     if (!attributes.minHeight) return {};
-                    return { style: `min-height: ${attributes.minHeight}` };
+                    return { style: `height: ${attributes.minHeight}` };
+                }
+            },
+            /** 열 너비 (CustomTableCell과 동일한 오버라이드 — v-html 조회 환경 대응) */
+            colwidth: {
+                default: null,
+                parseHTML: (element) => {
+                    const colwidthAttr = element.getAttribute('colwidth');
+                    if (colwidthAttr) {
+                        const widths = colwidthAttr.split(',').map(Number).filter((w: number) => w > 0);
+                        if (widths.length) return widths;
+                    }
+                    const styleWidth = parseInt(element.style.width, 10);
+                    if (styleWidth > 0) return [styleWidth];
+                    return null;
+                },
+                renderHTML: (attributes) => {
+                    if (!Array.isArray(attributes.colwidth) || !attributes.colwidth.length) return {};
+                    const totalWidth = (attributes.colwidth as number[]).reduce((s: number, w: number) => s + (w || 0), 0);
+                    return totalWidth > 0
+                        ? { colwidth: (attributes.colwidth as number[]).join(','), style: `width: ${totalWidth}px` }
+                        : { colwidth: (attributes.colwidth as number[]).join(',') };
                 }
             }
         };

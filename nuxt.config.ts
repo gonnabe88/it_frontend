@@ -44,7 +44,10 @@ export default defineNuxtConfig({
   },
   hooks: {
     ready() { // 'modules:done'보다 더 이른 시점인 'ready' 권장
-      const editorPath = 'C:\\Users\\gonna\\AppData\\Local\\Programs\\Antigravity\\code.exe';
+      /* 파워쉘에서 다음의 명령어로 심볼릭 링크를 생성해야 함
+      New-Item -ItemType SymbolicLink -Path "$env:LocalAppData\Programs\Antigravity\code.exe" -Target "$env:LocalAppData\Programs\Antigravity\Antigravity.exe"
+      */
+      const editorPath = '%LocalAppData%\\Programs\\Antigravity\\code.exe';
 
       // launch-editor가 참조하는 기본 변수들
       process.env.LAUNCH_EDITOR = editorPath;

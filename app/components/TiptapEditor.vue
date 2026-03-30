@@ -46,6 +46,7 @@ import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import { TableRow } from '@tiptap/extension-table';
+import { TableMap, CellSelection } from '@tiptap/pm/tables';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import CharacterCount from '@tiptap/extension-character-count';
@@ -239,13 +240,12 @@ const editor = useEditor({
         extractTOC(editor);
     },
     onTransaction: () => {
-        // 리사이즈 드래그 중이 아닐 때만 저장된 표 너비를 복원합니다.
-        // Tiptap의 updateColumns()는 매 트랜잭션마다 colwidth 합산으로 table.style.width를 재계산하며,
-        // 일부 셀의 colwidth가 없으면(fixedWidth=false) width를 비워 CSS width:100%가 됩니다.
-        // 드래그 중에는 Tiptap이 실시간으로 너비를 조정하므로 덮어쓰지 않아야 합니다.
-        if (!_isResizingTable) {
-            nextTick(applyTableWidths);
-        }
+        // 매 트랜잭션마다 표 너비를 즉시 복원합니다.
+        // nextTick을 사용하지 않는 이유: 드래그 중 연속 트랜잭션에서 TipTap의 updateColumns()가
+        // 매번 픽셀값을 덮어쓰므로, 마이크로태스크가 아닌 동기 호출로 즉각 반영해야 합니다.
+        // - 반응형(auto): _isResizingTable 무관, 항상 100% 재적용 (applyTableWidths 내부에서 처리)
+        // - 고정형(fixed): applyTableWidths 내부에서 _isResizingTable 중에는 건너뜁니다.
+        applyTableWidths();
     },
     onSelectionUpdate: () => {
         // 선택 영역 변경 시 표 플로팅 툴바 위치 갱신
@@ -405,23 +405,297 @@ const applyCellBgColor = (color: string | null) => {
 
 /** 테두리 스타일 옵션 */
 const BORDER_STYLES = [
-    { value: null,     label: '없음', title: '테두리 없음' },
-    { value: 'solid',  label: '─',   title: '실선' },
-    { value: 'dashed', label: '╌',   title: '점선' },
-    { value: 'double', label: '═',   title: '이중선' },
+    { value: null, label: '없음', title: '테두리 없음' },
+    { value: 'solid', label: '─', title: '실선' },
+    { value: 'dashed', label: '╌', title: '점선' },
+    { value: 'dotted', label: '⋯', title: '도트' },
+    { value: 'double', label: '═', title: '이중선' },
 ] as const;
+
+/** 테두리 두께 옵션 */
+const BORDER_WIDTHS = [
+    { value: '1px', label: '1px' },
+    { value: '2px', label: '2px' },
+    { value: '3px', label: '3px' },
+    { value: '4px', label: '4px' },
+    { value: '5px', label: '5px' },
+] as const;
+
+/** 테두리 설정 팔레트 표시 여부 */
+const borderPaletteVisible = ref(false);
 
 /** 현재 셀의 테두리 스타일 */
 const currentCellBorderStyle = computed<string | null>(() => {
     if (!editor.value?.isActive('table')) return null;
     const attrs = editor.value.getAttributes('tableCell');
     const headerAttrs = editor.value.getAttributes('tableHeader');
-    return attrs.borderStyle || headerAttrs.borderStyle || null;
+    return attrs.borderStyle || headerAttrs.borderStyle || attrs.borderTopStyle || headerAttrs.borderTopStyle || null;
 });
 
-/** 셀 테두리 스타일 적용 */
+// ── 테두리 방향별 상세 설정 (FR-06-2 개편) ──
+
+/** 사용자가 현재 선택 중인(아직 적용 전인) 테두리 속성 */
+const pendingBorderStyle = ref<string | null>('solid');
+const pendingBorderWidth = ref<string | null>('1px');
+const pendingBorderColor = ref<string | null>('#374151');
+
+/** 셀 테두리 방향 버튼 정의 */
+const BORDER_DIRECTIONS = [
+    { value: 'all', label: '전체 테두리', icon: 'M1 1h12v12H1z M1 7h12 M7 1v12' },
+    { value: 'outer', label: '외곽 테두리', icon: 'M1 1h12v12H1z' },
+    { value: 'inner', label: '안쪽 전체', icon: 'M1 7h12 M7 1v12' },
+    { value: 'top', label: '위 테두리', icon: 'M1 1h12' },
+    { value: 'bottom', label: '아래 테두리', icon: 'M1 13h12' },
+    { value: 'left', label: '왼쪽 테두리', icon: 'M1 1v12' },
+    { value: 'right', label: '오른쪽 테두리', icon: 'M13 1v12' },
+    { value: 'inner-h', label: '안쪽 가로', icon: 'M1 7h12' },
+    { value: 'inner-v', label: '안쪽 세로', icon: 'M7 1v12' },
+    { value: 'clear', label: '지우기', icon: 'M2 2l10 10 M12 2L2 12' }
+] as const;
+
+/** 현재 셀의 테두리 두께 */
+const currentCellBorderWidth = computed<string | null>(() => {
+    if (!editor.value?.isActive('table')) return null;
+    const attrs = editor.value.getAttributes('tableCell');
+    const headerAttrs = editor.value.getAttributes('tableHeader');
+    return attrs.borderWidth || headerAttrs.borderWidth || null;
+});
+
+/** 현재 셀의 테두리 색상 */
+const currentCellBorderColor = computed<string | null>(() => {
+    if (!editor.value?.isActive('table')) return null;
+    const attrs = editor.value.getAttributes('tableCell');
+    const headerAttrs = editor.value.getAttributes('tableHeader');
+    return attrs.borderColor || headerAttrs.borderColor || null;
+});
+
+/** 셀 테두리 스타일 선택 (적용 대기) */
 const applyCellBorderStyle = (style: string | null) => {
-    editor.value?.chain().focus().setCellAttribute('borderStyle', style).run();
+    pendingBorderStyle.value = style;
+};
+
+/** 셀 테두리 두께 선택 (적용 대기) */
+const applyCellBorderWidth = (width: string | null) => {
+    pendingBorderWidth.value = width;
+};
+
+const applyCellBorderColor = (color: string | null) => {
+    pendingBorderColor.value = color;
+};
+
+/**
+ * 특정 셀(node)에 지정된 방향(side)의 테두리를 현재 설정값으로 적용합니다.
+ */
+const updateCellSideAttributes = (editor: any, pos: number, side: string, isHeader: boolean) => {
+    const sides = [];
+    if (side === 'all') sides.push('Top', 'Bottom', 'Left', 'Right');
+    else if (side === 'top') sides.push('Top');
+    else if (side === 'bottom') sides.push('Bottom');
+    else if (side === 'left') sides.push('Left');
+    else if (side === 'right') sides.push('Right');
+
+    const attrs: any = {};
+    const type = isHeader ? 'tableHeader' : 'tableCell';
+
+    sides.forEach(s => {
+        attrs[`border${s}Style`] = pendingBorderStyle.value;
+        attrs[`border${s}Width`] = pendingBorderWidth.value;
+        attrs[`border${s}Color`] = pendingBorderColor.value;
+    });
+
+    // 팁탭의 기본 setCellAttribute 대신 직접 tr을 조작하여 여러 속성을 한 번에 저장합니다.
+    editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, null, {
+        ...(editor.state.doc.nodeAt(pos)?.attrs || {}),
+        ...attrs
+    }));
+};
+
+/**
+ * 테두리 방향 버튼 클릭 시 실행되는 메인 로직
+ */
+const applySideBorder = (side: string) => {
+    if (!editor.value) return;
+    const { state, view } = editor.value;
+    const { selection } = state;
+    const tr = state.tr;
+    let modified = false;
+
+    // 1. 셀 선택 방식 판별 (전용 CellSelection 인스턴스 또는 유사 객체인 경우)
+    const isCellSelection = typeof (selection as any).forEachCell === 'function';
+
+    if (!isCellSelection) {
+        // 단일 셀에 커서만 있는 경우 (NodeSelection 또는 TextSelection)
+        let pos = -1;
+        state.doc.nodesBetween(selection.from, selection.to, (node, p) => {
+            if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+                pos = p;
+                return false;
+            }
+        });
+
+        if (pos !== -1) {
+            const node = state.doc.nodeAt(pos);
+            if (node) {
+                const sides = [];
+                // 단일 셀에서는 '전체(all)', '외곽(outer)', '정리(clear)' 모두 4방향에 해당함
+                if (['all', 'outer', 'clear'].includes(side)) {
+                    sides.push('Top', 'Bottom', 'Left', 'Right');
+                } else if (['top', 'bottom', 'left', 'right'].includes(side)) {
+                    // 상하좌우 개별 방향
+                    sides.push(side.charAt(0).toUpperCase() + side.slice(1));
+                }
+
+                if (sides.length > 0) {
+                    const attrs: any = {};
+                    sides.forEach(s => {
+                        attrs[`border${s}Style`] = side === 'clear' ? null : pendingBorderStyle.value;
+                        attrs[`border${s}Width`] = side === 'clear' ? null : pendingBorderWidth.value;
+                        attrs[`border${s}Color`] = side === 'clear' ? null : pendingBorderColor.value;
+                    });
+                    tr.setNodeMarkup(pos, null, { ...node.attrs, ...attrs });
+                    modified = true;
+                }
+            }
+        }
+    } else {
+        // 2. 복수 셀이 선택된 경우 (CellSelection 계열)
+        const sel = selection as any;
+
+        // 테이블 노드와 시작 위치 찾기 ($anchorCell 기준)
+        const $anchorCell = state.doc.resolve(sel.$anchorCell.pos);
+        let tableNode = null;
+        let tableStart = -1;
+        for (let d = $anchorCell.depth; d >= 0; d--) {
+            const n = $anchorCell.node(d);
+            if (n.type.name === 'table') {
+                tableNode = n;
+                tableStart = $anchorCell.before(d);
+                break;
+            }
+        }
+
+        if (!tableNode) return;
+
+        const map = TableMap.get(tableNode);
+        if (!map || !map.map) return;
+        const tableContentStart = tableStart + 1;
+
+        // 선택 범위(Bounds) 계산
+        const anchorRect = map.findCell(sel.$anchorCell.pos - tableContentStart);
+        const headRect = map.findCell(sel.$headCell.pos - tableContentStart);
+        const minRow = Math.min(anchorRect.top, headRect.top);
+        const maxRow = Math.max(anchorRect.bottom, headRect.bottom) - 1;
+        const minCol = Math.min(anchorRect.left, headRect.left);
+        const maxCol = Math.max(anchorRect.right, headRect.right) - 1;
+
+        // 업데이트할 셀들의 위치와 속성을 수집 (pos -> attrs)
+        const cellUpdates = new Map<number, any>();
+
+        /** 인접 셀 위치 찾기 및 업데이트 목록 추가 함수 */
+        const addNeighborUpdate = (nPos: number, nSide: string, isDeleting: boolean) => {
+            const nNode = state.doc.nodeAt(nPos);
+            if (!nNode) return;
+            const nAttrs = cellUpdates.get(nPos) || { ...nNode.attrs };
+            nAttrs[`border${nSide}Style`] = isDeleting ? null : pendingBorderStyle.value;
+            nAttrs[`border${nSide}Width`] = isDeleting ? null : pendingBorderWidth.value;
+            nAttrs[`border${nSide}Color`] = isDeleting ? null : pendingBorderColor.value;
+            cellUpdates.set(nPos, nAttrs);
+        };
+
+        sel.forEachCell((node: any, pos: number) => {
+            if (!map || !map.map) return;
+            const pmMap = map.map as number[];
+            const pmWidth = map.width as number;
+            const pmHeight = map.height as number;
+            const rect = map.findCell(pos - tableContentStart);
+            if (!rect) return;
+            let sidesToUpdate: string[] = [];
+            const isDeleting = side === 'clear';
+
+            if (side === 'all') {
+                sidesToUpdate = ['Top', 'Bottom', 'Left', 'Right'];
+            } else if (isDeleting) {
+                sidesToUpdate = ['Top', 'Bottom', 'Left', 'Right'];
+            } else {
+                // 방향별(outer, inner, top 등) 로직
+                if (side === 'outer') {
+                    if (rect.top === minRow) sidesToUpdate.push('Top');
+                    if (rect.bottom - 1 === maxRow) sidesToUpdate.push('Bottom');
+                    if (rect.left === minCol) sidesToUpdate.push('Left');
+                    if (rect.right - 1 === maxCol) sidesToUpdate.push('Right');
+                } else if (side === 'inner') {
+                    if (rect.top > minRow) sidesToUpdate.push('Top');
+                    if (rect.bottom - 1 < maxRow) sidesToUpdate.push('Bottom');
+                    if (rect.left > minCol) sidesToUpdate.push('Left');
+                    if (rect.right - 1 < maxCol) sidesToUpdate.push('Right');
+                } else if (side === 'inner-h') {
+                    if (rect.top > minRow) sidesToUpdate.push('Top');
+                    if (rect.bottom - 1 < maxRow) sidesToUpdate.push('Bottom');
+                } else if (side === 'inner-v') {
+                    if (rect.left > minCol) sidesToUpdate.push('Left');
+                    if (rect.right - 1 < maxCol) sidesToUpdate.push('Right');
+                } else if (side === 'top' && rect.top === minRow) {
+                    sidesToUpdate.push('Top');
+                } else if (side === 'bottom' && rect.bottom - 1 === maxRow) {
+                    sidesToUpdate.push('Bottom');
+                } else if (side === 'left' && rect.left === minCol) {
+                    sidesToUpdate.push('Left');
+                } else if (side === 'right' && rect.right - 1 === maxCol) {
+                    sidesToUpdate.push('Right');
+                }
+            }
+
+            if (sidesToUpdate.length > 0) {
+                const attrs = cellUpdates.get(pos) || { ...node.attrs };
+                sidesToUpdate.forEach(s => {
+                    attrs[`border${s}Style`] = isDeleting ? null : pendingBorderStyle.value;
+                    attrs[`border${s}Width`] = isDeleting ? null : pendingBorderWidth.value;
+                    attrs[`border${s}Color`] = isDeleting ? null : pendingBorderColor.value;
+
+                    // ── 인접 셀 미러링 (Mirroring) ──
+                    // pmMap/pmWidth/pmHeight는 상단에서 이미 null 체크를 통과한 값입니다.
+                    const _m = pmMap!;
+                    const _w = pmWidth!;
+                    const _h = pmHeight!;
+                    if (s === 'Top' && rect.top > 0 && rect.top === minRow) {
+                        for (let c = rect.left; c < rect.right; c++) {
+                            const idx = (rect.top - 1) * _w + c;
+                            if (_m[idx] != null) addNeighborUpdate(_m[idx] + tableContentStart, 'Bottom', isDeleting);
+                        }
+                    } else if (s === 'Bottom' && rect.bottom < _h && rect.bottom - 1 === maxRow) {
+                        for (let c = rect.left; c < rect.right; c++) {
+                            const idx = rect.bottom * _w + c;
+                            if (_m[idx] != null) addNeighborUpdate(_m[idx] + tableContentStart, 'Top', isDeleting);
+                        }
+                    } else if (s === 'Left' && rect.left > 0 && rect.left === minCol) {
+                        for (let r = rect.top; r < rect.bottom; r++) {
+                            const idx = r * _w + (rect.left - 1);
+                            if (_m[idx] != null) addNeighborUpdate(_m[idx] + tableContentStart, 'Right', isDeleting);
+                        }
+                    } else if (s === 'Right' && rect.right < _w && rect.right - 1 === maxCol) {
+                        for (let r = rect.top; r < rect.bottom; r++) {
+                            const idx = r * _w + rect.right;
+                            if (_m[idx] != null) addNeighborUpdate(_m[idx] + tableContentStart, 'Left', isDeleting);
+                        }
+                    }
+                });
+                cellUpdates.set(pos, attrs);
+                modified = true;
+            } else if (isDeleting) {
+                // Clear 시에는 4방향 모두 지우고 인접 셀도 정리 시도 가능하지만 
+                // 안전을 위해 선택된 셀만 지워도 됨. (위에서 all-sides sidesToUpdate로 처리됨)
+            }
+        });
+
+        // 수집된 모든 업데이트 적용
+        cellUpdates.forEach((attrs, pos) => {
+            tr.setNodeMarkup(pos, null, attrs);
+        });
+    }
+
+    if (modified) {
+        view.dispatch(tr);
+    }
 };
 
 // ── 테이블 레이아웃 (FR-06-4) ──
@@ -434,8 +708,89 @@ const currentTableLayout = computed<string>(() => {
 
 /** 테이블 레이아웃 토글 (fixed ↔ auto) */
 const toggleTableLayout = () => {
-    const next = currentTableLayout.value === 'fixed' ? 'auto' : 'fixed';
-    editor.value?.chain().focus().updateAttributes('table', { tableLayout: next }).run();
+    if (!editor.value) return;
+    const isFixed = currentTableLayout.value === 'fixed';
+    const nextLayout = isFixed ? 'auto' : 'fixed';
+
+    // [FR-06-4] 반응형 전환 시 전체 폭(100%)으로 설정
+    // 고정형 전환 시에는 현재 실제 너비를 픽셀로 캡처하여 갑작스러운 변화를 방지
+    const tableEl = getTableElement();
+    const currentWidth = tableEl ? `${tableEl.offsetWidth}px` : '100%';
+    const nextWidth = isFixed ? '100%' : currentWidth;
+
+    // 1. 테이블 자체 속성 업데이트 (Layout & Width)
+    editor.value.chain().focus().updateAttributes('table', {
+        tableLayout: nextLayout,
+        width: nextWidth
+    }).run();
+
+    if (nextLayout === 'auto') {
+        // 2-a. 반응형 전환: colwidth는 제거하지 않고 유지합니다.
+        // - colwidth.renderHTML이 style="width:Xpx"를 출력하므로 v-html 조회 시 비율이 유지됩니다.
+        // - CSS의 table-layout:auto !important + width:100% !important 가 TipTap의
+        //   inline style.width(고정 픽셀)를 덮어쓰므로 표는 100% 폭으로 확장됩니다.
+        // - 브라우저는 각 td의 style.width를 기준값으로 사용해 비례 분배합니다.
+        //   (ex: 200px/100px/300px → 33%/17%/50% 비율 유지)
+
+        // applyTableWidths가 onTransaction에서 호출되어 auto 테이블의 width를 100%로 재적용합니다.
+    } else {
+        // 2-b. 고정형 전환: 실제 렌더링된 td.offsetWidth를 읽어 colwidth로 저장합니다.
+        // auto 모드에서 col 요소는 CSS `width: auto !important`로 막혀 있으므로
+        // normalizeColwidths의 col 참조 경로는 사용 불가 → DOM 직접 측정이 필수입니다.
+        nextTick(() => {
+            if (!editor.value) return;
+            const el = getTableElement();
+
+            // 첫 번째 행의 실제 td/th offsetWidth로 각 열 너비 목록 구성
+            const firstRow = el?.querySelector('tr') as HTMLTableRowElement | null;
+            const domCells = firstRow
+                ? Array.from(firstRow.querySelectorAll<HTMLElement>(':scope > td, :scope > th'))
+                : [];
+            const measuredWidths = domCells.map(c => c.offsetWidth).filter(w => w > 0);
+
+            if (measuredWidths.length === 0) {
+                // 측정 불가 시 균등 분배 fallback
+                normalizeColwidths(editor.value);
+                applyTableWidths();
+                return;
+            }
+
+            // ProseMirror 트랜잭션: 모든 셀에 실제 측정 너비를 colwidth로 설정
+            const { state, view } = editor.value;
+            const pmTr = state.tr;
+            let tablePos = -1;
+            const $pos = state.selection.$from;
+            for (let d = $pos.depth; d > 0; d--) {
+                if ($pos.node(d).type.name === 'table') { tablePos = $pos.before(d); break; }
+            }
+
+            if (tablePos !== -1) {
+                const tableNode = state.doc.nodeAt(tablePos);
+                if (tableNode) {
+                    tableNode.forEach((rowNode: any, rowOffset: number) => {
+                        if (rowNode.type.name !== 'tableRow') return;
+                        let colIdx = 0;
+                        rowNode.forEach((cellNode: any, cellOffset: number) => {
+                            if (cellNode.type.name !== 'tableCell' && cellNode.type.name !== 'tableHeader') return;
+                            const colspan = cellNode.attrs.colspan || 1;
+                            // colspan 범위의 실측 너비를 colwidth 배열로 구성
+                            const colWidths: number[] = [];
+                            for (let c = 0; c < colspan; c++) {
+                                const idx = colIdx + c;
+                                colWidths.push(idx < measuredWidths.length ? (measuredWidths[idx] ?? 0) : (measuredWidths[measuredWidths.length - 1] ?? 0));
+                            }
+                            const absPos = tablePos + 1 + rowOffset + 1 + cellOffset;
+                            pmTr.setNodeMarkup(absPos, null, { ...cellNode.attrs, colwidth: colWidths });
+                            colIdx += colspan;
+                        });
+                    });
+                    view.dispatch(pmTr.setMeta('addToHistory', true));
+                }
+            }
+
+            applyTableWidths();
+        });
+    }
 };
 
 // ── 셀 높이 (FR-06-5) ──
@@ -459,16 +814,24 @@ const applyCellMinHeight = (px: number) => {
 let _isResizingTable = false;
 
 /**
- * 저장된 CustomTable.width 속성을 DOM의 table.style.width에 직접 적용합니다.
+ * 저장된 CustomTable 속성을 DOM의 table 요소에 직접 적용합니다.
+ *
+ * ★ 핵심 메커니즘:
+ *   Tiptap의 TableView(NodeView)는 addAttributes().renderHTML() 결과를
+ *   라이브 DOM에 반영하지 않습니다 (getHTML() 직렬화에만 사용).
+ *   따라서 data-table-layout 등 커스텀 속성은 여기서 수동으로 DOM에 동기화해야
+ *   CSS 선택자(table[data-table-layout="auto"])가 매치됩니다.
+ *
+ *   CSS !important 규칙이 매치되면, updateColumns()가 매 트랜잭션마다
+ *   설정하는 인라인 픽셀 너비를 브라우저 스타일 엔진이 자동으로 덮어씁니다.
+ *   → 타이밍에 의존하지 않는 안정적인 너비 제어.
  */
 const applyTableWidths = () => {
-    if (_isResizingTable) return;
     if (!editor.value || editor.value.isDestroyed) return;
     const view = editor.value.view;
 
     view.state.doc.descendants((node, pos) => {
         if (node.type.name !== 'table') return;
-        if (!node.attrs.width) return;
 
         try {
             const wrapperEl = view.nodeDOM(pos) as HTMLElement | null;
@@ -478,6 +841,27 @@ const applyTableWidths = () => {
                 ? wrapperEl
                 : wrapperEl.querySelector('table')) as HTMLTableElement | null;
             if (!tableEl) return;
+
+            // ── data-table-layout 속성을 라이브 DOM에 동기화 ──
+            // 이 속성이 설정되면 CSS 규칙이 매치되어 !important 로 인라인 스타일을 덮어씁니다:
+            //   table[data-table-layout="auto"]  { width: 100% !important; table-layout: auto !important }
+            //   table[data-table-layout="fixed"] { table-layout: fixed !important }
+            const layout = node.attrs.tableLayout || 'fixed';
+            if (tableEl.getAttribute('data-table-layout') !== layout) {
+                tableEl.setAttribute('data-table-layout', layout);
+            }
+
+            if (layout === 'auto') {
+                // 반응형: CSS !important가 width: 100%, table-layout: auto를 강제하므로
+                // JS에서 추가 처리가 불필요합니다. updateColumns()의 인라인 스타일은
+                // CSS !important에 의해 자동으로 무시됩니다.
+                return;
+            }
+
+            // 고정형: 열 드래그 리사이즈 중에는 Tiptap이 실시간으로 너비를 조정하므로 덮어쓰지 않습니다.
+            if (_isResizingTable) return;
+
+            if (!node.attrs.width) return;
 
             if (tableEl.style.width !== node.attrs.width) {
                 tableEl.style.width = node.attrs.width;
@@ -588,13 +972,19 @@ const _onTableResizeStart = (e: MouseEvent) => {
 // mouseup → 리사이즈 종료, 이후 syncTableWidths가 새 너비를 캡처
 const _onTableResizeEnd = () => {
     _isResizingTable = false;
+    // 드래그 종료 후 updateColumns()가 픽셀값으로 남겨둔 경우를 즉시 교정
+    nextTick(applyTableWidths);
 };
 
 /** 팔레트 팝오버 바깥 클릭 시 닫기 */
 const _onClickOutsidePalette = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (!target.closest('.tf-color-btn') && !target.closest('.tiptap-table-float')) {
+    const isFloatingBtn = !!target.closest('.tf-color-btn') || !!target.closest('.tf-border-main-btn');
+    const isFloatingPanel = !!target.closest('.tiptap-table-float');
+
+    if (!isFloatingBtn && !isFloatingPanel) {
         cellBgPaletteVisible.value = false;
+        // 테두리 상세 설정(borderPaletteVisible)은 Drawer 형식이므로 외부 클릭으로 닫지 않음
     }
 };
 
@@ -642,13 +1032,8 @@ onBeforeUnmount(() => {
         </Transition>
 
         <!-- ── 툴바 (TiptapToolbar.vue로 분리 — Design Ref: §2 Clean Architecture) ── -->
-        <TiptapToolbar
-            v-if="!readonly && editor"
-            :editor="editor"
-            :imageUploadFn="props.imageUploadFn"
-            :fileUploadFn="props.fileUploadFn"
-            :attachmentList="props.attachmentList"
-        />
+        <TiptapToolbar v-if="!readonly && editor" :editor="editor" :imageUploadFn="props.imageUploadFn"
+            :fileUploadFn="props.fileUploadFn" :attachmentList="props.attachmentList" />
 
         <!-- ── 에디터 본문 ── -->
         <EditorContent v-if="editor" :editor="editor" class="tiptap-content" />
@@ -670,8 +1055,8 @@ onBeforeUnmount(() => {
     <!-- @mousedown.prevent: 버튼 클릭 시 에디터 포커스가 해제되지 않도록 기본 동작 방지 -->
     <Teleport to="body">
         <Transition name="table-float">
-            <div v-if="tableFloatVisible && editor && !props.readonly" class="tiptap-table-float"
-                :style="{ top: tableFloatY + 'px', left: tableFloatX + 'px' }">
+            <div v-if="tableFloatVisible && editor && !props.readonly && !borderPaletteVisible"
+                class="tiptap-table-float" :style="{ top: tableFloatY + 'px', left: tableFloatX + 'px' }">
 
                 <!-- 행 조작: 위 추가 / 아래 추가 / 행 삭제 -->
                 <div class="tf-group">
@@ -689,8 +1074,7 @@ onBeforeUnmount(() => {
                     </button>
                     <!-- 아래 행 추가: 새 행 셀에 colwidth 없음 → tableOp로 정규화 -->
                     <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addRowAfter().run())"
-                        title="아래 행 추가">
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addRowAfter().run())" title="아래 행 추가">
                         <!-- 닫힌 행 2개(위) + + 기호(아래): rect로 4면 막힘 -->
                         <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -783,13 +1167,13 @@ onBeforeUnmount(() => {
                             <!-- 위 행 세로 구분선 -->
                             <line x1="7" y1="1" x2="7" y2="7" />
                             <!-- 병합 셀 강조 (아래 행 채우기) -->
-                            <rect x="1.8" y="7.8" width="10.4" height="4.4" rx="0.5"
-                                fill="currentColor" opacity="0.3" stroke="none" />
+                            <rect x="1.8" y="7.8" width="10.4" height="4.4" rx="0.5" fill="currentColor" opacity="0.3"
+                                stroke="none" />
                         </svg>
                     </button>
                     <!-- 셀 분리: 분리된 새 셀에 colwidth 없음 → tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().splitCell().run())" title="셀 분리">
+                    <button class="tf-btn" @mousedown.prevent="tableOp(() => editor?.chain().focus().splitCell().run())"
+                        title="셀 분리">
                         <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="1" y="1" width="12" height="12" rx="1" />
@@ -861,26 +1245,21 @@ onBeforeUnmount(() => {
                 <!-- FR-06-3: 셀 배경색 팔레트 (16색) -->
                 <div class="tf-group" style="position: relative;">
                     <button class="tf-btn tf-color-btn"
-                        @mousedown.prevent="cellBgPaletteVisible = !cellBgPaletteVisible"
-                        title="셀 배경색">
+                        @mousedown.prevent="cellBgPaletteVisible = !cellBgPaletteVisible" title="셀 배경색">
                         <i class="pi pi-palette"></i>
                         <span class="tf-color-dot"
                             :style="{ backgroundColor: currentCellBg ?? 'transparent', border: currentCellBg ? 'none' : '1px dashed #aaa' }">
                         </span>
                     </button>
                     <!-- 팔레트 팝오버 -->
-                    <div v-if="cellBgPaletteVisible"
-                        class="tiptap-table-float"
+                    <div v-if="cellBgPaletteVisible" class="tiptap-table-float"
                         style="position: absolute; top: calc(100% + 4px); left: 0; width: 130px; padding: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; z-index: 100;"
                         @mousedown.prevent>
-                        <button v-for="color in TABLE_CELL_PALETTE" :key="color"
-                            class="tf-palette-swatch"
-                            :style="{ backgroundColor: color }"
-                            :title="color"
+                        <button v-for="color in TABLE_CELL_PALETTE" :key="color" class="tf-palette-swatch"
+                            :style="{ backgroundColor: color }" :title="color"
                             @mousedown.prevent="applyCellBgColor(color)" />
                         <!-- 배경 없음(지우개) -->
-                        <button class="tf-palette-swatch tf-palette-clear"
-                            title="배경 없음"
+                        <button class="tf-palette-swatch tf-palette-clear" title="배경 없음"
                             @mousedown.prevent="applyCellBgColor(null)">
                             <i class="pi pi-times" style="font-size: 9px;"></i>
                         </button>
@@ -889,23 +1268,26 @@ onBeforeUnmount(() => {
 
                 <span class="tf-divider" />
 
-                <!-- FR-06-2: 테두리 스타일 (없음/실선/점선/이중선) -->
-                <div class="tf-group">
-                    <button v-for="bs in BORDER_STYLES" :key="String(bs.value)"
-                        class="tf-btn"
-                        :class="{ 'tf-btn-active': currentCellBorderStyle === bs.value }"
-                        :title="bs.title"
-                        @mousedown.prevent="applyCellBorderStyle(bs.value)">
-                        <span style="font-size: 11px; font-weight: 600; line-height: 1;">{{ bs.label }}</span>
+                <!-- FR-06-2: 테두리 통합 상세 설정 (팝업 지원) -->
+                <div class="tf-group" style="position: relative;">
+                    <button class="tf-btn tf-border-main-btn" :class="{ 'tf-btn-active': borderPaletteVisible }"
+                        title="테두리 상세 설정" @mousedown.prevent="borderPaletteVisible = !borderPaletteVisible">
+                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                            stroke-width="1.3">
+                            <rect x="2" y="2" width="10" height="10" rx="1" />
+                            <path d="M2 5h10M5 2v10" opacity="0.4" />
+                        </svg>
+                        <span class="tf-border-indicator"
+                            :style="{ backgroundColor: (borderPaletteVisible ? pendingBorderColor : currentCellBorderColor) || '#888' }" />
                     </button>
+
                 </div>
 
                 <span class="tf-divider" />
 
                 <!-- FR-06-4: 레이아웃 토글 (반응형 / 고정형) -->
                 <div class="tf-group">
-                    <button class="tf-btn"
-                        :class="{ 'tf-btn-active': currentTableLayout === 'auto' }"
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableLayout === 'auto' }"
                         :title="currentTableLayout === 'fixed' ? '반응형으로 전환 (auto)' : '고정형으로 전환 (fixed)'"
                         @mousedown.prevent="toggleTableLayout">
                         <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor"
@@ -924,25 +1306,6 @@ onBeforeUnmount(() => {
 
                 <span class="tf-divider" />
 
-                <!-- FR-06-5: 셀 최소 높이 -->
-                <div class="tf-group" style="align-items: center;">
-                    <input
-                        type="number"
-                        class="tf-height-input"
-                        :value="currentCellMinHeight || ''"
-                        min="0"
-                        max="500"
-                        step="10"
-                        placeholder="높이"
-                        title="셀 최소 높이 (px)"
-                        @mousedown.prevent
-                        @change="(e) => applyCellMinHeight(Number((e.target as HTMLInputElement).value))"
-                    />
-                    <span style="font-size: 10px; color: #888; margin-left: 1px;">px</span>
-                </div>
-
-                <span class="tf-divider" />
-
                 <!-- 표 삭제 -->
                 <button class="tf-btn tf-danger" @mousedown.prevent="editor?.chain().focus().deleteTable().run()"
                     title="표 삭제">
@@ -956,22 +1319,13 @@ onBeforeUnmount(() => {
     <!-- 에디터 포커스를 유지하기 위해 mousedown.prevent 적용 -->
     <Teleport to="body">
         <Transition name="table-float">
-            <div
-                v-if="attachSuggest.active && attachSuggest.items.length"
-                class="tiptap-attach-suggest"
-                :style="{
-                    top: (attachSuggest.rect?.bottom ?? 0) + 4 + 'px',
-                    left: (attachSuggest.rect?.left ?? 0) + 'px',
-                }"
-                @mousedown.prevent
-            >
-                <div
-                    v-for="(item, idx) in attachSuggest.items"
-                    :key="item.flMngNo"
-                    class="attach-suggest-item"
+            <div v-if="attachSuggest.active && attachSuggest.items.length" class="tiptap-attach-suggest" :style="{
+                top: (attachSuggest.rect?.bottom ?? 0) + 4 + 'px',
+                left: (attachSuggest.rect?.left ?? 0) + 'px',
+            }" @mousedown.prevent>
+                <div v-for="(item, idx) in attachSuggest.items" :key="item.flMngNo" class="attach-suggest-item"
                     :class="{ 'attach-suggest-item--active': idx === attachSuggest.selectedIndex }"
-                    @mousedown.prevent="attachSuggest.command?.(item)"
-                >
+                    @mousedown.prevent="attachSuggest.command?.(item)">
                     <i class="pi pi-paperclip text-indigo-400" style="font-size: 11px;" />
                     <span class="truncate">{{ item.flNm }}</span>
                 </div>
@@ -979,9 +1333,89 @@ onBeforeUnmount(() => {
         </Transition>
     </Teleport>
 
+    <!-- ── 테두리 상세 설정 Drawer (FR-06-2 개편) ── -->
+    <Drawer v-model:visible="borderPaletteVisible" header="테두리 상세 설정" position="right" :modal="false"
+        :dismissable="false" class="!w-[340px] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl"
+        @mousedown.prevent>
+        <div class="flex flex-col gap-8 py-2">
+
+            <!-- 1. 스타일 & 두께 -->
+            <div class="flex gap-6">
+                <!-- 스타일 종류 -->
+                <div class="drawer-section flex-1">
+                    <div class="text-md !mb-3">선 스타일</div>
+                    <div class="flex flex-col gap-1.5">
+                        <button v-for="bs in BORDER_STYLES" :key="String(bs.value)"
+                            class="tf-btn !h-9 !justify-start !px-3 shadow-none border border-zinc-100 dark:border-zinc-800"
+                            :class="{ 'tf-btn-active !border-indigo-500': pendingBorderStyle === bs.value }"
+                            :title="bs.title" @mousedown.prevent="applyCellBorderStyle(bs.value)">
+                            <span class="text-xs font-semibold">{{ bs.label }}</span>
+                            <span class="ml-auto text-[10px] opacity-40">{{ bs.title }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 두께 -->
+                <div class="drawer-section flex-1">
+                    <div class="text-md !mb-3">두께</div>
+                    <div class="flex flex-col gap-1.5">
+                        <button v-for="bw in BORDER_WIDTHS" :key="bw.value"
+                            class="tf-btn !h-9 !justify-start !px-3 shadow-none border border-zinc-100 dark:border-zinc-800"
+                            :class="{ 'tf-btn-active !border-indigo-500': pendingBorderWidth === bw.value }"
+                            @mousedown.prevent="applyCellBorderWidth(bw.value)">
+                            <span class="text-[11px] font-bold">{{ bw.label }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 색상 -->
+            <div class="drawer-section">
+                <div class="text-md !mb-3">선 색상</div>
+                <div class="grid grid-cols-7 gap-1.5">
+                    <button v-for="color in TABLE_CELL_PALETTE" :key="color"
+                        class="tf-palette-swatch !w-full !h-7 rounded-sm transition-all"
+                        :style="{ backgroundColor: color }"
+                        :class="{ 'ring-2 ring-indigo-500 ring-offset-2 scale-90': pendingBorderColor === color }"
+                        @mousedown.prevent="applyCellBorderColor(color)" />
+                    <button
+                        class="tf-palette-swatch tf-palette-clear !w-full !h-7 rounded-sm bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+                        @mousedown.prevent="applyCellBorderColor(null)">
+                        <i class="pi pi-times" style="font-size: 10px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. 방향 선택 (Excel 스타일) -->
+            <div class="drawer-section">
+                <div class="text-md !mb-3">경계면 선택</div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button v-for="dir in BORDER_DIRECTIONS" :key="dir.value"
+                        class="tf-btn !h-14 !w-full flex-col !justify-center !items-center !gap-1 !pt-1.5 !pb-0.5 !px-0 shadow-sm border border-zinc-100 dark:border-zinc-800"
+                        :title="dir.label" @mousedown.prevent="applySideBorder(dir.value)">
+                        <svg width="20" height="20" viewBox="0 0 14 14" fill="none" stroke="currentColor">
+                            <!-- 배경 그리드 (지우기가 아닐 때만 표시하여 맥락 제공) -->
+                            <path v-if="dir.value !== 'clear'" d="M1 1h12v12H1z M1 7h12 M7 1v12" opacity="0.15"
+                                stroke-width="1" />
+                            <!-- 실제 방향 아이콘 (강조) -->
+                            <path :d="dir.icon" stroke-width="1.8" stroke-linecap="round" />
+                        </svg>
+                        <span class="text-[9px] font-medium opacity-70">{{ dir.label }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-6">
+                <Button label="설정 완료" icon="pi pi-check" class="w-full !h-11" severity="secondary"
+                    @click="borderPaletteVisible = false" />
+            </div>
+
+        </div>
+    </Drawer>
+
 </template>
 
-<style scoped>
+<style lang="postcss" scoped>
 /* tbar-btn, tf-btn-active, tbar-divider, tbar-select 스타일은 TiptapToolbar.vue로 이동됨 */
 
 /* ── 에디터 본문 영역 ── */
@@ -1117,33 +1551,49 @@ onBeforeUnmount(() => {
 
 /* ── Notion-like 표 스타일 ── */
 
-/* 표 수평 스크롤 래퍼 (.tableWrapper는 Tiptap Table 확장이 자동 생성) */
+/* 표 수평 스크롤 래퍼 (.tableWrapper는 Tiptap Table 확장이 자동 생성)
+   border-collapse: separate + border-radius 조합의 한계를 극복하기 위해
+   래퍼에 테두리와 곡률을 적용합니다. */
 :deep(.tiptap-content .ProseMirror .tableWrapper) {
+    overflow: hidden;
+    /* 둥근 모서리 클리핑 */
     overflow-x: auto;
+    /* 수평 스크롤 지원 */
     margin: 1.25rem 0;
+    border-radius: 6px;
 }
 
-/* border-collapse: separate + border-spacing: 0 조합으로
-   table 요소에 border-radius + overflow: hidden 적용 가능.
-   (border-collapse: collapse는 table의 border-radius를 무시함) */
+/* table: border-collapse: collapse를 적용하여 셀 간 테두리 병합 및 커스텀 테두리 허용 */
 :deep(.tiptap-content .ProseMirror table) {
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: fixed;
+    border-collapse: collapse;
+    table-layout: fixed; /* 기본값 */
     width: 100%;
     margin: 0;
     font-size: 0.875rem;
     line-height: 1.6;
-    border: 1px solid rgba(55, 53, 47, 0.12);
-    border-radius: 6px;
-    overflow: hidden;
+    border: none;
+    /* 외곽선은Wrapper가 담당 */
 }
 
-/* td · th 공통: 외곽은 table border가 담당하므로 우측·하단만 */
+/* [FR-06-4] 표 레이아웃 스타일 명시적 제어 */
+:deep(.tiptap-content .ProseMirror table[data-table-layout="auto"]) {
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+/* 반응형 모드에서 Tiptap의 리사이징 플러그인이 설정한 col 너비 무력화 */
+:deep(.tiptap-content .ProseMirror table[data-table-layout="auto"] col) {
+    width: auto !important;
+}
+
+:deep(.tiptap-content .ProseMirror table[data-table-layout="fixed"]) {
+    table-layout: fixed !important;
+}
+
+/* td · th 공통: 인라인 스타일이 없는 경우 기본 테두리 적용 */
 :deep(.tiptap-content .ProseMirror td),
 :deep(.tiptap-content .ProseMirror th) {
-    border-right: 1px solid rgba(55, 53, 47, 0.1);
-    border-bottom: 1px solid rgba(55, 53, 47, 0.1);
+    border: 1px solid rgba(55, 53, 47, 0.1);
     padding: 7px 12px;
     vertical-align: top;
     position: relative;
@@ -1151,17 +1601,7 @@ onBeforeUnmount(() => {
     word-break: break-word;
 }
 
-/* 마지막 열: 우측 border 제거 (table 외곽이 담당) */
-:deep(.tiptap-content .ProseMirror td:last-child),
-:deep(.tiptap-content .ProseMirror th:last-child) {
-    border-right: none;
-}
-
-/* 마지막 행: 하단 border 제거 (table 외곽이 담당) */
-:deep(.tiptap-content .ProseMirror tr:last-child td),
-:deep(.tiptap-content .ProseMirror tr:last-child th) {
-    border-bottom: none;
-}
+/* 마지막 열/행 테두리 제거 로직 삭제 (collapse 모드 도입으로 불필요 및 사이드 이펙트 방지) */
 
 /* th — 헤더 셀 */
 :deep(.tiptap-content .ProseMirror th) {
@@ -1179,29 +1619,17 @@ onBeforeUnmount(() => {
     background-color: rgba(55, 53, 47, 0.025);
 }
 
-/* FR-06-2: 테두리 스타일 — data-border-style 어트리뷰트 기반 CSS */
-:deep(.tiptap-content .ProseMirror td[data-border-style="solid"]),
-:deep(.tiptap-content .ProseMirror th[data-border-style="solid"]) {
-    border-style: solid !important;
-}
-:deep(.tiptap-content .ProseMirror td[data-border-style="dashed"]),
-:deep(.tiptap-content .ProseMirror th[data-border-style="dashed"]) {
-    border-style: dashed !important;
-}
-:deep(.tiptap-content .ProseMirror td[data-border-style="double"]),
-:deep(.tiptap-content .ProseMirror th[data-border-style="double"]) {
-    border-style: double !important;
-    border-width: 3px !important;
-}
+/* (데이터 속성 기반 테두리 스타일 CSS는 이제 인라인 style로 대체되므로 삭제 가능하지만 하위 호환성을 위해 유지할 수 있음. 
+   여기서는 인라인 스타일이 우선순위를 갖도록 !important 규칙 확인) */
 
-/* 다크모드 — 표 외곽선 */
-.dark :deep(.tiptap-content .ProseMirror table) {
-    border-color: rgba(255, 255, 255, 0.1);
+/* 다크모드 — 표 래퍼 설정 */
+:global(.dark) :deep(.tiptap-content .ProseMirror .tableWrapper) {
+    border: none;
 }
 
 /* 다크모드 — 셀 구분선 */
-.dark :deep(.tiptap-content .ProseMirror td),
-.dark :deep(.tiptap-content .ProseMirror th) {
+:global(.dark) :deep(.tiptap-content .ProseMirror td),
+:global(.dark) :deep(.tiptap-content .ProseMirror th) {
     border-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -1332,6 +1760,7 @@ onBeforeUnmount(() => {
     background: rgba(99, 102, 241, 0.12);
     color: #4f46e5;
 }
+
 :global(.dark) .tf-btn.tf-btn-active {
     background: rgba(99, 102, 241, 0.2);
     color: #818cf8;
@@ -1405,10 +1834,12 @@ onBeforeUnmount(() => {
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
+
 .tf-palette-swatch:hover {
     transform: scale(1.2);
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
 }
+
 /* 배경 없음(지우개) 스와치 */
 .tf-palette-swatch.tf-palette-clear {
     background: #fff;
@@ -1431,9 +1862,11 @@ onBeforeUnmount(() => {
     color: inherit;
     padding: 0 2px;
 }
+
 .tf-height-input:focus {
     border-color: rgba(99, 102, 241, 0.6);
 }
+
 /* 숫자 스피너 숨김 */
 .tf-height-input::-webkit-outer-spin-button,
 .tf-height-input::-webkit-inner-spin-button {
@@ -1470,6 +1903,7 @@ onBeforeUnmount(() => {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     padding: 4px;
 }
+
 :global(.dark) .tiptap-attach-suggest {
     background: #1e1e1e;
     border-color: rgba(255, 255, 255, 0.1);
@@ -1487,14 +1921,17 @@ onBeforeUnmount(() => {
     transition: background 0.1s;
     overflow: hidden;
 }
+
 :global(.dark) .attach-suggest-item {
     color: #d1d5db;
 }
+
 .attach-suggest-item--active,
 .attach-suggest-item:hover {
     background: rgba(99, 102, 241, 0.1);
     color: #4f46e5;
 }
+
 :global(.dark) .attach-suggest-item--active,
 :global(.dark) .attach-suggest-item:hover {
     background: rgba(99, 102, 241, 0.2);
@@ -1511,5 +1948,84 @@ onBeforeUnmount(() => {
 .table-float-leave-to {
     opacity: 0;
     transform: translateY(4px);
+}
+
+/* ── 테두리 설정 팝업 전용 스타일 ── */
+.border-settings-popover {
+    box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(55, 53, 47, 0.16);
+}
+
+.popover-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-left: 2px;
+}
+
+:global(.dark) .popover-label {
+    color: #9ca3af;
+}
+
+.tf-border-indicator {
+    position: absolute;
+    bottom: 4px;
+    left: 7px;
+    right: 7px;
+    height: 2.5px;
+    border-radius: 1px;
+    opacity: 0.8;
+}
+
+.tf-border-main-btn {
+    position: relative;
+    padding-bottom: 9px !important;
+    /* 인디케이터 공간 확보 */
+}
+
+/* ── 행 높이 리사이즈 핸들 스타일 (FR-06-5 개선) ── */
+:deep(.tiptap-content .ProseMirror .row-resize-handle) {
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: transparent;
+    cursor: row-resize;
+    z-index: 20;
+    transition: background 0.2s ease;
+}
+
+/* 셀에 마우스 호버 시 핸들 강조 */
+:deep(.tiptap-content .ProseMirror td:hover .row-resize-handle),
+:deep(.tiptap-content .ProseMirror th:hover .row-resize-handle) {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+/* 핸들 자체에 마우스 호버 시 더 짙게 표시 */
+:deep(.tiptap-content .ProseMirror .row-resize-handle:hover) {
+    background: rgba(99, 102, 241, 0.5) !important;
+}
+
+/* ── 행 높이 리사이징 가이드 라인 (너비 조절과 동일한 느낌) ── */
+:deep(.tiptap-content .ProseMirror .row-resize-line) {
+    position: absolute;
+    height: 2px;
+    background-color: #6366f1; /* Indigo 500 */
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+/* 리사이징 중 전역 커서 고정용 클래스 */
+:global(body.is-resizing-row) {
+    cursor: row-resize !important;
+}
+
+/* 다크모드 대응 */
+:global(.dark) :deep(.tiptap-content .ProseMirror .row-resize-handle:hover) {
+    background: rgba(129, 140, 248, 0.6) !important;
 }
 </style>
