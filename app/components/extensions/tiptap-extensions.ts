@@ -410,6 +410,8 @@ export const RowResizingPlugin = () => {
     });
 };
 
+// AdjacentColumnResizingPlugin removed as per user request to simplify.
+
 // ── CustomTable ──
 // 표 전체 너비(width) + 레이아웃(tableLayout) 속성 영구 저장 지원
 export const CustomTable = Table.extend({
@@ -424,42 +426,47 @@ export const CustomTable = Table.extend({
             width: {
                 default: null,
                 parseHTML: (element) => element.style.width || null,
-                renderHTML: (attributes) => {
-                    const styles: string[] = [];
-                    if (attributes.width) styles.push(`width: ${attributes.width}`);
-                    if (attributes.tableLayout) styles.push(`table-layout: ${attributes.tableLayout}`);
-
-                    return {
-                        'data-width': attributes.width,
-                        style: styles.length > 0 ? styles.join('; ') : null
-                    };
-                }
             },
             /**
-             * 표 레이아웃 방식 (FR-06-4)
-             * - 'auto' : 반응형 — 셀 내용에 따라 열 너비 자동 결정
-             * - 'fixed': 고정형 — colwidth 기반 고정 너비 유지
+             * 테이블 정렬 ('left' | 'center' | 'right')
              */
-            tableLayout: {
-                default: 'fixed',
-                parseHTML: (element) => element.getAttribute('data-table-layout') || 'fixed',
-                renderHTML: (attributes) => {
-                    return { 'data-table-layout': attributes.tableLayout ?? 'fixed' };
-                }
+            align: {
+                default: 'left',
+                parseHTML: (element) => {
+                    const attr = element.getAttribute('data-align');
+                    if (attr) return attr;
+
+                    // data 속성이 없는 경우 style 분석 (중앙: auto/auto, 우측: auto/0)
+                    const ml = element.style.marginLeft;
+                    const mr = element.style.marginRight;
+                    if (ml === 'auto' && mr === 'auto') return 'center';
+                    if (ml === 'auto' && (mr === '0' || mr === '0px')) return 'right';
+                    return 'left';
+                },
             }
         };
     },
 
-    /**
-     * 표 노드 렌더링 오버라이드
-     * width와 tableLayout 속성을 병합하여 하나의 style 어트리뷰트로 출력합니다.
-     * Tiptap의 mergeAttributes는 동일 키(style)를 덮어쓰기 때문에 여기서 통합 관리가 필요합니다.
-     */
     renderHTML({ node, HTMLAttributes }) {
-        const { width, tableLayout } = node.attrs;
+        const { width, align } = node.attrs;
         const styles: string[] = [];
+        
+        // 1. 너비 및 레이아웃 스타일
         if (width) styles.push(`width: ${width}`);
-        if (tableLayout) styles.push(`table-layout: ${tableLayout}`);
+        styles.push('table-layout: fixed');
+
+        // 2. 정렬 마진 스타일 (휴대성/보존성을 위해 직접 인라인 스타일로 출력)
+        if (align === 'center') {
+            styles.push('margin-left: auto', 'margin-right: auto');
+        } else if (align === 'right') {
+            styles.push('margin-left: auto', 'margin-right: 0');
+        } else {
+            styles.push('margin-left: 0', 'margin-right: auto');
+        }
+
+        // HTMLAttributes에서 개별 속성 렌더링 결과(class 등)를 보존하되, 
+        // 우리가 직접 생성한 style과 data- 속성으로 덮어씁니다.
+        const finalStyles = styles.join('; ');
 
         return [
             'div',
@@ -467,7 +474,9 @@ export const CustomTable = Table.extend({
             [
                 'table',
                 mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-                    style: styles.length > 0 ? styles.join('; ') : null
+                    'data-table-layout': 'fixed',
+                    'data-align': align,
+                    style: finalStyles || null
                 }),
                 ['tbody', 0]
             ]
@@ -476,8 +485,8 @@ export const CustomTable = Table.extend({
 
     addProseMirrorPlugins() {
         return [
-            ...(this.parent?.() || []),
             RowResizingPlugin(),
+            ...(this.parent?.() || []),
         ];
     }
 });
@@ -1336,6 +1345,26 @@ export const AttachmentExtension = TiptapNode.create({
                     if (!attributes.fileSize) return {};
                     return { 'data-file-size': String(attributes.fileSize) };
                 }
+            },
+            /** 노드 전체 너비 (px) */
+            width: {
+                default: null,
+                parseHTML: (element) => {
+                    const v = element.getAttribute('data-width');
+                    return v ? Number(v) : null;
+                },
+                renderHTML: (attributes) => {
+                    if (!attributes.width) return {};
+                    return { 'data-width': String(attributes.width) };
+                }
+            },
+            /** 수평 정렬 (left | center | right) */
+            align: {
+                default: 'right', // 기본값 우측 정렬
+                parseHTML: (element) => element.getAttribute('data-align') || 'right',
+                renderHTML: (attributes) => ({
+                    'data-align': attributes.align || 'right'
+                })
             }
         };
     },
@@ -1350,6 +1379,8 @@ export const AttachmentExtension = TiptapNode.create({
             'data-file-id':   node.attrs.fileId,
             'data-file-name': node.attrs.fileName,
             'data-file-size': node.attrs.fileSize != null ? String(node.attrs.fileSize) : '',
+            'data-width':     node.attrs.width != null ? String(node.attrs.width) : '',
+            'data-align':     node.attrs.align || 'right',
         })];
     },
 

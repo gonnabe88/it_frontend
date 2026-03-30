@@ -106,6 +106,11 @@ const props = defineProps<{
      * '![' 입력 시 이 목록을 기반으로 Suggestion 팝업을 표시합니다.
      */
     attachmentList?: AttachmentItem[];
+    /**
+     * 첨부파일 삭제 핸들러 (FR-05-4)
+     * 관리 다이얼로그에서 파일 삭제 버튼 클릭 시 호출됩니다.
+     */
+    fileDeleteFn?: (fileId: string) => Promise<void>;
 }>();
 
 const emit = defineEmits<{
@@ -141,7 +146,9 @@ const extractTOC = (editorInstance: any) => {
     emit('update:toc', toc);
 };
 
-// ── 드래그 & 드롭 상태 ──
+
+
+// ── 테이블 정렬 및 상태 ──
 /** 드래그 오버 시각 표시 여부 */
 const isDragOver = ref(false);
 /**
@@ -201,7 +208,7 @@ const editor = useEditor({
         TaskList,
         TaskItem.configure({ nested: true }),
         CharacterCount,
-        Placeholder.configure({ placeholder: props.placeholder || '내용을 입력하세요...' }),
+        Placeholder.configure({ placeholder: props.placeholder }),
         FontFamily,
         // Design Ref: §11 module-3 — FontSize 커스텀 마크 (FR-04)
         FontSize,
@@ -698,99 +705,112 @@ const applySideBorder = (side: string) => {
     }
 };
 
-// ── 테이블 레이아웃 (FR-06-4) ──
-
-/** 현재 테이블 레이아웃 ('fixed' | 'auto') */
-const currentTableLayout = computed<string>(() => {
-    if (!editor.value?.isActive('table')) return 'fixed';
-    return editor.value.getAttributes('table').tableLayout ?? 'fixed';
-});
-
-/** 테이블 레이아웃 토글 (fixed ↔ auto) */
-const toggleTableLayout = () => {
+/**
+ * [FR-06-4] 표 너비에 맞추기 (균등 배분 및 고정폭 고정)
+ * 테이블을 현재 에디터 컨테이너 너비(px)에 맞춰 100%로 확장하고, 
+ * 모든 열의 너비를 균등하게(Equal distribution) 배분합니다.
+ */
+const setTableFullWidth = () => {
     if (!editor.value) return;
-    const isFixed = currentTableLayout.value === 'fixed';
-    const nextLayout = isFixed ? 'auto' : 'fixed';
-
-    // [FR-06-4] 반응형 전환 시 전체 폭(100%)으로 설정
-    // 고정형 전환 시에는 현재 실제 너비를 픽셀로 캡처하여 갑작스러운 변화를 방지
     const tableEl = getTableElement();
-    const currentWidth = tableEl ? `${tableEl.offsetWidth}px` : '100%';
-    const nextWidth = isFixed ? '100%' : currentWidth;
+    if (!tableEl) return;
 
-    // 1. 테이블 자체 속성 업데이트 (Layout & Width)
-    editor.value.chain().focus().updateAttributes('table', {
-        tableLayout: nextLayout,
-        width: nextWidth
-    }).run();
+    const containerWidth = tableEl.parentElement?.offsetWidth || 800;
+    const { state, view } = editor.value;
+    let tablePos = -1;
+    const $pos = state.selection.$from;
+    for (let d = $pos.depth; d > 0; d--) {
+        if ($pos.node(d).type.name === 'table') { tablePos = $pos.before(d); break; }
+    }
+    if (tablePos === -1) return;
 
-    if (nextLayout === 'auto') {
-        // 2-a. 반응형 전환: colwidth는 제거하지 않고 유지합니다.
-        // - colwidth.renderHTML이 style="width:Xpx"를 출력하므로 v-html 조회 시 비율이 유지됩니다.
-        // - CSS의 table-layout:auto !important + width:100% !important 가 TipTap의
-        //   inline style.width(고정 픽셀)를 덮어쓰므로 표는 100% 폭으로 확장됩니다.
-        // - 브라우저는 각 td의 style.width를 기준값으로 사용해 비례 분배합니다.
-        //   (ex: 200px/100px/300px → 33%/17%/50% 비율 유지)
+    const tableNode = state.doc.nodeAt(tablePos);
+    if (!tableNode) return;
+    const map = TableMap.get(tableNode);
+    const colCount = map.width;
 
-        // applyTableWidths가 onTransaction에서 호출되어 auto 테이블의 width를 100%로 재적용합니다.
-    } else {
-        // 2-b. 고정형 전환: 실제 렌더링된 td.offsetWidth를 읽어 colwidth로 저장합니다.
-        // auto 모드에서 col 요소는 CSS `width: auto !important`로 막혀 있으므로
-        // normalizeColwidths의 col 참조 경로는 사용 불가 → DOM 직접 측정이 필수입니다.
-        nextTick(() => {
-            if (!editor.value) return;
-            const el = getTableElement();
+    // 1. 현재 열들의 너비 수집 및 총합 계산
+    const currentWidths = new Array(colCount).fill(0);
+    const firstRowMap = map.map.slice(0, colCount);
+    const seenCells = new Set<number>();
 
-            // 첫 번째 행의 실제 td/th offsetWidth로 각 열 너비 목록 구성
-            const firstRow = el?.querySelector('tr') as HTMLTableRowElement | null;
-            const domCells = firstRow
-                ? Array.from(firstRow.querySelectorAll<HTMLElement>(':scope > td, :scope > th'))
-                : [];
-            const measuredWidths = domCells.map(c => c.offsetWidth).filter(w => w > 0);
+    firstRowMap.forEach((cellPos, colIdx) => {
+        if (seenCells.has(cellPos)) return;
+        seenCells.add(cellPos);
 
-            if (measuredWidths.length === 0) {
-                // 측정 불가 시 균등 분배 fallback
-                normalizeColwidths(editor.value);
-                applyTableWidths();
-                return;
-            }
+        const cellNode = tableNode.nodeAt(cellPos);
+        if (cellNode) {
+            const colspan = (cellNode.attrs.colspan as number) || 1;
+            const colwidths = cellNode.attrs.colwidth as number[] | null;
 
-            // ProseMirror 트랜잭션: 모든 셀에 실제 측정 너비를 colwidth로 설정
-            const { state, view } = editor.value;
-            const pmTr = state.tr;
-            let tablePos = -1;
-            const $pos = state.selection.$from;
-            for (let d = $pos.depth; d > 0; d--) {
-                if ($pos.node(d).type.name === 'table') { tablePos = $pos.before(d); break; }
-            }
-
-            if (tablePos !== -1) {
-                const tableNode = state.doc.nodeAt(tablePos);
-                if (tableNode) {
-                    tableNode.forEach((rowNode: any, rowOffset: number) => {
-                        if (rowNode.type.name !== 'tableRow') return;
-                        let colIdx = 0;
-                        rowNode.forEach((cellNode: any, cellOffset: number) => {
-                            if (cellNode.type.name !== 'tableCell' && cellNode.type.name !== 'tableHeader') return;
-                            const colspan = cellNode.attrs.colspan || 1;
-                            // colspan 범위의 실측 너비를 colwidth 배열로 구성
-                            const colWidths: number[] = [];
-                            for (let c = 0; c < colspan; c++) {
-                                const idx = colIdx + c;
-                                colWidths.push(idx < measuredWidths.length ? (measuredWidths[idx] ?? 0) : (measuredWidths[measuredWidths.length - 1] ?? 0));
-                            }
-                            const absPos = tablePos + 1 + rowOffset + 1 + cellOffset;
-                            pmTr.setNodeMarkup(absPos, null, { ...cellNode.attrs, colwidth: colWidths });
-                            colIdx += colspan;
-                        });
-                    });
-                    view.dispatch(pmTr.setMeta('addToHistory', true));
+            for (let i = 0; i < colspan; i++) {
+                // 저장된 너비가 없으면 기본값(100px) 사용
+                const w = (colwidths && colwidths[i]) ? colwidths[i] : 100;
+                if (colIdx + i < colCount) {
+                    currentWidths[colIdx + i] = w;
                 }
             }
+        }
+    });
 
-            applyTableWidths();
-        });
+    const totalCurrentWidth = currentWidths.reduce((sum, w) => sum + w, 0);
+    // 비례 확대를 위한 배율 계산
+    const scaleRatio = containerWidth / totalCurrentWidth;
+    const newWidths = currentWidths.map(w => Math.floor(w * scaleRatio));
+
+    const tr = state.tr;
+    const processedCells = new Set<number>();
+
+    // 2. 모든 셀의 colwidth를 비례 너비로 업데이트
+    for (let r = 0; r < map.height; r++) {
+        for (let c = 0; c < map.width; c++) {
+            const cellPos = map.map[r * map.width + c];
+            if (cellPos === undefined || processedCells.has(cellPos)) continue;
+            processedCells.add(cellPos);
+
+            const cellNode = tableNode.nodeAt(cellPos);
+            if (cellNode) {
+                const colspan = (cellNode.attrs.colspan as number) || 1;
+                // 해당 셀이 차지하는 컬럼들의 새로운 너비 슬라이스 추출
+                const colWidthsSlice = newWidths.slice(c, c + colspan);
+                tr.setNodeMarkup(tablePos + 1 + cellPos, null, { ...cellNode.attrs, colwidth: colWidthsSlice });
+            }
+        }
     }
+
+    // 4. 테이블 전체 너비 모델 속성 제거 (내부 열 너비 합계에 따라 자연스럽게 결정)
+    tr.setNodeMarkup(tablePos, null, { ...tableNode.attrs, width: null });
+
+    view.dispatch(tr.setMeta('addToHistory', true));
+    nextTick(applyTableWidths);
+};
+
+// ── 테이블 전체 정렬 (FR-06-6) ──
+
+/** 현재 테이블의 정렬 상태 ('left' | 'center' | 'right') */
+const currentTableAlign = computed<string>(() => {
+    if (!editor.value?.isActive('table')) return 'left';
+    return editor.value.getAttributes('table').align ?? 'left';
+});
+
+/** 테이블 전체 정렬 적용 */
+const setTableAlign = (align: 'left' | 'center' | 'right') => {
+    editor.value?.chain().focus().updateAttributes('table', { align }).run();
+};
+
+// ── 셀 텍스트 정렬 (FR-01-2) ──
+
+/** 현재 선택된 셀의 텍스트 정렬 상태 */
+const currentCellTextAlign = computed<string>(() => {
+    if (!editor.value?.isActive('table')) return 'left';
+    const attrs = editor.value.getAttributes('tableCell');
+    const headerAttrs = editor.value.getAttributes('tableHeader');
+    return attrs.textAlign || headerAttrs.textAlign || 'left';
+});
+
+/** 셀 텍스트 정렬 적용 */
+const setCellTextAlign = (align: string) => {
+    editor.value?.chain().focus().setTextAlign(align).run();
 };
 
 // ── 셀 높이 (FR-06-5) ──
@@ -826,6 +846,9 @@ let _isResizingTable = false;
  *   설정하는 인라인 픽셀 너비를 브라우저 스타일 엔진이 자동으로 덮어씁니다.
  *   → 타이밍에 의존하지 않는 안정적인 너비 제어.
  */
+/**
+ * [FR-06] 테이블 너비 및 정렬 스타일 동기화 (단순화된 고정폭 버전)
+ */
 const applyTableWidths = () => {
     if (!editor.value || editor.value.isDestroyed) return;
     const view = editor.value.view;
@@ -842,31 +865,35 @@ const applyTableWidths = () => {
                 : wrapperEl.querySelector('table')) as HTMLTableElement | null;
             if (!tableEl) return;
 
-            // ── data-table-layout 속성을 라이브 DOM에 동기화 ──
-            // 이 속성이 설정되면 CSS 규칙이 매치되어 !important 로 인라인 스타일을 덮어씁니다:
-            //   table[data-table-layout="auto"]  { width: 100% !important; table-layout: auto !important }
-            //   table[data-table-layout="fixed"] { table-layout: fixed !important }
-            const layout = node.attrs.tableLayout || 'fixed';
-            if (tableEl.getAttribute('data-table-layout') !== layout) {
-                tableEl.setAttribute('data-table-layout', layout);
+            // 1. 레이아웃은 항상 fixed로 고정 (반응형 제거)
+            tableEl.setAttribute('data-table-layout', 'fixed');
+            tableEl.style.tableLayout = 'fixed';
+
+            // 2. data-align 속성 동기화
+            const align = node.attrs.align || 'left';
+            if (tableEl.getAttribute('data-align') !== align) {
+                tableEl.setAttribute('data-align', align);
             }
 
-            if (layout === 'auto') {
-                // 반응형: CSS !important가 width: 100%, table-layout: auto를 강제하므로
-                // JS에서 추가 처리가 불필요합니다. updateColumns()의 인라인 스타일은
-                // CSS !important에 의해 자동으로 무시됩니다.
-                return;
-            }
-
-            // 고정형: 열 드래그 리사이즈 중에는 Tiptap이 실시간으로 너비를 조정하므로 덮어쓰지 않습니다.
+            // 3. 테이블 전체 너비 동기화
+            // 드래그 중에는 간섭하지 않으며, width 속성이 있을 때만 적용합니다.
             if (_isResizingTable) return;
 
-            if (!node.attrs.width) return;
-
-            if (tableEl.style.width !== node.attrs.width) {
-                tableEl.style.width = node.attrs.width;
+            const targetWidth = node.attrs.width;
+            if (targetWidth) {
+                if (tableEl.style.width !== targetWidth) {
+                    tableEl.style.width = targetWidth;
+                }
+            } else {
+                // width가 null인 경우 스타일을 제거하여 자연스럽게 열 너비를 따르도록 함
+                if (tableEl.style.width) {
+                    tableEl.style.width = '';
+                }
             }
-        } catch { /* pos 매핑 실패 시 무시 */ }
+        } catch (e) {
+            console.warn('Sync failed:', e);
+        }
+        return false;
     });
 };
 
@@ -1017,7 +1044,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div
-        class="tiptap-editor-container relative border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-zinc-900">
+        class="tiptap-editor-container relative border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-zinc-900 flex flex-col h-full">
 
         <!-- 이미지 드래그 오버 시 표시되는 오버레이 -->
         <Transition name="drag-fade">
@@ -1033,10 +1060,10 @@ onBeforeUnmount(() => {
 
         <!-- ── 툴바 (TiptapToolbar.vue로 분리 — Design Ref: §2 Clean Architecture) ── -->
         <TiptapToolbar v-if="!readonly && editor" :editor="editor" :imageUploadFn="props.imageUploadFn"
-            :fileUploadFn="props.fileUploadFn" :attachmentList="props.attachmentList" />
+            :fileUploadFn="props.fileUploadFn" :fileDeleteFn="props.fileDeleteFn" :attachmentList="props.attachmentList" />
 
-        <!-- ── 에디터 본문 ── -->
-        <EditorContent v-if="editor" :editor="editor" class="tiptap-content" />
+        <!-- ── 에디터 본문 (부모 높이 전체 점유) ── -->
+        <EditorContent v-if="editor" :editor="editor" class="tiptap-content flex-1 overflow-y-auto custom-scrollbar" />
 
         <!-- SSR 중 placeholder -->
         <div v-else class="p-4 text-zinc-400 dark:text-zinc-600 min-h-[200px] flex items-start">
@@ -1285,21 +1312,66 @@ onBeforeUnmount(() => {
 
                 <span class="tf-divider" />
 
-                <!-- FR-06-4: 레이아웃 토글 (반응형 / 고정형) -->
+                <!-- FR-06-6: 테이블 전체 위치 정렬 -->
                 <div class="tf-group">
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableLayout === 'auto' }"
-                        :title="currentTableLayout === 'fixed' ? '반응형으로 전환 (auto)' : '고정형으로 전환 (fixed)'"
-                        @mousedown.prevent="toggleTableLayout">
-                        <svg width="16" height="16" viewBox="0 0 14 14" fill="none" stroke="currentColor"
-                            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-                            <!-- 표 외곽 -->
-                            <rect x="1" y="2" width="12" height="10" rx="1" />
-                            <!-- 가변 열 표시: 세로선 2개가 균등하지 않음 -->
-                            <line x1="5" y1="2" x2="5" y2="12" />
-                            <line x1="9" y1="2" x2="9" y2="12" />
-                            <!-- 반응형 화살표 힌트 -->
-                            <polyline points="2.5,7 4,5.5 4,8.5" v-if="currentTableLayout === 'fixed'" />
-                            <polyline points="11.5,7 10,5.5 10,8.5" v-if="currentTableLayout === 'fixed'" />
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'left' }" title="테이블 좌측 정렬"
+                        @mousedown.prevent="setTableAlign('left')">
+                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="1" y="2" width="8" height="10" rx="1" />
+                            <path d="M10 4h3M10 7h2M10 10h3" opacity="0.4" />
+                        </svg>
+                    </button>
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'center' }"
+                        title="테이블 중앙 정렬" @mousedown.prevent="setTableAlign('center')">
+                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="3" y="2" width="8" height="10" rx="1" />
+                            <path d="M1 4h1M12 4h1M1 7h1.5M11.5 7h1.5M1 10h1M12 10h1" opacity="0.4" />
+                        </svg>
+                    </button>
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'right' }" title="테이블 우측 정렬"
+                        @mousedown.prevent="setTableAlign('right')">
+                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="5" y="2" width="8" height="10" rx="1" />
+                            <path d="M1 4h3M2 7h2M1 10h3" opacity="0.4" />
+                        </svg>
+                    </button>
+                </div>
+
+                <span class="tf-divider" />
+
+                <!-- FR-01-2: 셀 텍스트 정렬 -->
+                <div class="tf-group">
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'left' }"
+                        title="텍스트 좌측 정렬" @mousedown.prevent="setCellTextAlign('left')">
+                        <i class="pi pi-align-left"></i>
+                    </button>
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'center' }"
+                        title="텍스트 중앙 정렬" @mousedown.prevent="setCellTextAlign('center')">
+                        <i class="pi pi-align-center"></i>
+                    </button>
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'right' }"
+                        title="텍스트 우측 정렬" @mousedown.prevent="setCellTextAlign('right')">
+                        <i class="pi pi-align-right"></i>
+                    </button>
+                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'justify' }"
+                        title="텍스트 양쪽 정렬" @mousedown.prevent="setCellTextAlign('justify')">
+                        <i class="pi pi-align-justify"></i>
+                    </button>
+                </div>
+
+                <span class="tf-divider" />
+
+                <!-- FR-06-4: 너비에 맞추기 (균등 배분 및 고정폭 고정) -->
+                <div class="tf-group">
+                    <button class="tf-btn" title="에디터 너비에 맞추기 (균등 배분)" @mousedown.prevent="setTableFullWidth">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 8 1 12 4 16" />
+                            <polyline points="20 16 23 12 20 8" />
+                            <line x1="1" y1="12" x2="23" y2="12" />
                         </svg>
                     </button>
                 </div>
@@ -1421,9 +1493,9 @@ onBeforeUnmount(() => {
 /* ── 에디터 본문 영역 ── */
 :deep(.tiptap-content .ProseMirror) {
     outline: none;
-    min-height: 400px;
-    padding: 1.25rem 1.5rem;
-    line-height: 1.75;
+    min-height: 100%; /* 부모 높이를 꽉 채움 */
+    padding: 1.5rem 2rem;
+    line-height: 1.8;
     color: #1c1c1e;
 }
 
@@ -1555,19 +1627,22 @@ onBeforeUnmount(() => {
    border-collapse: separate + border-radius 조합의 한계를 극복하기 위해
    래퍼에 테두리와 곡률을 적용합니다. */
 :deep(.tiptap-content .ProseMirror .tableWrapper) {
+    position: relative;
     overflow: hidden;
-    /* 둥근 모서리 클리핑 */
     overflow-x: auto;
-    /* 수평 스크롤 지원 */
     margin: 1.25rem 0;
-    border-radius: 6px;
+    /* 테두리 대신 padding을 주어 내부 테이블의 border가 잘림 없이 표시되게 함 */
+    padding: 1px;
 }
 
 /* table: border-collapse: collapse를 적용하여 셀 간 테두리 병합 및 커스텀 테두리 허용 */
 :deep(.tiptap-content .ProseMirror table) {
     border-collapse: collapse;
-    table-layout: fixed; /* 기본값 */
-    width: 100%;
+    table-layout: fixed;
+    /* 기본값 */
+    width: auto;
+    min-width: 100px;
+    max-width: 100%;
     margin: 0;
     font-size: 0.875rem;
     line-height: 1.6;
@@ -1575,20 +1650,25 @@ onBeforeUnmount(() => {
     /* 외곽선은Wrapper가 담당 */
 }
 
-/* [FR-06-4] 표 레이아웃 스타일 명시적 제어 */
-:deep(.tiptap-content .ProseMirror table[data-table-layout="auto"]) {
-    table-layout: auto !important;
-    width: 100% !important;
+/* [FR-06-4] 표 레이아웃 스타일 명시적 제어 (반응형 제거됨) */
+
+/* [FR-06-6] 테이블 위치 정렬 (데이터 속성 기반 강제 적용) */
+:deep(.tiptap-content .ProseMirror table[data-align="left"]) {
+    margin-left: 0 !important;
+    margin-right: auto !important;
 }
 
-/* 반응형 모드에서 Tiptap의 리사이징 플러그인이 설정한 col 너비 무력화 */
-:deep(.tiptap-content .ProseMirror table[data-table-layout="auto"] col) {
-    width: auto !important;
+:deep(.tiptap-content .ProseMirror table[data-align="center"]) {
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
-:deep(.tiptap-content .ProseMirror table[data-table-layout="fixed"]) {
-    table-layout: fixed !important;
+:deep(.tiptap-content .ProseMirror table[data-align="right"]) {
+    margin-left: auto !important;
+    margin-right: 0 !important;
 }
+
+/* 반응형 모드 관련 CSS 제거됨 */
 
 /* td · th 공통: 인라인 스타일이 없는 경우 기본 테두리 적용 */
 :deep(.tiptap-content .ProseMirror td),
@@ -1624,7 +1704,7 @@ onBeforeUnmount(() => {
 
 /* 다크모드 — 표 래퍼 설정 */
 :global(.dark) :deep(.tiptap-content .ProseMirror .tableWrapper) {
-    border: none;
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 /* 다크모드 — 셀 구분선 */
@@ -2013,7 +2093,8 @@ onBeforeUnmount(() => {
 :deep(.tiptap-content .ProseMirror .row-resize-line) {
     position: absolute;
     height: 2px;
-    background-color: #6366f1; /* Indigo 500 */
+    background-color: #6366f1;
+    /* Indigo 500 */
     z-index: 100;
     pointer-events: none;
     opacity: 0.8;
@@ -2027,5 +2108,21 @@ onBeforeUnmount(() => {
 /* 다크모드 대응 */
 :global(.dark) :deep(.tiptap-content .ProseMirror .row-resize-handle:hover) {
     background: rgba(129, 140, 248, 0.6) !important;
+}
+
+/* ── 읽기 전용 모드(편집 불가)인 경우 테이블 조작 비활성화 (FR-06-5) ── */
+:deep(.tiptap-content .ProseMirror[contenteditable="false"] .row-resize-handle) {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+:deep(.tiptap-content .ProseMirror[contenteditable="false"] table) {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+:deep(.tiptap-content .ProseMirror[contenteditable="false"] .selectedCell:after) {
+    display: none !important;
+    /* Tiptap 기본 셀 선택 오버레이 숨김 */
 }
 </style>

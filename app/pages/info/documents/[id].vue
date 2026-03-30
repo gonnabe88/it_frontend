@@ -106,6 +106,49 @@ const handleEditorImageUpload = async (file: File): Promise<string> => {
     }
 };
 
+/**
+ * Tiptap 에디터 첨부파일 업로드 핸들러
+ * @param file - 업로드할 파일
+ */
+const handleEditorFileUpload = async (file: File) => {
+    try {
+        const result = await uploadFile(file, '첨부파일', docMngNo, '요구사항정의서');
+        await refreshFiles();
+        return {
+            flMngNo: result.flMngNo,
+            flNm:    result.orcFlNm,
+            flSz:    0, // 서버 응답에 파일 크기가 없는 경우 처리 (필요 시 API 스펙 확인)
+        };
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '파일 업로드 실패', detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.', life: 4000 });
+        throw e;
+    }
+};
+
+/**
+ * Tiptap 에디터 첨부파일 삭제 핸들러
+ * @param flMngNo - 삭제할 파일 관리번호
+ */
+const handleEditorFileDelete = async (flMngNo: string) => {
+    try {
+        await deleteFile(flMngNo);
+        toast.add({ severity: 'success', summary: '삭제 완료', detail: '파일이 서버에서 삭제되었습니다.', life: 3000 });
+        await refreshFiles();
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '삭제 실패', detail: e?.data?.message || '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
+        throw e;
+    }
+};
+
+/** Tiptap 에디터용 첨부파일 목록 (AttachmentItem[] 형식) */
+const attachmentListForEditor = computed(() =>
+    attachedFiles.value.map(f => ({
+        flMngNo: f.flMngNo,
+        flNm:    f.orcFlNm,
+        flSz:    0, // API 스펙상 크기가 없다면 0 처리
+    }))
+);
+
 /** 편집 폼 데이터 */
 const form = reactive<RequirementDocumentForm>({
     reqNm: '',
@@ -645,13 +688,17 @@ onUnmounted(() => {
                         </div>
                         <div class="p-4">
                             <ClientOnly>
-                                <!-- 편집 모드: 이미지 API 업로드 활성화 -->
+                                <!-- 편집 모드: 첨부파일 및 이미지 API 업로드 활성화 -->
                                 <TiptapEditor v-if="isEditing" v-model="form.reqCone"
                                     placeholder="요구사항 상세 내용을 입력하세요..."
                                     :imageUploadFn="handleEditorImageUpload"
+                                    :fileUploadFn="handleEditorFileUpload"
+                                    :fileDeleteFn="handleEditorFileDelete"
+                                    :attachmentList="attachmentListForEditor"
                                     @update:toc="handleUpdateToc" />
                                 <!-- 읽기 모드 -->
                                 <TiptapEditor v-else :modelValue="doc.reqCone || ''" :readonly="true"
+                                    :attachmentList="attachmentListForEditor"
                                     @update:toc="handleUpdateToc" />
                                 <template #fallback>
                                     <div class="p-8 text-center text-zinc-400">

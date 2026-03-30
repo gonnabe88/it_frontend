@@ -39,6 +39,10 @@ const props = defineProps<{
      * 현재 문서의 첨부파일 목록 (파일 첨부 다이얼로그 기존 파일 표시용)
      */
     attachmentList?: AttachmentItem[];
+    /**
+     * 첨부파일 삭제 핸들러 (FR-05-4)
+     */
+    fileDeleteFn?: (fileId: string) => Promise<void>;
 }>();
 
 // ── 색상 팔레트 ──
@@ -277,16 +281,37 @@ const fileAttachInputRef = ref<HTMLInputElement | null>(null);
 const isUploadingFile = ref(false);
 
 /**
- * "파일 첨부" 버튼 클릭 → 파일 선택 input 클릭
- * fileUploadFn이 없으면 버튼을 비활성화합니다.
+ * "파일 첨부" 버튼 클릭 → 첨부파일 관리 다이얼로그 오픈
  */
 const openFileAttach = () => {
+    fileAttachDialogVisible.value = true;
+};
+
+/**
+ * 신규 파일 업로드 트리거 (다이얼로그 내부에서 호출)
+ */
+const triggerFileUpload = () => {
     if (!props.fileUploadFn) return;
     fileAttachInputRef.value?.click();
 };
 
 /**
- * 파일 선택 후 업로드하고 attachment 노드를 삽입합니다.
+ * 목록에서 선택한 기존 첨부파일을 본문에 삽입 (FR-05)
+ */
+const insertAttachment = (item: AttachmentItem) => {
+    props.editor?.chain().focus().insertContent({
+        type: 'attachment',
+        attrs: {
+            fileId: item.flMngNo,
+            fileName: item.flNm,
+            fileSize: item.flSz,
+        }
+    }).run();
+    // 삽입 후 다이얼로그를 유지하거나 닫을 수 있으나, 현재는 유지 (UX)
+};
+
+/**
+ * 파일 선택 후 서버 업로드 및 본문 삽입
  * Design Ref: §5.2, §8 — fileUploadFn 호출 + insertContent
  */
 const handleFileAttachChange = async (event: Event) => {
@@ -296,18 +321,76 @@ const handleFileAttachChange = async (event: Event) => {
     isUploadingFile.value = true;
     try {
         const result = await props.fileUploadFn(file);
-        props.editor?.chain().focus().insertContent({
-            type: 'attachment',
-            attrs: {
-                fileId:   result.flMngNo,
-                fileName: result.flNm,
-                fileSize: result.flSz,
-            }
-        }).run();
+        // 업로드 성공 시 즉시 본문에 삽입
+        insertAttachment({
+            flMngNo: result.flMngNo,
+            flNm: result.flNm,
+            flSz: result.flSz,
+        });
     } finally {
         isUploadingFile.value = false;
-        // 같은 파일을 다시 선택할 수 있도록 input 초기화
         if (fileAttachInputRef.value) fileAttachInputRef.value.value = '';
+    }
+};
+
+/** 파일 크기 포맷 (Bytes -> KB, MB) */
+const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+/**
+ * 첨부파일 삭제 처리 (FR-05-4)
+ * 확인 창을 거쳐 삭제를 진행하며, 성공 시 본문 내의 관련 노드도 자동 제거합니다.
+ */
+const confirmDeleteAttachment = async (file: AttachmentItem) => {
+    if (!props.fileDeleteFn) return;
+
+    const confirmed = window.confirm(`'${file.flNm}' 파일을 삭제하시겠습니까?\n서버에서 삭제되며 본문 내의 관련 내용도 모두 제거됩니다.`);
+    if (!confirmed) return;
+
+    try {
+        // 1. 서버 삭제 요청
+        await props.fileDeleteFn(file.flMngNo);
+
+        // 2. 에디터 본문 내의 해당 파일 노드들 자동 제거 (동기화)
+        if (props.editor) {
+            const { state, dispatch } = props.editor.view;
+            const tr = state.tr;
+            let deleted = false;
+
+            state.doc.descendants((node, pos) => {
+                if (node.type.name === 'attachment' && node.attrs.fileId === file.flMngNo) {
+                    // pos는 노드의 위치입니다. 
+                    // 이미 삭제가 일어났다면 pos가 변할 수 있으므로 뒤에서부터 지우거나
+                    // 단순하게 filter를 쓸 수 있지만, 여기서는 pos를 정확히 계산하기 위해
+                    // tr.delete를 사용하되, multiple nodes의 경우 pos 관리가 필요함.
+                    // Tiptap에서는 간단히 editor.commands.deleteNode()를 루프에서 쓰는 방식도 있음.
+                }
+            });
+
+            // 가장 안전한 방식: editor.commands를 활용한 필터링 삭제
+            props.editor.commands.command(({ tr, state, dispatch }) => {
+                const positions: number[] = [];
+                state.doc.descendants((node, pos) => {
+                    if (node.type.name === 'attachment' && node.attrs.fileId === file.flMngNo) {
+                        positions.push(pos);
+                    }
+                });
+
+                // 뒤에서부터 지워야 인덱스가 깨지지 않음
+                positions.reverse().forEach(pos => {
+                    tr.delete(pos, pos + 1);
+                });
+                return true;
+            });
+        }
+    } catch (e) {
+        console.error('[TiptapToolbar] 파일 삭제 실패:', e);
+        alert('파일 삭제 중 오류가 발생했습니다.');
     }
 };
 
@@ -430,8 +513,7 @@ const parsedExcalidrawInitialData = computed(() => {
             <div class="toolbar-group flex gap-0.5 items-center">
                 <!-- 글자 색상 팔레트 -->
                 <div class="relative">
-                    <button class="tbar-btn flex flex-col items-center justify-center gap-0 min-w-[28px]"
-                        title="글자 색상"
+                    <button class="tbar-btn flex flex-col items-center justify-center gap-0 min-w-[28px]" title="글자 색상"
                         @click.stop="colorPaletteVisible = !colorPaletteVisible; highlightPaletteVisible = false">
                         <span class="text-[11px] font-bold leading-tight">A</span>
                         <span class="w-4 h-[3px] rounded-sm" :style="{ backgroundColor: currentTextColor }"></span>
@@ -458,12 +540,11 @@ const parsedExcalidrawInitialData = computed(() => {
 
                 <!-- 배경(형광펜) 색상 팔레트 -->
                 <div class="relative">
-                    <button class="tbar-btn flex flex-col items-center justify-center gap-0 min-w-[28px]"
-                        title="배경 색상" :class="{ 'tbar-btn-active': editor.isActive('highlight') }"
+                    <button class="tbar-btn flex flex-col items-center justify-center gap-0 min-w-[28px]" title="배경 색상"
+                        :class="{ 'tbar-btn-active': editor.isActive('highlight') }"
                         @click.stop="highlightPaletteVisible = !highlightPaletteVisible; colorPaletteVisible = false">
                         <i class="pi pi-pen-to-square text-[11px] leading-tight"></i>
-                        <span class="w-4 h-[3px] rounded-sm"
-                            :style="{ backgroundColor: currentHighlightColor }"></span>
+                        <span class="w-4 h-[3px] rounded-sm" :style="{ backgroundColor: currentHighlightColor }"></span>
                     </button>
                     <!-- 배경색 팔레트 패널 -->
                     <div v-if="highlightPaletteVisible"
@@ -561,8 +642,8 @@ const parsedExcalidrawInitialData = computed(() => {
             <!-- 삽입 -->
             <div class="toolbar-group flex gap-0.5">
                 <!-- 링크 -->
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('link') }"
-                    @click="openLinkDialog" title="링크 삽입">
+                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('link') }" @click="openLinkDialog"
+                    title="링크 삽입">
                     <i class="pi pi-link text-xs"></i>
                 </button>
                 <!-- 링크 제거 -->
@@ -575,8 +656,8 @@ const parsedExcalidrawInitialData = computed(() => {
                     <i class="pi pi-image text-xs"></i>
                 </button>
                 <!-- 표 삽입 (플로팅 툴바로 행/열 조작) -->
-                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('table') }"
-                    @click="insertTable" title="표 삽입">
+                <button class="tbar-btn" :class="{ 'tbar-btn-active': editor.isActive('table') }" @click="insertTable"
+                    title="표 삽입">
                     <i class="pi pi-table text-xs"></i>
                 </button>
                 <!-- 구분선 -->
@@ -603,12 +684,12 @@ const parsedExcalidrawInitialData = computed(() => {
 
             <!-- 실행 취소 / 다시 실행 -->
             <div class="toolbar-group flex gap-0.5">
-                <button class="tbar-btn" @click="editor.chain().focus().undo().run()"
-                    :disabled="!editor.can().undo()" title="실행 취소 (Ctrl+Z)">
+                <button class="tbar-btn" @click="editor.chain().focus().undo().run()" :disabled="!editor.can().undo()"
+                    title="실행 취소 (Ctrl+Z)">
                     <i class="pi pi-undo text-xs"></i>
                 </button>
-                <button class="tbar-btn" @click="editor.chain().focus().redo().run()"
-                    :disabled="!editor.can().redo()" title="다시 실행 (Ctrl+Y)">
+                <button class="tbar-btn" @click="editor.chain().focus().redo().run()" :disabled="!editor.can().redo()"
+                    title="다시 실행 (Ctrl+Y)">
                     <i class="pi pi-refresh text-xs"></i>
                 </button>
             </div>
@@ -627,15 +708,13 @@ const parsedExcalidrawInitialData = computed(() => {
             <div class="relative">
                 <button
                     class="tbar-btn bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-700 flex items-center gap-1.5 px-2"
-                    title="수식 삽입 (LaTeX)"
-                    @click.stop="mathMenuVisible = !mathMenuVisible">
+                    title="수식 삽입 (LaTeX)" @click.stop="mathMenuVisible = !mathMenuVisible">
                     <span class="text-xs font-bold italic">∑</span>
                     <span class="text-xs">수식</span>
                     <i class="pi pi-chevron-down text-[9px]" />
                 </button>
                 <!-- 수식 타입 선택 드롭다운 -->
-                <div
-                    v-if="mathMenuVisible"
+                <div v-if="mathMenuVisible"
                     class="absolute top-full left-0 mt-1 z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg shadow-lg py-1 min-w-[130px]"
                     @click.stop>
                     <button
@@ -654,24 +733,16 @@ const parsedExcalidrawInitialData = computed(() => {
             </div>
 
             <!-- FR-05-2: 파일 첨부 버튼 -->
-            <button
-                v-if="fileUploadFn"
+            <button v-if="fileUploadFn"
                 class="tbar-btn bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700 flex items-center gap-1.5 px-2"
-                :class="{ 'opacity-50 cursor-not-allowed': isUploadingFile }"
-                :disabled="isUploadingFile"
-                title="파일 첨부 (FR-05)"
-                @click="openFileAttach">
+                :class="{ 'opacity-50 cursor-not-allowed': isUploadingFile }" :disabled="isUploadingFile"
+                title="파일 첨부 (FR-05)" @click="openFileAttach">
                 <i v-if="isUploadingFile" class="pi pi-spin pi-spinner text-xs" />
                 <i v-else class="pi pi-paperclip text-xs" />
                 <span class="text-xs">{{ isUploadingFile ? '업로드 중...' : '파일 첨부' }}</span>
             </button>
             <!-- 숨겨진 파일 input: 모든 파일 형식 허용 -->
-            <input
-                ref="fileAttachInputRef"
-                type="file"
-                class="hidden"
-                @change="handleFileAttachChange"
-            />
+            <input ref="fileAttachInputRef" type="file" class="hidden" @change="handleFileAttachChange" />
         </div>
 
         <!-- ── 링크 삽입 다이얼로그 ── -->
@@ -763,6 +834,66 @@ const parsedExcalidrawInitialData = computed(() => {
             <template #footer>
                 <Button label="취소" severity="secondary" icon="pi pi-times" @click="closeExcalidraw" />
                 <Button label="다이어그램 저장" icon="pi pi-check" @click="handleExcalidrawSave" />
+            </template>
+        </Dialog>
+
+        <!-- ── 첨부파일 관리 다이얼로그 (FR-05) ── -->
+        <Dialog v-model:visible="fileAttachDialogVisible" modal header="첨부파일 관리" :style="{ width: '720px' }">
+            <div class="flex flex-col gap-4">
+                <!-- 상단: 신규 업로드 버튼 -->
+                <div
+                    class="flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-700">
+                    <div class="text-sm text-zinc-500">
+                        <i class="pi pi-info-circle mr-1"></i>
+                        새로운 파일을 업로드하여 문서에 추가합니다.
+                    </div>
+                    <Button label="업로드" icon="pi pi-upload" size="small" :loading="isUploadingFile"
+                        @click="triggerFileUpload" />
+                </div>
+
+                <!-- 중앙: 첨부파일 목록 -->
+                <div class="flex flex-col gap-2">
+                    <h4 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 px-1 flex items-center gap-2">
+                        <i class="pi pi-list"></i>
+                        문서 첨부파일 목록 ({{ attachmentList?.length || 0 }})
+                    </h4>
+
+                    <div v-if="attachmentList && attachmentList.length > 0"
+                        class="max-h-[300px] overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg divide-y divide-zinc-100 dark:divide-zinc-800">
+                        <div v-for="file in attachmentList" :key="file.flMngNo"
+                            class="flex items-center justify-between p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors group">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <i class="pi pi-file text-indigo-500 text-lg shrink-0"></i>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate"
+                                        :title="file.flNm">
+                                        {{ file.flNm }}
+                                    </span>
+                                    <span class="text-[11px] text-zinc-400">
+                                        {{ formatFileSize(file.flSz) }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div
+                                class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <Button icon="pi pi-trash" label="삭제" size="small" severity="danger" text
+                                    @click="confirmDeleteAttachment(file)" :disabled="!fileDeleteFn" />
+                                <Button icon="pi pi-plus" label="본문 삽입" size="small" severity="secondary"
+                                    @click="insertAttachment(file)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 빈 상태 -->
+                    <div v-else
+                        class="py-12 flex flex-col items-center justify-center border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50/50 dark:bg-zinc-900/20">
+                        <i class="pi pi-folder-open text-3xl text-zinc-300 mb-3"></i>
+                        <p class="text-sm text-zinc-400">첨부된 파일이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+            <template #footer>
+                <Button label="닫기" severity="secondary" @click="fileAttachDialogVisible = false" />
             </template>
         </Dialog>
     </template>
