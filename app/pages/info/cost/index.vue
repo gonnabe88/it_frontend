@@ -98,6 +98,21 @@ const filteredCosts = computed(() => {
         cost.pulCgprNm?.toLowerCase().includes(kw)
     );
 });
+
+/**
+ * 결재 상태에 따른 PrimeVue Tag 색상 클래스 반환
+ *
+ * @param status - 결재 상태 문자열
+ * @returns Tailwind CSS 클래스
+ */
+const getApprovalTagClass = (status: string) => {
+    switch (status) {
+        case '완료': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+        case '반려': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+        case '진행중': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+        default: return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 text-zinc-400';
+    }
+};
 </script>
 
 <template>
@@ -164,6 +179,15 @@ const filteredCosts = computed(() => {
                 <Column field="dfrCle" header="지급주기" sortable></Column>
                 <Column field="pulDpmNm" header="추진부서" sortable></Column>
                 <Column field="pulCgprNm" header="담당자" sortable></Column>
+
+                <!-- 결재현황 태그 -->
+                <Column field="apfSts" header="결재현황" sortable>
+                    <template #body="slotProps">
+                        <Tag :value="slotProps.data.apfSts || '예산 작성'"
+                            :class="getApprovalTagClass(slotProps.data.apfSts)" class="border-0"
+                            rounded />
+                    </template>
+                </Column>
 
                 <!-- 상세 조회 버튼 -->
                 <Column style="width: 10%">

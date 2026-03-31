@@ -6,11 +6,16 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     // 브라우저 1개만 사용 (로컬 환경 속도 최적화)
     workers: 1,
+    timeout: 60 * 1000,
+    expect: {
+        timeout: 10 * 1000
+    },
     reporter: 'html',
     use: {
         baseURL: 'http://localhost:3002',
-        // 실패 시 스크린샷 자동 저장
+        trace: 'on-first-retry',
         screenshot: 'only-on-failure',
+        video: 'on-first-retry',
     },
     projects: [
         // 1단계: 인증 설정 (수동 로그인)

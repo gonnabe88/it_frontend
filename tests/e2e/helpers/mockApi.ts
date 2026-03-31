@@ -41,10 +41,13 @@ export async function mockApi<T>(
     body: T,
     status = 200
 ) {
-    // URL 패턴 끝에 와일드카드를 추가하여 쿼리 스트링이나 슬래시 차이를 허용합니다.
-    const pattern = urlPattern.endsWith('*') ? urlPattern : `${urlPattern}*`;
-    await page.route(`**${pattern}`, route => {
-        route.fulfill({
+    // 정규식을 사용하여 더욱 유연하고 확실하게 매칭합니다.
+    const escapedPattern = urlPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedPattern);
+
+    await page.route(regex, async route => {
+        console.log(`[Mock Hit] ${route.request().method()} ${route.request().url()}`);
+        await route.fulfill({
             status,
             contentType: 'application/json',
             body: JSON.stringify(body)
