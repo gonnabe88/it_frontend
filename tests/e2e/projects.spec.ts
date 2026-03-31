@@ -15,8 +15,7 @@ const mockProjects = [
 
 test.describe('정보화사업 프로젝트 목록', () => {
     test.beforeEach(async ({ page }) => {
-        // 로그인 상태 주입 및 API Mock 설정
-        await setLoggedIn(page);
+        // 전역 storageState를 사용하므로 API Mock만 설정합니다.
         await mockApi(page, '/api/projects', mockProjects);
     });
 

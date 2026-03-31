@@ -16,8 +16,8 @@ test.describe('인증 플로우', () => {
         await page.goto('/login');
 
         // 사원번호와 비밀번호 입력
-        await page.getByLabel('사원번호').fill('E001');
-        await page.getByLabel('비밀번호').fill('password123');
+        await page.getByLabel('행번').fill('E001');
+        await page.getByLabel('ESSO 비밀번호').fill('password123');
         await page.getByRole('button', { name: '로그인' }).click();
 
         // 로그인 후 메인 페이지로 리다이렉트 확인 (login 페이지가 아니어야 함)
@@ -35,8 +35,8 @@ test.describe('인증 플로우', () => {
         });
 
         await page.goto('/login');
-        await page.getByLabel('사원번호').fill('E001');
-        await page.getByLabel('비밀번호').fill('wrongpassword');
+        await page.getByLabel('행번').fill('E001');
+        await page.getByLabel('ESSO 비밀번호').fill('wrongpassword');
         await page.getByRole('button', { name: '로그인' }).click();
 
         // 에러 메시지(Toast 또는 인라인 에러)가 표시되어야 함

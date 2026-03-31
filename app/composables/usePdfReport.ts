@@ -663,10 +663,6 @@ export const usePdfReport = () => {
                                     { text: htmlToText(project.xptEff),     colSpan: 3 }, {}, {}
                                 ],
                                 [
-                                    { text: '추진사유',           style: 'label', fillColor: colors.headerBg },
-                                    { text: htmlToText(project.pulRsn),     colSpan: 3 }, {}, {}
-                                ],
-                                [
                                     { text: '추진경과',           style: 'label', fillColor: colors.headerBg },
                                     { text: htmlToText(project.pulPsg),     colSpan: 3 }, {}, {}
                                 ],

@@ -1,7 +1,7 @@
 # Page snapshot
 
 ```yaml
-- generic [ref=e1]:
+- generic [active] [ref=e1]:
   - generic [ref=e3]:
     - complementary [ref=e4]:
       - generic [ref=e5]:
@@ -12,182 +12,294 @@
           - generic [ref=e10]: 
       - list [ref=e12]:
         - listitem [ref=e13]:
-          - link " 홈" [ref=e14] [cursor=pointer]:
+          - link " Home" [ref=e14] [cursor=pointer]:
             - /url: /info
             - generic [ref=e15]:
               - generic [ref=e16]: 
-              - generic [ref=e17]: 홈
+              - generic [ref=e17]: Home
         - listitem [ref=e18]:
-          - link " 가이드" [ref=e19] [cursor=pointer]:
+          - link " 사업 가이드" [ref=e19] [cursor=pointer]:
             - /url: /guide
             - generic [ref=e20]:
               - generic [ref=e21]: 
-              - generic [ref=e22]: 가이드
+              - generic [ref=e22]: 사업 가이드
         - listitem [ref=e23]:
-          - link " 요구사항 정의서" [ref=e24] [cursor=pointer]:
-            - /url: /info/documents
+          - generic [ref=e24] [cursor=pointer]:
             - generic [ref=e25]:
-              - generic [ref=e26]: 
-              - generic [ref=e27]: 요구사항 정의서
-        - listitem [ref=e28]:
-          - link " 사전진단" [ref=e29] [cursor=pointer]:
-            - /url: /diagnosis
-            - generic [ref=e30]:
-              - generic [ref=e31]: 
-              - generic [ref=e32]: 사전진단
-        - listitem [ref=e33]:
-          - generic [ref=e34] [cursor=pointer]:
-            - generic [ref=e35]:
-              - generic [ref=e36]: 
-              - generic [ref=e37]: 전산예산
-            - generic [ref=e38]: 
-          - list [ref=e39]:
-            - listitem [ref=e40]:
-              - link "예산 작성" [ref=e41] [cursor=pointer]:
+              - generic [ref=e26]: 
+              - generic [ref=e27]: 전산예산
+            - generic [ref=e28]: 
+          - list [ref=e29]:
+            - listitem [ref=e30]:
+              - link "예산 작성" [ref=e31] [cursor=pointer]:
                 - /url: /budget
-            - listitem [ref=e42]:
-              - link "결재 상신" [ref=e43] [cursor=pointer]:
+                - generic [ref=e32]: 예산 작성
+            - listitem [ref=e33]:
+              - link "결재 상신 8" [ref=e34] [cursor=pointer]:
                 - /url: /budget/approval
-            - listitem [ref=e44]:
-              - link "예산 목록" [ref=e45] [cursor=pointer]:
+                - generic [ref=e35]: 결재 상신
+                - generic [ref=e36]: "8"
+            - listitem [ref=e37]:
+              - link "예산 목록" [ref=e38] [cursor=pointer]:
                 - /url: /budget/list
-        - listitem [ref=e46]:
-          - generic [ref=e47] [cursor=pointer]:
-            - generic [ref=e48]:
-              - generic [ref=e49]: 
-              - generic [ref=e50]: 정보화사업
-            - generic [ref=e51]: 
-          - list [ref=e52]:
-            - listitem [ref=e53]:
-              - link "사업 목록" [ref=e54] [cursor=pointer]:
+                - generic [ref=e39]: 예산 목록
+        - listitem [ref=e40]:
+          - generic [ref=e41] [cursor=pointer]:
+            - generic [ref=e42]:
+              - generic [ref=e43]: 
+              - generic [ref=e44]: 정보기술부문 계획
+            - generic [ref=e45]: 
+          - list [ref=e46]:
+            - listitem [ref=e47]:
+              - link "계획 조회" [ref=e48] [cursor=pointer]:
+                - /url: /info/plan
+                - generic [ref=e49]: 계획 조회
+            - listitem [ref=e50]:
+              - link "계획 등록" [ref=e51] [cursor=pointer]:
+                - /url: /info/plan/form
+                - generic [ref=e52]: 계획 등록
+        - listitem [ref=e53]:
+          - generic [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: 
+              - generic [ref=e57]: 정보화사업
+            - generic [ref=e58]: 
+          - list [ref=e59]:
+            - listitem [ref=e60]:
+              - link "사업 목록" [ref=e61] [cursor=pointer]:
                 - /url: /info/projects
-            - listitem [ref=e55]:
-              - link "사전 협의" [ref=e56] [cursor=pointer]:
-                - /url: /info/consultation
-            - listitem [ref=e57]:
-              - link "정보화실무협의회 신청" [ref=e58] [cursor=pointer]:
-                - /url: /info/council-request
-            - listitem [ref=e59]:
-              - link "세부 요구사항 작성" [ref=e60] [cursor=pointer]:
-                - /url: /info/requirements
-            - listitem [ref=e61]:
-              - link "소요예산 산정 신청" [ref=e62] [cursor=pointer]:
-                - /url: /info/estimation
+                - generic [ref=e62]: 사업 목록
             - listitem [ref=e63]:
-              - link "과업심의위원회 신청" [ref=e64] [cursor=pointer]:
-                - /url: /info/deliberation
-            - listitem [ref=e65]:
-              - link "입찰/계약 의뢰" [ref=e66] [cursor=pointer]:
-                - /url: /info/contract
-            - listitem [ref=e67]:
-              - link "대금지급 의뢰" [ref=e68] [cursor=pointer]:
-                - /url: /info/payment
+              - link "사전 협의" [ref=e64] [cursor=pointer]:
+                - /url: /info/consultation
+                - generic [ref=e65]: 사전 협의
+            - listitem [ref=e66]:
+              - link "정보화실무협의회 신청" [ref=e67] [cursor=pointer]:
+                - /url: /info/council-request
+                - generic [ref=e68]: 정보화실무협의회 신청
             - listitem [ref=e69]:
-              - link "성과평가" [ref=e70] [cursor=pointer]:
-                - /url: /info/evaluation
-        - listitem [ref=e71]:
-          - generic [ref=e72] [cursor=pointer]:
-            - generic [ref=e73]:
-              - generic [ref=e74]: 
-              - generic [ref=e75]: 정보화협의체 운영
-            - generic [ref=e76]: 
-          - list [ref=e77]:
+              - link "세부 요구사항 작성" [ref=e70] [cursor=pointer]:
+                - /url: /info/requirements
+                - generic [ref=e71]: 세부 요구사항 작성
+            - listitem [ref=e72]:
+              - link "소요예산 산정 신청" [ref=e73] [cursor=pointer]:
+                - /url: /info/estimation
+                - generic [ref=e74]: 소요예산 산정 신청
+            - listitem [ref=e75]:
+              - link "과업심의위원회 신청" [ref=e76] [cursor=pointer]:
+                - /url: /info/deliberation
+                - generic [ref=e77]: 과업심의위원회 신청
             - listitem [ref=e78]:
-              - link "정보화실무협의회 운영" [ref=e79] [cursor=pointer]:
+              - link "입찰/계약 의뢰" [ref=e79] [cursor=pointer]:
+                - /url: /info/contract
+                - generic [ref=e80]: 입찰/계약 의뢰
+            - listitem [ref=e81]:
+              - link "대금지급 의뢰" [ref=e82] [cursor=pointer]:
+                - /url: /info/payment
+                - generic [ref=e83]: 대금지급 의뢰
+            - listitem [ref=e84]:
+              - link "성과평가" [ref=e85] [cursor=pointer]:
+                - /url: /info/evaluation
+                - generic [ref=e86]: 성과평가
+        - listitem [ref=e87]:
+          - generic [ref=e88] [cursor=pointer]:
+            - generic [ref=e89]:
+              - generic [ref=e90]: 
+              - generic [ref=e91]: 정보화협의체 운영
+            - generic [ref=e92]: 
+          - list [ref=e93]:
+            - listitem [ref=e94]:
+              - link "정보화실무협의회 운영" [ref=e95] [cursor=pointer]:
                 - /url: /info/council/working
-            - listitem [ref=e80]:
-              - link "정보화추진협의회 운영" [ref=e81] [cursor=pointer]:
+                - generic [ref=e96]: 정보화실무협의회 운영
+            - listitem [ref=e97]:
+              - link "정보화추진협의회 운영" [ref=e98] [cursor=pointer]:
                 - /url: /info/council/promotion
-            - listitem [ref=e82]:
-              - link "정보화추진위원회 운영" [ref=e83] [cursor=pointer]:
+                - generic [ref=e99]: 정보화추진협의회 운영
+            - listitem [ref=e100]:
+              - link "정보화추진위원회 운영" [ref=e101] [cursor=pointer]:
                 - /url: /info/council/committee
-    - generic [ref=e84]:
-      - generic [ref=e85]:
-        - generic [ref=e86]:
-          - menubar [ref=e87]:
-            - menuitem "정보화" [ref=e88]:
-              - generic [ref=e91] [cursor=pointer]: 정보화
+                - generic [ref=e102]: 정보화추진위원회 운영
+        - listitem [ref=e103]:
+          - generic [ref=e104] [cursor=pointer]:
+            - generic [ref=e105]:
+              - generic [ref=e106]: 
+              - generic [ref=e107]: 시스템 관리
+            - generic [ref=e108]: 
+          - list [ref=e109]:
+            - listitem [ref=e110]:
+              - link "사용자 관리" [ref=e111] [cursor=pointer]:
+                - /url: /admin/users
+                - generic [ref=e112]: 사용자 관리
+            - listitem [ref=e113]:
+              - link "자격등급 관리" [ref=e114] [cursor=pointer]:
+                - /url: /admin/roles
+                - generic [ref=e115]: 자격등급 관리
+            - listitem [ref=e116]:
+              - link "코드 관리" [ref=e117] [cursor=pointer]:
+                - /url: /admin/codes
+                - generic [ref=e118]: 코드 관리
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - menubar [ref=e122]:
+            - menuitem "사업·예산" [ref=e123]:
+              - generic [ref=e126] [cursor=pointer]: 사업·예산
               - text:    
-            - menuitem "IT자체감사" [ref=e92]:
-              - generic [ref=e95] [cursor=pointer]: IT자체감사
+            - menuitem "IT·AI CDP" [ref=e127]:
+              - generic [ref=e130] [cursor=pointer]: IT·AI CDP
+              - text:    
+            - menuitem "IT자체감사" [ref=e131]:
+              - generic [ref=e134] [cursor=pointer]: IT자체감사
               - text:    
-            - menuitem "전자결재" [ref=e96]:
-              - generic [ref=e99] [cursor=pointer]: 전자결재
-          - generic [ref=e101]:
-            - button "" [ref=e102] [cursor=pointer]:
-              - generic [ref=e103]: 
-            - button "" [ref=e104] [cursor=pointer]:
-              - generic [ref=e105]: 
-            - generic [ref=e107]:
-              - generic [ref=e108]:
-                - generic [ref=e109]: 홍길동
-                - generic [ref=e110]: E001
-              - generic [ref=e112]: 홍
-              - button "" [ref=e113] [cursor=pointer]:
-                - generic [ref=e114]: 
-        - generic [ref=e115]:
-          - generic [ref=e117] [cursor=pointer]: 전자결재 목록
-          - button "모두 닫기" [ref=e119] [cursor=pointer]:
-            - generic [ref=e120]: 모두 닫기
-      - main [ref=e121]:
-        - generic [ref=e122]:
-          - generic [ref=e123]:
-            - generic [ref=e124]:
-              - heading "전자결재 목록" [level=1] [ref=e125]
-              - paragraph [ref=e126]: 신청한 결재 내역을 조회합니다.
-            - generic [ref=e127]:
-              - button "직원 조회" [ref=e128] [cursor=pointer]:
-                - generic [ref=e129]: 
-                - generic [ref=e130]: 직원 조회
-              - button "" [ref=e131] [cursor=pointer]:
-                - generic [ref=e132]: 
-          - generic [ref=e134]:
-            - table [ref=e136]:
-              - rowgroup [ref=e137]:
-                - row "All items unselected 신청서명 상태 신청자 신청일자 신청의견 결재 처리" [ref=e138]:
-                  - columnheader "All items unselected" [ref=e139]:
-                    - generic [ref=e140]:
-                      - generic:
-                        - checkbox "All items unselected" [disabled]
-                  - columnheader "신청서명" [ref=e141] [cursor=pointer]:
-                    - generic [ref=e142]:
-                      - generic [ref=e143]: 신청서명
-                      - img [ref=e145]
-                  - columnheader "상태" [ref=e150] [cursor=pointer]:
-                    - generic [ref=e151]:
-                      - generic [ref=e152]: 상태
-                      - img [ref=e154]
-                  - columnheader "신청자" [ref=e159] [cursor=pointer]:
-                    - generic [ref=e160]:
-                      - generic [ref=e161]: 신청자
-                      - img [ref=e163]
-                  - columnheader "신청일자" [ref=e168] [cursor=pointer]:
-                    - generic [ref=e169]:
-                      - generic [ref=e170]: 신청일자
-                      - img [ref=e172]
-                  - columnheader "신청의견" [ref=e177]:
-                    - generic [ref=e179]: 신청의견
-                  - columnheader "결재 처리" [ref=e180]:
-                    - generic [ref=e182]: 결재 처리
-              - rowgroup [ref=e183]:
-                - row "데이터가 없습니다." [ref=e184]:
-                  - cell "데이터가 없습니다." [ref=e185]:
-                    - generic [ref=e186]: 데이터가 없습니다.
-            - navigation [ref=e187]:
-              - generic [ref=e189]:
+            - menuitem "전자결재" [ref=e135]:
+              - generic [ref=e138] [cursor=pointer]: 전자결재
+            - menuitem "관리자" [ref=e139]:
+              - generic [ref=e141] [cursor=pointer]:
+                - img [ref=e142]
+                - generic [ref=e144]: 관리자
+          - generic [ref=e146]:
+            - button "" [ref=e147] [cursor=pointer]:
+              - generic [ref=e148]: 
+            - button "" [ref=e149] [cursor=pointer]:
+              - generic [ref=e150]: 
+            - generic [ref=e152]:
+              - generic [ref=e153]:
+                - generic [ref=e154]: 박종훈
+                - generic [ref=e155]: K140024
+              - generic [ref=e157]: 박
+              - button "" [ref=e158] [cursor=pointer]:
+                - generic [ref=e159]: 
+        - generic [ref=e160]:
+          - generic [ref=e162] [cursor=pointer]: 전자결재 목록
+          - button "모두 닫기" [ref=e164] [cursor=pointer]:
+            - generic [ref=e165]: 모두 닫기
+      - main [ref=e166]:
+        - generic [ref=e167]:
+          - generic [ref=e168]:
+            - generic [ref=e169]:
+              - heading "전자결재 목록" [level=1] [ref=e170]
+              - paragraph [ref=e171]: 신청한 결재 내역을 조회합니다.
+            - generic [ref=e172]:
+              - button "직원 조회" [ref=e173] [cursor=pointer]:
+                - generic [ref=e174]: 
+                - generic [ref=e175]: 직원 조회
+              - button "" [ref=e176] [cursor=pointer]:
+                - generic [ref=e177]: 
+          - generic [ref=e179]:
+            - table [ref=e181]:
+              - rowgroup [ref=e182]:
+                - row "All items unselected 신청서명 상태 신청자 신청일자 신청의견 결재 처리" [ref=e183]:
+                  - columnheader "All items unselected" [ref=e184]:
+                    - checkbox "All items unselected" [ref=e187] [cursor=pointer]
+                  - columnheader "신청서명" [ref=e189] [cursor=pointer]:
+                    - generic [ref=e190]:
+                      - generic [ref=e191]: 신청서명
+                      - img [ref=e193]
+                  - columnheader "상태" [ref=e198] [cursor=pointer]:
+                    - generic [ref=e199]:
+                      - generic [ref=e200]: 상태
+                      - img [ref=e202]
+                  - columnheader "신청자" [ref=e207] [cursor=pointer]:
+                    - generic [ref=e208]:
+                      - generic [ref=e209]: 신청자
+                      - img [ref=e211]
+                  - columnheader "신청일자" [ref=e216] [cursor=pointer]:
+                    - generic [ref=e217]:
+                      - generic [ref=e218]: 신청일자
+                      - img [ref=e220]
+                  - columnheader "신청의견" [ref=e225]:
+                    - generic [ref=e227]: 신청의견
+                  - columnheader "결재 처리" [ref=e228]:
+                    - generic [ref=e230]: 결재 처리
+              - rowgroup [ref=e231]:
+                - row "전산예산 작성 결재완료 K140024 2026-03-23 신입행원 PC 구매 외 1건" [ref=e232]:
+                  - cell [ref=e233]
+                  - cell "전산예산 작성" [ref=e234]
+                  - cell "결재완료" [ref=e235]:
+                    - generic [ref=e237] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e238]
+                  - cell "2026-03-23" [ref=e239]
+                  - cell "신입행원 PC 구매 외 1건" [ref=e240]
+                  - cell [ref=e241]
+                - row "전산예산 신청 결재완료 K140024 2026-03-08 백신 구매" [ref=e242]:
+                  - cell [ref=e243]
+                  - cell "전산예산 신청" [ref=e244]
+                  - cell "결재완료" [ref=e245]:
+                    - generic [ref=e247] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e248]
+                  - cell "2026-03-08" [ref=e249]
+                  - cell "백신 구매" [ref=e250]
+                  - cell [ref=e251]
+                - row "전산예산 신청 결재완료 K140024 2026-03-01 AI 기반 챗봇 서비스 도입" [ref=e252]:
+                  - cell [ref=e253]
+                  - cell "전산예산 신청" [ref=e254]
+                  - cell "결재완료" [ref=e255]:
+                    - generic [ref=e257] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e258]
+                  - cell "2026-03-01" [ref=e259]
+                  - cell "AI 기반 챗봇 서비스 도입" [ref=e260]
+                  - cell [ref=e261]
+                - row "전산예산 신청 결재완료 K140024 2026-03-01 네트워크 장비 노후화 교체" [ref=e262]:
+                  - cell [ref=e263]
+                  - cell "전산예산 신청" [ref=e264]
+                  - cell "결재완료" [ref=e265]:
+                    - generic [ref=e267] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e268]
+                  - cell "2026-03-01" [ref=e269]
+                  - cell "네트워크 장비 노후화 교체" [ref=e270]
+                  - cell [ref=e271]
+                - row "전산예산 신청 결재완료 K140024 2026-01-25 전사적 자원관리(ERP) 고도화" [ref=e272]:
+                  - cell [ref=e273]
+                  - cell "전산예산 신청" [ref=e274]
+                  - cell "결재완료" [ref=e275]:
+                    - generic [ref=e277] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e278]
+                  - cell "2026-01-25" [ref=e279]
+                  - cell "전사적 자원관리(ERP) 고도화" [ref=e280]
+                  - cell [ref=e281]
+                - row "전산예산 신청 결재완료 K140024 2026-01-26 AI 기반 챗봇 서비스 도입#3" [ref=e282]:
+                  - cell [ref=e283]
+                  - cell "전산예산 신청" [ref=e284]
+                  - cell "결재완료" [ref=e285]:
+                    - generic [ref=e287] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e288]
+                  - cell "2026-01-26" [ref=e289]
+                  - cell "AI 기반 챗봇 서비스 도입#3" [ref=e290]
+                  - cell [ref=e291]
+                - row "전산예산 신청 결재완료 K140024 2026-01-26 AI 기반 챗봇 서비스 도입" [ref=e292]:
+                  - cell [ref=e293]
+                  - cell "전산예산 신청" [ref=e294]
+                  - cell "결재완료" [ref=e295]:
+                    - generic [ref=e297] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e298]
+                  - cell "2026-01-26" [ref=e299]
+                  - cell "AI 기반 챗봇 서비스 도입" [ref=e300]
+                  - cell [ref=e301]
+                - row "전산예산 신청 결재완료 K140024 2026-01-26 AI 기반 챗봇 서비스 도입#2" [ref=e302]:
+                  - cell [ref=e303]
+                  - cell "전산예산 신청" [ref=e304]
+                  - cell "결재완료" [ref=e305]:
+                    - generic [ref=e307] [cursor=pointer]: 결재완료
+                  - cell "K140024" [ref=e308]
+                  - cell "2026-01-26" [ref=e309]
+                  - cell "AI 기반 챗봇 서비스 도입#2" [ref=e310]
+                  - cell [ref=e311]
+            - navigation [ref=e312]:
+              - generic [ref=e314]:
                 - button "First Page" [disabled]:
                   - img
                 - button "Previous Page" [disabled]:
                   - img
+                - button "Page 1" [ref=e316] [cursor=pointer]: "1"
                 - button "Next Page" [disabled]:
                   - img
                 - button "Last Page" [disabled]:
                   - img
-                - generic:
-                  - combobox "Rows per page" [disabled]: "10"
-                  - generic:
-                    - img
-      - contentinfo [ref=e190]: © 2026 IT Portal System. All rights reserved.
+                - generic [ref=e317] [cursor=pointer]:
+                  - combobox "Rows per page" [ref=e318]: "10"
+                  - img [ref=e320]
+      - contentinfo [ref=e322]: © 2026 IT Portal System. All rights reserved.
   - generic:
     - img
   - generic:
@@ -196,29 +308,12 @@
         - button "Go to parent" [disabled]
         - button "Open in editor"
         - button "Close"
-  - generic [ref=e191]:
-    - button "Toggle Nuxt DevTools" [ref=e192] [cursor=pointer]:
-      - img [ref=e193]
-    - generic "Page load time" [ref=e196]:
-      - generic [ref=e197]: "1.4"
-      - generic [ref=e198]: s
-    - button "Toggle Component Inspector" [ref=e200] [cursor=pointer]:
-      - img [ref=e201]
-  - generic [ref=e206]:
-    - alert [ref=e207]:
-      - generic [ref=e208]:
-        - img [ref=e209]
-        - generic [ref=e211]:
-          - generic [ref=e212]: 네트워크 오류
-          - generic [ref=e213]: 서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.
-        - button "Close" [active] [ref=e215] [cursor=pointer]:
-          - img [ref=e216]
-    - alert [ref=e218]:
-      - generic [ref=e219]:
-        - img [ref=e220]
-        - generic [ref=e222]:
-          - generic [ref=e223]: 네트워크 오류
-          - generic [ref=e224]: 서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요.
-        - button "Close" [ref=e226] [cursor=pointer]:
-          - img [ref=e227]
+  - generic [ref=e323]:
+    - button "Toggle Nuxt DevTools" [ref=e324] [cursor=pointer]:
+      - img [ref=e325]
+    - generic "Page load time" [ref=e328]:
+      - generic [ref=e329]: "307"
+      - generic [ref=e330]: ms
+    - button "Toggle Component Inspector" [ref=e332] [cursor=pointer]:
+      - img [ref=e333]
 ```

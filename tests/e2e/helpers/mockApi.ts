@@ -18,7 +18,7 @@ export async function mockLoginApi(
     page: Page,
     user = { eno: 'E001', empNm: '홍길동' }
 ) {
-    await page.route('**/api/auth/login', route => {
+    await page.route('**/api/auth/login*', route => {
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -41,7 +41,9 @@ export async function mockApi<T>(
     body: T,
     status = 200
 ) {
-    await page.route(`**${urlPattern}`, route => {
+    // URL 패턴 끝에 와일드카드를 추가하여 쿼리 스트링이나 슬래시 차이를 허용합니다.
+    const pattern = urlPattern.endsWith('*') ? urlPattern : `${urlPattern}*`;
+    await page.route(`**${pattern}`, route => {
         route.fulfill({
             status,
             contentType: 'application/json',

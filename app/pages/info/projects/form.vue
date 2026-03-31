@@ -80,7 +80,6 @@ const form = ref({
     sttDt: null as Date | null,
     endDt: null as Date | null,
     prjDes: '',
-    pulRsn: '', // 추진사유
     xptEff: '', // 기대효과
     svnHdq: '', // 주관부문
 

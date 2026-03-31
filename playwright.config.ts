@@ -13,7 +13,36 @@ export default defineConfig({
         screenshot: 'only-on-failure',
     },
     projects: [
-        { name: 'chromium', use: { ...devices['Desktop Chrome'] } }
+        // 1단계: 인증 설정 (수동 로그인)
+        // 세션 정보가 담긴 .auth/user.json을 생성합니다.
+        {
+            name: 'setup',
+            testMatch: /auth\.setup\.ts/,
+            use: {
+                // 수동 로그인은 반드시 창이 보여야 함
+                headless: false,
+            }
+        },
+        // 2단계 (A): 일반 기능 테스트 (로그인 상태 유지)
+        {
+            name: 'chromium',
+            testIgnore: /.*auth\.spec\.ts/, // 전체 경로에 대해 auth.spec.ts 제외
+            use: { 
+                ...devices['Desktop Chrome'],
+                // 1단계에서 저장한 세션 재사용
+                storageState: '.auth/user.json',
+            },
+            dependencies: ['setup'],
+        },
+        // 2단계 (B): 인증 기능 테스트 (로그인 상태 없이 클린한 상태로 시작)
+        {
+            name: 'auth-tests',
+            testMatch: /auth\.spec\.ts/,
+            use: { 
+                ...devices['Desktop Chrome'],
+                storageState: undefined, // 세션 정보 사용 안 함
+            },
+        }
     ],
     // 테스트 전 dev 서버 자동 실행
     webServer: {

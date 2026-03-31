@@ -13,7 +13,7 @@ const mockCosts = [
 
 test.describe('전산업무비 목록', () => {
     test.beforeEach(async ({ page }) => {
-        await setLoggedIn(page);
+        // 전역 storageState를 사용하므로 API Mock만 설정합니다.
         await mockApi(page, '/api/costs', mockCosts);
     });
 

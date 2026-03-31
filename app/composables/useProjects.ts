@@ -90,7 +90,6 @@ export interface ProjectDetail extends Project {
     prjPulPtt: number | null; // 추진가능성 (0~100 정수, NUMBER(3,0))
     prjRng: string;      // 사업범위 (Scope, HTML 형식 가능)
     pulPsg: string;      // 추진경과 (HTML 형식 가능)
-    pulRsn: string;      // 추진사유 (HTML 형식 가능)
     rprSts: string;      // 보고상태 (경영진 보고 여부)
     saf: string;         // 현황 (Situation As-Is, HTML 형식 가능)
     svnDpmCgpr: string;  // 주관부서 현업 담당자 사번

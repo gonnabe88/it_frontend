@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import logo from '@/assets/logo.png';
 import { useAuth } from '~/composables/useAuth';
+import { ROLE } from '~/types/auth';
 
 const route = useRoute();
 const router = useRouter();
@@ -14,7 +15,10 @@ const isActiveRoot = (label: string) => {
     return false;
 };
 
-const items = ref([
+// 시스템관리자 여부 (ITPAD001 역할 보유 시 [관리자] 메뉴 표시)
+const isAdmin = computed(() => user.value?.athIds?.includes(ROLE.ADMIN));
+
+const menuItems = computed(() => [
     {
         label: '사업·예산',
         root: true,
@@ -106,7 +110,14 @@ const items = ref([
         label: '전자결재',
         root: true,
         command: () => navigateTo('/approval')
-    }
+    },
+    // 시스템관리자 전용 메뉴 — ITPAD001 역할 보유 시에만 노출
+    ...(isAdmin.value ? [{
+        label: '관리자',
+        root: true,
+        adminIcon: true,
+        command: () => navigateTo('/admin/codes')
+    }] : [])
 ]);
 
 const isDark = ref(false);
@@ -183,7 +194,7 @@ const navigateToTab = (path: string) => {
 <template>
     <Toast position="top-right" />
     <div class="card">
-        <MegaMenu :model="items" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
+        <MegaMenu :model="menuItems" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
             style="border-radius: 0">
 
             <template #item="{ item }">
@@ -192,7 +203,17 @@ const navigateToTab = (path: string) => {
                     :class="[isActiveRoot(typeof item.label === 'string' ? item.label : '') ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'text-zinc-700 dark:text-zinc-200']"
                     style="border-radius: 0"
                     @click="item.command ? item.command({ originalEvent: $event, item }) : null">
-                    <span>{{ item.label }}</span>
+                    <!-- 관리자 메뉴: 왕관 SVG 아이콘 + 노란색 강조 -->
+                    <template v-if="item.adminIcon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="w-4 h-4 mr-1 text-yellow-500">
+                            <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.4a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 5.919a.5.5 0 0 1 .798-.519l4.276 3.764a1 1 0 0 0 1.516-.294z" />
+                            <path d="M5 21h14" />
+                        </svg>
+                        <span class="text-yellow-600 dark:text-yellow-400">{{ item.label }}</span>
+                    </template>
+                    <span v-else>{{ item.label }}</span>
                 </a>
                 <a v-else-if="!item.image" @click="item.command ? item.command({ originalEvent: $event, item }) : null"
                     class="flex items-center p-4 cursor-pointer mb-2 gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-800/50 rounded-lg transition-colors">

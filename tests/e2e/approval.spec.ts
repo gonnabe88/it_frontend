@@ -13,7 +13,7 @@ const mockApprovals = [
 
 test.describe('전자결재 목록', () => {
     test.beforeEach(async ({ page }) => {
-        await setLoggedIn(page);
+        // 전역 storageState를 사용하므로 setLoggedIn 대신 API Mock만 설정합니다.
         await mockApi(page, '/api/approvals', mockApprovals);
     });
 
