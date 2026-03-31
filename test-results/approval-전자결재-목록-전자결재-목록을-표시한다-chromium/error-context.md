@@ -312,7 +312,7 @@
     - button "Toggle Nuxt DevTools" [ref=e324] [cursor=pointer]:
       - img [ref=e325]
     - generic "Page load time" [ref=e328]:
-      - generic [ref=e329]: "307"
+      - generic [ref=e329]: "508"
       - generic [ref=e330]: ms
     - button "Toggle Component Inspector" [ref=e332] [cursor=pointer]:
       - img [ref=e333]

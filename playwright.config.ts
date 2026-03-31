@@ -50,6 +50,9 @@ export default defineConfig({
         url: 'http://localhost:3002',
         // 이미 실행 중인 서버 재사용 (로컬 환경 속도 최적화)
         reuseExistingServer: !process.env.CI,
-        timeout: 120 * 1000
+        timeout: 120 * 1000,
+        env: {
+            NUXT_SSR: 'false'
+        }
     }
 });

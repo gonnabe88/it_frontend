@@ -20,7 +20,9 @@ test.describe('정보화사업 프로젝트 목록', () => {
     });
 
     test('프로젝트 목록을 표시한다', async ({ page }) => {
+        const responsePromise = page.waitForResponse(res => res.url().includes('/api/projects') && res.status() === 200);
         await page.goto('/info/projects');
+        await responsePromise;
 
         // 목록 데이터가 렌더링될 때까지 대기
         await expect(page.getByText('테스트 정보화사업 A')).toBeVisible({ timeout: 10000 });
@@ -28,7 +30,9 @@ test.describe('정보화사업 프로젝트 목록', () => {
     });
 
     test('프로젝트 상태 태그가 표시된다', async ({ page }) => {
+        const responsePromise = page.waitForResponse(res => res.url().includes('/api/projects') && res.status() === 200);
         await page.goto('/info/projects');
+        await responsePromise;
 
         await expect(page.getByText('사업 추진')).toBeVisible({ timeout: 10000 });
         await expect(page.getByText('완료')).toBeVisible();
