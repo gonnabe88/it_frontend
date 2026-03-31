@@ -46,7 +46,11 @@ const toggleSidebar = () => {
 };
 
 const route = useRoute();
-const context = computed(() => route.path.startsWith('/audit') ? 'audit' : 'info');
+const context = computed(() => {
+    if (route.path.startsWith('/audit')) return 'audit';
+    if (route.path.startsWith('/admin')) return 'admin';
+    return 'info';
+});
 
 const menuItems = computed(() => {
     if (context.value === 'audit') {
@@ -72,6 +76,30 @@ const menuItems = computed(() => {
             }
         ];
     }
+
+    // 시스템 관리자 전용 컨텍스트
+    if (context.value === 'admin') {
+        return [
+            { label: '대시보드', icon: 'pi pi-chart-line', to: '/admin/dashboard' },
+            {
+                label: '데이터 관리', icon: 'pi pi-database', items: [
+                    { label: '공통코드', to: '/admin/codes' },
+                    { label: '자격등급', to: '/admin/auth-grades' },
+                    { label: '사용자', to: '/admin/users' },
+                    { label: '역할', to: '/admin/roles' },
+                    { label: '조직', to: '/admin/organizations' },
+                ]
+            },
+            {
+                label: '이력 · 보안', icon: 'pi pi-shield', items: [
+                    { label: '로그인 이력', to: '/admin/login-history' },
+                    { label: 'JWT 갱신토큰', to: '/admin/tokens' },
+                    { label: '첨부파일', to: '/admin/files' },
+                ]
+            },
+        ];
+    }
+
     // Default: Info
     return [
         { label: 'Home', icon: 'pi pi-home', to: '/info' },
@@ -109,14 +137,6 @@ const menuItems = computed(() => {
                 { label: '정보화추진위원회 운영', to: '/info/council/committee' }
             ]
         },
-        // 시스템관리자(ITPAD001) 전용 메뉴: isAdmin() 조건으로 렌더링 여부를 결정합니다.
-        ...(isAdmin() ? [{
-            label: '시스템 관리', icon: 'pi pi-shield', adminOnly: true, items: [
-                { label: '사용자 관리', to: '/admin/users' },
-                { label: '자격등급 관리', to: '/admin/roles' },
-                { label: '코드 관리', to: '/admin/codes' }
-            ]
-        }] : [])
     ];
 });
 

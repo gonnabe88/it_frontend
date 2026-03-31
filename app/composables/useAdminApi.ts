@@ -40,10 +40,176 @@ export interface AdminCodeResponse {
     cdSqn: number;
     fstEnrDtm: string;
     fstEnrUsid: string;
-    fstEnrUsNm: string;   // ENO → 이름 변환
+    fstEnrUsNm: string;
     lstChgDtm: string;
     lstChgUsid: string;
-    lstChgUsNm: string;   // ENO → 이름 변환
+    lstChgUsNm: string;
+}
+
+// ============================================================================
+// 자격등급 타입 정의
+// ============================================================================
+
+export interface AdminAuthGradeRequest {
+    athId: string;
+    qlfGrNm?: string;
+    qlfGrMat?: string;
+    useYn?: string;
+}
+
+export interface AdminAuthGradeResponse {
+    athId: string;
+    qlfGrNm: string;
+    qlfGrMat: string;
+    useYn: string;
+    fstEnrDtm: string;
+    fstEnrUsid: string;
+    fstEnrUsNm: string;
+    lstChgDtm: string;
+    lstChgUsid: string;
+    lstChgUsNm: string;
+}
+
+// ============================================================================
+// 역할 타입 정의
+// ============================================================================
+
+export interface AdminRoleRequest {
+    athId: string;
+    eno: string;
+    useYn?: string;
+}
+
+export interface AdminRoleResponse {
+    athId: string;
+    eno: string;
+    usrNm: string;
+    useYn: string;
+    fstEnrDtm: string;
+    fstEnrUsid: string;
+    fstEnrUsNm: string;
+    lstChgDtm: string;
+    lstChgUsid: string;
+    lstChgUsNm: string;
+}
+
+// ============================================================================
+// 사용자 타입 정의
+// ============================================================================
+
+export interface AdminUserRequest {
+    eno: string;
+    usrNm?: string;
+    ptCNm?: string;
+    temC?: string;
+    bbrC?: string;
+    etrMilAddrNm?: string;
+    inleNo?: string;
+    cpnTpn?: string;
+    password?: string;
+}
+
+export interface AdminUserResponse {
+    eno: string;
+    usrNm: string;
+    ptCNm: string;
+    temC: string;
+    temNm: string;
+    bbrC: string;
+    bbrNm: string;
+    etrMilAddrNm: string;
+    inleNo: string;
+    cpnTpn: string;
+    fstEnrDtm: string;
+    lstChgDtm: string;
+}
+
+// ============================================================================
+// 조직 타입 정의
+// ============================================================================
+
+export interface AdminOrgRequest {
+    prlmOgzCCone: string;
+    bbrNm?: string;
+    bbrWrenNm?: string;
+    itmSqnSno?: string;
+    prlmHrkOgzCCone?: string;
+}
+
+export interface AdminOrgResponse {
+    prlmOgzCCone: string;
+    bbrNm: string;
+    bbrWrenNm: string;
+    itmSqnSno: string;
+    prlmHrkOgzCCone: string;
+    fstEnrDtm: string;
+    fstEnrUsid: string;
+    fstEnrUsNm: string;
+    lstChgDtm: string;
+    lstChgUsid: string;
+    lstChgUsNm: string;
+}
+
+// ============================================================================
+// 로그인 이력 타입 정의
+// ============================================================================
+
+export interface AdminLoginHistoryResponse {
+    eno: string;
+    usrNm: string;
+    lgnDtm: string;
+    lgnTp: string;
+    ipAddr: string;
+    flurRsn: string;
+    ustAgt: string;
+    fstEnrDtm: string;
+}
+
+// ============================================================================
+// JWT 토큰 타입 정의
+// ============================================================================
+
+export interface AdminTokenResponse {
+    eno: string;
+    usrNm: string;
+    endDtm: string;
+    tokMasked: string;
+    fstEnrDtm: string;
+}
+
+// ============================================================================
+// 첨부파일 타입 정의
+// ============================================================================
+
+export interface AdminFileResponse {
+    flMngNo: string;
+    orcFlNm: string;
+    flDtt: string;
+    orcDtt: string;
+    fstEnrDtm: string;
+    fstEnrUsid: string;
+    fstEnrUsNm: string;
+}
+
+// ============================================================================
+// 대시보드 통계 타입 정의
+// ============================================================================
+
+export interface AdminLoginStatResponse {
+    date: string;   // YYYY-MM-DD
+    count: number;
+}
+
+// ============================================================================
+// 페이지네이션 공통 타입 (Spring Page 응답)
+// ============================================================================
+
+export interface AdminPageResponse<T> {
+    content: T[];
+    totalElements: number;
+    totalPages: number;
+    number: number;       // 현재 페이지 (0-based)
+    size: number;
 }
 
 // ============================================================================
@@ -60,48 +226,126 @@ export const useAdminApi = () => {
     // 공통코드 (TAAABB_CCODEM)
     // ==========================================================================
 
-    /**
-     * 공통코드 목록 조회 (반응형)
-     * 컴포넌트 마운트 시 자동 호출, refresh()로 수동 갱신 가능
-     */
     const fetchCodes = () =>
         useApiFetch<AdminCodeResponse[]>(`${BASE}/codes`);
 
-    /**
-     * 공통코드 추가
-     * @param body 공통코드 생성 요청
-     */
     const createCode = (body: AdminCodeRequest) =>
         $apiFetch(`${BASE}/codes`, { method: 'POST', body });
 
-    /**
-     * 공통코드 수정 (인라인 편집 즉시 저장)
-     * @param cdId 코드ID
-     * @param body 공통코드 수정 요청
-     */
     const updateCode = (cdId: string, body: AdminCodeRequest) =>
         $apiFetch(`${BASE}/codes/${cdId}`, { method: 'PUT', body });
 
-    /**
-     * 공통코드 삭제 (Soft Delete)
-     * @param cdId 코드ID
-     */
     const deleteCode = (cdId: string) =>
         $apiFetch(`${BASE}/codes/${cdId}`, { method: 'DELETE' });
 
     // ==========================================================================
-    // 자격등급, 사용자, 조직, 역할 — Session 2 구현 예정
+    // 자격등급 (TAAABB_CAUTHI) — M3
     // ==========================================================================
 
+    const fetchAuthGrades = () =>
+        useApiFetch<AdminAuthGradeResponse[]>(`${BASE}/auth-grades`);
+
+    const createAuthGrade = (body: AdminAuthGradeRequest) =>
+        $apiFetch(`${BASE}/auth-grades`, { method: 'POST', body });
+
+    const updateAuthGrade = (athId: string, body: AdminAuthGradeRequest) =>
+        $apiFetch(`${BASE}/auth-grades/${athId}`, { method: 'PUT', body });
+
+    const deleteAuthGrade = (athId: string) =>
+        $apiFetch(`${BASE}/auth-grades/${athId}`, { method: 'DELETE' });
+
     // ==========================================================================
-    // 로그인이력, JWT토큰, 첨부파일, 대시보드 — Session 3 구현 예정
+    // 역할 (TAAABB_CROLEI) — M4
     // ==========================================================================
+
+    const fetchRoles = () =>
+        useApiFetch<AdminRoleResponse[]>(`${BASE}/roles`);
+
+    const createRole = (body: AdminRoleRequest) =>
+        $apiFetch(`${BASE}/roles`, { method: 'POST', body });
+
+    const updateRole = (athId: string, eno: string, body: AdminRoleRequest) =>
+        $apiFetch(`${BASE}/roles/${athId}/${eno}`, { method: 'PUT', body });
+
+    const deleteRole = (athId: string, eno: string) =>
+        $apiFetch(`${BASE}/roles/${athId}/${eno}`, { method: 'DELETE' });
+
+    // ==========================================================================
+    // 사용자 (TAAABB_CUSERI) — M5
+    // ==========================================================================
+
+    const fetchUsers = () =>
+        useApiFetch<AdminUserResponse[]>(`${BASE}/users`);
+
+    const createUser = (body: AdminUserRequest) =>
+        $apiFetch(`${BASE}/users`, { method: 'POST', body });
+
+    const updateUser = (eno: string, body: AdminUserRequest) =>
+        $apiFetch(`${BASE}/users/${eno}`, { method: 'PUT', body });
+
+    const deleteUser = (eno: string) =>
+        $apiFetch(`${BASE}/users/${eno}`, { method: 'DELETE' });
+
+    // ==========================================================================
+    // 조직 (TAAABB_CORGNI) — M6
+    // ==========================================================================
+
+    const fetchOrganizations = () =>
+        useApiFetch<AdminOrgResponse[]>(`${BASE}/organizations`);
+
+    const createOrganization = (body: AdminOrgRequest) =>
+        $apiFetch(`${BASE}/organizations`, { method: 'POST', body });
+
+    const updateOrganization = (orgC: string, body: AdminOrgRequest) =>
+        $apiFetch(`${BASE}/organizations/${orgC}`, { method: 'PUT', body });
+
+    const deleteOrganization = (orgC: string) =>
+        $apiFetch(`${BASE}/organizations/${orgC}`, { method: 'DELETE' });
+
+    // ==========================================================================
+    // 로그인이력 (TAAABB_CLOGNH) — M7
+    // ==========================================================================
+
+    const fetchLoginHistory = (page = 0, size = 50) =>
+        useApiFetch<AdminPageResponse<AdminLoginHistoryResponse>>(`${BASE}/login-history`, {
+            query: { page, size },
+        });
+
+    // ==========================================================================
+    // JWT 토큰 (TAAABB_CRTOKM) — M7
+    // ==========================================================================
+
+    const fetchTokens = () =>
+        useApiFetch<AdminTokenResponse[]>(`${BASE}/tokens`);
+
+    // ==========================================================================
+    // 첨부파일 (TAAABB_CFILEM) — M7
+    // ==========================================================================
+
+    const fetchFiles = () =>
+        useApiFetch<AdminFileResponse[]>(`${BASE}/files`);
+
+    // ==========================================================================
+    // 대시보드 통계 — M8
+    // ==========================================================================
+
+    const fetchLoginStats = () =>
+        useApiFetch<AdminLoginStatResponse[]>(`${BASE}/dashboard/login-stats`);
 
     return {
         // 공통코드
-        fetchCodes,
-        createCode,
-        updateCode,
-        deleteCode,
+        fetchCodes, createCode, updateCode, deleteCode,
+        // 자격등급
+        fetchAuthGrades, createAuthGrade, updateAuthGrade, deleteAuthGrade,
+        // 역할
+        fetchRoles, createRole, updateRole, deleteRole,
+        // 사용자
+        fetchUsers, createUser, updateUser, deleteUser,
+        // 조직
+        fetchOrganizations, createOrganization, updateOrganization, deleteOrganization,
+        // 로그인이력 / JWT토큰 / 첨부파일
+        fetchLoginHistory, fetchTokens, fetchFiles,
+        // 대시보드
+        fetchLoginStats,
     };
 };
