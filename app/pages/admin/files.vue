@@ -13,8 +13,8 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
 import { useAdminApi } from '~/composables/useAdminApi';
+import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -95,7 +95,7 @@ const flDttSeverity = (flDtt: string): string => {
 
             <Column field="fstEnrDtm" header="등록시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.fstEnrDtm ? new Date(data.fstEnrDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
         </DataTable>

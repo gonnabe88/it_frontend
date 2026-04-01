@@ -14,8 +14,8 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { useAdminApi } from '~/composables/useAdminApi';
+import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -86,7 +86,7 @@ const isExpired = (endDtm: string): boolean => {
             <Column field="endDtm" header="만료일시" :style="{ width: '160px' }">
                 <template #body="{ data }">
                     <span :class="isExpired(data.endDtm) ? 'text-red-500' : 'text-green-600'">
-                        {{ data.endDtm ? new Date(data.endDtm).toLocaleString('ko-KR') : '' }}
+                        {{ formatDateTime(data.endDtm) }}
                     </span>
                 </template>
             </Column>
@@ -100,7 +100,7 @@ const isExpired = (endDtm: string): boolean => {
 
             <Column field="fstEnrDtm" header="발급시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.fstEnrDtm ? new Date(data.fstEnrDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
         </DataTable>

@@ -210,6 +210,21 @@ export const COST_STAGES = [
 export const getCostTagClass = (status: string) => STATUS_TAG_CLASS_MAP[status] ?? 'kdb-tag-gray';
 
 /**
+ * 날짜/시간 문자열을 한국어 로케일 표시 형식으로 변환
+ *
+ * @param dtm - ISO 날짜/시간 문자열. null/undefined/빈 문자열은 빈 문자열 반환.
+ * @returns '2026. 4. 1. 오전 9:00:00' 형태의 문자열
+ *
+ * @example
+ * formatDateTime('2026-04-01T09:00:00') // → '2026. 4. 1. 오전 9:00:00'
+ * formatDateTime(null)                   // → ''
+ */
+export const formatDateTime = (dtm: string | null | undefined): string => {
+    if (!dtm) return '';
+    return new Date(dtm).toLocaleString('ko-KR');
+};
+
+/**
  * 파일 크기를 사람이 읽기 쉬운 단위로 변환
  * @param bytes - 파일 크기 (바이트). null/undefined는 빈 문자열 반환.
  * @returns '1.2 KB', '3.5 MB' 형태의 문자열 (0 bytes → '0 B')

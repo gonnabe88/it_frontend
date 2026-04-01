@@ -13,8 +13,8 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
 import type { AdminPageResponse, AdminLoginHistoryResponse } from '~/composables/useAdminApi';
+import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -127,7 +127,7 @@ const lgnTpLabel = (lgnTp: string): string => {
 
             <Column field="lgnDtm" header="발생시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.lgnDtm ? new Date(data.lgnDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.lgnDtm) }}
                 </template>
             </Column>
 

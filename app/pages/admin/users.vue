@@ -15,11 +15,11 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminUserResponse, type AdminUserRequest } from '~/composables/useAdminApi';
+import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -36,17 +36,11 @@ const editingRows = ref<AdminUserResponse[]>([]);
 
 // 신규 사용자 추가 다이얼로그 상태
 const newRowVisible = ref(false);
-const newRow = reactive<AdminUserRequest>({
-    eno: '',
-    usrNm: '',
-    ptCNm: '',
-    temC: '',
-    bbrC: '',
-    etrMilAddrNm: '',
-    inleNo: '',
-    cpnTpn: '',
-    password: '',
+const blankRow = (): AdminUserRequest => ({
+    eno: '', usrNm: '', ptCNm: '', temC: '', bbrC: '',
+    etrMilAddrNm: '', inleNo: '', cpnTpn: '', password: '',
 });
+const newRow = reactive<AdminUserRequest>(blankRow());
 
 // 직원정보 팝업 상태
 const employeeDialogVisible = ref(false);
@@ -104,8 +98,7 @@ const onDeleteConfirm = (eno: string, usrNm: string) => {
 };
 
 const openNewRowDialog = () => {
-    Object.assign(newRow, { eno: '', usrNm: '', ptCNm: '', temC: '', bbrC: '',
-        etrMilAddrNm: '', inleNo: '', cpnTpn: '', password: '' });
+    Object.assign(newRow, blankRow());
     newRowVisible.value = true;
 };
 
@@ -198,13 +191,13 @@ const saveNewRow = async () => {
 
             <Column field="fstEnrDtm" header="생성시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.fstEnrDtm ? new Date(data.fstEnrDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
 
             <Column field="lstChgDtm" header="수정시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.lstChgDtm ? new Date(data.lstChgDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.lstChgDtm) }}
                 </template>
             </Column>
 

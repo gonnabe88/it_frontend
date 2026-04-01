@@ -15,11 +15,11 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminAuthGradeResponse, type AdminAuthGradeRequest } from '~/composables/useAdminApi';
+import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 // 관리자 미들웨어 + 레이아웃 적용
@@ -37,12 +37,8 @@ const editingRows = ref<AdminAuthGradeResponse[]>([]);
 
 // 신규 행 추가 다이얼로그 상태
 const newRowVisible = ref(false);
-const newRow = reactive<AdminAuthGradeRequest>({
-    athId: '',
-    qlfGrNm: '',
-    qlfGrMat: '',
-    useYn: 'Y',
-});
+const blankRow = (): AdminAuthGradeRequest => ({ athId: '', qlfGrNm: '', qlfGrMat: '', useYn: 'Y' });
+const newRow = reactive<AdminAuthGradeRequest>(blankRow());
 
 // 직원정보 팝업 상태
 const employeeDialogVisible = ref(false);
@@ -102,7 +98,7 @@ const onDeleteConfirm = (athId: string) => {
  * 신규 행 추가 다이얼로그 초기화 후 표시
  */
 const openNewRowDialog = () => {
-    Object.assign(newRow, { athId: '', qlfGrNm: '', qlfGrMat: '', useYn: 'Y' });
+    Object.assign(newRow, blankRow());
     newRowVisible.value = true;
 };
 
@@ -190,7 +186,7 @@ const saveNewRow = async () => {
             </Column>
             <Column field="fstEnrDtm" header="최초생성시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.fstEnrDtm ? new Date(data.fstEnrDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
 
@@ -206,7 +202,7 @@ const saveNewRow = async () => {
             </Column>
             <Column field="lstChgDtm" header="마지막수정시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.lstChgDtm ? new Date(data.lstChgDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.lstChgDtm) }}
                 </template>
             </Column>
 

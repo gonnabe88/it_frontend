@@ -15,11 +15,11 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminCodeResponse, type AdminCodeRequest } from '~/composables/useAdminApi';
+import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 // 관리자 미들웨어 + 레이아웃 적용
@@ -37,17 +37,11 @@ const editingRows = ref<AdminCodeResponse[]>([]);
 
 // 신규 행 추가 다이얼로그 상태
 const newRowVisible = ref(false);
-const newRow = reactive<AdminCodeRequest>({
-    cdId: '',
-    cdNm: '',
-    cdva: '',
-    cdDes: '',
-    cttTp: '',
-    cttTpDes: '',
-    sttDt: undefined,
-    endDt: undefined,
-    cdSqn: undefined,
+const blankRow = (): AdminCodeRequest => ({
+    cdId: '', cdNm: '', cdva: '', cdDes: '', cttTp: '', cttTpDes: '',
+    sttDt: undefined, endDt: undefined, cdSqn: undefined,
 });
+const newRow = reactive<AdminCodeRequest>(blankRow());
 
 // 직원정보 팝업 상태
 const employeeDialogVisible = ref(false);
@@ -115,7 +109,7 @@ const onDeleteConfirm = (cdId: string) => {
  * 신규 행 추가 다이얼로그 초기화 후 표시
  */
 const openNewRowDialog = () => {
-    Object.assign(newRow, { cdId: '', cdNm: '', cdva: '', cdDes: '', cttTp: '', cttTpDes: '', sttDt: undefined, endDt: undefined, cdSqn: undefined });
+    Object.assign(newRow, blankRow());
     newRowVisible.value = true;
 };
 
@@ -219,7 +213,7 @@ const saveNewRow = async () => {
             </Column>
             <Column field="fstEnrDtm" header="최초생성시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.fstEnrDtm ? new Date(data.fstEnrDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
 
@@ -235,7 +229,7 @@ const saveNewRow = async () => {
             </Column>
             <Column field="lstChgDtm" header="마지막수정시간" :style="{ width: '160px' }">
                 <template #body="{ data }">
-                    {{ data.lstChgDtm ? new Date(data.lstChgDtm).toLocaleString('ko-KR') : '' }}
+                    {{ formatDateTime(data.lstChgDtm) }}
                 </template>
             </Column>
 
