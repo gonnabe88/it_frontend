@@ -22,7 +22,7 @@
 - [ ] `pages/info/projects/[id].vue` (769줄) — 섹션별 서브 컴포넌트 분리 검토
 - [ ] `composables/usePdfReport.ts` (638줄) — PDF 빌더 패턴 도입 또는 모듈 분리 검토
 - [ ] `pages/budget/list.vue` (560줄) — 탭별 콘텐츠를 별도 컴포넌트로 분리 검토
-- [ ] `components/TiptapEditor.vue` (2233줄) — 툴바 섹션, 표 조작, 다이얼로그 로직을 별도 composable/컴포넌트로 분리 검토
+- [x] `components/TiptapEditor.vue` (2233줄) — 툴바 섹션, 표 조작, 다이얼로그 로직을 별도 composable/컴포넌트로 분리 검토 (`TiptapToolbar.vue` 등)
 - [ ] `components/TiptapEditor.vue` — Excalidraw 디버그 `console.log` 제거 (상용 배포 전)
 - [x] `pages/info/projects/form.vue` — `onEmployeeSelected`에서 `(form.value as any)` 타입 단언 사용 → 타입 안전한 방식으로 리팩토링
 
@@ -71,3 +71,6 @@
 | `pages/approval/index.vue` — 결재 타임라인 `ApprovalTimeline.vue` 컴포넌트 분리 (110줄 감소) | 2026-03-08 |
 | 전체 소스 코드 주석 전수 점검 (60개 파일) — 한글 JSDoc/인라인 주석 표준 충족 확인 | 2026-03-25 |
 | `README.md` 최신화 — Tiptap/Excalidraw/HWPX/GeminiChat, httpOnly 쿠키 인증, 새 모듈 반영 | 2026-03-25 |
+| E2E 테스트 안정화 및 API 모킹 개선 사항 반영 | 2026-04-02 |
+| Tiptap 수식 지원, 표 정렬, 파일첨부 다이얼로그 연동 등 컴포넌트 완성 | 2026-03-30 |
+| 프로젝트 작성 폼 UX 검증 및 다크모드 대응 개선 완료 | 2026-03-28 |

@@ -438,6 +438,16 @@ const handleExcalidrawSave = async () => {
 const parsedExcalidrawInitialData = computed(() => {
     return initialSceneData.value || null;
 });
+
+/**
+ * Excalidraw 다이얼로그가 표시된 후 호출
+ * 브라우저 리사이즈 이벤트를 강제로 발생시켜 내부 캔버스 크기를 맞춥니다. (FR-07 관련)
+ */
+const handleExcalidrawAfterShow = () => {
+    if (process.client) {
+        window.dispatchEvent(new Event('resize'));
+    }
+};
 </script>
 
 <template>
@@ -801,7 +811,8 @@ const parsedExcalidrawInitialData = computed(() => {
         <Dialog :visible="isExcalidrawOpen" @update:visible="(val) => { if (!val) closeExcalidraw(); }" modal
             header="다이어그램 편집" :style="{ width: '92vw', maxWidth: '1400px' }"
             :contentStyle="{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column' }"
-            @hide="closeExcalidraw">
+            @hide="closeExcalidraw"
+            @after-show="handleExcalidrawAfterShow">
             <div class="flex-1 min-h-0 h-full">
                 <ClientOnly>
                     <ExcalidrawWrapper v-if="isExcalidrawOpen" ref="excalidrawWrapperRef"
@@ -884,7 +895,7 @@ const parsedExcalidrawInitialData = computed(() => {
     </template>
 </template>
 
-<style scoped>
+<style scoped lang="postcss">
 /* ── 툴바 버튼 기본 스타일 ── */
 .tbar-btn {
     @apply px-2 py-1.5 rounded text-sm text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:bg-zinc-300 dark:active:bg-zinc-600 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed min-w-[28px] text-center;

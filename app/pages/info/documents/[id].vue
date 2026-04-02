@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-[pages/info/documents/[id].vue] 요구사항 정의서 상세/편집 페이지
+[pages/info/documents/[id].vue] 사전협의 상세/편집 페이지
 ================================================================================
 GET /api/documents/{id}로 문서를 조회하고,
 수정은 PUT, 삭제는 DELETE를 통해 처리합니다.
@@ -116,8 +116,8 @@ const handleEditorFileUpload = async (file: File) => {
         await refreshFiles();
         return {
             flMngNo: result.flMngNo,
-            flNm:    result.orcFlNm,
-            flSz:    0, // 서버 응답에 파일 크기가 없는 경우 처리 (필요 시 API 스펙 확인)
+            flNm: result.orcFlNm,
+            flSz: 0, // 서버 응답에 파일 크기가 없는 경우 처리 (필요 시 API 스펙 확인)
         };
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '파일 업로드 실패', detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.', life: 4000 });
@@ -144,8 +144,8 @@ const handleEditorFileDelete = async (flMngNo: string) => {
 const attachmentListForEditor = computed(() =>
     attachedFiles.value.map(f => ({
         flMngNo: f.flMngNo,
-        flNm:    f.orcFlNm,
-        flSz:    0, // API 스펙상 크기가 없다면 0 처리
+        flNm: f.orcFlNm,
+        flSz: 0, // API 스펙상 크기가 없다면 0 처리
     }))
 );
 
@@ -447,8 +447,7 @@ onUnmounted(() => {
                     <!-- 읽기 모드 액션 -->
                     <template v-if="!isEditing">
                         <Button label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
-                            :loading="isExporting"
-                            :disabled="!doc.reqCone"
+                            :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
                         <Button label="편집" icon="pi pi-pencil" @click="startEdit" />
                         <Button label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
@@ -530,7 +529,8 @@ onUnmounted(() => {
                             <div class="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                                 <dt class="text-xs text-zinc-400 mb-2 flex items-center gap-1.5">
                                     <i class="pi pi-paperclip"></i> 첨부파일
-                                    <span class="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full px-1.5 py-0.5 text-xs">
+                                    <span
+                                        class="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full px-1.5 py-0.5 text-xs">
                                         {{ attachedFiles.length }}
                                     </span>
                                 </dt>
@@ -593,9 +593,11 @@ onUnmounted(() => {
                                 </div>
 
                                 <!-- 첨부파일 관리 영역 (편집 모드) -->
-                                <div class="md:col-span-2 flex flex-col gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-1">
+                                <div
+                                    class="md:col-span-2 flex flex-col gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-1">
                                     <div class="flex items-center justify-between">
-                                        <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                        <label
+                                            class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                                             <i class="pi pi-paperclip text-zinc-400"></i> 첨부파일
                                         </label>
                                         <Button icon="pi pi-plus" label="파일 추가" size="small" severity="secondary"
@@ -689,17 +691,13 @@ onUnmounted(() => {
                         <div class="p-4">
                             <ClientOnly>
                                 <!-- 편집 모드: 첨부파일 및 이미지 API 업로드 활성화 -->
-                                <TiptapEditor v-if="isEditing" v-model="form.reqCone"
-                                    placeholder="요구사항 상세 내용을 입력하세요..."
-                                    :imageUploadFn="handleEditorImageUpload"
-                                    :fileUploadFn="handleEditorFileUpload"
-                                    :fileDeleteFn="handleEditorFileDelete"
-                                    :attachmentList="attachmentListForEditor"
+                                <TiptapEditor v-if="isEditing" v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세요..."
+                                    :imageUploadFn="handleEditorImageUpload" :fileUploadFn="handleEditorFileUpload"
+                                    :fileDeleteFn="handleEditorFileDelete" :attachmentList="attachmentListForEditor"
                                     @update:toc="handleUpdateToc" />
                                 <!-- 읽기 모드 -->
                                 <TiptapEditor v-else :modelValue="doc.reqCone || ''" :readonly="true"
-                                    :attachmentList="attachmentListForEditor"
-                                    @update:toc="handleUpdateToc" />
+                                    :attachmentList="attachmentListForEditor" @update:toc="handleUpdateToc" />
                                 <template #fallback>
                                     <div class="p-8 text-center text-zinc-400">
                                         <i class="pi pi-spin pi-spinner text-2xl mb-2 block"></i>
@@ -770,7 +768,6 @@ onUnmounted(() => {
     <!-- AI 채팅 플로팅 패널 -->
     <GeminiChat
         systemInstruction="당신은 IT 프로젝트 요구사항 분석 전문가입니다. 응답은 HTML로 작성해주세요. 사용자가 요구사항 정의서 초안을 작성할 수 있도록 도와주세요. 사용자가 요구사항을 입력하면, 요구사항 정의서의 각 항목에 맞게 내용을 정리하고, 누락된 항목이 있다면 추가할 내용을 제안해주세요. 작성된 요구사항을 함께 보내주면 추가,수정한 부분을 html로 표시해주세요."
-        :documentContent="documentContext"
-        :flMngNos="attachedFiles.map(f => f.flMngNo)"
+        :documentContent="documentContext" :flMngNos="attachedFiles.map(f => f.flMngNo)"
         @apply-content="onApplyAiContent" />
 </template>

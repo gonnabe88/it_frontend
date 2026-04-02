@@ -103,6 +103,7 @@ const menuItems = computed(() => {
     // Default: Info
     return [
         { label: 'Home', icon: 'pi pi-home', to: '/info' },
+        { label: '사전협의', icon: 'pi pi-file-edit', to: '/info/documents' },
         { label: '사업 가이드', icon: 'pi pi-book', to: '/guide' },
         {
             label: '전산예산', icon: 'pi pi-wallet', items: [
@@ -257,8 +258,7 @@ watch(menuItems, (items) => {
                                         active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
                                         <span>{{ sub.label }}</span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
-                                        <span
-                                            v-if="sub.to === '/budget/approval' && approvalCount > 0"
+                                        <span v-if="sub.to === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
                                             {{ approvalCount > 99 ? '99+' : approvalCount }}
                                         </span>
