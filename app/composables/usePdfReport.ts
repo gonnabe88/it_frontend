@@ -729,7 +729,7 @@ export const usePdfReport = () => {
                                 ],
                                 // 비목명 / 계약구분
                                 [
-                                    { text: '비목명',    style: 'labelCost' }, { text: cellVal(cost.ioeNm) },
+                                    { text: '비목코드',    style: 'labelCost' }, { text: cellVal(cost.ioeC) },
                                     { text: '계약구분',  style: 'labelCost' }, { text: cellVal(cost.cttTp) }
                                 ],
                                 // 계약상대처 / 결재현황
@@ -746,8 +746,8 @@ export const usePdfReport = () => {
                                 ],
                                 // 추진담당자 / 추진부서
                                 [
-                                    { text: '추진담당자', style: 'labelCost' }, { text: cellVal(cost.pulCgprNm) },
-                                    { text: '추진부서',   style: 'labelCost' }, { text: cellVal(cost.pulDpmNm) }
+                                    { text: '담당자', style: 'labelCost' }, { text: cellVal(cost.cgprNm) },
+                                    { text: '담당부서',   style: 'labelCost' }, { text: cellVal(cost.biceDpmNm) }
                                 ],
                                 // 지급주기 / 지급예정월
                                 [

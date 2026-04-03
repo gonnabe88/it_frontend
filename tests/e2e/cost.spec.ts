@@ -7,8 +7,8 @@ import { test, expect } from '@playwright/test';
 import { mockApi } from './helpers/mockApi';
 
 const mockCosts = [
-    { itMngcNo: 'COST-2026-001', ioeNm: '전산임차료 테스트', itMngcBg: 10000000, apfSts: '예산 작성' },
-    { itMngcNo: 'COST-2026-002', ioeNm: '전산제비 테스트',   itMngcBg: 20000000, apfSts: '사업 추진' },
+    { itMngcNo: 'COST-2026-001', ioeC: 'IOE001', itMngcBg: 10000000, apfSts: '예산 작성' },
+    { itMngcNo: 'COST-2026-002', ioeC: 'IOE002',   itMngcBg: 20000000, apfSts: '사업 추진' },
 ];
 
 test.describe('전산업무비 목록', () => {

@@ -210,8 +210,8 @@ onUnmounted(() => {
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
-                            <span class="text-zinc-500 text-sm font-medium">비목명</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.ioeNm || '-' }}</span>
+                            <span class="text-zinc-500 text-sm font-medium">비목코드</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.ioeC || '-' }}</span>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">계약구분</span>
@@ -250,9 +250,9 @@ onUnmounted(() => {
                                 <i class="pi pi-building text-lg"></i>
                             </div>
                             <div>
-                                <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">추진부서</div>
+                                <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">담당부서</div>
                                 <div class="font-extrabold text-base text-zinc-900 dark:text-zinc-100 leading-tight">
-                                    {{ cost.pulDpmNm || '-' }}
+                                    {{ cost.biceDpmNm || '-' }}
                                 </div>
                             </div>
                         </div>
@@ -260,12 +260,12 @@ onUnmounted(() => {
                         <div class="flex flex-col gap-2 pt-3 border-t border-blue-100 dark:border-zinc-700 z-10">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400 font-medium">담당자</span>
-                                <span class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{ cost.pulCgprNm ||
+                                <span class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{ cost.cgprNm ||
                                     '-' }}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400 font-medium">사번</span>
-                                <span class="text-zinc-900 dark:text-zinc-100 font-mono text-sm">{{ cost.pulCgpr || '-'
+                                <span class="text-zinc-900 dark:text-zinc-100 font-mono text-sm">{{ cost.cgpr || '-'
                                     }}</span>
                             </div>
                         </div>

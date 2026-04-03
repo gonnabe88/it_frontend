@@ -19,7 +19,7 @@
 
 [UI 구성]
   - 인라인 편집 DataTable (editMode="cell" 방식)
-  - 비목명, 계약명, 계약구분, 계약상대처, 예산, 통화, 지급주기, 최초지급일, 담당자
+  - 비목코드, 계약명, 계약구분, 계약상대처, 예산, 통화, 지급주기, 최초지급일, 담당자, 담당부서, 담당팀, 사업코드, 유형, 구분
   - 행 추가 / 개별 행 삭제 버튼
 
 [저장 로직]
@@ -104,7 +104,7 @@ onMounted(async () => {
  */
 const addCostRow = () => {
     costs.value.push({
-        ioeNm: '',
+        ioeC: '',
         cttNm: '',
         cttTp: '',
         cttOpp: '',
@@ -116,7 +116,17 @@ const addCostRow = () => {
         xcrBseDt: '',
         infPrtYn: 'N',
         indRsn: '',
-        pulCgpr: '',
+        cgpr: '',
+        cgprNm: '',
+        biceDpm: '',
+        biceDpmNm: '',
+        biceTem: '',
+        biceTemNm: '',
+        abusC: '',
+        itMngcTp: '',
+        itMngcDtt: '',
+        assetBg: 0,
+        apfSts: '예산 작성',
         lstYn: 'Y',
         delYn: 'N'
     });
@@ -158,8 +168,8 @@ const saveCosts = async () => {
 
     /* 간단한 필수 입력값 유효성 검사 */
     for (const cost of costs.value) {
-        if (!cost.ioeNm) {
-            alert('비목명을 입력해주세요.');
+        if (!cost.ioeC) {
+            alert('비목코드를 입력해주세요.');
             return;
         }
     }
@@ -233,10 +243,10 @@ const ynOptions = ['Y', 'N'];
                 headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
             }">
-                <!-- 비목명: 필수 입력 -->
-                <Column header="비목명" style="min-width: 150px">
+                <!-- 비목코드: 필수 입력 -->
+                <Column header="비목코드" style="min-width: 150px">
                     <template #body="{ data }">
-                        <InputText v-model="data.ioeNm" class="w-full" />
+                        <InputText v-model="data.ioeC" class="w-full" />
                     </template>
                 </Column>
 
@@ -294,7 +304,37 @@ const ynOptions = ['Y', 'N'];
                 <!-- 담당자 사원번호 입력 -->
                 <Column header="담당자" style="min-width: 100px">
                     <template #body="{ data }">
-                        <InputText v-model="data.pulCgpr" class="w-full" />
+                        <InputText v-model="data.cgpr" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column header="담당부서" style="min-width: 100px">
+                    <template #body="{ data }">
+                        <InputText v-model="data.biceDpm" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column header="담당팀" style="min-width: 100px">
+                    <template #body="{ data }">
+                        <InputText v-model="data.biceTem" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column header="사업코드" style="min-width: 100px">
+                    <template #body="{ data }">
+                        <InputText v-model="data.abusC" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column header="유형" style="min-width: 100px">
+                    <template #body="{ data }">
+                        <InputText v-model="data.itMngcTp" class="w-full" />
+                    </template>
+                </Column>
+
+                <Column header="구분" style="min-width: 100px">
+                    <template #body="{ data }">
+                        <InputText v-model="data.itMngcDtt" class="w-full" />
                     </template>
                 </Column>
 

@@ -115,8 +115,8 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         totalBg: c.itMngcBg || 0,
         assetBg: c.assetBg || 0,
         costBg: c.itMngcBg || 0,
-        deptNm: c.pulDpmNm || '',
-        managerNm: c.pulCgprNm || '',
+        deptNm: c.biceDpmNm || '',
+        managerNm: c.cgprNm || '',
         sttDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         endDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         apfSts: c.apfSts || '',
@@ -257,10 +257,10 @@ const resetProjectFilters = () => {
 
 /* ── 전산업무비 Drawer 필터 ── */
 const costFilters = ref({
-    ioeNm: [] as string[],
+    ioeC: [] as string[],
     cttTp: [] as string[],
     cttOpp: [] as string[],
-    pulDpmNm: [] as string[],
+    biceDpmNm: [] as string[],
     apfSts: [] as string[],
     budgetMin: null as number | null,
     budgetMax: null as number | null,
@@ -272,10 +272,10 @@ const costFilters = ref({
 
 /** 전산업무비 필터 적용 여부 */
 const hasCostFilters = computed(() =>
-    costFilters.value.ioeNm.length > 0 ||
+    costFilters.value.ioeC.length > 0 ||
     costFilters.value.cttTp.length > 0 ||
     costFilters.value.cttOpp.length > 0 ||
-    costFilters.value.pulDpmNm.length > 0 ||
+    costFilters.value.biceDpmNm.length > 0 ||
     costFilters.value.apfSts.length > 0 ||
     costFilters.value.budgetMin !== null ||
     costFilters.value.budgetMax !== null ||
@@ -285,10 +285,10 @@ const hasCostFilters = computed(() =>
     costFilters.value.costBgMax !== null
 );
 
-const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeNm).filter(Boolean))]);
+const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeC).filter(Boolean))]);
 const costCttTps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttTp).filter(Boolean))]);
 const costCttOpps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttOpp).filter(Boolean))]);
-const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.pulDpmNm).filter(Boolean))]);
+const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.biceDpmNm).filter(Boolean))]);
 const costApfStsOpts = computed(() => [...new Set(costs.value.map((c: ItCost) => c.apfSts).filter(Boolean))]);
 
 const filteredCostIoeNms = ref<string[]>([]);
@@ -305,7 +305,7 @@ const searchCostApfSts = (e: { query: string }) => { filteredCostApfSts.value = 
 
 /** 전산업무비 필터 초기화 */
 const resetCostFilters = () => {
-    costFilters.value = { ioeNm: [], cttTp: [], cttOpp: [], pulDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
+    costFilters.value = { ioeC: [], cttTp: [], cttOpp: [], biceDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
 };
 
 /* ── 경상사업 Drawer 필터 ── */
@@ -420,15 +420,15 @@ const filteredCosts = computed(() => {
         /* 텍스트 검색 */
         if (costSearch.value) {
             const kw = costSearch.value.toLowerCase();
-            if (!c.ioeNm?.toLowerCase().includes(kw) &&
+            if (!c.ioeC?.toLowerCase().includes(kw) &&
                 !c.cttNm?.toLowerCase().includes(kw) &&
                 !c.cttOpp?.toLowerCase().includes(kw)) return false;
         }
         /* Drawer 필터 */
-        if (costFilters.value.ioeNm.length > 0 && !costFilters.value.ioeNm.includes(c.ioeNm)) return false;
+        if (costFilters.value.ioeC.length > 0 && !costFilters.value.ioeC.includes(c.ioeC)) return false;
         if (costFilters.value.cttTp.length > 0 && !costFilters.value.cttTp.includes(c.cttTp)) return false;
         if (costFilters.value.cttOpp.length > 0 && !costFilters.value.cttOpp.includes(c.cttOpp)) return false;
-        if (costFilters.value.pulDpmNm.length > 0 && !costFilters.value.pulDpmNm.includes(c.pulDpmNm)) return false;
+        if (costFilters.value.biceDpmNm.length > 0 && !costFilters.value.biceDpmNm.includes(c.biceDpmNm)) return false;
         if (costFilters.value.apfSts.length > 0 && !costFilters.value.apfSts.includes(c.apfSts)) return false;
         if (costFilters.value.budgetMin !== null && c.itMngcBg < costFilters.value.budgetMin) return false;
         if (costFilters.value.budgetMax !== null && c.itMngcBg > costFilters.value.budgetMax) return false;
@@ -624,13 +624,13 @@ const downloadProjectsExcel = () => {
 const downloadCostsExcel = () => {
     const rows = filteredCosts.value.map((c: ItCost) => ({
         '계약명': c.cttNm,
-        '비목명': c.ioeNm,
+        '비목코드': c.ioeC,
         '신규/계속': c.cttTp,
         '총 예산(원)': c.itMngcBg,
         '자본예산(원)': c.assetBg || 0,
         '계약상대처': c.cttOpp,
-        '추진부서': c.pulDpmNm,
-        '담당자': c.pulCgprNm,
+        '담당부서': c.biceDpmNm,
+        '담당자': c.cgprNm,
         '지급예정월': c.fstDfrDt,
         '결재현황': c.apfSts
     }));

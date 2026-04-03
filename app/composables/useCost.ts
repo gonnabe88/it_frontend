@@ -27,7 +27,7 @@ export interface ItCost {
     itMngcNo?: string;      // 전산업무비 관리번호 (PK, 서버에서 채번)
     itMngcSno?: number;     // 전산업무비 일련번호 (버전 관리용)
     lstYn?: string;         // 최종여부 (Y: 최신 데이터 / N: 이력 데이터)
-    ioeNm: string;          // 비목명 (지출 항목의 분류명)
+    ioeC: string;           // 비목코드 (지출 항목의 코드)
     cttNm: string;          // 계약명 (계약서상 명칭)
     cttTp: string;          // 계약구분 (유지보수, 라이선스, 서비스 등)
     cttOpp: string;         // 계약상대처 (벤더/공급사명)
@@ -39,9 +39,15 @@ export interface ItCost {
     xcrBseDt?: string;      // 환율기준일자 (환율 적용 기준 날짜, optional)
     infPrtYn: string;       // 정보보호여부 (Y: 정보보호 관련 항목 / N: 일반)
     indRsn: string;         // 증감사유 (전년 대비 예산 증감 사유)
-    pulCgpr: string;        // 추진담당자 사번 (해당 계약의 IT 담당자)
-    pulCgprNm: string;      // 추진담당자명 (사용자명 조회 결과)
-    pulDpmNm: string;       // 추진부서명 (조직명 조회 결과)
+    cgpr: string;           // 담당자 사번 (해당 계약의 IT 담당자)
+    cgprNm: string;         // 담당자명 (사용자명 조회 결과)
+    biceDpm: string;        // 담당부서 코드
+    biceDpmNm: string;      // 담당부서명 (조직명 조회 결과)
+    biceTem: string;        // 담당팀 코드
+    biceTemNm: string;      // 담당팀명 (조직명 조회 결과)
+    abusC: string;          // 사업코드
+    itMngcTp: string;       // 전산업무비유형
+    itMngcDtt: string;      // 전산업무비구분
     assetBg: number;        // 자본예산 (원 단위)
     apfSts: string;         // 결재현황 (전자결재 신청 상태)
     delYn?: string;         // 삭제여부 (Y: 삭제됨 / N: 유효, optional)
@@ -116,11 +122,12 @@ export const useCost = () => {
      *
      * @example
      * await createCost({
-     *   ioeNm: '소프트웨어 유지보수', cttNm: 'Oracle DB 유지보수',
+     *   ioeC: 'IOE001', cttNm: 'Oracle DB 유지보수',
      *   cttTp: '유지보수', cttOpp: 'Oracle Korea',
      *   itMngcBg: 50000000, dfrCle: '연간',
      *   fstDfrDt: '2026-01-01', cur: 'KRW',
-     *   infPrtYn: 'N', indRsn: '전년 동일', pulCgpr: '홍길동'
+     *   infPrtYn: 'N', indRsn: '전년 동일', cgpr: '홍길동',
+     *   biceDpm: '001', biceTem: '00101', abusC: 'AB01', itMngcTp: 'TP01', itMngcDtt: 'DT01'
      * });
      */
     const createCost = async (payload: ItCost) => {
