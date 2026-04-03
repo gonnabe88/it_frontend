@@ -258,9 +258,11 @@ const resetProjectFilters = () => {
 /* ── 전산업무비 Drawer 필터 ── */
 const costFilters = ref({
     ioeC: [] as string[],
+    ioeNm: [] as string[],
     cttTp: [] as string[],
     cttOpp: [] as string[],
     biceDpmNm: [] as string[],
+    pulDpmNm: [] as string[],
     apfSts: [] as string[],
     budgetMin: null as number | null,
     budgetMax: null as number | null,
@@ -273,9 +275,11 @@ const costFilters = ref({
 /** 전산업무비 필터 적용 여부 */
 const hasCostFilters = computed(() =>
     costFilters.value.ioeC.length > 0 ||
+    costFilters.value.ioeNm.length > 0 ||
     costFilters.value.cttTp.length > 0 ||
     costFilters.value.cttOpp.length > 0 ||
     costFilters.value.biceDpmNm.length > 0 ||
+    costFilters.value.pulDpmNm.length > 0 ||
     costFilters.value.apfSts.length > 0 ||
     costFilters.value.budgetMin !== null ||
     costFilters.value.budgetMax !== null ||
@@ -305,7 +309,7 @@ const searchCostApfSts = (e: { query: string }) => { filteredCostApfSts.value = 
 
 /** 전산업무비 필터 초기화 */
 const resetCostFilters = () => {
-    costFilters.value = { ioeC: [], cttTp: [], cttOpp: [], biceDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
+    costFilters.value = { ioeC: [], ioeNm: [], cttTp: [], cttOpp: [], biceDpmNm: [], pulDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
 };
 
 /* ── 경상사업 Drawer 필터 ── */
