@@ -43,6 +43,7 @@ export interface LoginResponse {
     empNm: string;    // 로그인한 사용자의 사원명 (화면 표시용)
     athIds: string[]; // 자격등급 ID 목록 (다중 자격등급 지원)
     bbrC: string;     // 소속 부서코드
+    temC: string;     // 소속 팀코드
 }
 
 /**
@@ -70,4 +71,5 @@ export interface User {
     empNm: string;    // 사원명 (상단 네비게이션 등 UI 표시용)
     athIds: string[]; // 자격등급 ID 목록 (다중 자격등급 지원)
     bbrC: string;     // 소속 부서코드 (권한 범위 결정에 사용)
+    temC: string;     // 소속 팀코드
 }

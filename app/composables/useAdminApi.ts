@@ -238,6 +238,12 @@ export const useAdminApi = () => {
     const deleteCode = (cdId: string) =>
         $apiFetch(`${BASE}/codes/${cdId}`, { method: 'DELETE' });
 
+    const bulkUpsertCodes = (codes: AdminCodeRequest[]) =>
+        $apiFetch<{ created: number; updated: number }>(`${BASE}/codes/bulk`, {
+            method: 'POST',
+            body: { codes }
+        });
+
     // ==========================================================================
     // 자격등급 (TAAABB_CAUTHI) — M3
     // ==========================================================================
@@ -334,7 +340,7 @@ export const useAdminApi = () => {
 
     return {
         // 공통코드
-        fetchCodes, createCode, updateCode, deleteCode,
+        fetchCodes, createCode, updateCode, deleteCode, bulkUpsertCodes,
         // 자격등급
         fetchAuthGrades, createAuthGrade, updateAuthGrade, deleteAuthGrade,
         // 역할

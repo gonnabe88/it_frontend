@@ -69,7 +69,7 @@ const isEditMode = computed(() => !!projectId);
 /** 폼 데이터 상태 (신규/수정 공통) */
 const form = ref({
     prjNm: '',
-    prjDtt: '신규',
+    pulDtt: '신규',
     prjTp: '',
     svnDpm: '',        // 주관부서코드
     svnDpmNm: '',      // 주관부서명 (직원 검색에서 자동 세팅)
@@ -620,7 +620,7 @@ const searchContinueProjects = async (event: { query: string }) => {
 
 /**
  * 전년도 사업 선택 시 폼 자동 채우기
- * prjYy(사업연도), prjDtt(신규/계속)을 제외한 모든 필드와 소요자원을 복사합니다.
+ * prjYy(사업연도), pulDtt(신규/계속)을 제외한 모든 필드와 소요자원을 복사합니다.
  * gclMngNo(품목관리번호)는 신규 등록이므로 null로 초기화합니다.
  */
 const onContinueProjectSelect = async (event: { value: Project }) => {
@@ -647,13 +647,13 @@ const onContinueProjectSelect = async (event: { value: Project }) => {
             };
         });
 
-        /* prjYy·prjDtt 유지, 나머지 복사 */
-        const { prjYy, prjDtt } = form.value;
+        /* prjYy·pulDtt 유지, 나머지 복사 */
+        const { prjYy, pulDtt } = form.value;
         form.value = {
             ...form.value,
             ...detail,
             prjYy,
-            prjDtt,
+            pulDtt,
             prjSts: '예산 작성',
             sttDt: detail.sttDt ? new Date(detail.sttDt) : null,
             endDt: detail.endDt ? new Date(detail.endDt) : null,
@@ -674,7 +674,7 @@ watch(continueProjectAC, (val) => {
 });
 
 /** 사업구분이 '계속'으로 변경될 때 현재 사업명으로 AutoComplete 초기화 */
-watch(() => form.value.prjDtt, (val) => {
+watch(() => form.value.pulDtt, (val) => {
     if (val === '계속') continueProjectAC.value = form.value.prjNm;
 });
 
@@ -771,11 +771,11 @@ const cancel = () => {
                     </div>
                     <!-- 사업 구분 선택 (신규/계속) -->
                     <div class="flex flex-col gap-2">
-                        <Select v-model="form.prjDtt" :options="prjTypeOptions" placeholder="구분 선택" class="w-32" />
+                        <Select v-model="form.pulDtt" :options="prjTypeOptions" placeholder="구분 선택" class="w-32" />
                     </div>
                     <!-- 사업명: 계속이면 전년도 사업 AutoComplete, 신규이면 일반 입력 -->
                     <div class="flex flex-col gap-2 flex-1">
-                        <AutoComplete v-if="form.prjDtt === '계속'" v-model="continueProjectAC" dropdown
+                        <AutoComplete v-if="form.pulDtt === '계속'" v-model="continueProjectAC" dropdown
                             :suggestions="continueSuggestions" optionLabel="prjNm" placeholder="전년도 사업명으로 검색 후 선택..."
                             fluid :delay="300" :invalid="formErrors.prjNm" @complete="searchContinueProjects"
                             @item-select="onContinueProjectSelect" />

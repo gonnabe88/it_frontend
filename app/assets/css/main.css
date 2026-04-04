@@ -1,3 +1,6 @@
+/* PrimeVue 아이콘 폰트 (nuxt.config.ts css 배열에서 404 발생하여 여기서 import) */
+@import 'primeicons/primeicons.css';
+
 @font-face {
     font-family: 'NotoSansKR';
     src: url('/assets/fonts/NotoSansKR-Thin.woff2') format('woff2');

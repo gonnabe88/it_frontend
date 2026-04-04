@@ -192,7 +192,6 @@ const navigateToTab = (path: string) => {
 </script>
 
 <template>
-    <Toast position="top-right" />
     <div class="card">
         <MegaMenu :model="menuItems" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
             style="border-radius: 0">

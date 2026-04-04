@@ -130,9 +130,7 @@ export default defineNuxtConfig({
 
   /* ── 글로벌 CSS 파일 ── */
   css: [
-    'primeicons/primeicons.css',                           // PrimeVue 아이콘 폰트
     '~/assets/css/main.css',                               // Tailwind CSS + 커스텀 유틸리티 클래스
-    '@excalidraw/excalidraw/index.css'                     // Excalidraw UI 스타일
   ],
 
   /* ── PostCSS 플러그인: Tailwind CSS + 자동 벤더 프리픽스 ── */

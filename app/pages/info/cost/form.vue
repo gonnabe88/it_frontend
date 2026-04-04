@@ -19,7 +19,8 @@
 
 [UI 구성]
   - 인라인 편집 DataTable (editMode="cell" 방식)
-  - 비목코드, 계약명, 계약구분, 계약상대처, 예산, 통화, 지급주기, 최초지급일, 담당자, 담당부서, 담당팀, 사업코드, 유형, 구분
+  - 비목코드, 계약명, 계약구분, 계약상대처, 예산, 통화, 지급주기, 최초지급일, 담당자(직원조회), 사업코드, 유형, 구분
+  - 담당부서·담당팀은 담당자 선택 시 자동입력 (입력폼에서 제거)
   - 행 추가 / 개별 행 삭제 버튼
 
 [저장 로직]
@@ -33,11 +34,30 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import { useCost, type ItCost } from '~/composables/useCost';
+import { useAuth } from '~/composables/useAuth';
+import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
-const { fetchCost, createCost, updateCost, fetchCostsBulk } = useCost();
+const { fetchCostOnce, createCost, updateCost, fetchCostsBulk } = useCost();
+const { user } = useAuth();
+
+/* ── 공통코드 옵션 로드 ──────────────────────────────────── */
+interface CodeOption { cdId: string; cdNm: string; }
+
+const { $apiFetch } = useNuxtApp();
+const config = useRuntimeConfig();
+const CCODEM_BASE = `${config.public.apiBase}/api/ccodem/type`;
+
+/** 비목코드 옵션 (IOE_LEAFE · IOE_XPN · IOE_SEVS · IOE_IDR 병합) */
+const ioeCOptions = ref<CodeOption[]>([]);
+/** 구분 옵션 (CTT_TP) */
+const pulDttOptions = ref<CodeOption[]>([]);
+/** 지급주기 옵션 (DFR_CLE) */
+const dfrCleOptions = ref<CodeOption[]>([]);
+/** 사업코드 옵션 (ABUS_C) */
+const abusCOptions = ref<CodeOption[]>([]);
 
 const title = '전산업무비 신청/수정';
 definePageMeta({
@@ -46,6 +66,15 @@ definePageMeta({
 
 /** 현재 편집 중인 전산업무비 항목 목록 */
 const costs = ref<ItCost[]>([]);
+
+/* ── 직원조회 다이얼로그 상태 ──────────────────────────────── */
+/** 직원조회 다이얼로그 표시 여부 */
+const employeeDialogVisible = ref(false);
+/** 직원조회 대상 행 인덱스 */
+const selectedRowIndex = ref<number>(-1);
+
+/** 현재 로그인 사용자의 부서/팀 정보 (신규 행 자동입력용) */
+const currentUserDetail = ref<{ bbrC: string; bbrNm: string; temC: string; temNm: string } | null>(null);
 
 /**
  * 초기 데이터 로드
@@ -56,15 +85,37 @@ const costs = ref<ItCost[]>([]);
  * - 둘 다 없으면 빈 행 1개 추가 (신규 등록)
  */
 onMounted(async () => {
+    /* 공통코드 + 현재 사용자 상세정보 병렬 로드 */
+    try {
+        const userEno = user.value?.eno ?? '';
+        const userBase = `${config.public.apiBase}/api/users`;
+        const [ioeLeafe, ioeXpn, ioeSevs, ioeIdr, cttTpList, dfrCleList, abusCList, userDetail] = await Promise.all([
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_LEAFE`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_XPN`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_SEVS`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_IDR`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/CTT_TP`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/DFR_CLE`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/ABUS_C`),
+            userEno ? $apiFetch<{ bbrC: string; bbrNm: string; temC: string; temNm: string }>(`${userBase}/${userEno}`) : Promise.resolve(null),
+        ]);
+        ioeCOptions.value   = [...ioeLeafe, ...ioeXpn, ...ioeSevs, ...ioeIdr];
+        pulDttOptions.value = cttTpList;
+        dfrCleOptions.value = dfrCleList;
+        abusCOptions.value  = abusCList;
+        if (userDetail) currentUserDetail.value = userDetail;
+    } catch (e) {
+        console.error('초기 데이터 로드 실패', e);
+    }
+
     const id = route.query.id as string;
     const ids = route.query.ids as string;
 
     if (id) {
         /* 단건 수정 모드: 지정된 관리번호 1건 로드 */
         try {
-            const { data } = await fetchCost(id);
-            if (data.value) {
-                const costData = { ...data.value };
+            const costData = await fetchCostOnce(id);
+            if (costData) {
                 /* 최초지급일을 Date 객체로 변환 (DatePicker 바인딩용) */
                 if (costData.fstDfrDt) {
                     costData.fstDfrDt = new Date(costData.fstDfrDt);
@@ -101,6 +152,7 @@ onMounted(async () => {
 /**
  * 새 행 추가
  * 기본값으로 초기화된 빈 전산업무비 항목을 목록에 추가합니다.
+ * 담당자·담당부서·담당팀은 현재 로그인 사용자 정보로 자동입력됩니다.
  */
 const addCostRow = () => {
     costs.value.push({
@@ -116,15 +168,16 @@ const addCostRow = () => {
         xcrBseDt: '',
         infPrtYn: 'N',
         indRsn: '',
-        cgpr: '',
-        cgprNm: '',
-        biceDpm: '',
-        biceDpmNm: '',
-        biceTem: '',
-        biceTemNm: '',
+        /* 담당자: 현재 로그인 사용자로 자동입력 */
+        cgpr: user.value?.eno ?? '',
+        cgprNm: user.value?.empNm ?? '',
+        biceDpm: currentUserDetail.value?.bbrC ?? user.value?.bbrC ?? '',
+        biceDpmNm: currentUserDetail.value?.bbrNm ?? '',
+        biceTem: currentUserDetail.value?.temC ?? user.value?.temC ?? '',
+        biceTemNm: currentUserDetail.value?.temNm ?? '',
         abusC: '',
-        itMngcTp: '',
-        itMngcDtt: '',
+        itMngcTp: 'IT_MNGC_TP_001',
+        pulDtt: '',
         assetBg: 0,
         apfSts: '예산 작성',
         lstYn: 'Y',
@@ -153,6 +206,34 @@ const removeCostRow = (index: number) => {
         // 명시적으로 삭제 API를 호출하지 않음 (사용자가 실수로 지울 수 있으므로).
     }
     costs.value.splice(index, 1);
+};
+
+/**
+ * 직원조회 다이얼로그 열기
+ * @param index - 담당자를 변경할 행 인덱스
+ */
+const openEmployeeSearch = (index: number) => {
+    selectedRowIndex.value = index;
+    employeeDialogVisible.value = true;
+};
+
+/**
+ * 직원조회 완료 처리
+ * 선택된 직원 정보로 해당 행의 담당자·담당부서·담당팀을 자동입력합니다.
+ *
+ * @param selected - EmployeeSearchDialog에서 emit된 직원 정보
+ *   { eno, usrNm, bbrNm, temNm, orgCode(부서코드) }
+ */
+const onEmployeeSelect = (selected: { eno: string; usrNm: string; bbrNm: string; temC: string | null; temNm: string | null; orgCode: string }) => {
+    const row = costs.value[selectedRowIndex.value];
+    if (!row) return;
+    row.cgpr = selected.eno;
+    row.cgprNm = selected.usrNm;
+    row.biceDpm = selected.orgCode;
+    row.biceDpmNm = selected.bbrNm;
+    row.biceTem = selected.temC ?? '';
+    row.biceTemNm = selected.temNm ?? '';
+    employeeDialogVisible.value = false;
 };
 
 /**
@@ -221,7 +302,6 @@ const cancel = () => {
 
 /* 드롭다운 선택지 옵션 */
 const currencyOptions = ['KRW', 'USD', 'EUR', 'JPY', 'CNY'];
-const ynOptions = ['Y', 'N'];
 </script>
 
 <template>
@@ -239,14 +319,35 @@ const ynOptions = ['Y', 'N'];
 
         <!-- 인라인 편집 DataTable -->
         <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <DataTable :value="costs" editMode="cell" tableClass="editable-cells-table" :pt="{
+            <DataTable :value="costs" tableClass="editable-cells-table" :pt="{
                 headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
             }">
-                <!-- 비목코드: 필수 입력 -->
-                <Column header="비목코드" style="min-width: 150px">
+                <!-- 사업코드 (코드 기반 Select, ABUS_C) -->
+                <Column header="사업코드" style="min-width: 160px">
                     <template #body="{ data }">
-                        <InputText v-model="data.ioeC" class="w-full" />
+                        <Select
+                            v-model="data.abusC"
+                            :options="abusCOptions"
+                            option-label="cdNm"
+                            option-value="cdId"
+                            placeholder="사업코드 선택"
+                            class="w-full"
+                        />
+                    </template>
+                </Column>
+
+                <!-- 비목코드: 필수 입력 (코드 기반 Select) -->
+                <Column header="비목코드" style="min-width: 180px">
+                    <template #body="{ data }">
+                        <Select
+                            v-model="data.ioeC"
+                            :options="ioeCOptions"
+                            option-label="cdNm"
+                            option-value="cdId"
+                            placeholder="비목코드 선택"
+                            class="w-full"
+                        />
                     </template>
                 </Column>
 
@@ -257,10 +358,17 @@ const ynOptions = ['Y', 'N'];
                     </template>
                 </Column>
 
-                <!-- 계약구분 -->
-                <Column header="계약구분" style="min-width: 100px">
+                <!-- 계약구분 (코드 기반 Select, CTT_TP) -->
+                <Column header="계약구분" style="min-width: 140px">
                     <template #body="{ data }">
-                        <InputText v-model="data.cttTp" class="w-full" />
+                        <Select
+                            v-model="data.cttTp"
+                            :options="pulDttOptions"
+                            option-label="cdNm"
+                            option-value="cdId"
+                            placeholder="계약구분 선택"
+                            class="w-full"
+                        />
                     </template>
                 </Column>
 
@@ -286,10 +394,17 @@ const ynOptions = ['Y', 'N'];
                     </template>
                 </Column>
 
-                <!-- 지급주기 -->
-                <Column header="지급주기" style="min-width: 100px">
+                <!-- 지급주기 (코드 기반 Select) -->
+                <Column header="지급주기" style="min-width: 140px">
                     <template #body="{ data }">
-                        <InputText v-model="data.dfrCle" class="w-full" />
+                        <Select
+                            v-model="data.dfrCle"
+                            :options="dfrCleOptions"
+                            option-label="cdNm"
+                            option-value="cdId"
+                            placeholder="지급주기 선택"
+                            class="w-full"
+                        />
                     </template>
                 </Column>
 
@@ -301,40 +416,21 @@ const ynOptions = ['Y', 'N'];
                     </template>
                 </Column>
 
-                <!-- 담당자 사원번호 입력 -->
-                <Column header="담당자" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.cgpr" class="w-full" />
-                    </template>
-                </Column>
-
-                <Column header="담당부서" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.biceDpm" class="w-full" />
-                    </template>
-                </Column>
-
-                <Column header="담당팀" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.biceTem" class="w-full" />
-                    </template>
-                </Column>
-
-                <Column header="사업코드" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.abusC" class="w-full" />
-                    </template>
-                </Column>
-
-                <Column header="유형" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.itMngcTp" class="w-full" />
-                    </template>
-                </Column>
-
-                <Column header="구분" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.itMngcDtt" class="w-full" />
+                <!-- 담당자: 직원조회 버튼으로 선택, 선택 시 담당부서·담당팀 자동입력 -->
+                <Column header="담당자" style="min-width: 160px">
+                    <template #body="{ data, index }">
+                        <div class="flex items-center gap-1">
+                            <span class="flex-1 text-sm truncate" :title="data.cgprNm || data.cgpr">
+                                {{ data.cgprNm ? `${data.cgprNm} (${data.cgpr})` : (data.cgpr || '미선택') }}
+                            </span>
+                            <Button
+                                icon="pi pi-search"
+                                text
+                                size="small"
+                                @click="openEmployeeSearch(index)"
+                                v-tooltip.top="'직원조회'"
+                            />
+                        </div>
                     </template>
                 </Column>
 
@@ -346,5 +442,11 @@ const ynOptions = ['Y', 'N'];
                 </Column>
             </DataTable>
         </div>
+
+        <!-- 직원조회 다이얼로그 -->
+        <EmployeeSearchDialog
+            v-model:visible="employeeDialogVisible"
+            @select="onEmployeeSelect"
+        />
     </div>
 </template>
