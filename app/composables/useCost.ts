@@ -52,7 +52,7 @@ export interface ItCost {
     lstYn?: string;         // 최종여부 (Y: 최신 데이터 / N: 이력 데이터)
     ioeC: string;           // 비목코드 (지출 항목의 코드)
     cttNm: string;          // 계약명 (계약서상 명칭)
-    cttTp: string;          // 계약구분 (유지보수, 라이선스, 서비스 등)
+    // cttTp 제거됨 - pulDtt(전산업무비구분)로 대체
     cttOpp: string;         // 계약상대처 (벤더/공급사명)
     itMngcBg: number;       // 전산업무비 예산 금액
     dfrCle: string;         // 지급주기 (월별, 분기별, 연간 등)
@@ -71,7 +71,9 @@ export interface ItCost {
     abusC: string;          // 사업코드
     itMngcTp: string;       // 전산업무비유형
     pulDtt: string;      // 전산업무비구분
-    assetBg?: number;       // 자본예산 (원 단위)
+    bgYy?: string;          // 예산연도 (YYYY)
+    assetBg?: number;       // 자본예산 (원 단���, 비목코드 cttTp=IOE_CPIT)
+    costBg?: number;        // 일반관리비 (원 단위, 비목코드 cttTp=IOE_IDR/IOE_SEVS/IOE_XPN/IOE_LEAFE)
     apfSts?: string;        // 결재현황 (전자결재 신청 상태)
     delYn?: string;         // 삭제여부 (Y: 삭제됨 / N: 유효, optional)
     terminals?: Terminal[]; // 금융정보단말기 목록 (1:N)

@@ -34,6 +34,9 @@ const plnMngNo = route.params.id as string;
 /* 계획 상세 데이터 조회 */
 const { data: planData, error, pending } = await fetchPlan(plnMngNo);
 
+/* ── 공통코드 코드명 변환 ── */
+const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
+
 /* ── 예산 단위 선택 ── */
 const units = ['원', '천원', '백만원', '억원'];
 const selectedUnit = ref('백만원');
@@ -82,7 +85,7 @@ const handleDelete = async () => {
     try {
         await deletePlan(plnMngNo);
         alert('삭제되었습니다.');
-        router.push('/info/plan');
+        if (window.history.length > 1) { router.back(); } else { router.push('/info/plan'); }
     } catch (e) {
         console.error('계획 삭제 실패:', e);
         alert('삭제 중 오류가 발생했습니다.');
@@ -107,7 +110,7 @@ const handleDelete = async () => {
                     icon="pi pi-list"
                     severity="secondary"
                     outlined
-                    @click="router.push('/info/plan')"
+                    @click="router.back()"
                 />
                 <!-- 삭제 버튼 -->
                 <Button
@@ -228,7 +231,9 @@ const handleDelete = async () => {
                             }"
                         >
                             <Column field="prjNm" header="사업명" />
-                            <Column field="prjTp" header="사업유형" style="width: 8rem" />
+                            <Column field="prjTp" header="사업유형" style="width: 8rem">
+                                <template #body="slotProps">{{ getPrjTpName(slotProps.data.prjTp) }}</template>
+                            </Column>
                             <Column field="svnDpmNm" header="주관부서" style="width: 10rem" />
                             <Column field="prjBg" :header="`총예산 (${selectedUnit})`" style="width: 10rem">
                                 <template #body="slotProps">
@@ -258,7 +263,7 @@ const handleDelete = async () => {
                         class="space-y-2"
                     >
                         <div class="flex items-center gap-2">
-                            <Tag :value="typeGroup.prjTp" severity="secondary" />
+                            <Tag :value="getPrjTpName(typeGroup.prjTp)" severity="secondary" />
                             <span class="text-sm text-zinc-500">{{ typeGroup.projects.length }}건</span>
                         </div>
                         <DataTable

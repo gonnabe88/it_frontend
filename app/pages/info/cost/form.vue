@@ -35,7 +35,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
-import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import CostFormTableSection from '~/components/cost/CostFormTableSection.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -52,7 +52,7 @@ const CCODEM_BASE = `${config.public.apiBase}/api/ccodem/type`;
 
 /** 비목코드 옵션 (IOE_LEAFE · IOE_XPN · IOE_SEVS · IOE_IDR 병합) */
 const ioeCOptions = ref<CodeOption[]>([]);
-/** 구분 옵션 (CTT_TP) */
+/** 구분 옵션 (PUL_DTT) */
 const pulDttOptions = ref<CodeOption[]>([]);
 /** 지급주기 옵션 (DFR_CLE) */
 const dfrCleOptions = ref<CodeOption[]>([]);
@@ -66,12 +66,6 @@ definePageMeta({
 
 /** 현재 편집 중인 전산업무비 항목 목록 */
 const costs = ref<ItCost[]>([]);
-
-/* ── 직원조회 다이얼로그 상태 ──────────────────────────────── */
-/** 직원조회 다이얼로그 표시 여부 */
-const employeeDialogVisible = ref(false);
-/** 직원조회 대상 행 인덱스 */
-const selectedRowIndex = ref<number>(-1);
 
 /** 현재 로그인 사용자의 부서/팀 정보 (신규 행 자동입력용) */
 const currentUserDetail = ref<{ bbrC: string; bbrNm: string; temC: string; temNm: string } | null>(null);
@@ -89,18 +83,18 @@ onMounted(async () => {
     try {
         const userEno = user.value?.eno ?? '';
         const userBase = `${config.public.apiBase}/api/users`;
-        const [ioeLeafe, ioeXpn, ioeSevs, ioeIdr, cttTpList, dfrCleList, abusCList, userDetail] = await Promise.all([
+        const [ioeLeafe, ioeXpn, ioeSevs, ioeIdr, pulDttList, dfrCleList, abusCList, userDetail] = await Promise.all([
             $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_LEAFE`),
             $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_XPN`),
             $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_SEVS`),
             $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_IDR`),
-            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/CTT_TP`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/PUL_DTT`),
             $apiFetch<CodeOption[]>(`${CCODEM_BASE}/DFR_CLE`),
             $apiFetch<CodeOption[]>(`${CCODEM_BASE}/ABUS_C`),
             userEno ? $apiFetch<{ bbrC: string; bbrNm: string; temC: string; temNm: string }>(`${userBase}/${userEno}`) : Promise.resolve(null),
         ]);
         ioeCOptions.value   = [...ioeLeafe, ...ioeXpn, ...ioeSevs, ...ioeIdr];
-        pulDttOptions.value = cttTpList;
+        pulDttOptions.value = pulDttList;
         dfrCleOptions.value = dfrCleList;
         abusCOptions.value  = abusCList;
         if (userDetail) currentUserDetail.value = userDetail;
@@ -158,7 +152,7 @@ const addCostRow = () => {
     costs.value.push({
         ioeC: '',
         cttNm: '',
-        cttTp: '',
+        pulDtt: '',
         cttOpp: '',
         itMngcBg: 0,
         dfrCle: '',
@@ -183,57 +177,6 @@ const addCostRow = () => {
         lstYn: 'Y',
         delYn: 'N'
     });
-};
-
-/**
- * 지정된 인덱스의 행 삭제
- * UI 목록에서만 제거합니다.
- * (실제 DB 삭제는 상세 화면의 삭제 버튼에서 처리)
- *
- * @param index - 삭제할 행의 인덱스
- */
-const removeCostRow = (index: number) => {
-    const item = costs.value[index];
-    if (item?.itMngcNo) {
-        // 기존 데이터 삭제 시 (여기서는 UI에서만 제거하고 저장은 안함, 혹은 별도 처리)
-        // 요구사항이 "행추가/삭제하는 형식"이므로 UI에서 제거.
-        // 실제 삭제 API 호출은 저장 시점에는 하지 않고, UI 목록에서만 뺌.
-        // 만약 삭제 API도 호출해야 한다면 로직 추가 필요.
-        // 여기서는 "신청/수정" 화면이므로, 수정 모드일 때 행을 지우면 삭제로 간주할지 여부가 모호함.
-        // 보통 이런 그리드 폼에서는 저장 시점에 삭제된 항목을 처리하거나,
-        // 단순히 입력 폼에서만 제거하는 방식임.
-        // 안전하게 UI 제거만 하고, 실제 데이터 삭제는 상세 화면에서 하도록 유도하거나,
-        // 명시적으로 삭제 API를 호출하지 않음 (사용자가 실수로 지울 수 있으므로).
-    }
-    costs.value.splice(index, 1);
-};
-
-/**
- * 직원조회 다이얼로그 열기
- * @param index - 담당자를 변경할 행 인덱스
- */
-const openEmployeeSearch = (index: number) => {
-    selectedRowIndex.value = index;
-    employeeDialogVisible.value = true;
-};
-
-/**
- * 직원조회 완료 처리
- * 선택된 직원 정보로 해당 행의 담당자·담당부서·담당팀을 자동입력합니다.
- *
- * @param selected - EmployeeSearchDialog에서 emit된 직원 정보
- *   { eno, usrNm, bbrNm, temNm, orgCode(부서코드) }
- */
-const onEmployeeSelect = (selected: { eno: string; usrNm: string; bbrNm: string; temC: string | null; temNm: string | null; orgCode: string }) => {
-    const row = costs.value[selectedRowIndex.value];
-    if (!row) return;
-    row.cgpr = selected.eno;
-    row.cgprNm = selected.usrNm;
-    row.biceDpm = selected.orgCode;
-    row.biceDpmNm = selected.bbrNm;
-    row.biceTem = selected.temC ?? '';
-    row.biceTemNm = selected.temNm ?? '';
-    employeeDialogVisible.value = false;
 };
 
 /**
@@ -300,8 +243,6 @@ const cancel = () => {
     router.back();
 };
 
-/* 드롭다운 선택지 옵션 */
-const currencyOptions = ['KRW', 'USD', 'EUR', 'JPY', 'CNY'];
 </script>
 
 <template>
@@ -317,136 +258,16 @@ const currencyOptions = ['KRW', 'USD', 'EUR', 'JPY', 'CNY'];
             </div>
         </div>
 
-        <!-- 인라인 편집 DataTable -->
+        <!-- 인라인 편집 DataTable (CostFormTableSection 컴포넌트) -->
         <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <DataTable :value="costs" tableClass="editable-cells-table" :pt="{
-                headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-            }">
-                <!-- 사업코드 (코드 기반 Select, ABUS_C) -->
-                <Column header="사업코드" style="min-width: 160px">
-                    <template #body="{ data }">
-                        <Select
-                            v-model="data.abusC"
-                            :options="abusCOptions"
-                            option-label="cdNm"
-                            option-value="cdId"
-                            placeholder="사업코드 선택"
-                            class="w-full"
-                        />
-                    </template>
-                </Column>
-
-                <!-- 비목코드: 필수 입력 (코드 기반 Select) -->
-                <Column header="비목코드" style="min-width: 180px">
-                    <template #body="{ data }">
-                        <Select
-                            v-model="data.ioeC"
-                            :options="ioeCOptions"
-                            option-label="cdNm"
-                            option-value="cdId"
-                            placeholder="비목코드 선택"
-                            class="w-full"
-                        />
-                    </template>
-                </Column>
-
-                <!-- 계약명 -->
-                <Column header="계약명" style="min-width: 150px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.cttNm" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 계약구분 (코드 기반 Select, CTT_TP) -->
-                <Column header="계약구분" style="min-width: 140px">
-                    <template #body="{ data }">
-                        <Select
-                            v-model="data.cttTp"
-                            :options="pulDttOptions"
-                            option-label="cdNm"
-                            option-value="cdId"
-                            placeholder="계약구분 선택"
-                            class="w-full"
-                        />
-                    </template>
-                </Column>
-
-                <!-- 계약상대처 -->
-                <Column header="계약상대처" style="min-width: 120px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.cttOpp" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 예산: 통화에 따라 동적 서식 적용 -->
-                <Column header="예산" style="min-width: 120px">
-                    <template #body="{ data }">
-                        <InputNumber v-model="data.itMngcBg" mode="currency" :currency="data.cur || 'KRW'"
-                            locale="ko-KR" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 통화: 드롭다운 선택 -->
-                <Column header="통화" style="width: 100px">
-                    <template #body="{ data }">
-                        <Select v-model="data.cur" :options="currencyOptions" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 지급주기 (코드 기반 Select) -->
-                <Column header="지급주기" style="min-width: 140px">
-                    <template #body="{ data }">
-                        <Select
-                            v-model="data.dfrCle"
-                            :options="dfrCleOptions"
-                            option-label="cdNm"
-                            option-value="cdId"
-                            placeholder="지급주기 선택"
-                            class="w-full"
-                        />
-                    </template>
-                </Column>
-
-                <!-- 최초지급일: 월 단위(YYYY-MM) 선택 -->
-                <Column header="최초지급일" style="min-width: 140px">
-                    <template #body="{ data }">
-                        <DatePicker v-model="data.fstDfrDt" view="month" dateFormat="yy-mm" showIcon fluid
-                            placeholder="최초지급일" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 담당자: 직원조회 버튼으로 선택, 선택 시 담당부서·담당팀 자동입력 -->
-                <Column header="담당자" style="min-width: 160px">
-                    <template #body="{ data, index }">
-                        <div class="flex items-center gap-1">
-                            <span class="flex-1 text-sm truncate" :title="data.cgprNm || data.cgpr">
-                                {{ data.cgprNm ? `${data.cgprNm} (${data.cgpr})` : (data.cgpr || '미선택') }}
-                            </span>
-                            <Button
-                                icon="pi pi-search"
-                                text
-                                size="small"
-                                @click="openEmployeeSearch(index)"
-                                v-tooltip.top="'직원조회'"
-                            />
-                        </div>
-                    </template>
-                </Column>
-
-                <!-- 행 삭제 버튼 -->
-                <Column header="삭제" style="width: 50px; text-align: center">
-                    <template #body="{ index }">
-                        <Button icon="pi pi-trash" text severity="danger" @click="removeCostRow(index)" />
-                    </template>
-                </Column>
-            </DataTable>
+            <CostFormTableSection
+                v-model="costs"
+                :ioe-c-options="ioeCOptions"
+                :pul-dtt-options="pulDttOptions"
+                :dfr-cle-options="dfrCleOptions"
+                :abus-c-options="abusCOptions"
+                :show-delete-column="true"
+            />
         </div>
-
-        <!-- 직원조회 다이얼로그 -->
-        <EmployeeSearchDialog
-            v-model:visible="employeeDialogVisible"
-            @select="onEmployeeSelect"
-        />
     </div>
 </template>

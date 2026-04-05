@@ -12,7 +12,10 @@ const { fetchCost, deleteCost } = useCost();
 const id = route.params.id as string;
 definePageMeta({ title: '금융정보단말기 상세' });
 
-const { data: cost, error } = await fetchCost(id);
+const { data: cost, error, refresh: refreshCost } = await fetchCost(id);
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshCost());
 
 const handleDelete = () => {
     confirm.require({
@@ -25,7 +28,7 @@ const handleDelete = () => {
         accept: async () => {
             try {
                 await deleteCost(id);
-                router.push('/info/cost');
+                if (window.history.length > 1) { router.back(); } else { router.push('/info/cost'); }
             } catch (err) {
                 console.error('Failed to delete cost:', err);
             }
@@ -54,7 +57,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 </div>
             </div>
             <div class="flex gap-2">
-                <Button label="목록" icon="pi pi-list" severity="secondary" outlined @click="navigateTo('/info/cost')" />
+                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.back()" />
                 <Button label="삭제" icon="pi pi-trash" severity="danger" outlined @click="handleDelete" />
                 <Button label="수정" icon="pi pi-pencil" @click="navigateTo(`/info/cost/terminal/form?id=${cost.itMngcNo}`)" />
             </div>

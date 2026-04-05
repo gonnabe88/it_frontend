@@ -58,6 +58,51 @@ const toast = useToast();
 // fetchRates() (= refresh) 중복 호출 불필요 → 2회 호출 및 40X 오류 방지
 const { convertToKRW } = useCurrencyRates();
 
+/* ── 공통코드 코드명 변환 (cdId → cdNm) ── */
+const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
+const { getCodeName: getBzDttName } = useCodeOptions('BZ_DTT');
+const { getCodeName: getTchnTpName } = useCodeOptions('TCHN_TP');
+const { getCodeName: getMnUsrName } = useCodeOptions('MN_USR');
+const { getCodeName: getRprStsName } = useCodeOptions('RPR_STS');
+const { getCodeName: getPrjPulPttName } = useCodeOptions('PRJ_PUL_PTT');
+
+/* ── IOE 비목 공통코드 조회 (구분 컬럼 cdId → cdNm 표시용) ── */
+interface IoeCode { cdId: string; cdNm: string; cttTp: string; }
+const ioeCodeMap = ref(new Map<string, IoeCode>());
+const IOE_CTT_TYPES = ['IOE_LEAFE', 'IOE_XPN', 'IOE_SEVS', 'IOE_IDR', 'IOE_CPIT'];
+
+onMounted(async () => {
+    try {
+        const { $apiFetch } = useNuxtApp();
+        const config = useRuntimeConfig();
+        const results = await Promise.all(
+            IOE_CTT_TYPES.map(cttTp =>
+                $apiFetch<IoeCode[]>(`${config.public.apiBase}/api/ccodem/type/${cttTp}`)
+            )
+        );
+        const map = new Map<string, IoeCode>();
+        for (const code of results.flat()) {
+            map.set(code.cdId, code);
+        }
+        ioeCodeMap.value = map;
+    } catch (e) {
+        console.error('IOE 비목 코드 조회 실패', e);
+    }
+});
+
+/** cdId로 코드명 조회 (없으면 cdId 그대로 표시) */
+const getCodeNm = (cdId: string): string => {
+    return ioeCodeMap.value.get(cdId)?.cdNm || cdId;
+};
+
+/** cdId로 cttTp 조회 */
+const getCttTp = (cdId: string): string => {
+    return ioeCodeMap.value.get(cdId)?.cttTp || '';
+};
+
+/** 경상사업 여부 (ornYn='Y') */
+const isOrdinary = computed(() => (project.value as any)?.ornYn === 'Y');
+
 definePageMeta({
     title: '정보화사업 상세'
 });
@@ -77,7 +122,12 @@ const handleDelete = () => {
         accept: async () => {
             try {
                 await deleteProject(prjMngNo as string);
-                router.push('/info/projects'); // 목록 화면으로 이동
+                /* 진입 전 화면으로 복귀 (히스토리가 없으면 목록으로 이동) */
+                if (window.history.length > 1) {
+                    router.back();
+                } else {
+                    router.push('/info/projects');
+                }
             } catch (err) {
                 console.error('Failed to delete project:', err);
                 toast.add({
@@ -163,21 +213,19 @@ const totalItemsAmount = computed(() => {
 
 /**
  * 소요자원 구분별 PrimeVue Tag severity 매핑
- * DataTable의 구분 컬럼에 색상 Badge를 표시하는 데 사용합니다.
+ * cttTp 기준으로 색상을 결정합니다.
  *
- * @param category - 자원 구분명 ('개발비' | '기계장치' | '기타무형자산' | '전산임차료' | '전산제비')
+ * @param cdId - 공통코드 cdId (예: IOE-351-1100-1)
  * @returns PrimeVue Tag severity 값
  */
-const getCategorySeverity = (category: string) => {
-    /* "대분류 > 소분류" 형식이면 대분류만 추출하여 severity 결정 */
-    const mainCat = category?.split(' > ')[0] ?? category;
-    switch (mainCat) {
-        case '개발비': return 'info';
-        case '기계장치': return 'warning';
-        case '기타무형자산': return 'success';
-        case '전산용역비': return 'contrast';
-        case '전산임차료': return 'danger';
-        case '전산제비': return 'secondary';
+const getCategorySeverity = (cdId: string) => {
+    const cttTp = getCttTp(cdId);
+    switch (cttTp) {
+        case 'IOE_CPIT': return 'info';       // 자본예산
+        case 'IOE_LEAFE': return 'danger';     // 임차료
+        case 'IOE_XPN': return 'warning';      // 여비/경비
+        case 'IOE_SEVS': return 'contrast';    // 용역비
+        case 'IOE_IDR': return 'secondary';    // 제비/간접비
         default: return 'secondary';
     }
 };
@@ -213,7 +261,7 @@ const formatDateToYearMonth = (dateStr?: string) => {
 };
 
 // --- 목차 (TOC) 관련 상태 및 로직 ---
-const tocItems = [
+const allTocItems = [
     { id: 'section-progress', label: '사업 진행 현황', icon: 'pi pi-step-forward-alt' },
     {
         id: 'section-overview',
@@ -222,32 +270,34 @@ const tocItems = [
         children: [
             { id: 'sub-overview-desc', label: '사업 주요내용' },
             { id: 'sub-overview-status', label: '현황 & 필요성' },
-            { id: 'sub-overview-expect', label: '기대효과 & 문제점' }
+            { id: 'sub-overview-expect', label: '기대효과 & 문제점', ordinaryHidden: true }
         ]
     },
     {
         id: 'section-scope',
         label: '사업 범위 및 일정',
         icon: 'pi pi-map',
+        ordinaryHidden: true,
         children: [
             { id: 'sub-scope-range', label: '사업 범위' },
             { id: 'sub-scope-history', label: '추진 경과 & 향후 계획' },
             { id: 'sub-scope-dates', label: '사업 일정 & 추진가능성' }
         ]
     },
-    { id: 'section-category', label: '사업 구분', icon: 'pi pi-tags' },
-    { id: 'section-criteria', label: '편성 기준', icon: 'pi pi-check-circle' },
+    { id: 'section-category', label: '사업 구분', icon: 'pi pi-tags', ordinaryHidden: true },
+    { id: 'section-criteria', label: '편성 기준', icon: 'pi pi-check-circle', ordinaryHidden: true },
     {
         id: 'section-org',
         label: '담당 조직',
         icon: 'pi pi-users',
+        ordinaryHidden: true,
         children: [
             { id: 'sub-org-business', label: '주관부서 & IT 담당부서' }
         ]
     },
     {
         id: 'section-budget',
-        label: '추진시기 및 소요예산',
+        label: '소요예산',
         icon: 'pi pi-wallet',
         children: [
             { id: 'sub-budget-total', label: '총 예산 & 전결권 & 보고상태' }
@@ -255,6 +305,17 @@ const tocItems = [
     },
     { id: 'section-resource', label: '소요자원 상세내용', icon: 'pi pi-box' }
 ];
+
+/** 경상사업 시 숨겨진 섹션을 제외한 TOC 항목 */
+const tocItems = computed(() => {
+    if (!isOrdinary.value) return allTocItems;
+    return allTocItems
+        .filter(item => !(item as any).ordinaryHidden)
+        .map(item => ({
+            ...item,
+            children: item.children?.filter(c => !(c as any).ordinaryHidden)
+        }));
+});
 
 const activeSection = ref('section-progress');
 let observer: IntersectionObserver | null = null;
@@ -291,7 +352,7 @@ onMounted(() => {
         });
 
         // 화면에 보여지는 섹션 중 가장 상단(목차 순서상 먼저 나오는) 것을 activeSection으로 지정
-        const allIds = tocItems.flatMap(item => [item.id, ...(item.children?.map(c => c.id) || [])]);
+        const allIds = allTocItems.flatMap(item => [item.id, ...(item.children?.map(c => c.id) || [])]);
         for (const id of allIds) {
             if (visibleSections.has(id)) {
                 activeSection.value = id;
@@ -303,7 +364,7 @@ onMounted(() => {
         rootMargin: '-10px 0px -60% 0px' // 스크롤 시 상단 바로 아래부터 감지하도록 여백 조정
     });
 
-    tocItems.forEach(item => {
+    allTocItems.forEach(item => {
         const el = document.getElementById(item.id);
         if (el && observer) observer.observe(el);
         if (item.children) {
@@ -333,16 +394,20 @@ onUnmounted(() => {
                 <div class="space-y-2">
                     <!-- 사업 유형 태그 + 관리번호 + 기간 -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                        <Tag :value="project.prjTp"
+                        <Tag v-if="isOrdinary" value="경상사업"
+                            class="bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-0 px-2.5 py-0.5 font-medium"
+                            rounded />
+                        <Tag :value="getPrjTpName(project.prjTp)"
                             class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <span class="font-mono text-zinc-400">#{{ project.prjMngNo }}</span>
                         <span class="text-zinc-300 dark:text-zinc-700">|</span>
-                        <div
+                        <div v-if="!isOrdinary"
                             class="flex items-center gap-1.5 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs font-medium">
                             <i class="pi pi-calendar text-zinc-400"></i>
                             <span>{{ project.sttDt }} ~ {{ project.endDt }}</span>
                         </div>
+                        <span v-else class="text-xs font-medium">{{ project.bgYy }}년</span>
                     </div>
                     <!-- 사업명 + 진행 상태 태그 -->
                     <div class="flex flex-wrap items-center gap-3">
@@ -356,8 +421,8 @@ onUnmounted(() => {
 
             <!-- 액션 버튼: 목록 / 삭제(조건부) / 수정 -->
             <div class="flex gap-2 self-end md:self-center">
-                <Button label="목록" icon="pi pi-list" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
-                    @click="navigateTo('/info/projects')" />
+                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
+                    @click="router.back()" />
                 <!-- 결재 중이거나 완료된 경우, 또는 수정 권한이 없는 경우 삭제 버튼 숨김 -->
                 <Button v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)
                     && canModify(project.fstEnrUsid, project.svnDpm)" label="삭제"
@@ -366,7 +431,7 @@ onUnmounted(() => {
                 <!-- 수정 권한이 있는 경우에만 수정 버튼 표시 -->
                 <Button v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-pencil"
                     class="shadow-lg shadow-indigo-500/20"
-                    @click="navigateTo(`/info/projects/form?id=${project.prjMngNo}`)" />
+                    @click="navigateTo(`/info/projects/form?id=${project.prjMngNo}${isOrdinary ? '&ordinary=true' : ''}`)" />
             </div>
         </div>
 
@@ -497,8 +562,8 @@ onUnmounted(() => {
                                 </div>
                             </div>
                         </div>
-                        <!-- 기대효과 -->
-                        <div id="sub-overview-expect" class="relative scroll-mt-6">
+                        <!-- 기대효과 (경상사업 숨김) -->
+                        <div v-if="!isOrdinary" id="sub-overview-expect" class="relative scroll-mt-6">
                             <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-50 dark:bg-blue-900/20"></div>
                             <div class="relative pl-10">
                                 <div
@@ -513,8 +578,8 @@ onUnmounted(() => {
                                 </div>
                             </div>
                         </div>
-                        <!-- 미추진 시 문제점 -->
-                        <div id="sub-overview-problem" class="relative scroll-mt-6">
+                        <!-- 미추진 시 문제점 (경상사업 숨김) -->
+                        <div v-if="!isOrdinary" id="sub-overview-problem" class="relative scroll-mt-6">
                             <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-red-50 dark:bg-red-900/20"></div>
                             <div class="relative pl-10">
                                 <div
@@ -532,8 +597,8 @@ onUnmounted(() => {
                     </div>
                 </section>
 
-                <!-- 섹션 3 & 4: 사업 범위 및 일정 + 진행 상황 + 추진시기 -->
-                <section id="section-scope"
+                <!-- 섹션 3 & 4: 사업 범위 및 일정 + 진행 상황 + 추진시기 (경상사업 숨김) -->
+                <section v-if="!isOrdinary" id="section-scope"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
 
                     <!-- 사업 범위 및 일정 -->
@@ -636,15 +701,15 @@ onUnmounted(() => {
                                     class="font-bold text-green-900 dark:text-green-100 text-md mb-3 block">추진가능성</label>
                                 <div
                                     class="p-4 bg-green-50/30 dark:bg-green-900/10 rounded-xl border border-green-100 dark:border-green-900/20 text-sm text-zinc-700 dark:text-zinc-300">
-                                    {{ project.prjPulPtt || '-' }}
+                                    {{ getPrjPulPttName(String(project.prjPulPtt ?? '')) }}
                                 </div>
                             </div>
                         </div>
                     </div>
 
                 </section>
-                <!-- 섹션 5: 사업 구분 -->
-                <section id="section-category"
+                <!-- 섹션 5: 사업 구분 (경상사업 숨김) -->
+                <section v-if="!isOrdinary" id="section-category"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-tags text-purple-500"></i>
@@ -653,25 +718,25 @@ onUnmounted(() => {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">업무 구분</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ project.bzDtt || '-' }}</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ getBzDttName(project.bzDtt) }}</span>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">사업 유형</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ project.prjTp || '-' }}</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ getPrjTpName(project.prjTp) }}</span>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">기술 유형</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ project.tchnTp || '-' }}</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ getTchnTpName(project.tchnTp) }}</span>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">주요 사용자</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ project.mnUsr || '-' }}</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ getMnUsrName(project.mnUsr) }}</span>
                         </div>
                     </div>
                 </section>
 
-                <!-- 섹션 6: 편성 기준 -->
-                <section id="section-criteria"
+                <!-- 섹션 6: 편성 기준 (경상사업 숨김) -->
+                <section v-if="!isOrdinary" id="section-criteria"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-check-circle text-teal-500"></i>
@@ -690,8 +755,8 @@ onUnmounted(() => {
                         </div>
                     </div>
                 </section>
-                <!-- 섹션 7: 담당 조직 -->
-                <section id="section-org"
+                <!-- 섹션 7: 담당 조직 (경상사업 숨김) -->
+                <section v-if="!isOrdinary" id="section-org"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-users text-cyan-500"></i>
@@ -781,10 +846,10 @@ onUnmounted(() => {
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-wallet text-yellow-500"></i>
-                        추진시기 및 소요예산
+                        소요예산
                     </h3>
-                    <!-- 총예산 / 전결권 / 보고상태 카드 -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- 총예산 / 전결권 / 보고상태 카드 (경상사업: 보고상태 숨김 → 2열) -->
+                    <div class="grid gap-4" :class="isOrdinary ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'">
                         <!-- 총 예산 카드 -->
                         <div id="sub-budget-total"
                             class="scroll-mt-6 flex flex-col justify-between p-6 bg-yellow-50/[0.6] dark:bg-yellow-900/10 rounded-2xl border border-yellow-100 dark:border-yellow-900/20 text-center relative overflow-hidden">
@@ -832,8 +897,8 @@ onUnmounted(() => {
                                 </p>
                             </div>
                         </div>
-                        <!-- 보고상태 카드 -->
-                        <div id="sub-budget-report"
+                        <!-- 보고상태 카드 (경상사업 숨김) -->
+                        <div v-if="!isOrdinary" id="sub-budget-report"
                             class="scroll-mt-6 flex flex-col justify-between p-6 bg-green-50/[0.6] dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/20 text-center relative overflow-hidden">
                             <div
                                 class="absolute -right-4 -top-4 w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full blur-xl">
@@ -843,7 +908,7 @@ onUnmounted(() => {
                                     class="text-sm font-bold text-green-600 dark:text-green-500 uppercase tracking-wide mb-2">
                                     보고상태</div>
                                 <div class="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">{{
-                                    project.rprSts || '-' }}</div>
+                                    getRprStsName(project.rprSts) }}</div>
                             </div>
                             <!-- 보고상태 안내 문구 -->
                             <div class="mt-4 pt-3 border-t border-green-100 dark:border-green-900/30 z-10">
@@ -872,11 +937,11 @@ onUnmounted(() => {
                                     <p>등록된 소요자원이 없습니다.</p>
                                 </div>
                             </template>
-                            <!-- 구분: 카테고리별 색상 Badge -->
+                            <!-- 구분: 공통코드 cdNm 표시 + cttTp 기반 색상 Badge -->
                             <Column field="gclDtt" header="구분" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <Tag :value="data.gclDtt" :severity="getCategorySeverity(data.gclDtt)" rounded
+                                    <Tag :value="getCodeNm(data.gclDtt)" :severity="getCategorySeverity(data.gclDtt)" rounded
                                         class="text-xs"></Tag>
                                 </template>
                             </Column>
@@ -920,22 +985,22 @@ onUnmounted(() => {
                             <Column field="bgFdtn" header="산정근거"
                                 headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center" style="min-width: 100px"
                                 class="text-right bg-zinc-50/50 dark:bg-zinc-900" />
-                            <!-- 도입시기: 자본예산 구분(개발비/기계장치/기타무형자산) -->
+                            <!-- 도입시기: 자본예산(IOE_CPIT) -->
                             <Column header="도입시기" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <span v-if="['개발비', '기계장치', '기타무형자산'].includes(data.gclDtt)"
+                                    <span v-if="getCttTp(data.gclDtt) === 'IOE_CPIT'"
                                         class="text-zinc-600 dark:text-zinc-300">
                                         {{ formatDateToYearMonth(data.itdDt) }}
                                     </span>
                                     <span v-else class="text-zinc-400 dark:text-zinc-600 font-light">-</span>
                                 </template>
                             </Column>
-                            <!-- 지급주기: 임차료/제비 구분 -->
+                            <!-- 지급주기: 자본예산 이외 -->
                             <Column header="지급주기" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <span v-if="!['개발비', '기계장치', '기타무형자산'].includes(data.gclDtt)"
+                                    <span v-if="getCttTp(data.gclDtt) !== 'IOE_CPIT' && getCttTp(data.gclDtt)"
                                         class="text-zinc-600 dark:text-zinc-300">
                                         {{ data.dfrCle || '-' }}
                                     </span>

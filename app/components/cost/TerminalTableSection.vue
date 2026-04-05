@@ -1,94 +1,280 @@
+<!--
+================================================================================
+[components/cost/TerminalTableSection.vue] 단말기 상세목록 테이블 컴포넌트
+================================================================================
+금융정보단말기 전산업무비의 단말기 상세목록을 관리하는 컴포넌트입니다.
+terminal/form.vue의 DataTable 2를 컴포넌트로 분리했습니다.
+
+[담당자 입력]
+  AutoComplete(이름 검색) + 직원조회 다이얼로그 버튼 (index.vue와 동일 로직)
+
+[Props]
+  modelValue    - Terminal[] (단말기 목록)
+  dfrCleOptions - 지급주기 옵션
+  tmnSvcOptions - 단말기서비스 옵션
+  currencyOptions - 통화 선택지
+================================================================================
+-->
 <script setup lang="ts">
 import { ref } from 'vue';
+import { type Terminal } from '~/composables/useCost';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+
+interface CodeOption { cdId: string; cdNm: string; }
+interface UserSuggestion {
+    eno: string;
+    usrNm: string;
+    bbrNm: string;
+    bbrC: string;
+    temC: string | null;
+    temNm: string | null;
+    ptCNm?: string;
+}
 
 const props = defineProps<{
-    modelValue: any[];
+    modelValue: Terminal[];
+    dfrCleOptions: CodeOption[];
+    tmnSvcOptions: CodeOption[];
     currencyOptions: string[];
 }>();
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+    'update:modelValue': [value: Terminal[]];
+}>();
 
-/** 신규 행 추가 */
+const { $apiFetch } = useNuxtApp();
+const config = useRuntimeConfig();
+const { user } = useAuth();
+
+/* ── 행 추가/삭제 ─────────────────────────────────────────── */
+
+/** 단말기 행 추가 */
 const addRow = () => {
-    const newRow = {
-        tmnNm: '',
-        tmnTuzManr: '',
-        tmnUsg: '',
-        tmnSvc: '',
-        tmlAmt: 0,
-        cur: 'KRW',
-        xcr: 1,
-        xcrBseDt: new Date().toISOString().split('T')[0],
-        dfrCle: '매월',
-        indRsn: '',
-        cgpr: '',
-        biceTem: '',
-        biceDpm: '',
-        rmk: ''
-    };
-    emit('update:modelValue', [...props.modelValue, newRow]);
+    emit('update:modelValue', [
+        ...props.modelValue,
+        {
+            tmnNm: '',
+            tmnTuzManr: '',
+            tmnUsg: '',
+            tmnSvc: '',
+            tmlAmt: 0,
+            cur: 'KRW',
+            xcr: 1,
+            xcrBseDt: new Date().toISOString().split('T')[0],
+            dfrCle: '',
+            indRsn: '',
+            cgpr: '',
+            cgprNm: '',
+            biceTem: '',
+            biceDpm: '',
+            rmk: ''
+        }
+    ]);
 };
 
-/** 행 삭제 */
+/** 단말기 행 삭제 */
 const removeRow = (index: number) => {
-    const newRows = [...props.modelValue];
-    newRows.splice(index, 1);
-    emit('update:modelValue', newRows);
+    const updated = [...props.modelValue];
+    updated.splice(index, 1);
+    emit('update:modelValue', updated);
 };
 
+/* ── 담당자 자동완성 검색 ──────────────────────────────────── */
+const employeeSuggestions = ref<UserSuggestion[]>([]);
+const employeeDialogVisible = ref(false);
+const selectedRowIndex = ref<number>(-1);
+
+/** AutoComplete 검색 이벤트 핸들러 */
+const searchEmployee = async (event: { query: string }) => {
+    const keyword = event.query.trim();
+    if (!keyword) { employeeSuggestions.value = []; return; }
+    try {
+        const userBase = `${config.public.apiBase}/api/users/search`;
+        const orgCode = user.value?.bbrC ?? '';
+        const results = await $apiFetch<UserSuggestion[]>(userBase, {
+            query: { keyword, ...(orgCode ? { orgCode } : {}) }
+        });
+        employeeSuggestions.value = results ?? [];
+    } catch (e) {
+        console.error('직원 검색 실패', e);
+        employeeSuggestions.value = [];
+    }
+};
+
+/** AutoComplete 선택 완료 시 해당 행에 담당자 정보 직접 반영 */
+const onEmployeeAutoSelect = (data: Terminal, selected: UserSuggestion) => {
+    data.cgpr = selected.eno;
+    data.cgprNm = selected.usrNm;
+    data.biceDpm = selected.bbrC;
+    data.biceTem = selected.temC ?? '';
+};
+
+/** 직원조회 다이얼로그 열기 */
+const openEmployeeSearch = (index: number) => {
+    selectedRowIndex.value = index;
+    employeeDialogVisible.value = true;
+};
+
+/** 직원조회 다이얼로그 선택 완료 시 해당 행에 담당자 정보 직접 반영 */
+const onDialogEmployeeSelect = (selected: { eno: string; usrNm: string; bbrNm: string; temC?: string; temNm?: string; orgCode?: string }) => {
+    if (selectedRowIndex.value < 0) return;
+    const data = props.modelValue[selectedRowIndex.value];
+    if (!data) return;
+    data.cgpr = selected.eno;
+    data.cgprNm = selected.usrNm;
+    data.biceDpm = selected.orgCode ?? '';
+    data.biceTem = selected.temC ?? '';
+    employeeDialogVisible.value = false;
+};
 </script>
 
 <template>
-    <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 w-full">
+    <div class="space-y-3">
         <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                <i class="pi pi-list text-indigo-500"></i>
-                단말기 상세 목록
-            </h3>
-            <Button label="행 추가" icon="pi pi-plus" size="small" severity="secondary" @click="addRow" />
+            <h3 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">단말기 상세목록</h3>
+            <Button label="행 추가" icon="pi pi-plus" severity="secondary" size="small" @click="addRow" />
         </div>
 
-        <DataTable :value="modelValue" responsive-layout="scroll" class="p-datatable-sm border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden" :scrollable="true" scroll-height="400px">
-            <Column header="No" :style="{ width: '50px' }">
-                <template #body="slotProps">
-                    {{ slotProps.index + 1 }}
+        <StyledDataTable :value="modelValue">
+            <!-- No -->
+            <Column header="No" style="width: 50px">
+                <template #body="{ index }">
+                    {{ index + 1 }}
                 </template>
             </Column>
-            <Column field="tmnNm" header="단말기명" :style="{ width: '150px' }">
-                <template #body="slotProps">
-                    <InputText v-model="slotProps.data.tmnNm" class="w-full !text-xs" />
+
+            <!-- 단말기명 -->
+            <Column header="단말기명" style="min-width: 150px">
+                <template #body="{ data }">
+                    <InputText v-model="data.tmnNm" class="w-full" />
                 </template>
             </Column>
-            <Column field="tmnTuzManr" header="이용방법" :style="{ width: '150px' }">
-                <template #body="slotProps">
-                    <InputText v-model="slotProps.data.tmnTuzManr" class="w-full !text-xs" />
+
+            <!-- 이용방법 -->
+            <Column header="이용방법" style="min-width: 150px">
+                <template #body="{ data }">
+                    <InputText v-model="data.tmnTuzManr" class="w-full" />
                 </template>
             </Column>
-            <Column field="tmnUsg" header="용도" :style="{ width: '150px' }">
-                <template #body="slotProps">
-                    <InputText v-model="slotProps.data.tmnUsg" class="w-full !text-xs" />
+
+            <!-- 용도 -->
+            <Column header="용도" style="min-width: 150px">
+                <template #body="{ data }">
+                    <InputText v-model="data.tmnUsg" class="w-full" />
                 </template>
             </Column>
-            <Column field="tmlAmt" header="금액" :style="{ width: '120px' }">
-                <template #body="slotProps">
-                    <InputNumber v-model="slotProps.data.tmlAmt" class="w-full !text-xs" :min="0" />
+
+            <!-- 금액 -->
+            <Column header="금액" style="min-width: 120px">
+                <template #body="{ data }">
+                    <InputNumber v-model="data.tmlAmt" mode="currency" :currency="data.cur || 'KRW'"
+                        locale="ko-KR" class="w-full" :min="0" />
                 </template>
             </Column>
-            <Column field="cur" header="통화" :style="{ width: '100px' }">
-                <template #body="slotProps">
-                    <Select v-model="slotProps.data.cur" :options="currencyOptions" class="w-full !text-xs" />
+
+            <!-- 통화 -->
+            <Column header="통화" style="width: 100px">
+                <template #body="{ data }">
+                    <Select v-model="data.cur" :options="currencyOptions" class="w-full" />
                 </template>
             </Column>
-            <Column field="dfrCle" header="지급주기" :style="{ width: '100px' }">
-                <template #body="slotProps">
-                    <InputText v-model="slotProps.data.dfrCle" class="w-full !text-xs" />
+
+            <!-- 지급주기 -->
+            <Column header="지급주기" style="min-width: 140px">
+                <template #body="{ data }">
+                    <Select v-model="data.dfrCle" :options="dfrCleOptions" option-label="cdNm"
+                        option-value="cdId" placeholder="지급주기 선택" class="w-full" />
                 </template>
             </Column>
-            <Column header="관리" :style="{ width: '50px' }">
-                <template #body="slotProps">
-                    <Button icon="pi pi-trash" severity="danger" text rounded @click="removeRow(slotProps.index)" />
+
+            <!-- 단말기서비스 -->
+            <Column header="단말기서비스" style="min-width: 160px">
+                <template #body="{ data }">
+                    <Select v-model="data.tmnSvc" :options="tmnSvcOptions" option-label="cdNm"
+                        option-value="cdId" placeholder="서비스 선택" class="w-full" />
                 </template>
             </Column>
-        </DataTable>
+
+            <!-- 증감사유 -->
+            <Column header="증감사유" style="min-width: 150px">
+                <template #body="{ data }">
+                    <InputText v-model="data.indRsn" class="w-full" />
+                </template>
+            </Column>
+
+            <!-- 담당자 (AutoComplete + 직원조회 버튼) -->
+            <Column header="담당자" style="min-width: 150px; width: 170px">
+                <template #body="{ data, index }">
+                    <div class="cgpr-cell">
+                        <AutoComplete :modelValue="data.cgprNm || ''" :suggestions="employeeSuggestions"
+                            optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'"
+                            @complete="searchEmployee"
+                            @item-select="onEmployeeAutoSelect(data, $event.value)">
+                            <template #option="{ option }">
+                                <div class="py-1.5 pl-2.5 border-l-[3px] border-blue-900">
+                                    <div class="leading-tight">
+                                        <div class="flex items-baseline gap-1.5">
+                                            <span class="font-semibold text-sm">{{ option.usrNm }}</span>
+                                            <span class="text-[11px] text-surface-400">{{ option.eno }}</span>
+                                            <span v-if="option.ptCNm" class="text-xs text-primary/70">{{ option.ptCNm }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-surface-400 mt-0.5">
+                                            <i class="pi pi-building text-[10px]" />
+                                            <span>{{ option.bbrNm }}</span>
+                                            <template v-if="option.temNm">
+                                                <span class="text-surface-300">·</span>
+                                                <span>{{ option.temNm }}</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </AutoComplete>
+                        <Button icon="pi pi-search" text size="small" class="!pe-1"
+                            @click="openEmployeeSearch(index)" v-tooltip.top="'직원조회'" />
+                    </div>
+                </template>
+            </Column>
+
+            <!-- 비고 -->
+            <Column header="비고" style="min-width: 150px">
+                <template #body="{ data }">
+                    <InputText v-model="data.rmk" class="w-full" />
+                </template>
+            </Column>
+
+            <!-- 행 삭제 -->
+            <Column header="삭제" style="width: 50px; text-align: center">
+                <template #body="{ index }">
+                    <Button icon="pi pi-trash" text severity="danger" @click="removeRow(index)" />
+                </template>
+            </Column>
+        </StyledDataTable>
+
+        <!-- 직원조회 다이얼로그 -->
+        <EmployeeSearchDialog v-model:visible="employeeDialogVisible" @select="onDialogEmployeeSelect" />
     </div>
 </template>
+
+<style scoped>
+/* 담당자 셀: grid로 AutoComplete(1fr)와 버튼(auto) 분배 */
+.cgpr-cell {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.cgpr-cell :deep(.p-autocomplete) {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.cgpr-cell :deep(.p-autocomplete input) {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+</style>

@@ -109,7 +109,8 @@ const menuItems = computed(() => {
             label: '전산예산', icon: 'pi pi-wallet', items: [
                 { label: '예산 작성', to: '/budget' },
                 { label: '결재 상신', to: '/budget/approval' },
-                { label: '예산 목록', to: '/budget/list' }
+                { label: '예산 목록', to: '/budget/list' },
+                { label: '예산 작업', to: '/budget/work' }
             ]
         },
         {

@@ -78,7 +78,15 @@ const activeFilterCount = computed(() => {
 const filteredCodes = computed(() => {
     const list = codes.value ?? [];
     const { cdId, cdNm, cdva, cdDes, cttTp, cttTpDes, baseDate } = searchFilters.value;
+    const gk = globalSearch.value.trim().toLowerCase();
     return list.filter(c => {
+        // 통합검색: 주요 텍스트 필드 중 하나라도 매칭되면 통과
+        if (gk) {
+            const haystack = [c.cdId, c.cdNm, c.cdva, c.cdDes, c.cttTp, c.cttTpDes]
+                .filter(Boolean).join(' ').toLowerCase();
+            if (!haystack.includes(gk)) return false;
+        }
+        // Drawer 상세 필터
         if (cdId  && !c.cdId?.toLowerCase().includes(cdId.trim().toLowerCase()))   return false;
         if (cdNm  && !c.cdNm?.toLowerCase().includes(cdNm.trim().toLowerCase()))   return false;
         if (cdva  && !c.cdva?.toLowerCase().includes(cdva.trim().toLowerCase()))   return false;
@@ -103,6 +111,9 @@ const resetFilters = () => {
         baseDate: null,
     };
 };
+
+/** 통합검색 키워드 */
+const globalSearch = ref('');
 
 // 신규 행 추가 다이얼로그 상태
 const newRowVisible = ref(false);
@@ -335,6 +346,14 @@ const saveNewRow = async () => {
             </div>
         </div>
 
+        <!-- 통합검색 -->
+        <div class="mb-4">
+            <IconField>
+                <InputIcon class="pi pi-search" />
+                <InputText v-model="globalSearch" placeholder="통합검색 (코드ID, 코드명, 코드값, 코드설명, 구분...)" class="w-full" />
+            </IconField>
+        </div>
+
         <!-- 필터 적용 중 표시 -->
         <div v-if="activeFilterCount > 0" class="flex items-center gap-2 mb-3 flex-wrap">
             <span class="text-sm text-zinc-500 dark:text-zinc-400">적용된 필터:</span>
@@ -358,19 +377,22 @@ const saveNewRow = async () => {
             dataKey="cdId"
             scrollable
             scrollHeight="calc(100vh - 300px)"
+            paginator
+            :rows="50"
+            :rowsPerPageOptions="[50, 100, 200]"
             class="p-datatable-sm"
             stripedRows>
 
             <Column field="cdId" header="코드ID" :style="{ width: '120px' }" frozen
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.cdId, showDelay: 400 }">{{ data.cdId }}</span>
+                    <span class="block truncate" :title="data.cdId">{{ data.cdId }}</span>
                 </template>
             </Column>
             <Column field="cdNm" header="코드명" :style="{ width: '150px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.cdNm, showDelay: 400 }">{{ data.cdNm }}</span>
+                    <span class="block truncate" :title="data.cdNm">{{ data.cdNm }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <InputText v-model="data[field]" class="w-full" />
@@ -379,7 +401,7 @@ const saveNewRow = async () => {
             <Column field="cdva" header="코드값" :style="{ width: '150px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.cdva, showDelay: 400 }">{{ data.cdva }}</span>
+                    <span class="block truncate" :title="data.cdva">{{ data.cdva }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <InputText v-model="data[field]" class="w-full" />
@@ -388,7 +410,7 @@ const saveNewRow = async () => {
             <Column field="cdDes" header="코드설명" :style="{ width: '200px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.cdDes, showDelay: 400 }">{{ data.cdDes }}</span>
+                    <span class="block truncate" :title="data.cdDes">{{ data.cdDes }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <InputText v-model="data[field]" class="w-full" />
@@ -397,7 +419,7 @@ const saveNewRow = async () => {
             <Column field="cttTp" header="코드값구분" :style="{ width: '120px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.cttTp, showDelay: 400 }">{{ data.cttTp }}</span>
+                    <span class="block truncate" :title="data.cttTp">{{ data.cttTp }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <InputText v-model="data[field]" class="w-full" />
@@ -406,7 +428,7 @@ const saveNewRow = async () => {
             <Column field="cttTpDes" header="구분설명" :style="{ width: '180px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.cttTpDes, showDelay: 400 }">{{ data.cttTpDes }}</span>
+                    <span class="block truncate" :title="data.cttTpDes">{{ data.cttTpDes }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <InputText v-model="data[field]" class="w-full" />
@@ -415,7 +437,7 @@ const saveNewRow = async () => {
             <Column field="sttDt" header="시작일자" :style="{ width: '130px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.sttDt, showDelay: 400 }">{{ data.sttDt }}</span>
+                    <span class="block truncate" :title="data.sttDt">{{ data.sttDt }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <DatePicker v-model="data[field]" dateFormat="yy-mm-dd" class="w-full" />
@@ -424,7 +446,7 @@ const saveNewRow = async () => {
             <Column field="endDt" header="종료일자" :style="{ width: '130px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: data.endDt, showDelay: 400 }">{{ data.endDt }}</span>
+                    <span class="block truncate" :title="data.endDt">{{ data.endDt }}</span>
                 </template>
                 <template #editor="{ data, field }">
                     <DatePicker v-model="data[field]" dateFormat="yy-mm-dd" class="w-full" />
@@ -442,7 +464,7 @@ const saveNewRow = async () => {
                 <template #body="{ data }">
                     <span v-if="data.fstEnrUsid"
                           class="block truncate cursor-pointer text-blue-500 hover:underline"
-                          v-tooltip.top="{ value: data.fstEnrUsNm || data.fstEnrUsid, showDelay: 400 }"
+                          :title="data.fstEnrUsNm || data.fstEnrUsid"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
                     </span>
@@ -451,7 +473,7 @@ const saveNewRow = async () => {
             <Column field="fstEnrDtm" header="최초생성시간" :style="{ width: '160px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: formatDateTime(data.fstEnrDtm), showDelay: 400 }">
+                    <span class="block truncate" :title="formatDateTime(data.fstEnrDtm)">
                         {{ formatDateTime(data.fstEnrDtm) }}
                     </span>
                 </template>
@@ -463,7 +485,7 @@ const saveNewRow = async () => {
                 <template #body="{ data }">
                     <span v-if="data.lstChgUsid"
                           class="block truncate cursor-pointer text-blue-500 hover:underline"
-                          v-tooltip.top="{ value: data.lstChgUsNm || data.lstChgUsid, showDelay: 400 }"
+                          :title="data.lstChgUsNm || data.lstChgUsid"
                           @click="showEmployeeDialog(data.lstChgUsid)">
                         {{ data.lstChgUsNm || data.lstChgUsid }}
                     </span>
@@ -472,7 +494,7 @@ const saveNewRow = async () => {
             <Column field="lstChgDtm" header="마지막수정시간" :style="{ width: '160px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span class="block truncate" v-tooltip.top="{ value: formatDateTime(data.lstChgDtm), showDelay: 400 }">
+                    <span class="block truncate" :title="formatDateTime(data.lstChgDtm)">
                         {{ formatDateTime(data.lstChgDtm) }}
                     </span>
                 </template>

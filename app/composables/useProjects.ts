@@ -38,7 +38,7 @@ export interface Project {
     sttDt: string;     // 시작일 (YYYY-MM-DD)
     endDt: string;     // 종료일 (YYYY-MM-DD)
     prjSts: string;    // 프로젝트 상태 (검토중, 진행중, 완료, 보류 등)
-    prjYy: number;     // 사업연도 (YYYY)
+    bgYy: number;     // 사업연도 (YYYY)
     svnHdq: string;    // 주관부문 (상위 조직 단위)
     svnDpmCgprNm: string; // 주관부서 담당자명 (사용자명 조회 결과)
     applicationInfo?: any; // 결재 타임라인 및 신청 상태 정보
@@ -219,7 +219,7 @@ export const useProjects = () => {
      * 프로젝트 목록 일회성 조회 ($apiFetch 기반, 비반응형)
      * 이벤트 핸들러 등 컴포넌트 setup 외부에서 사용합니다.
      *
-     * @param query - 쿼리 파라미터 (예: { prjYy: '2025', ornYn: 'N' })
+     * @param query - 쿼리 파라미터 (예: { bgYy: '2025', ornYn: 'N' })
      * @returns Project 배열 Promise
      */
     const fetchProjectsOnce = async (query?: Record<string, string>): Promise<Project[]> => {

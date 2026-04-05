@@ -52,7 +52,7 @@ const handleDelete = () => {
         accept: async () => {
             try {
                 await deleteCost(id);
-                router.push('/info/cost');
+                if (window.history.length > 1) { router.back(); } else { router.push('/info/cost'); }
             } catch (err) {
                 console.error('Failed to delete cost:', err);
                 toast.add({
@@ -160,9 +160,9 @@ onUnmounted(() => {
                 <Button icon="pi pi-arrow-left" text rounded aria-label="Back" @click="router.back()"
                     class="mt-1 w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors" />
                 <div class="space-y-2">
-                    <!-- 계약구분 태그 + 관리번호 + 최초지급일 -->
+                    <!-- 신규/계속 태그 + 관리번호 + 최초지급일 -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                        <Tag :value="cost.cttTp"
+                        <Tag :value="cost.pulDtt"
                             class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <span class="font-mono text-zinc-400">#{{ cost.itMngcNo }}</span>
@@ -186,8 +186,8 @@ onUnmounted(() => {
 
             <!-- 액션 버튼: 목록 / 삭제 / 수정 -->
             <div class="flex gap-2 self-end md:self-center">
-                <Button label="목록" icon="pi pi-list" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
-                    @click="navigateTo('/info/cost')" />
+                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
+                    @click="router.back()" />
                 <Button label="삭제" icon="pi pi-trash" severity="danger" outlined class="bg-white dark:bg-zinc-900"
                     @click="handleDelete" />
                 <Button label="수정" icon="pi pi-pencil" class="shadow-lg shadow-indigo-500/20"
@@ -214,8 +214,8 @@ onUnmounted(() => {
                             <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.ioeC || '-' }}</span>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
-                            <span class="text-zinc-500 text-sm font-medium">계약구분</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.cttTp || '-' }}</span>
+                            <span class="text-zinc-500 text-sm font-medium">신규/계속</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.pulDtt || '-' }}</span>
                         </div>
                         <div
                             class="col-span-2 flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
