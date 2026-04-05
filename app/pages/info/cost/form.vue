@@ -152,7 +152,6 @@ const addCostRow = () => {
     costs.value.push({
         ioeC: '',
         cttNm: '',
-        pulDtt: '',
         cttOpp: '',
         itMngcBg: 0,
         dfrCle: '',

@@ -22,22 +22,12 @@ index.vue와 동일한 헤더 스타일(blue-900, showGridlines)을 적용합니
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
 import { type ItCost } from '~/composables/useCost';
+import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 interface CodeOption { cdId: string; cdNm: string; }
-interface UserSuggestion {
-    eno: string;
-    usrNm: string;
-    bbrNm: string;
-    bbrC: string;
-    temC: string | null;
-    temNm: string | null;
-    ptCNm?: string;
-    displayLabel?: string;
-}
 
 const props = withDefaults(defineProps<{
     modelValue: ItCost[];
@@ -60,34 +50,7 @@ const emit = defineEmits<{
     'update:modelValue': [value: ItCost[]];
 }>();
 
-const { $apiFetch } = useNuxtApp();
-const config = useRuntimeConfig();
-const { user } = useAuth();
-
-/* ── 담당자 자동완성 검색 ──────────────────────────────────── */
-const employeeSuggestions = ref<UserSuggestion[]>([]);
-const employeeDialogVisible = ref(false);
-const selectedRowIndex = ref<number>(-1);
-
-/** AutoComplete 검색 이벤트 핸들러 (동일 부서 소속 직원 검색) */
-const searchEmployee = async (event: { query: string }) => {
-    const keyword = event.query.trim();
-    if (!keyword) { employeeSuggestions.value = []; return; }
-    try {
-        const userBase = `${config.public.apiBase}/api/users/search`;
-        const orgCode = user.value?.bbrC ?? '';
-        const results = await $apiFetch<UserSuggestion[]>(userBase, {
-            query: { keyword, ...(orgCode ? { orgCode } : {}) }
-        });
-        employeeSuggestions.value = (results ?? []).map(u => ({
-            ...u,
-            displayLabel: `${u.usrNm}${u.ptCNm ? `(${u.ptCNm})` : ''}, ${u.temNm || u.bbrNm || ''}`
-        }));
-    } catch (e) {
-        console.error('직원 검색 실패', e);
-        employeeSuggestions.value = [];
-    }
-};
+const { employeeSuggestions, employeeDialogVisible, selectedRowIndex, searchEmployee, openEmployeeSearch } = useEmployeeSearch();
 
 /** AutoComplete 선택 완료 시 행 데이터에 담당자 정보 반영 */
 const onEmployeeAutoSelect = (data: ItCost, selected: UserSuggestion) => {
@@ -99,14 +62,8 @@ const onEmployeeAutoSelect = (data: ItCost, selected: UserSuggestion) => {
     data.biceTemNm = selected.temNm ?? '';
 };
 
-/** 직원조회 다이얼로그 열기 */
-const openEmployeeSearch = (data: ItCost) => {
-    selectedRowIndex.value = props.modelValue.indexOf(data);
-    employeeDialogVisible.value = true;
-};
-
 /** 직원조회 다이얼로그 선택 완료 시 행 데이터에 담당자 정보 반영 */
-const onDialogEmployeeSelect = (selected: { eno: string; usrNm: string; bbrNm: string; temC?: string; temNm?: string; orgCode?: string }) => {
+const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
     if (selectedRowIndex.value < 0) return;
     const data = props.modelValue[selectedRowIndex.value];
     if (!data) return;
@@ -202,7 +159,7 @@ const deleteRow = (index: number) => {
 
         <!-- 담당자 (AutoComplete + 직원조회 버튼, index.vue와 동일 로직) -->
         <Column header="담당자" style="min-width: 150px; width: 170px">
-            <template #body="{ data }">
+            <template #body="{ data, index }">
                 <div class="cgpr-cell">
                     <AutoComplete :modelValue="data.cgprNm || ''" :suggestions="employeeSuggestions"
                         optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'" @complete="searchEmployee"
@@ -228,7 +185,7 @@ const deleteRow = (index: number) => {
                         </template>
                     </AutoComplete>
                     <Button icon="pi pi-search" text size="small" class="!pe-1"
-                        @click="openEmployeeSearch(data)" v-tooltip.top="'직원조회'" />
+                        @click="openEmployeeSearch(index)" v-tooltip.top="'직원조회'" />
                 </div>
             </template>
         </Column>

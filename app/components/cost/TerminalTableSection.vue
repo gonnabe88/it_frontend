@@ -16,21 +16,12 @@ terminal/form.vue의 DataTable 2를 컴포넌트로 분리했습니다.
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
 import { type Terminal } from '~/composables/useCost';
+import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 
 interface CodeOption { cdId: string; cdNm: string; }
-interface UserSuggestion {
-    eno: string;
-    usrNm: string;
-    bbrNm: string;
-    bbrC: string;
-    temC: string | null;
-    temNm: string | null;
-    ptCNm?: string;
-}
 
 const props = defineProps<{
     modelValue: Terminal[];
@@ -43,9 +34,7 @@ const emit = defineEmits<{
     'update:modelValue': [value: Terminal[]];
 }>();
 
-const { $apiFetch } = useNuxtApp();
-const config = useRuntimeConfig();
-const { user } = useAuth();
+const { employeeSuggestions, employeeDialogVisible, selectedRowIndex, searchEmployee, openEmployeeSearch } = useEmployeeSearch();
 
 /* ── 행 추가/삭제 ─────────────────────────────────────────── */
 
@@ -80,28 +69,6 @@ const removeRow = (index: number) => {
     emit('update:modelValue', updated);
 };
 
-/* ── 담당자 자동완성 검색 ──────────────────────────────────── */
-const employeeSuggestions = ref<UserSuggestion[]>([]);
-const employeeDialogVisible = ref(false);
-const selectedRowIndex = ref<number>(-1);
-
-/** AutoComplete 검색 이벤트 핸들러 */
-const searchEmployee = async (event: { query: string }) => {
-    const keyword = event.query.trim();
-    if (!keyword) { employeeSuggestions.value = []; return; }
-    try {
-        const userBase = `${config.public.apiBase}/api/users/search`;
-        const orgCode = user.value?.bbrC ?? '';
-        const results = await $apiFetch<UserSuggestion[]>(userBase, {
-            query: { keyword, ...(orgCode ? { orgCode } : {}) }
-        });
-        employeeSuggestions.value = results ?? [];
-    } catch (e) {
-        console.error('직원 검색 실패', e);
-        employeeSuggestions.value = [];
-    }
-};
-
 /** AutoComplete 선택 완료 시 해당 행에 담당자 정보 직접 반영 */
 const onEmployeeAutoSelect = (data: Terminal, selected: UserSuggestion) => {
     data.cgpr = selected.eno;
@@ -110,14 +77,8 @@ const onEmployeeAutoSelect = (data: Terminal, selected: UserSuggestion) => {
     data.biceTem = selected.temC ?? '';
 };
 
-/** 직원조회 다이얼로그 열기 */
-const openEmployeeSearch = (index: number) => {
-    selectedRowIndex.value = index;
-    employeeDialogVisible.value = true;
-};
-
 /** 직원조회 다이얼로그 선택 완료 시 해당 행에 담당자 정보 직접 반영 */
-const onDialogEmployeeSelect = (selected: { eno: string; usrNm: string; bbrNm: string; temC?: string; temNm?: string; orgCode?: string }) => {
+const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
     if (selectedRowIndex.value < 0) return;
     const data = props.modelValue[selectedRowIndex.value];
     if (!data) return;
