@@ -32,7 +32,7 @@
       <AppHeader class="print:hidden" />
 
       <!-- 메인 콘텐츠 영역: 각 페이지가 <slot />으로 삽입됩니다 -->
-      <main class="flex-1 overflow-auto p-6 scroll-smooth print:overflow-visible print:p-0 print:h-auto">
+      <main class="main-scroll flex-1 min-h-0 overflow-auto p-6 print:overflow-visible print:p-0 print:h-auto">
         <slot />
       </main>
 
@@ -44,3 +44,24 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+.main-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.main-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.main-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+.main-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+}
+.main-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+</style>

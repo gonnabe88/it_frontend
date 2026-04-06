@@ -446,6 +446,8 @@ onUnmounted(() => {
                 <div class="flex gap-2">
                     <!-- 읽기 모드 액션 -->
                     <template v-if="!isEditing">
+                        <Button label="사전협의" icon="pi pi-comments" severity="info" outlined
+                            @click="navigateTo(`/info/documents/${docMngNo}/review`)" />
                         <Button label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm)" />

@@ -75,6 +75,7 @@ import {
     injectColwidthsFromColgroup
 } from './extensions/tiptap-extensions';
 import type { AttachmentItem } from './extensions/tiptap-extensions';
+import type { AnyExtension } from '@tiptap/core';
 
 /** lowlight 인스턴스: 일반적으로 사용하는 언어 번들 포함 */
 const lowlight = createLowlight(common);
@@ -111,6 +112,11 @@ const props = defineProps<{
      * 관리 다이얼로그에서 파일 삭제 버튼 클릭 시 호출됩니다.
      */
     fileDeleteFn?: (fileId: string) => Promise<void>;
+    /**
+     * 추가 Tiptap Extension 목록 (사전협의 CommentMark 등)
+     * 기본 extensions 배열 뒤에 추가됩니다.
+     */
+    additionalExtensions?: AnyExtension[];
 }>();
 
 const emit = defineEmits<{
@@ -225,6 +231,8 @@ const editor = useEditor({
         // mathlive <math-field> Web Component는 onMounted에서 동적 임포트됩니다.
         InlineMathExtension,
         BlockMathExtension,
+        // 외부에서 주입된 추가 Extension (예: CommentMark)
+        ...(props.additionalExtensions ?? []),
     ],
     // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환 (브라우저 환경에서만 실행)
     content: process.client ? injectColwidthsFromColgroup(props.modelValue || '') : (props.modelValue || ''),
@@ -352,7 +360,7 @@ watch(() => props.modelValue, (val) => {
         // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환하여
         // Tiptap의 updateColumns()가 덮어쓰기 전에 너비 정보를 보존합니다.
         const processed = process.client ? injectColwidthsFromColgroup(val || '') : (val || '');
-        editor.value.commands.setContent(processed, { emitUpdate: false });
+        editor.value.commands.setContent(processed, false);
         // 저장된 테이블 너비 복원
         nextTick(applyTableWidths);
     }
@@ -1040,6 +1048,9 @@ const wordCount = computed(() => editor.value?.storage.characterCount.words() ??
 onBeforeUnmount(() => {
     editor.value?.destroy();
 });
+
+/** 외부에서 에디터 인스턴스에 접근할 수 있도록 노출 */
+defineExpose({ editor });
 </script>
 
 <template>
@@ -1510,21 +1521,90 @@ onBeforeUnmount(() => {
     padding: 0 2px;
 }
 
-/* 제목 스타일 */
+/* ── 제목 스타일 (계층형 문서 구조 — 전체 화면 공통) ──
+   h1 — 장(章): 네이비 배경 블록
+   h2 — 절(節): 좌측 인디고 바 + 연배경
+   h3 — 항(項): 좌측 얇은 바 + 파란 텍스트
+   h4 — 목(目): ▶ 기호 마커 + 들여쓰기 */
 :deep(.tiptap-content .ProseMirror h1) {
-    @apply text-3xl font-bold mt-6 mb-3 text-zinc-900 dark:text-zinc-100;
+    font-size: 1.375rem;
+    font-weight: 800;
+    background-color: #1e3a5f;
+    color: #ffffff;
+    padding: 0.55rem 1rem;
+    border-radius: 4px;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    letter-spacing: -0.01em;
 }
 
 :deep(.tiptap-content .ProseMirror h2) {
-    @apply text-2xl font-bold mt-5 mb-2 text-zinc-900 dark:text-zinc-100;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e3a6e;
+    border-left: 5px solid #1d4ed8;
+    background-color: #eff6ff;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0 4px 4px 0;
+    margin-top: 1.75rem;
+    margin-bottom: 0.6rem;
 }
 
 :deep(.tiptap-content .ProseMirror h3) {
-    @apply text-xl font-bold mt-4 mb-2 text-zinc-800 dark:text-zinc-200;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    border-left: 3px solid #3b82f6;
+    padding: 0.2rem 0.6rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.4rem;
+    background: none;
 }
 
 :deep(.tiptap-content .ProseMirror h4) {
-    @apply text-lg font-semibold mt-3 mb-1 text-zinc-800 dark:text-zinc-200;
+    font-size: 0.975rem;
+    font-weight: 600;
+    color: #374151;
+    padding-left: 1.1rem;
+    margin-top: 0.9rem;
+    margin-bottom: 0.3rem;
+    position: relative;
+    background: none;
+}
+
+:deep(.tiptap-content .ProseMirror h4::before) {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    top: 0.25rem;
+    font-size: 0.5rem;
+    color: #6366f1;
+    line-height: 1;
+}
+
+/* 다크모드 제목 */
+.dark :deep(.tiptap-content .ProseMirror h1) {
+    background-color: #1e3a5f;
+    color: #e2e8f0;
+}
+
+.dark :deep(.tiptap-content .ProseMirror h2) {
+    background-color: #1e2d4a;
+    border-left-color: #3b82f6;
+    color: #93c5fd;
+}
+
+.dark :deep(.tiptap-content .ProseMirror h3) {
+    color: #60a5fa;
+    border-left-color: #3b82f6;
+}
+
+.dark :deep(.tiptap-content .ProseMirror h4) {
+    color: #d1d5db;
+}
+
+.dark :deep(.tiptap-content .ProseMirror h4::before) {
+    color: #818cf8;
 }
 
 /* 단락 */
