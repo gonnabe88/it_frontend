@@ -93,7 +93,7 @@ const menuItems = computed(() => {
             label: '정보화사업', icon: 'pi pi-briefcase', items: [
                 { label: '사업 목록', to: '/info/projects' },
                 { label: '사전 협의', to: '/info/consultation' },
-                { label: '정보화실무협의회 신청', to: '/info/council-request' },
+                { label: '정보화실무협의회 신청', to: '/info/council' },
                 { label: '세부 요구사항 작성', to: '/info/requirements' },
                 { label: '소요예산 산정 신청', to: '/info/estimation' },
                 { label: '과업심의위원회 신청', to: '/info/deliberation' },
