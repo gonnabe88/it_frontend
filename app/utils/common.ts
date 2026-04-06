@@ -242,3 +242,80 @@ export const formatFileSize = (bytes: number | null | undefined): string => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
+
+// ============================================================================
+// 협의회 상태 유틸리티
+// ============================================================================
+
+/** 협의회 진행상태 코드 → 한글 레이블 매핑 */
+const COUNCIL_STATUS_LABEL_MAP: Record<string, string> = {
+    DRAFT:           '작성 중',
+    SUBMITTED:       '작성 완료',
+    APPROVAL_PENDING:'결재 대기',
+    APPROVED:        '결재 완료',
+    PREPARING:       '개최 준비',
+    SCHEDULED:       '일정 확정',
+    IN_PROGRESS:     '협의회 진행 중',
+    EVALUATING:      '평가의견 작성 중',
+    RESULT_WRITING:  '결과서 작성 중',
+    RESULT_REVIEW:   '결과서 검토 중',
+    FINAL_APPROVAL:  '결과보고 결재 중',
+    COMPLETED:       '완료',
+};
+
+/** 협의회 진행상태 코드 → kdb-tag-* CSS 클래스 매핑 */
+const COUNCIL_STATUS_TAG_MAP: Record<string, string> = {
+    DRAFT:           'kdb-tag-gray',
+    SUBMITTED:       'kdb-tag-yellow',
+    APPROVAL_PENDING:'kdb-tag-blue',
+    APPROVED:        'kdb-tag-teal',
+    PREPARING:       'kdb-tag-indigo',
+    SCHEDULED:       'kdb-tag-purple',
+    IN_PROGRESS:     'kdb-tag-orange',
+    EVALUATING:      'kdb-tag-pink',
+    RESULT_WRITING:  'kdb-tag-cyan',
+    RESULT_REVIEW:   'kdb-tag-rose',
+    FINAL_APPROVAL:  'kdb-tag-blue',
+    COMPLETED:       'kdb-tag-green',
+};
+
+/**
+ * 협의회 진행상태 코드를 화면 표출용 한글 레이블로 변환
+ *
+ * @param status - 협의회 상태 코드 (CouncilStatus)
+ * @returns 한글 상태 레이블 (예: '작성 중', '결재 완료')
+ *
+ * @example
+ * getCouncilStatusLabel('DRAFT')     // → '작성 중'
+ * getCouncilStatusLabel('COMPLETED') // → '완료'
+ */
+export const getCouncilStatusLabel = (status: string): string =>
+    COUNCIL_STATUS_LABEL_MAP[status] ?? status;
+
+/**
+ * 협의회 진행상태 코드에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
+ *
+ * @param status - 협의회 상태 코드 (CouncilStatus)
+ * @returns kdb-tag-* 커스텀 CSS 클래스명
+ *
+ * @example
+ * getCouncilTagClass('COMPLETED')  // → 'kdb-tag-green'
+ * getCouncilTagClass('DRAFT')      // → 'kdb-tag-gray'
+ */
+export const getCouncilTagClass = (status: string): string =>
+    COUNCIL_STATUS_TAG_MAP[status] ?? 'kdb-tag-gray';
+
+/**
+ * 협의회 심의유형 코드를 화면 표출용 한글 레이블로 변환
+ *
+ * @param dbrTp - 심의유형 코드 (INFO_SYS / INFO_SEC / ETC)
+ * @returns 한글 심의유형 레이블
+ */
+export const getHearingTypeLabel = (dbrTp: string | null | undefined): string => {
+    switch (dbrTp) {
+        case 'INFO_SYS': return '정보시스템';
+        case 'INFO_SEC': return '정보보호';
+        case 'ETC':      return '기타';
+        default:         return '-';
+    }
+};
