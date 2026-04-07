@@ -186,10 +186,10 @@ const handleKeydown = (event: KeyboardEvent) => {
       </div>
     </div>
 
-    <!-- 메시지 입력 영역 -->
-    <div class="border-t border-surface-200 bg-white p-3">
+    <!-- 메시지 입력 영역: 전체 높이의 30% 고정 -->
+    <div class="border-t border-surface-200 bg-white flex flex-col flex-none" style="height: 30%;">
       <!-- 첨부파일 표시 -->
-      <div v-if="attachments.length > 0" class="mb-2 space-y-1">
+      <div v-if="attachments.length > 0" class="flex-none px-3 pt-2 space-y-1">
         <div
           v-for="(att, idx) in attachments"
           :key="att.id"
@@ -202,43 +202,42 @@ const handleKeydown = (event: KeyboardEvent) => {
         </div>
       </div>
 
-      <!-- 입력 + 버튼 -->
-      <div class="flex items-end gap-2">
-        <div class="flex-1">
-          <Textarea
-            v-model="messageText"
-            :rows="15"
-            placeholder="메시지를 입력하세요..."
-            class="w-full text-sm"
-            style="min-height: 400px; resize: none;"
-            @keydown="handleKeydown"
-          />
-        </div>
-        <div class="flex flex-col gap-1">
-          <input
-            ref="fileInputRef"
-            type="file"
-            multiple
-            class="hidden"
-            accept="image/*,.pdf,.hwp,.hwpx,.xlsx,.xls,.docx,.doc"
-            @change="handleFileAdd"
-          />
-          <Button
-            icon="pi pi-paperclip"
-            text
-            rounded
-            size="small"
-            v-tooltip.top="'첨부'"
-            @click="fileInputRef?.click()"
-          />
-          <Button
-            icon="pi pi-send"
-            rounded
-            size="small"
-            :disabled="!messageText.trim()"
-            @click="handleSend"
-          />
-        </div>
+      <!-- 텍스트 입력창: 남은 공간 전체 사용 -->
+      <div class="flex-1 px-3 pt-2 min-h-0">
+        <Textarea
+          v-model="messageText"
+          placeholder="메시지를 입력하세요..."
+          class="w-full h-full text-sm"
+          style="resize: none; height: 100%;"
+          @keydown="handleKeydown"
+        />
+      </div>
+
+      <!-- 버튼 영역: 하단 고정 -->
+      <div class="flex-none flex items-center justify-end gap-2 px-3 py-2">
+        <input
+          ref="fileInputRef"
+          type="file"
+          multiple
+          class="hidden"
+          accept="image/*,.pdf,.hwp,.hwpx,.xlsx,.xls,.docx,.doc"
+          @change="handleFileAdd"
+        />
+        <Button
+          icon="pi pi-paperclip"
+          text
+          rounded
+          size="small"
+          v-tooltip.top="'첨부'"
+          @click="fileInputRef?.click()"
+        />
+        <Button
+          icon="pi pi-send"
+          rounded
+          size="small"
+          :disabled="!messageText.trim()"
+          @click="handleSend"
+        />
       </div>
     </div>
   </div>
