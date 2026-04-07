@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-[pages/info/council/index.vue] 정보화실무협의회 사업목록
+[pages/info/council-request/index.vue] 정보화실무협의회 사업목록
 ================================================================================
 소관부서 담당자/IT관리자/평가위원별로 맞춤 협의회 목록을 표출하는 진입점 페이지입니다.
 
@@ -16,11 +16,11 @@
 
 [라우팅 규칙 (협의회 상태 기준)]
   - DRAFT/SUBMITTED/APPROVAL_PENDING/APPROVED:
-      → /info/council/{asctId}  (타당성검토표 Step 1)
+      → /info/council-request/{asctId}  (타당성검토표 Step 1)
   - PREPARING/SCHEDULED/IN_PROGRESS:
-      → /info/council/prepare/{asctId}  (개최준비 Step 2)
+      → /info/council-request/prepare/{asctId}  (개최준비 Step 2)
   - EVALUATING/RESULT_WRITING/RESULT_REVIEW/FINAL_APPROVAL/COMPLETED:
-      → /info/council/result/{asctId}  (개최 Step 3)
+      → /info/council-request/result/{asctId}  (개최 Step 3)
 
 [Design Ref: §4.1 index.vue — 사업목록 + 진행상태]
 ================================================================================
@@ -119,11 +119,11 @@ const navigateToCouncil = (item: typeof filteredCouncils.value[0]) => {
     const step2Statuses: string[] = ['PREPARING', 'SCHEDULED', 'IN_PROGRESS'];
 
     if (step1Statuses.includes(item.asctSts)) {
-        navigateTo(`/info/council/${item.asctId}`);
+        navigateTo(`/info/council-request/${item.asctId}`);
     } else if (step2Statuses.includes(item.asctSts)) {
-        navigateTo(`/info/council/prepare/${item.asctId}`);
+        navigateTo(`/info/council-request/prepare/${item.asctId}`);
     } else {
-        navigateTo(`/info/council/result/${item.asctId}`);
+        navigateTo(`/info/council-request/result/${item.asctId}`);
     }
 };
 
@@ -178,7 +178,7 @@ const submitCreate = async () => {
         showCreateDialog.value = false;
         /* 목록 갱신 후 신규 협의회(타당성검토표 Step 1)로 이동 */
         await refresh();
-        navigateTo(`/info/council/${asctId}`);
+        navigateTo(`/info/council-request/${asctId}`);
     } finally {
         createPending.value = false;
     }

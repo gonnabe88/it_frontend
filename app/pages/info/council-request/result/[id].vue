@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-[pages/info/council/result/[id].vue]
+[pages/info/council-request/result/[id].vue]
 협의회 개최 페이지 (Step 3)
 ================================================================================
 권한에 따라 다른 화면을 표출합니다:
@@ -145,7 +145,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
         <div class="flex items-start justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <NuxtLink to="/info/council"
+                    <NuxtLink to="/info/council-request"
                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
                         협의회 목록
                     </NuxtLink>

@@ -6,5 +6,21 @@
     "feature": null,
     "phase": null,
     "progress": null
+  },
+  {
+    "sessionId": "0aa2d61d-3919-4f22-a678-4071533e5d9e",
+    "reason": "other",
+    "endedAt": "2026-04-07T16:28:34.122Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
+  },
+  {
+    "sessionId": "d71e6f77-96ae-49e2-afa5-b7f73419c93d",
+    "reason": "other",
+    "endedAt": "2026-04-07T16:35:10.632Z",
+    "feature": null,
+    "phase": null,
+    "progress": null
   }
 ]

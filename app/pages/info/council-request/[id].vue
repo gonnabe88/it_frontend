@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-[pages/info/council/[id].vue] 타당성검토표 작성/조회 (Step 1)
+[pages/info/council-request/[id].vue] 타당성검토표 작성/조회 (Step 1)
 ================================================================================
 협의회 신청 후 소관부서 담당자가 타당성검토표를 작성하는 Step 1 페이지입니다.
 
@@ -16,7 +16,7 @@
   - readonly 모드: 협의회 상태 SUBMITTED 이상이면 모든 입력 비활성화
 
 [라우팅]
-  - 진입: /info/council/{asctId}
+  - 진입: /info/council-request/{asctId}
   - 이전: /info/council (목록)
 
 [Design Ref: §4.2 [id].vue — 타당성검토표 (Step 1)]
@@ -341,7 +341,7 @@ const submitApproval = async () => {
         toast.add({ severity: 'success', summary: '결재 요청 완료', life: 2000 });
         /* 상태 갱신 후 목록으로 이동 */
         await refreshCouncil();
-        navigateTo('/info/council');
+        navigateTo('/info/council-request');
     } catch {
         toast.add({
             severity: 'error',
@@ -366,7 +366,7 @@ const submitApproval = async () => {
                     icon="pi pi-arrow-left"
                     severity="secondary"
                     text
-                    @click="navigateTo('/info/council')"
+                    @click="navigateTo('/info/council-request')"
                     v-tooltip.top="'목록으로'"
                 />
                 <div>

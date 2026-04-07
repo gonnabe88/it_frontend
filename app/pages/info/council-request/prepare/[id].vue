@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-[pages/info/council/prepare/[id].vue]
+[pages/info/council-request/prepare/[id].vue]
 협의회 개최준비 페이지 (Step 2 — IT관리자)
 ================================================================================
 IT관리자(ITPAD001)가 협의회 개최준비 단계에서 사용하는 페이지입니다.
@@ -132,7 +132,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <NuxtLink
-                        to="/info/council"
+                        to="/info/council-request"
                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
                     >
                         협의회 목록
