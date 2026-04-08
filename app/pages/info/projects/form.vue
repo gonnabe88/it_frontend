@@ -39,7 +39,7 @@
  *   - 취소 시: router.back()
  * ============================================================================
  */
-import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { ref, reactive, onActivated, computed, watch } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useProjects } from '~/composables/useProjects';
 import type { Project } from '~/composables/useProjects';
@@ -58,15 +58,16 @@ const resourceTableRef = ref<InstanceType<typeof ResourceTableSection> | null>(n
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
+const { removeTab } = useTabs();
 const { fetchProject, fetchProjectsOnce, fetchProjectDetailOnce, createProject, updateProject } = useProjects();
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 
 definePageMeta({ title: '예산 작성' });
 
-/** 수정 모드의 사업 관리번호 (신규 등록 시 null) */
-const projectId = route.query.id ? (route.query.id as string) : null;
+/** 수정 모드의 사업 관리번호 (라우트 쿼리 변경에 반응하도록 computed로 선언) */
+const projectId = computed(() => route.query.id ? (route.query.id as string) : null);
 /** 수정 모드 여부 (projectId 존재 시 true) */
-const isEditMode = computed(() => !!projectId);
+const isEditMode = computed(() => !!projectId.value);
 
 /** 경상사업 여부: 수정 모드에서는 기존 데이터의 ornYn, 신규 등록에서는 쿼리 파라미터 */
 const isOrdinary = computed(() => {
@@ -384,11 +385,14 @@ const onEmployeeSelected = (user: EmployeeSelectResult) => {
  * isEditMode가 true이면 fetchProject API를 호출하여 폼 데이터를 채웁니다.
  * API 응답의 items를 UI 모델인 resourceItems로 변환합니다.
  */
-onMounted(async () => {
+onActivated(async () => {
+    /* ── 재활성화 시 상태 초기화 (KeepAlive로 이전 데이터 잔존 방지) ── */
+    codeRestored.value = false;
+
     /* ── 수정 모드: 사업 데이터 로드 ── */
-    if (isEditMode.value && projectId) {
+    if (isEditMode.value && projectId.value) {
         try {
-            const { data, error } = await fetchProject(projectId);
+            const { data, error } = await fetchProject(projectId.value);
             if (data.value) {
                 const project = data.value;
 
@@ -555,7 +559,7 @@ const executeSave = async () => {
     /* 2. 전체 Payload 구성 */
     const payload = {
         ...form.value,
-        prjMngNo: projectId,
+        prjMngNo: projectId.value,
         sttDt: formatDate(form.value.sttDt),
         endDt: formatDate(form.value.endDt),
         lblFsgTlm: formatDate(form.value.lblFsgTlm),
@@ -565,22 +569,23 @@ const executeSave = async () => {
     /* 불필요한 UI용 resourceItems 필드는 백엔드에서 무시됨 */
 
     try {
-        let response;
-        if (isEditMode.value && projectId) {
-            response = await updateProject(projectId, payload);
+        let savedPrjMngNo: string;
+        if (isEditMode.value && projectId.value) {
+            savedPrjMngNo = await updateProject(projectId.value, payload);
         } else {
-            response = await createProject(payload);
+            savedPrjMngNo = await createProject(payload);
         }
 
-        /* 저장 완료 확인 다이얼로그 */
+        /* 저장 완료 확인 다이얼로그 → 상세 화면으로 이동 */
         confirm.require({
             message: isEditMode.value ? '수정되었습니다.' : '등록되었습니다.',
             header: '완료',
             icon: 'pi pi-check',
             rejectProps: { class: 'hidden' },
             acceptLabel: '확인',
-            accept: () => {
-                router.push('/info/projects');
+            accept: async () => {
+                await router.push(`/info/projects/${savedPrjMngNo}`);
+                removeTab('/info/projects/form');
             }
         });
     } catch (error: any) {

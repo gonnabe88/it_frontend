@@ -35,6 +35,9 @@ const { data: docData, pending: loadPending, error, refresh } = await fetchDocum
 // 해당 문서에 연결된 파일 목록을 조회합니다. (await 없이 반응형으로 동작)
 const { data: filesData, refresh: refreshFiles } = fetchFiles('요구사항정의서', docMngNo);
 
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => { refresh(); refreshFiles(); });
+
 /** 첨부파일 목록 (flDtt === '첨부파일') */
 const attachedFiles = computed<FileRecord[]>(() =>
     (filesData.value || []).filter(f => f.flDtt === '첨부파일')

@@ -35,7 +35,10 @@ const id = route.params.id as string;
 definePageMeta({ title: '전산업무비 상세' });
 
 /** 전산업무비 상세 데이터 조회 */
-const { data: cost, error } = await fetchCost(id);
+const { data: cost, error, refresh: refreshCost } = await fetchCost(id);
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshCost());
 
 /**
  * 삭제 확인 다이얼로그 표시 및 처리

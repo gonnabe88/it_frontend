@@ -20,6 +20,8 @@ definePageMeta({ title });
 const { createDocument } = useDocuments();
 const { uploadFile, uploadFilesBulk, updateFileMeta, deleteFile, getPreviewUrl } = useFiles();
 const toast = useToast();
+const router = useRouter();
+const { removeTab } = useTabs();
 
 /**
  * 요구사항 정의서 본문 기본 템플릿 (Tiptap HTML)
@@ -215,8 +217,9 @@ const onSave = async () => {
         }
 
         toast.add({ severity: 'success', summary: '저장 완료', detail: '요구사항 정의서가 등록되었습니다.', life: 3000 });
-        // 저장 후 목록 페이지로 이동
-        await navigateTo('/info/documents');
+        /* 저장 후 상세 화면으로 이동 + form 탭 닫기 */
+        await router.push(`/info/documents/${docMngNo}`);
+        removeTab('/info/documents/form');
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '저장 실패', detail: e?.data?.message || '저장 중 오류가 발생했습니다.', life: 4000 });
     } finally {
@@ -224,7 +227,10 @@ const onSave = async () => {
     }
 };
 
-const onCancel = () => navigateTo('/info/documents');
+const onCancel = () => {
+    router.push('/info/documents');
+    removeTab('/info/documents/form');
+};
 
 /* ── AI 반영 처리 ── */
 /**

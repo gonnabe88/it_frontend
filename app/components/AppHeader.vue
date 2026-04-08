@@ -186,8 +186,18 @@ watch(() => route.path, () => {
     }
 }, { immediate: true });
 
-const navigateToTab = (path: string) => {
-    navigateTo(path);
+/**
+ * 탭 클릭 시 네비게이션 + 데이터 새로고침
+ * - 같은 경로: 현재 페이지 데이터만 새로고침
+ * - 다른 경로: 이동 완료 후 대상 페이지 데이터 새로고침
+ */
+const navigateToTab = async (path: string) => {
+    if (route.fullPath === path) {
+        await refreshNuxtData();
+    } else {
+        await navigateTo(path);
+        await refreshNuxtData();
+    }
 };
 </script>
 

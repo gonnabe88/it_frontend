@@ -50,7 +50,10 @@ const prjMngNo = route.params.id;
 const { fetchProject, deleteProject } = useProjects();
 // RBAC 권한 헬퍼: 수정/삭제 버튼 표시 여부 판단에 사용
 const { canModify } = useAuth();
-const { data: project, error } = await fetchProject(prjMngNo as string);
+const { data: project, error, refresh: refreshProject } = await fetchProject(prjMngNo as string);
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshProject());
 const confirm = useConfirm();
 const toast = useToast();
 

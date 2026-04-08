@@ -222,39 +222,36 @@ const requestApproval = () => {
 };
 
 /**
- * BudgetSummaryCards에 전달할 정보화사업 목록 (경상사업 제외)
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
+ * 현재 조회 필터가 적용된 항목 ID 셋 (카드 통계에 사용)
+ * 선택된 항목이 있으면 선택된 것만, 없으면 필터링된 목록 기준으로 표시합니다.
  */
-const cardProjects = computed(() =>
-    hasSelection.value
-        ? projects.value.filter(p =>
-            (p as any).ornYn !== 'Y' &&
-            selectedItems.value.some(i => i._type === '사업' && i._id === p.prjMngNo))
-        : projects.value.filter(p => (p as any).ornYn !== 'Y')
+const cardSourceItems = computed(() =>
+    hasSelection.value ? selectedItems.value : filteredItems.value
 );
+
+/**
+ * BudgetSummaryCards에 전달할 정보화사업 목록 (경상사업 제외)
+ */
+const cardProjects = computed(() => {
+    const ids = new Set(cardSourceItems.value.filter(i => i._type === '사업').map(i => i._id));
+    return projects.value.filter(p => (p as any).ornYn !== 'Y' && ids.has(p.prjMngNo));
+});
 
 /**
  * BudgetSummaryCards에 전달할 경상사업 목록
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
  */
-const cardOrdinary = computed(() =>
-    hasSelection.value
-        ? projects.value.filter(p =>
-            (p as any).ornYn === 'Y' &&
-            selectedItems.value.some(i => i._type === '경상' && i._id === p.prjMngNo))
-        : projects.value.filter(p => (p as any).ornYn === 'Y')
-);
+const cardOrdinary = computed(() => {
+    const ids = new Set(cardSourceItems.value.filter(i => i._type === '경상').map(i => i._id));
+    return projects.value.filter(p => (p as any).ornYn === 'Y' && ids.has(p.prjMngNo));
+});
 
 /**
  * BudgetSummaryCards에 전달할 전산업무비 목록
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
  */
-const cardCosts = computed(() =>
-    hasSelection.value
-        ? costs.value.filter(c =>
-            selectedItems.value.some(i => i._type === '비용' && i._id === c.itMngcNo))
-        : costs.value
-);
+const cardCosts = computed(() => {
+    const ids = new Set(cardSourceItems.value.filter(i => i._type === '비용').map(i => i._id));
+    return costs.value.filter(c => ids.has(c.itMngcNo || ''));
+});
 
 /* ── 조회 필터 Drawer ── */
 /** Drawer 표시 여부 */

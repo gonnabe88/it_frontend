@@ -33,7 +33,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onActivated } from 'vue';
 import { type ProjectDetail, useProjects } from '~/composables/useProjects';
 import { type ItCost, useCost } from '~/composables/useCost';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
@@ -128,14 +128,10 @@ const onEmployeeSelect = (employee: EmployeeSelectResult) => {
     const rank = employee.ptCNm || '';
     const id = employee.eno;
 
-    const dateStr = new Date()
-        .toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
-        .replace(/\. /g, '.').replace(/\.$/, '');
-
     if (currentSearchTarget.value === 'teamLead') {
-        approvalLine.value.teamLead = { name, rank, date: dateStr, id };
+        approvalLine.value.teamLead = { name, rank, date: '', id };
     } else {
-        approvalLine.value.deptHead = { name, rank, date: dateStr, id };
+        approvalLine.value.deptHead = { name, rank, date: '', id };
     }
 
     /* 결재자 변경 시 PDF 자동 재생성 */
@@ -177,7 +173,21 @@ const generatePdf = async () => {
  * sessionStorage에서 선택된 ID들을 읽고,
  * 정보화사업/전산업무비 상세 데이터를 병렬로 일괄 조회한 후 PDF를 초기 생성합니다.
  */
-onMounted(async () => {
+/**
+ * 초기 데이터 로드 (onActivated 사용)
+ * app.vue에서 <NuxtPage keepalive>로 페이지가 캐시되므로,
+ * onMounted 대신 onActivated를 사용하여 재방문 시에도 데이터를 새로 로드합니다.
+ * - 첫 방문: onActivated 실행 → sessionStorage 읽기 → 데이터 조회 → PDF 생성
+ * - 재방문: onActivated 재실행 → 새 sessionStorage 읽기 → 데이터 재조회 → PDF 재생성
+ */
+onActivated(async () => {
+    /* 이전 PDF URL 메모리 해제 및 상태 초기화 */
+    if (pdfUrl.value) {
+        URL.revokeObjectURL(pdfUrl.value);
+        pdfUrl.value = null;
+    }
+    loading.value = true;
+
     let pIds: string[] = [];
     let cIds: string[] = [];
 
@@ -205,11 +215,17 @@ onMounted(async () => {
         }
     }
 
-    /* 아무것도 선택되지 않은 경우 목록으로 리다이렉트 */
+    /* sessionStorage에 새 데이터가 없으면 기존 상태 유지 (탭 클릭으로 재방문한 경우) */
     if (pIds.length === 0 && cIds.length === 0) {
+        if (projects.value.length === 0 && costs.value.length === 0) {
+            loading.value = false;
+            alert('선택된 항목이 없습니다.');
+            navigateTo('/budget/list');
+            return;
+        }
+        /* 이전 데이터가 있으면 PDF만 재생성 */
+        await generatePdf();
         loading.value = false;
-        alert('선택된 항목이 없습니다.');
-        navigateTo('/budget/list');
         return;
     }
 

@@ -31,6 +31,9 @@ const confirm = useConfirm();
 /* ── 데이터 로드 ── */
 const { data: documentsData, pending, error, refresh } = await fetchDocuments();
 
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refresh());
+
 /** 목록 (null 안전 처리) */
 const documents = computed(() => documentsData.value || []);
 

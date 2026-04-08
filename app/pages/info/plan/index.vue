@@ -12,7 +12,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onActivated } from 'vue';
 import { usePlan, type Plan } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 
@@ -22,7 +22,10 @@ definePageMeta({ title });
 
 /* 계획 목록 데이터 가져오기 */
 const { fetchPlans } = usePlan();
-const { data: plansData, error } = await fetchPlans();
+const { data: plansData, error, refresh: refreshPlans } = await fetchPlans();
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshPlans());
 
 /** 계획 목록 (null 안전 처리) */
 const plans = computed(() => plansData.value || []);
