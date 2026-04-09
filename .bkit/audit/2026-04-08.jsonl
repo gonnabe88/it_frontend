@@ -1,0 +1,1 @@
+{"id":"4ec8435e-dc9f-4baa-89a2-3c338e4b4549","timestamp":"2026-04-08T11:31:48.192Z","sessionId":"","actor":"system","actorId":"unified-bash-post","action":"command_executed","category":"control","target":"ls c:/it/it_database/","targetType":"feature","details":{},"result":"success","reason":null,"destructiveOperation":false,"blastRadius":null,"bkitVersion":"2.0.6"}

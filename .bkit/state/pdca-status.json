@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-06T17:52:28.158Z",
+  "lastUpdated": "2026-04-09T16:41:16.982Z",
   "activeFeatures": [
     "it_frontend",
     "unit",
@@ -28,7 +28,8 @@
     "qna",
     "prepare",
     "evaluation",
-    "result"
+    "result",
+    "council-request"
   ],
   "primaryFeature": "it_frontend",
   "features": {
@@ -420,9 +421,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T12:07:05.762Z",
-        "lastUpdated": "2026-04-06T17:13:02.403Z"
+        "lastUpdated": "2026-04-09T16:40:15.497Z"
       },
-      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\budget\\project\\repository\\ProjectRepositoryImpl.java"
+      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\repository\\CouncilRepository.java"
     },
     "dto": {
       "phase": "do",
@@ -446,9 +447,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T13:12:52.941Z",
-        "lastUpdated": "2026-04-06T17:12:56.715Z"
+        "lastUpdated": "2026-04-09T16:41:16.982Z"
       },
-      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\budget\\project\\service\\ProjectService.java"
+      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\service\\CouncilService.java"
     },
     "controller": {
       "phase": "do",
@@ -579,6 +580,19 @@
         "lastUpdated": "2026-04-04T19:56:16.160Z"
       },
       "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\result\\[id].vue"
+    },
+    "council-request": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-09T15:49:46.516Z",
+        "lastUpdated": "2026-04-09T15:53:30.506Z"
+      },
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\index.vue"
     }
   },
   "pipeline": {
@@ -589,7 +603,7 @@
   "session": {
     "startedAt": "2026-03-07T15:52:46.492Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-06T17:52:28.158Z"
+    "lastActivity": "2026-04-09T16:41:16.982Z"
   },
   "history": [
     {
@@ -3313,6 +3327,72 @@
     {
       "timestamp": "2026-04-06T17:52:28.158Z",
       "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T15:49:46.516Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T15:53:30.506Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:01:30.994Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:03:32.395Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:32:39.021Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:32:46.515Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:32:58.758Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:39:34.375Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:40:15.497Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:40:24.758Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:41:16.982Z",
+      "feature": "service",
       "phase": "do",
       "action": "updated"
     }

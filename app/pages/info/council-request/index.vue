@@ -179,6 +179,8 @@ const submitCreate = async () => {
         /* 목록 갱신 후 신규 협의회(타당성검토표 Step 1)로 이동 */
         await refresh();
         navigateTo(`/info/council-request/${asctId}`);
+    } catch (e: any) {
+        alert(`협의회 신청 중 오류가 발생했습니다.\n${e?.data?.message ?? e?.message ?? '알 수 없는 오류'}`);
     } finally {
         createPending.value = false;
     }
@@ -441,35 +443,10 @@ const getPrjTpLabel = (prjTp: string | null) => {
             header="협의회 신청"
             :modal="true"
             :closable="true"
-            class="w-full max-w-md"
+            class="w-full max-w-sm"
             @hide="closeCreateDialog"
         >
             <div class="flex flex-col gap-5 pt-2">
-                <!-- 프로젝트관리번호 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold text-sm">
-                        프로젝트관리번호
-                        <span class="text-red-500">*</span>
-                    </label>
-                    <InputText
-                        v-model="createForm.prjMngNo"
-                        placeholder="예: PRJ-2026-0001"
-                        fluid
-                    />
-                </div>
-
-                <!-- 프로젝트순번 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold text-sm">프로젝트순번</label>
-                    <InputNumber
-                        v-model="createForm.prjSno"
-                        :min="1"
-                        :max="99"
-                        showButtons
-                        fluid
-                    />
-                </div>
-
                 <!-- 심의유형 -->
                 <div class="flex flex-col gap-2">
                     <label class="font-semibold text-sm">
@@ -485,6 +462,12 @@ const getPrjTpLabel = (prjTp: string | null) => {
                         fluid
                     />
                 </div>
+
+                <!-- 안내 문구 -->
+                <div class="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+                    <i class="pi pi-info-circle mt-0.5 flex-shrink-0" />
+                    <span>타당성검토표를 작성하시겠습니까?</span>
+                </div>
             </div>
 
             <!-- Dialog 버튼 -->
@@ -496,10 +479,10 @@ const getPrjTpLabel = (prjTp: string | null) => {
                     @click="closeCreateDialog"
                 />
                 <Button
-                    label="신청"
+                    label="확인"
                     icon="pi pi-check"
                     :loading="createPending"
-                    :disabled="!createForm.prjMngNo || !createForm.dbrTp"
+                    :disabled="!createForm.dbrTp"
                     @click="submitCreate"
                 />
             </template>
