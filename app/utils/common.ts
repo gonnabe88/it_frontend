@@ -225,6 +225,18 @@ export const formatDateTime = (dtm: string | null | undefined): string => {
 };
 
 /**
+ * 오늘 날짜를 결재선 표시용 한국어 형식으로 반환
+ *
+ * @returns '2026.04.09' 형태의 문자열
+ *
+ * @example
+ * formatKoreanDate() // → '2026.04.09'
+ */
+export const formatKoreanDate = (): string =>
+    new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+        .replace(/\. /g, '.').replace(/\.$/, '');
+
+/**
  * 파일 크기를 사람이 읽기 쉬운 단위로 변환
  * @param bytes - 파일 크기 (바이트). null/undefined는 빈 문자열 반환.
  * @returns '1.2 KB', '3.5 MB' 형태의 문자열 (0 bytes → '0 B')

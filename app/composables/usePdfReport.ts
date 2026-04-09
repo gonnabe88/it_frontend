@@ -69,7 +69,7 @@ const initDefaults = () => {
  * [ApprovalLine] 결재선 정보 인터페이스
  * PDF 보고서 헤더의 결재 테이블에 표시되는 결재자 정보입니다.
  */
-interface ApprovalLine {
+export interface ApprovalLine {
     drafter:  { name: string; rank: string; date: string; id: string }; // 기안자
     teamLead: { name: string; rank: string; date: string; id: string }; // 팀장
     deptHead: { name: string; rank: string; date: string; id: string }; // 부서장
