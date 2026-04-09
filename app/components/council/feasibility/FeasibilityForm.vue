@@ -50,7 +50,7 @@ const emit = defineEmits<{
                 <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">사업 개요</h2>
             </div>
             <div class="p-5">
-                <FeasibilityOverview
+                <CouncilFeasibilityOverview
                     :modelValue="modelValue"
                     :readonly="readonly"
                     @update:modelValue="emit('update:modelValue', $event)"
@@ -69,7 +69,7 @@ const emit = defineEmits<{
                 <span class="text-xs text-zinc-400 dark:text-zinc-500">(6개 항목 · 1~5점)</span>
             </div>
             <div class="p-5">
-                <FeasibilityChecklist
+                <CouncilFeasibilityChecklist
                     :modelValue="modelValue.checkItems"
                     :readonly="readonly"
                     @update:modelValue="emit('update:modelValue', { ...modelValue, checkItems: $event })"
@@ -88,7 +88,7 @@ const emit = defineEmits<{
                 <span class="text-xs text-zinc-400 dark:text-zinc-500">(1개 이상)</span>
             </div>
             <div class="p-5">
-                <FeasibilityPerformance
+                <CouncilFeasibilityPerformance
                     :modelValue="modelValue.performances"
                     :readonly="readonly"
                     @update:modelValue="emit('update:modelValue', { ...modelValue, performances: $event })"

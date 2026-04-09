@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-09T16:41:16.982Z",
+  "lastUpdated": "2026-04-09T19:17:01.406Z",
   "activeFeatures": [
     "it_frontend",
     "unit",
@@ -50,9 +50,9 @@
       "phaseTimestamps": {},
       "automationLevel": 2,
       "phaseNumber": 3,
-      "lastFile": "c:\\it\\it_frontend\\app\\components\\AppSidebar.vue",
+      "lastFile": "c:\\it\\it_frontend\\app\\types\\council.ts",
       "timestamps": {
-        "lastUpdated": "2026-04-06T17:52:28.158Z"
+        "lastUpdated": "2026-04-09T19:09:24.795Z"
       }
     },
     "unit": {
@@ -421,7 +421,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T12:07:05.762Z",
-        "lastUpdated": "2026-04-09T16:40:15.497Z"
+        "lastUpdated": "2026-04-09T18:29:17.298Z"
       },
       "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\repository\\CouncilRepository.java"
     },
@@ -434,9 +434,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T13:12:11.700Z",
-        "lastUpdated": "2026-04-05T13:45:24.839Z"
+        "lastUpdated": "2026-04-09T19:08:50.518Z"
       },
-      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\common\\system\\dto\\AuthDto.java"
+      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\dto\\CouncilDto.java"
     },
     "service": {
       "phase": "do",
@@ -447,7 +447,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T13:12:52.941Z",
-        "lastUpdated": "2026-04-09T16:41:16.982Z"
+        "lastUpdated": "2026-04-09T19:09:03.309Z"
       },
       "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\service\\CouncilService.java"
     },
@@ -486,9 +486,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T09:50:24.463Z",
-        "lastUpdated": "2026-04-04T15:22:11.334Z"
+        "lastUpdated": "2026-04-09T19:13:53.957Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\feasibility\\FeasibilityForm.vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\feasibility\\FeasibilityPerformance.vue"
     },
     "committee": {
       "phase": "do",
@@ -551,9 +551,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T19:28:15.665Z",
-        "lastUpdated": "2026-04-04T19:28:15.665Z"
+        "lastUpdated": "2026-04-09T18:51:04.745Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\prepare\\[id].vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\prepare\\[id].vue"
     },
     "evaluation": {
       "phase": "do",
@@ -577,9 +577,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T19:54:26.992Z",
-        "lastUpdated": "2026-04-04T19:56:16.160Z"
+        "lastUpdated": "2026-04-09T18:51:14.183Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\result\\[id].vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\result\\[id].vue"
     },
     "council-request": {
       "phase": "do",
@@ -590,9 +590,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-09T15:49:46.516Z",
-        "lastUpdated": "2026-04-09T15:53:30.506Z"
+        "lastUpdated": "2026-04-09T19:17:01.406Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\index.vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\[id].vue"
     }
   },
   "pipeline": {
@@ -603,7 +603,7 @@
   "session": {
     "startedAt": "2026-03-07T15:52:46.492Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-09T16:41:16.982Z"
+    "lastActivity": "2026-04-09T19:17:01.406Z"
   },
   "history": [
     {
@@ -3393,6 +3393,192 @@
     {
       "timestamp": "2026-04-09T16:41:16.982Z",
       "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:08:10.964Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:08:18.224Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:29:06.544Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:29:17.298Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:29:25.955Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:41:23.838Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:46:35.653Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:49:40.409Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:49:58.565Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:20.674Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:34.035Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:47.757Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:54.638Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:51:04.745Z",
+      "feature": "prepare",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:51:14.183Z",
+      "feature": "result",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:55:30.902Z",
+      "feature": "dto",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:55:52.633Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:56:05.921Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:59:56.528Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:01:14.253Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:01:22.822Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:01:32.921Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:08:50.518Z",
+      "feature": "dto",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:09:03.309Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:09:24.795Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:09:41.050Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:11:20.489Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:13:53.957Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:16:29.395Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:16:47.017Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:17:01.406Z",
+      "feature": "council-request",
       "phase": "do",
       "action": "updated"
     }

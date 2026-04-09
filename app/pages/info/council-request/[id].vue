@@ -23,7 +23,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import type { FeasibilityData, CheckItemData, PerformanceItem } from '~/types/council';
 import { useCouncil } from '~/composables/useCouncil';
 import { useFiles } from '~/composables/useFiles';
@@ -76,10 +76,29 @@ const DEFAULT_PERFORMANCE: PerformanceItem = {
     glNv: '', msmSttDt: null, msmEndDt: null, msmTpm: '', msmCle: '',
 };
 
-/** 타당성검토표 전체 폼 기본값 */
+/**
+ * STT_DT / END_DT (YYYY-MM-DD) → 사업기간 문자열 (YYYY.MM~YYYY.MM) 변환
+ */
+const buildPrjTrm = (sttDt: string | null, endDt: string | null): string => {
+    const fmt = (dt: string | null) => dt ? dt.slice(0, 7).replace('-', '.') : '';
+    const s = fmt(sttDt);
+    const e = fmt(endDt);
+    if (s && e) return `${s}~${e}`;
+    if (s) return s;
+    return '';
+};
+
+/** 타당성검토표 전체 폼 기본값 (BPROJM 값으로 초기화) */
 const DEFAULT_FORM: FeasibilityData = {
-    prjNm: '', prjTrm: '', ncs: '', prjBg: null, edrt: '', prjDes: '',
-    lglRglYn: 'N', lglRglNm: null, xptEff: '', kpnTp: 'TEMP',
+    prjNm:   councilData.value?.prjNm  ?? '',
+    prjTrm:  buildPrjTrm(councilData.value?.sttDt ?? null, councilData.value?.endDt ?? null),
+    ncs:     councilData.value?.ncs    ?? '',
+    prjBg:   councilData.value?.prjBg  ?? null,
+    edrt:    councilData.value?.edrt   ?? '',
+    prjDes:  councilData.value?.prjDes ?? '',
+    lglRglYn: 'N', lglRglNm: null,
+    xptEff:  councilData.value?.xptEff ?? '',
+    kpnTp: 'TEMP',
     checkItems: DEFAULT_CHECK_ITEMS.map(item => ({ ...item })),
     performances: [{ ...DEFAULT_PERFORMANCE }],
     flMngNo: null,
@@ -119,7 +138,7 @@ const initForm = (data: FeasibilityData | null) => {
 };
 
 /* 최초 로드 시 폼 초기화 */
-initForm(feasibilityRaw.value);
+initForm(feasibilityRaw.value ?? null);
 
 // ============================================================================
 // Computed
@@ -309,18 +328,31 @@ const showApprovalDialog = ref(false);
 /** 결재 요청 폼 */
 const approvalForm = ref({
     approverEno: '',
+    approverNm: '',
     rqsOpnn: '',
 });
 
 /** 결재 요청 진행 중 여부 */
 const approvalPending = ref(false);
 
+/** 직원 검색 Dialog 표출 여부 */
+const showEmpSearch = ref(false);
+
+/**
+ * 직원 검색에서 팀장 선택 시 처리
+ */
+const onApproverSelected = (emp: { eno: string; usrNm: string }) => {
+    approvalForm.value.approverEno = emp.eno;
+    approvalForm.value.approverNm  = emp.usrNm;
+    showEmpSearch.value = false;
+};
+
 /**
  * 결재 요청 Dialog 닫기 및 초기화
  */
 const closeApprovalDialog = () => {
     showApprovalDialog.value = false;
-    approvalForm.value = { approverEno: '', rqsOpnn: '' };
+    approvalForm.value = { approverEno: '', approverNm: '', rqsOpnn: '' };
 };
 
 /**
@@ -371,7 +403,6 @@ const submitApproval = async () => {
                 />
                 <div>
                     <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">{{ asctId }}</p>
                 </div>
             </div>
             <!-- 진행상태 뱃지 -->
@@ -402,7 +433,7 @@ const submitApproval = async () => {
             Design Ref: §3.2 FeasibilityForm.vue — 래퍼 컴포넌트
             (사업개요 + 타당성 자체점검 + 성과관리 자체계획)
         -->
-        <FeasibilityForm
+        <CouncilFeasibilityForm
             v-model="form"
             :readonly="readonly"
         />
@@ -505,17 +536,28 @@ const submitApproval = async () => {
                 타당성검토표가 작성완료 되었습니다. 팀장에게 결재를 요청하세요.
             </Message>
 
-            <!-- 결재자(팀장) 사번 -->
+            <!-- 결재자(팀장) 검색 -->
             <div class="flex flex-col gap-2">
                 <label class="font-semibold text-sm">
-                    결재자 사번 (팀장)
+                    결재자 (팀장)
                     <span class="text-red-500">*</span>
                 </label>
-                <InputText
-                    v-model="approvalForm.approverEno"
-                    placeholder="팀장 사번 입력"
-                    fluid
-                />
+                <div class="flex items-center gap-2">
+                    <InputText
+                        :value="approvalForm.approverNm ? `${approvalForm.approverNm} (${approvalForm.approverEno})` : ''"
+                        placeholder="직원 검색으로 선택하세요"
+                        readonly
+                        fluid
+                        class="cursor-pointer"
+                        @click="showEmpSearch = true"
+                    />
+                    <Button
+                        icon="pi pi-search"
+                        severity="secondary"
+                        outlined
+                        @click="showEmpSearch = true"
+                    />
+                </div>
             </div>
 
             <!-- 신청의견 (선택) -->
@@ -541,9 +583,16 @@ const submitApproval = async () => {
                 label="결재 요청"
                 icon="pi pi-send"
                 :loading="approvalPending"
-                :disabled="!approvalForm.approverEno.trim()"
+                :disabled="!approvalForm.approverEno"
                 @click="submitApproval"
             />
         </template>
     </Dialog>
+
+    <!-- 직원 검색 Dialog (팀장 선택) -->
+    <CommonEmployeeSearchDialog
+        v-model:visible="showEmpSearch"
+        header="팀장 검색"
+        @select="onApproverSelected"
+    />
 </template>

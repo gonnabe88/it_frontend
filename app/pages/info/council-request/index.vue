@@ -246,23 +246,15 @@ const getPrjTpLabel = (prjTp: string | null) => {
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-2">
-                <!-- 새로고침 -->
-                <Button
-                    icon="pi pi-refresh"
-                    severity="secondary"
-                    outlined
-                    :loading="pending"
-                    @click="() => refresh()"
-                    v-tooltip.top="'새로고침'"
-                />
-                <!-- 협의회 신청 (일반사용자에게만 노출, 권한 체크는 서버 측) -->
-                <Button
-                    label="협의회 신청"
-                    icon="pi pi-plus"
-                    @click="showCreateDialog = true"
-                />
-            </div>
+            <!-- 새로고침 -->
+            <Button
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                :loading="pending"
+                @click="() => refresh()"
+                v-tooltip.top="'새로고침'"
+            />
         </div>
 
         <!-- 필터 영역 -->

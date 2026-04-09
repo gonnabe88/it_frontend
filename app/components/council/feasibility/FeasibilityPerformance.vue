@@ -192,24 +192,28 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                 <!-- 측정시작일 -->
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-medium text-zinc-600 dark:text-zinc-400">측정시작일</label>
-                    <InputText
-                        :value="item.msmSttDt ?? ''"
+                    <DatePicker
+                        :modelValue="item.msmSttDt ? new Date(item.msmSttDt) : null"
                         :disabled="readonly"
+                        dateFormat="yy-mm-dd"
                         placeholder="YYYY-MM-DD"
+                        showIcon
                         fluid
-                        @input="updateField(index, 'msmSttDt', ($event.target as HTMLInputElement).value || null)"
+                        @update:modelValue="(v: Date | null) => updateField(index, 'msmSttDt', v ? v.toISOString().slice(0, 10) : null)"
                     />
                 </div>
 
                 <!-- 측정종료일 -->
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-medium text-zinc-600 dark:text-zinc-400">측정종료일</label>
-                    <InputText
-                        :value="item.msmEndDt ?? ''"
+                    <DatePicker
+                        :modelValue="item.msmEndDt ? new Date(item.msmEndDt) : null"
                         :disabled="readonly"
+                        dateFormat="yy-mm-dd"
                         placeholder="YYYY-MM-DD"
+                        showIcon
                         fluid
-                        @input="updateField(index, 'msmEndDt', ($event.target as HTMLInputElement).value || null)"
+                        @update:modelValue="(v: Date | null) => updateField(index, 'msmEndDt', v ? v.toISOString().slice(0, 10) : null)"
                     />
                 </div>
 

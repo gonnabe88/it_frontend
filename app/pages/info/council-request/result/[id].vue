@@ -290,7 +290,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <h2 class="font-semibold text-sm text-zinc-700 dark:text-zinc-300">타당성검토표 (참고용)</h2>
                 </div>
                 <div class="p-5">
-                    <FeasibilityForm
+                    <CouncilFeasibilityForm
                         v-if="feasibilityData"
                         :modelValue="feasibilityData"
                         :readonly="true"

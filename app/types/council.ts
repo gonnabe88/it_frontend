@@ -107,6 +107,22 @@ export interface CouncilDetail {
   cnrcDt: string | null;
   cnrcTm: string | null;
   cnrcPlc: string | null;
+  /** 사업명 (BPROJM.PRJ_NM) */
+  prjNm: string | null;
+  /** 전결권자 (BPROJM.EDRT) */
+  edrt: string | null;
+  /** 사업기간 시작일 (BPROJM.STT_DT) */
+  sttDt: string | null;
+  /** 사업기간 종료일 (BPROJM.END_DT) */
+  endDt: string | null;
+  /** 필요성 (BPROJM.NCS) */
+  ncs: string | null;
+  /** 소요예산 (BPROJM.PRJ_BG) */
+  prjBg: number | null;
+  /** 사업내용 (BPROJM.PRJ_DES) */
+  prjDes: string | null;
+  /** 기대효과 (BPROJM.XPT_EFF) */
+  xptEff: string | null;
 }
 
 /**
