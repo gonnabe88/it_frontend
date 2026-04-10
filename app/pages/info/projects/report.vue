@@ -36,7 +36,7 @@ import { ref, onMounted } from 'vue';
 import { type ProjectDetail, useProjects } from '~/composables/useProjects';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { useApprovals, type CreateApplicationRequest } from '~/composables/useApprovals';
+import { useApprovals, type CreateApplicationRequest, type OrcItem } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
 import type { OrgUser } from '~/composables/useOrganization';
 
@@ -243,9 +243,7 @@ const submitApproval = async () => {
                         deptHead: { ...approvalLine.value.deptHead, date: '' }
                     }
                 }),
-                orcTbCd: 'BPRJTM', // 연계 테이블 코드 (프로젝트)
-                orcPkVl: project.prjMngNo, // 연계 PK (프로젝트 관리번호)
-                orcSnoVl: '1', // 일련번호 기본값
+                orcItems: [{ orcTbCd: 'BPROJM', orcPkVl: project.prjMngNo, orcSnoVl: '1' }] as OrcItem[], // 원본 데이터 연결
                 rqsEno: approvalLine.value.drafter.id, // 기안자 사원번호
                 rqsOpnn: `${project.prjNm}`, // 신청 의견 (사업명)
                 approverEnos: [

@@ -209,48 +209,79 @@ export const COST_STAGES = [
  */
 export const getCostTagClass = (status: string) => STATUS_TAG_CLASS_MAP[status] ?? 'kdb-tag-gray';
 
-/**
- * 날짜/시간 문자열을 한국어 로케일 표시 형식으로 변환
- *
- * @param dtm - ISO 날짜/시간 문자열. null/undefined/빈 문자열은 빈 문자열 반환.
- * @returns '2026. 4. 1. 오전 9:00:00' 형태의 문자열
- *
- * @example
- * formatDateTime('2026-04-01T09:00:00') // → '2026. 4. 1. 오전 9:00:00'
- * formatDateTime(null)                   // → ''
- */
-export const formatDateTime = (dtm: string | null | undefined): string => {
-    if (!dtm) return '';
-    return new Date(dtm).toLocaleString('ko-KR');
+// ============================================================================
+// 협의회 상태 유틸리티
+// ============================================================================
+
+/** 협의회 진행상태 코드 → 한글 레이블 매핑 */
+const COUNCIL_STATUS_LABEL_MAP: Record<string, string> = {
+    DRAFT:           '작성 중',
+    SUBMITTED:       '작성 완료',
+    APPROVAL_PENDING:'결재 대기',
+    APPROVED:        '결재 완료',
+    PREPARING:       '개최 준비',
+    SCHEDULED:       '일정 확정',
+    IN_PROGRESS:     '협의회 진행 중',
+    EVALUATING:      '평가의견 작성 중',
+    RESULT_WRITING:  '결과서 작성 중',
+    RESULT_REVIEW:   '결과서 검토 중',
+    FINAL_APPROVAL:  '결과보고 결재 중',
+    COMPLETED:       '완료',
+};
+
+/** 협의회 진행상태 코드 → kdb-tag-* CSS 클래스 매핑 */
+const COUNCIL_STATUS_TAG_MAP: Record<string, string> = {
+    DRAFT:           'kdb-tag-gray',
+    SUBMITTED:       'kdb-tag-yellow',
+    APPROVAL_PENDING:'kdb-tag-blue',
+    APPROVED:        'kdb-tag-teal',
+    PREPARING:       'kdb-tag-indigo',
+    SCHEDULED:       'kdb-tag-purple',
+    IN_PROGRESS:     'kdb-tag-orange',
+    EVALUATING:      'kdb-tag-pink',
+    RESULT_WRITING:  'kdb-tag-cyan',
+    RESULT_REVIEW:   'kdb-tag-rose',
+    FINAL_APPROVAL:  'kdb-tag-blue',
+    COMPLETED:       'kdb-tag-green',
 };
 
 /**
- * 오늘 날짜를 결재선 표시용 한국어 형식으로 반환
+ * 협의회 진행상태 코드를 화면 표출용 한글 레이블로 변환
  *
- * @returns '2026.04.09' 형태의 문자열
+ * @param status - 협의회 상태 코드 (CouncilStatus)
+ * @returns 한글 상태 레이블 (예: '작성 중', '결재 완료')
  *
  * @example
- * formatKoreanDate() // → '2026.04.09'
+ * getCouncilStatusLabel('DRAFT')     // → '작성 중'
+ * getCouncilStatusLabel('COMPLETED') // → '완료'
  */
-export const formatKoreanDate = (): string =>
-    new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
-        .replace(/\. /g, '.').replace(/\.$/, '');
+export const getCouncilStatusLabel = (status: string): string =>
+    COUNCIL_STATUS_LABEL_MAP[status] ?? status;
 
 /**
- * 파일 크기를 사람이 읽기 쉬운 단위로 변환
- * @param bytes - 파일 크기 (바이트). null/undefined는 빈 문자열 반환.
- * @returns '1.2 KB', '3.5 MB' 형태의 문자열 (0 bytes → '0 B')
+ * 협의회 진행상태 코드에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
+ *
+ * @param status - 협의회 상태 코드 (CouncilStatus)
+ * @returns kdb-tag-* 커스텀 CSS 클래스명
  *
  * @example
- * formatFileSize(0)        // → '0 B'
- * formatFileSize(1536)     // → '1.5 KB'
- * formatFileSize(1572864)  // → '1.5 MB'
+ * getCouncilTagClass('COMPLETED')  // → 'kdb-tag-green'
+ * getCouncilTagClass('DRAFT')      // → 'kdb-tag-gray'
  */
-export const formatFileSize = (bytes: number | null | undefined): string => {
-    if (bytes == null) return '';
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+export const getCouncilTagClass = (status: string): string =>
+    COUNCIL_STATUS_TAG_MAP[status] ?? 'kdb-tag-gray';
+
+/**
+ * 협의회 심의유형 코드를 화면 표출용 한글 레이블로 변환
+ *
+ * @param dbrTp - 심의유형 코드 (INFO_SYS / INFO_SEC / ETC)
+ * @returns 한글 심의유형 레이블
+ */
+export const getHearingTypeLabel = (dbrTp: string | null | undefined): string => {
+    switch (dbrTp) {
+        case 'INFO_SYS': return '정보시스템';
+        case 'INFO_SEC': return '정보보호';
+        case 'ETC':      return '기타';
+        default:         return '-';
+    }
 };

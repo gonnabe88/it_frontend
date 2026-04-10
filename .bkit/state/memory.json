@@ -1,18 +1,25 @@
 {
-  "sessionCount": 27,
+  "sessionCount": 46,
   "lastSession": {
-    "startedAt": "2026-03-28T00:36:21.001Z",
+    "startedAt": "2026-04-09T16:38:56.442Z",
     "platform": "claude",
     "level": "Dynamic"
   },
   "currentFeature": null,
   "phase": null,
+  "matchRate": null,
   "archivedFeatures": [
     {
       "feature": "frontend-test-setup",
       "matchRate": 95,
       "archivedAt": "2026-03-08",
       "archivedTo": "docs/archive/2026-03/frontend-test-setup/"
+    },
+    {
+      "feature": "council",
+      "matchRate": 94,
+      "archivedAt": "2026-04-05",
+      "archivedTo": "docs/archive/2026-04/council/"
     }
   ]
 }
