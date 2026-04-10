@@ -33,15 +33,19 @@ definePageMeta({
 /* ── 데이터 조회 ── */
 const { fetchProjects, fetchProjectsBulk } = useProjects();
 /* apfSts=none: 결재 신청이 없는 항목(미상신)만 조회 */
-const { data: projectsData } = await fetchProjects({ apfSts: 'none' });
+/* await 제거: keepalive + server:false 환경에서 Suspense 블로킹 방지 */
+const { data: projectsData, pending: projectsPending } = fetchProjects({ apfSts: 'none' });
 /** 정보화사업 목록 */
 const projects = computed(() => projectsData.value || []);
 
 const { fetchCosts, fetchCostsBulk } = useCost();
 /* apfSts=none: 결재 신청이 없는 항목(미상신)만 조회 */
-const { data: costsData } = await fetchCosts({ apfSts: 'none' });
+const { data: costsData, pending: costsPending } = fetchCosts({ apfSts: 'none' });
 /** 전산업무비 목록 */
 const costs = computed(() => costsData.value || []);
+
+/** 데이터 로딩 중 여부 */
+const isLoading = computed(() => projectsPending.value || costsPending.value);
 
 /**
  * [UnifiedBudgetItem] 통합 예산 항목 인터페이스
@@ -483,12 +487,18 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
+        <!-- 데이터 로딩 중 표시 -->
+        <div v-if="isLoading" class="flex items-center justify-center py-12">
+            <ProgressSpinner style="width: 40px; height: 40px" strokeWidth="4" />
+            <span class="ml-3 text-zinc-500 dark:text-zinc-400">데이터를 불러오는 중...</span>
+        </div>
+
         <!-- 예산 현황 요약 카드 -->
-        <BudgetSummaryCards :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
+        <BudgetSummaryCards v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
             :selectedUnit="selectedUnit" />
 
         <!-- 통합 DataTable -->
-        <div
+        <div v-if="!isLoading"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
             <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
@@ -603,7 +613,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- 조회 필터 Drawer -->
-        <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[480px]">
+        <Drawer v-if="!isLoading" v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[480px]">
             <div class="flex flex-col gap-6 py-2">
 
                 <!-- 예산연도 -->

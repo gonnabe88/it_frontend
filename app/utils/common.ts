@@ -7,7 +7,8 @@
  * 컴포넌트, composable, 스토어 등 어디서든 import하여 사용할 수 있습니다.
  *
  * [포함 함수]
- *  - formatBudget      : 예산 금액을 단위(천원/백만원/억원)에 따라 변환 및 포맷
+ *  - formatBudget       : 예산 금액을 단위(천원/백만원/억원)에 따라 변환 및 포맷
+ *  - formatKoreanDate   : 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 변환
  *  - getApprovalTagClass: 결재 상태별 PrimeVue Tag CSS 클래스 반환
  *  - getProjectTagClass : 사업현황 상태별 PrimeVue Tag CSS 클래스 반환
  *
@@ -284,4 +285,21 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
         case 'ETC':      return '기타';
         default:         return '-';
     }
+};
+
+/**
+ * 현재 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 반환
+ *
+ * @param date - 변환할 Date 객체 (기본값: 현재 날짜)
+ * @returns 한국어 날짜 문자열 (예: '2026년 04월 10일')
+ *
+ * @example
+ * formatKoreanDate()                        // → '2026년 04월 10일'
+ * formatKoreanDate(new Date('2026-01-15'))   // → '2026년 01월 15일'
+ */
+export const formatKoreanDate = (date: Date = new Date()): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}년 ${m}월 ${d}일`;
 };
