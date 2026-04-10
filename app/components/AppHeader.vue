@@ -139,7 +139,12 @@ const menuItems = computed(() => [
     }] : [])
 ]);
 
-const isDark = ref(false);
+/**
+ * 다크모드 상태
+ * - useCookie를 사용하여 SSR/CSR 양쪽에서 동일한 초기값을 보장합니다.
+ * - 쿠키값은 nuxt.config.ts 인라인 스크립트와 동기화됩니다.
+ */
+const isDark = useCookie<boolean>('theme-dark', { default: () => false });
 
 /**
  * 실제 테마 적용 로직 (다크/라이트 전환)
@@ -147,13 +152,7 @@ const isDark = ref(false);
  */
 const applyTheme = () => {
     isDark.value = !isDark.value;
-    if (isDark.value) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-    }
+    document.documentElement.classList.toggle('dark', isDark.value);
 };
 
 /**
@@ -177,16 +176,14 @@ const handleLogout = async () => {
 };
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
-        isDark.value = true;
-        document.documentElement.classList.add('dark');
-    } else {
-        isDark.value = false;
-        document.documentElement.classList.remove('dark');
+    // 쿠키 미설정(최초 방문) 시 시스템 다크모드 설정을 초기값으로 사용
+    const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('theme-dark='));
+    if (!hasCookie) {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        isDark.value = systemDark;
     }
+    // 인라인 스크립트가 이미 DOM에 적용했으나, 쿠키 값과 한 번 더 동기화
+    document.documentElement.classList.toggle('dark', isDark.value);
 });
 
 const { tabs, addTab, removeTab, closeAll } = useTabs();

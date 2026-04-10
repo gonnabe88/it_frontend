@@ -13,7 +13,7 @@
 [기능]
   - 축소/확장 토글: 아이콘만 표시 ↔ 아이콘+레이블 표시 전환
   - 결재 상신 배지: 미상신 항목 수 표시 (정보화사업 + 전산업무비)
-  - 축소 상태 영구 저장: localStorage에 저장하여 새로고침 후에도 유지
+  - 축소 상태 영구 저장: useCookie로 저장하여 새로고침 후에도 유지 (SSR 안전)
 ================================================================================
 -->
 <script setup lang="ts">
@@ -22,11 +22,10 @@ import { useCost } from '~/composables/useCost';
 
 /**
  * 사이드바 축소 상태
- * - SSR 하이드레이션 불일치 방지를 위해 기본값은 false로 초기화합니다.
- * - onMounted에서 localStorage에 저장된 값을 읽어 복원합니다.
- * - 상태 변경 시 localStorage에 자동 저장합니다.
+ * - useCookie를 사용하여 SSR/CSR 모두에서 동일한 초기값을 보장합니다.
+ * - 쿠키는 서버에서도 읽을 수 있어 하이드레이션 불일치가 발생하지 않습니다.
  */
-const collapsed = ref(false);
+const collapsed = useCookie<boolean>('sidebar-collapsed', { default: () => false });
 
 // RBAC 권한 헬퍼: 관리자 메뉴 표시 여부 판단에 사용
 const { isAdmin } = useAuth();
@@ -49,18 +48,9 @@ const approvalCount = computed(() => {
     return projects + costs;
 });
 
-onMounted(() => {
-    // 브라우저 새로고침 후 이전 축소 상태 복원
-    const saved = localStorage.getItem('sidebar-collapsed');
-    if (saved !== null) {
-        collapsed.value = saved === 'true';
-    }
-});
-
 const toggleSidebar = () => {
+    // useCookie가 자동으로 쿠키에 저장합니다.
     collapsed.value = !collapsed.value;
-    // 변경된 상태를 localStorage에 영구 저장
-    localStorage.setItem('sidebar-collapsed', String(collapsed.value));
 };
 
 const route = useRoute();
