@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useOrganization, type OrgUser } from '~/composables/useOrganization';
+import { ref, computed, watch } from 'vue';
+import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
 
 const props = defineProps({
     visible: {
@@ -20,7 +20,7 @@ const isVisible = computed({
     set: (value) => emit('update:visible', value)
 });
 
-const { fetchOrganizations, buildOrgTree } = useOrganization();
+const { buildOrgTree } = useOrganization();
 const config = useRuntimeConfig();
 const { $apiFetch } = useNuxtApp();
 const nodes = ref<any[]>([]);
@@ -30,12 +30,18 @@ const users = ref<OrgUser[]>([]);
 const loadingUsers = ref(false);
 const selectedUser = ref();
 
-// Load organization tree
-onMounted(async () => {
-    const { data } = await fetchOrganizations();
-    if (data.value) {
-        nodes.value = buildOrgTree(data.value);
-        expandAll();
+/** 다이얼로그가 열릴 때 조직도 로드 (미로드 시에만) */
+watch(() => props.visible, async (open) => {
+    if (open && nodes.value.length === 0) {
+        try {
+            const data = await $apiFetch<Organization[]>(`${config.public.apiBase}/api/organizations`);
+            if (data) {
+                nodes.value = buildOrgTree(data);
+                expandAll();
+            }
+        } catch (e) {
+            console.error('조직도 로드 실패', e);
+        }
     }
 });
 

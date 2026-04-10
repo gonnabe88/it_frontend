@@ -11,17 +11,23 @@
 
 [v-model]
   - ResourceItem[]  : 소요자원 항목 배열 (부모 form.resourceItems와 양방향 바인딩)
+
+[구분 코드 연동]
+  - 공통코드(CCODEM)에서 CTT_TP = IOE_LEAFE, IOE_XPN, IOE_SEVS, IOE_IDR, IOE_CPIT 조회
+  - cdNm을 ' - ' 기준으로 분할하여 CascadeSelect 계층 구조 생성
+  - 저장 시 cdId(예: IOE-351-1100-1)를 gclDtt에 저장
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 /**
  * 소요자원 항목 인터페이스 (UI 모델)
+ * category에는 공통코드 cdId를 저장합니다.
  */
 export interface ResourceItem {
-    category: string;
-    subCategory: string;
+    category: string;       // cdId (예: IOE-351-1100-1)
+    subCategory: string;    // 미사용 (하위호환용, 빈 문자열)
     item: string;
     quantity: number;
     currency: string;
@@ -36,11 +42,20 @@ export interface ResourceItem {
     gclMngNo?: string | null;
 }
 
+/** 공통코드 응답 타입 */
+interface CodeResponse {
+    cdId: string;
+    cdNm: string;
+    cdva: string;
+    cttTp: string;
+    cttTpDes: string;
+}
+
 /** CascadeSelect 옵션 노드 타입 */
 interface CategoryOption {
     label: string;
-    category: string;
-    subCategory: string;
+    cdId: string;
+    cttTp: string;
     items?: CategoryOption[];
 }
 
@@ -57,60 +72,181 @@ const items = defineModel<ResourceItem[]>({ required: true });
 const paymentCycleOptions = ['월', '분기', '반기', '년'];
 const ynOptions = ['Y', 'N'];
 
-/**
- * 구분 CascadeSelect 트리 옵션
- * 소분류가 있는 대분류는 items 배열을 가지며, 없는 항목은 leaf 노드로 직접 선택됩니다.
- */
-const resourceCategorySelectOptions: CategoryOption[] = [
-    {
-        label: '개발비', category: '개발비', subCategory: '',
-        items: [
-            { label: '일반', category: '개발비', subCategory: '일반' },
-            { label: '감리/컨설팅', category: '개발비', subCategory: '감리/컨설팅' },
-        ],
-    },
-    { label: '기계장치', category: '기계장치', subCategory: '' },
-    {
-        label: '기타무형자산', category: '기타무형자산', subCategory: '',
-        items: [
-            { label: '일반', category: '기타무형자산', subCategory: '일반' },
-            { label: 'SW라이선스', category: '기타무형자산', subCategory: 'SW라이선스' },
-        ],
-    },
-    {
-        label: '전산용역비', category: '전산용역비', subCategory: '',
-        items: [
-            { label: '외주(운영,관제 등)', category: '전산용역비', subCategory: '외주(운영,관제 등)' },
-            { label: '자문/심사', category: '전산용역비', subCategory: '자문/심사' },
-        ],
-    },
-    { label: '전산임차료', category: '전산임차료', subCategory: '' },
-    { label: '전산제비', category: '전산제비', subCategory: '' },
-];
+/* ── 공통코드에서 IOE 비목 코드 조회 ── */
+
+const config = useRuntimeConfig();
+
+/** 조회 대상 CTT_TP 목록 */
+const IOE_CTT_TYPES = ['IOE_LEAFE', 'IOE_XPN', 'IOE_SEVS', 'IOE_IDR', 'IOE_CPIT'] as const;
+
+/** 전체 IOE 코드 원본 데이터 */
+const ioeCodes = ref<CodeResponse[]>([]);
+
+/** cdId → CodeResponse 매핑 (부모에서 cttTp 조회용) */
+const codeMap = computed(() => {
+    const map = new Map<string, CodeResponse>();
+    for (const code of ioeCodes.value) {
+        map.set(code.cdId, code);
+    }
+    return map;
+});
 
 /**
- * category + subCategory 값으로 CascadeSelect 선택값 노드를 찾아 반환합니다.
+ * cdId로 해당 코드의 cttTp 조회
+ * 부모 컴포넌트에서 자본예산/일반관리비 분류에 사용합니다.
  */
-const findCategoryOption = (category: string, subCategory: string): CategoryOption | null => {
-    for (const opt of resourceCategorySelectOptions) {
-        if (opt.items) {
-            if (subCategory) {
-                const sub = opt.items.find(s => s.category === category && s.subCategory === subCategory);
-                if (sub) return sub;
-            }
-        } else {
-            if (opt.category === category) return opt;
+const getCttTpByCdId = (cdId: string): string => {
+    return codeMap.value.get(cdId)?.cttTp || '';
+};
+
+/** 부모에게 cttTp 조회 함수 노출 */
+defineExpose({ getCttTpByCdId });
+
+/**
+ * 공통코드 데이터를 CascadeSelect 트리 구조로 변환
+ *
+ * cdNm을 ' - ' 기준으로 분할하여 계층 구조 생성:
+ *   - 2단계: "전산임차료 - 국내전산임차료" → 전산임차료 > 국내전산임차료
+ *   - 3단계: "전산용역비 - 외주용역 - 외주운영/관제 등" → 전산용역비 > 외주용역 > 외주운영/관제 등
+ *   - 1단계(leaf 없음): "자본예산 - 기계장치" → 자본예산 > 기계장치 (직접 선택)
+ */
+const resourceCategorySelectOptions = computed<CategoryOption[]>(() => {
+    if (ioeCodes.value.length === 0) return [];
+
+    // 1단계: 첫 번째 segment별 그룹핑
+    const level1Map = new Map<string, { codes: CodeResponse[]; hasSub: boolean }>();
+
+    for (const code of ioeCodes.value) {
+        const segments = code.cdNm.split(' - ').map(s => s.trim());
+        const key = segments[0]!;
+        if (!level1Map.has(key)) {
+            level1Map.set(key, { codes: [], hasSub: false });
+        }
+        const group = level1Map.get(key)!;
+        group.codes.push(code);
+        if (segments.length >= 2) {
+            group.hasSub = true;
         }
     }
-    return null;
+
+    // 2단계: 트리 구조 생성
+    const options: CategoryOption[] = [];
+
+    for (const [label1, group] of level1Map) {
+        if (group.codes.length === 1 && group.codes[0]!.cdNm.split(' - ').length <= 2) {
+            // 하위 항목이 1개뿐이고 2단계 이하 → leaf 노드
+            const code = group.codes[0]!;
+            options.push({
+                label: label1,
+                cdId: code.cdId,
+                cttTp: code.cttTp,
+            });
+        } else {
+            // 2단계 그룹핑
+            const level2Map = new Map<string, CodeResponse[]>();
+
+            for (const code of group.codes) {
+                const segments = code.cdNm.split(' - ').map(s => s.trim());
+                if (segments.length === 2) {
+                    // "전산임차료 - 국내전산임차료" → leaf
+                    const key2 = segments[1]!;
+                    level2Map.set(key2, [code]);
+                } else if (segments.length >= 3) {
+                    // "전산용역비 - 외주용역 - 외주운영/관제 등" → 2단계 그룹
+                    const key2 = segments[1]!;
+                    if (!level2Map.has(key2)) {
+                        level2Map.set(key2, []);
+                    }
+                    level2Map.get(key2)!.push(code);
+                }
+            }
+
+            const subItems: CategoryOption[] = [];
+            for (const [label2, codes] of level2Map) {
+                if (codes.length === 1 && codes[0]!.cdNm.split(' - ').length <= 2) {
+                    // 2단계 leaf
+                    subItems.push({
+                        label: label2,
+                        cdId: codes[0]!.cdId,
+                        cttTp: codes[0]!.cttTp,
+                    });
+                } else if (codes.length === 1 && codes[0]!.cdNm.split(' - ').length >= 3) {
+                    // 3단계이지만 하위 1개 → leaf
+                    const seg = codes[0]!.cdNm.split(' - ').map(s => s.trim());
+                    subItems.push({
+                        label: `${label2} - ${seg.slice(2).join(' - ')}`,
+                        cdId: codes[0]!.cdId,
+                        cttTp: codes[0]!.cttTp,
+                    });
+                } else {
+                    // 3단계 그룹 (여러 하위 항목)
+                    const level3Items: CategoryOption[] = codes.map(code => {
+                        const seg = code.cdNm.split(' - ').map(s => s.trim());
+                        return {
+                            label: seg.slice(2).join(' - '),
+                            cdId: code.cdId,
+                            cttTp: code.cttTp,
+                        };
+                    });
+                    subItems.push({
+                        label: label2,
+                        cdId: '',
+                        cttTp: codes[0]!.cttTp,
+                        items: level3Items,
+                    });
+                }
+            }
+
+            options.push({
+                label: label1,
+                cdId: '',
+                cttTp: group.codes[0]!.cttTp,
+                items: subItems,
+            });
+        }
+    }
+
+    return options;
+});
+
+/**
+ * cdId로 CascadeSelect 선택값 노드를 찾아 반환합니다.
+ * 트리를 재귀 탐색하여 일치하는 leaf 노드를 반환합니다.
+ */
+const findCategoryOption = (cdId: string): CategoryOption | null => {
+    if (!cdId) return null;
+    const search = (opts: CategoryOption[]): CategoryOption | null => {
+        for (const opt of opts) {
+            if (opt.cdId === cdId) return opt;
+            if (opt.items) {
+                const found = search(opt.items);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+    return search(resourceCategorySelectOptions.value);
+};
+
+/**
+ * cdId로 표시 라벨 생성 (CascadeSelect value 표시용)
+ * 경로를 ' › ' 구분자로 연결합니다.
+ */
+const getCategoryDisplayLabel = (cdId: string): string => {
+    const code = codeMap.value.get(cdId);
+    if (!code) return cdId;
+    // cdNm의 ' - '를 ' › '로 변환
+    return code.cdNm.split(' - ').map(s => s.trim()).join(' › ');
 };
 
 /**
  * CascadeSelect 변경 이벤트 처리
  */
 const onCategorySelect = (rowData: ResourceItem, value: CategoryOption) => {
-    rowData.category = value.category;
-    rowData.subCategory = value.subCategory;
+    if (value && value.cdId) {
+        rowData.category = value.cdId;
+        rowData.subCategory = '';
+    }
 };
 
 /** 소요자원 테이블 넓게 보기 토글 상태 */
@@ -122,7 +258,7 @@ const toggleExpand = () => { isExpanded.value = !isExpanded.value; };
  */
 const addRow = () => {
     items.value.push({
-        category: '개발비',
+        category: '',
         subCategory: '',
         item: '',
         quantity: 0,
@@ -143,6 +279,24 @@ const addRow = () => {
 const removeRow = (index: number) => {
     items.value.splice(index, 1);
 };
+
+/**
+ * IOE 비목 코드 일괄 조회
+ * 5개 CTT_TP를 병렬로 조회하여 ioeCodes에 병합합니다.
+ */
+onMounted(async () => {
+    try {
+        const { $apiFetch } = useNuxtApp();
+        const results = await Promise.all(
+            IOE_CTT_TYPES.map(cttTp =>
+                $apiFetch<CodeResponse[]>(`${config.public.apiBase}/api/ccodem/type/${cttTp}`)
+            )
+        );
+        ioeCodes.value = results.flat();
+    } catch (e) {
+        console.error('IOE 비목 코드 조회 실패', e);
+    }
+});
 </script>
 
 <template>
@@ -170,20 +324,20 @@ const removeRow = (index: number) => {
                     </div>
                 </template>
 
-                <!-- 구분: CascadeSelect (대분류 → 소분류 2단계) -->
+                <!-- 구분: CascadeSelect (공통코드 기반 계층 구조) -->
                 <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center"
                     style="min-width: 160px;">
                     <template #body="{ data }">
-                        <CascadeSelect :model-value="findCategoryOption(data.category, data.subCategory)"
+                        <CascadeSelect :model-value="findCategoryOption(data.category)"
                             :options="resourceCategorySelectOptions" optionLabel="label" optionGroupLabel="label"
                             optionGroupChildren="items" placeholder="선택" fluid
                             @change="onCategorySelect(data, $event.value)">
                             <template #value="{ value }">
-                                <template v-if="value">
-                                    {{ value.category }}
-                                    <template v-if="value.subCategory">
-                                        <span class="opacity-40 mx-0.5">›</span>{{ value.subCategory }}
-                                    </template>
+                                <template v-if="value && value.cdId">
+                                    {{ getCategoryDisplayLabel(value.cdId) }}
+                                </template>
+                                <template v-else-if="data.category">
+                                    {{ getCategoryDisplayLabel(data.category) }}
                                 </template>
                                 <span v-else style="color: var(--p-cascadeselect-placeholder-color)">선택</span>
                             </template>
@@ -232,17 +386,17 @@ const removeRow = (index: number) => {
                     </template>
                 </Column>
 
-                <!-- 도입시기/지급주기: 구분에 따라 다른 입력 컴포넌트 표시 -->
+                <!-- 도입시기/지급주기: cttTp에 따라 다른 입력 컴포넌트 표시 -->
                 <Column header="도입시기/지급주기" headerClass="text-center justify-center [&>div]:justify-center"
                     style="min-width: 200px">
                     <template #body="{ data }">
-                        <!-- 자본예산: 도입시기 DatePicker (월 단위) -->
-                        <div v-if="['개발비', '기계장치', '기타무형자산'].includes(data.category)">
+                        <!-- 자본예산(IOE_CPIT): 도입시기 DatePicker (월 단위) -->
+                        <div v-if="getCttTpByCdId(data.category) === 'IOE_CPIT'">
                             <DatePicker v-model="data.introDate" view="month" dateFormat="yy-mm" showIcon fluid
                                 placeholder="도입시기" class="w-full" />
                         </div>
-                        <!-- 임차료/제비: 지급주기 드롭다운 -->
-                        <div v-else-if="['전산임차료', '전산제비'].includes(data.category)">
+                        <!-- 임차료/제비/여비/용역비: 지급주기 드롭다운 -->
+                        <div v-else-if="data.category && getCttTpByCdId(data.category)">
                             <Select v-model="data.paymentCycle" :options="paymentCycleOptions" placeholder="지급주기"
                                 class="w-full" />
                         </div>

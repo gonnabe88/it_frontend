@@ -20,29 +20,65 @@ const props = defineProps(nodeViewProps);
 /** mathlive <math-field> DOM 참조 */
 const mathFieldRef = ref<any>(null);
 
-/** 에디터 편집 가능 여부 */
-const isEditable = computed(() => !!props.editor?.isEditable);
+/**
+ * 에디터 편집 가능 여부
+ * [수정] computed() 대신 ref + editor 'transaction' 이벤트 동기화 방식 사용.
+ * editor.isEditable은 Vue 반응형 getter가 아니므로 초기화 타이밍에 따라
+ * computed가 false에 고정되는 문제를 방지합니다.
+ */
+const isEditable = ref(!!props.editor?.isEditable);
+
+/** transaction 이벤트 핸들러 (onUnmounted 정리용으로 분리) */
+const syncEditable = () => {
+    isEditable.value = !!props.editor?.isEditable;
+};
 
 /**
  * mathlive 동적 임포트 및 이벤트 연결
  * onMounted에서 import → SSR에서 실행되지 않음
  */
 onMounted(async () => {
-    // @vite-ignore: mathlive는 customElements.define()을 최상위에서 호출하므로
-    // Vite SSR 정적 분석에서 제외합니다. onMounted는 브라우저에서만 실행됩니다.
+    // 에디터 transaction 이벤트로 isEditable 동기화
+    props.editor?.on('transaction', syncEditable);
+
+    // mathlive Web Component 등록
     await import(/* @vite-ignore */ 'mathlive');
 
     if (!mathFieldRef.value) return;
 
+    // async import 완료 후 최신 편집 가능 상태 재확인
+    isEditable.value = !!props.editor?.isEditable;
+
     // 초기 LaTeX 값 설정
     mathFieldRef.value.value = props.node.attrs.latex ?? '';
 
+    // [수정] 소문자 readonly setter 사용 → read-only DOM 속성까지 함께 관리
+    mathFieldRef.value.readonly = !isEditable.value;
+
+    // [수정] input 이벤트 리스너를 isEditable 조건 밖에서 등록
+    mathFieldRef.value.addEventListener('input', () => {
+        if (!isEditable.value) return;
+        props.updateAttributes?.({ latex: mathFieldRef.value?.value ?? '' });
+    });
+
+    // change 이벤트: 포커스 이탈 시 최종 값 캡처 보장
+    mathFieldRef.value.addEventListener('change', () => {
+        if (!isEditable.value) return;
+        props.updateAttributes?.({ latex: mathFieldRef.value?.value ?? '' });
+    });
+
     if (isEditable.value) {
-        // 수식 변경 시 Tiptap 노드 속성 업데이트
-        mathFieldRef.value.addEventListener('input', () => {
-            props.updateAttributes?.({ latex: mathFieldRef.value?.value ?? '' });
-        });
+        // 새로 삽입된 빈 수식인 경우 자동 포커스
+        if (!props.node.attrs.latex) {
+            setTimeout(() => {
+                mathFieldRef.value?.focus();
+            }, 50);
+        }
     }
+});
+
+onUnmounted(() => {
+    props.editor?.off('transaction', syncEditable);
 });
 
 /** latex prop 변경 시 <math-field> 값 동기화 */
@@ -51,6 +87,12 @@ watch(() => props.node.attrs.latex, (newLatex) => {
     if (document.activeElement !== mathFieldRef.value) {
         mathFieldRef.value.value = newLatex ?? '';
     }
+});
+
+watch(isEditable, (val) => {
+    if (!mathFieldRef.value) return;
+    // [수정] 소문자 readonly setter 사용 → read-only DOM 속성도 함께 제거/추가
+    mathFieldRef.value.readonly = !val;
 });
 </script>
 
@@ -71,12 +113,8 @@ watch(() => props.node.attrs.latex, (newLatex) => {
             - display=block 으로 전체 폭 사용
             - 조회 모드: 중앙 정렬 readonly 렌더링
         -->
-        <math-field
-            ref="mathFieldRef"
-            :read-only="!isEditable"
-            class="math-field-block"
-            :class="{ 'math-field-readonly': !isEditable }"
-        />
+        <math-field ref="mathFieldRef" :read-only="!isEditable" @mousedown.stop class="math-field-block"
+            :class="{ 'math-field-readonly': !isEditable }" />
     </NodeViewWrapper>
 </template>
 
@@ -88,13 +126,17 @@ watch(() => props.node.attrs.latex, (newLatex) => {
     margin: 8px 0;
     padding: 8px;
     border-radius: 6px;
-    background-color: rgb(248, 250, 252); /* slate-50 */
-    border: 1px solid rgb(226, 232, 240); /* slate-200 */
+    background-color: rgb(248, 250, 252);
+    /* slate-50 */
+    border: 1px solid rgb(226, 232, 240);
+    /* slate-200 */
 }
 
 :global(.dark) .math-block-wrapper {
-    background-color: rgb(30, 41, 59); /* slate-800 */
-    border-color: rgb(51, 65, 85); /* slate-700 */
+    background-color: rgb(30, 41, 59);
+    /* slate-800 */
+    border-color: rgb(51, 65, 85);
+    /* slate-700 */
 }
 
 /* 드래그 핸들 */
@@ -103,7 +145,8 @@ watch(() => props.node.attrs.latex, (newLatex) => {
     display: flex;
     align-items: center;
     padding: 4px 2px;
-    color: rgb(148, 163, 184); /* slate-400 */
+    color: rgb(148, 163, 184);
+    /* slate-400 */
     cursor: grab;
     opacity: 0;
     transition: opacity 0.15s;
@@ -135,5 +178,17 @@ watch(() => props.node.attrs.latex, (newLatex) => {
     border-color: transparent !important;
     background: transparent;
     --math-field-text-align: center;
+}
+
+/* 포커스(편집) 시 배경색 밝게 수정 */
+.math-field-block:focus-within {
+    --fill-color-focus: rgba(99, 102, 241, 0.1);
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Shadow DOM 전역 오버라이드: .ML__contains-highlight 직접 타겟팅 */
+:global(.ML__contains-highlight),
+:global(.ML__focused .ML__contains-highlight) {
+    background-color: transparent !important;
 }
 </style>

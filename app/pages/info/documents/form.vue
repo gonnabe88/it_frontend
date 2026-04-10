@@ -18,8 +18,10 @@ const title = '요구사항 정의서 작성';
 definePageMeta({ title });
 
 const { createDocument } = useDocuments();
-const { uploadFile, uploadFilesBulk, updateFileMeta, getPreviewUrl } = useFiles();
+const { uploadFile, uploadFilesBulk, updateFileMeta, deleteFile, getPreviewUrl } = useFiles();
 const toast = useToast();
+const router = useRouter();
+const { removeTab } = useTabs();
 
 /**
  * 요구사항 정의서 본문 기본 템플릿 (Tiptap HTML)
@@ -104,6 +106,12 @@ const pendingAttachments = ref<File[]>([]);
  */
 const pendingImageIds = ref<string[]>([]);
 
+/** 에디터 다이얼로그를 통해 업로드된 첨부파일 ID 목록 */
+const pendingAttachmentIds = ref<string[]>([]);
+
+/** 에디터 다이얼로그용 첨부파일 목록 상태 (실시간 업로드된 파일 표시용) */
+const editorAttachments = ref<Array<{ flMngNo: string; flNm: string; flSz: number }>>([]);
+
 /** 파일 크기를 사람이 읽기 쉬운 형식으로 변환 */
 const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes}B`;
@@ -151,6 +159,38 @@ const handleEditorImageUpload = async (file: File): Promise<string> => {
     }
 };
 
+/** Tiptap 에디터 첨부파일 업로드 핸들러 (신규 작성용) */
+const handleEditorFileUpload = async (file: File) => {
+    try {
+        const result = await uploadFile(file, '첨부파일', '', '요구사항정의서');
+        pendingAttachmentIds.value.push(result.flMngNo);
+        
+        const newItem = {
+            flMngNo: result.flMngNo,
+            flNm:    result.orcFlNm,
+            flSz:    0,
+        };
+        editorAttachments.value.push(newItem);
+        return newItem;
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '파일 업로드 실패', detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.', life: 4000 });
+        throw e;
+    }
+};
+
+/** Tiptap 에디터 첨부파일 삭제 핸들러 (신규 작성용) */
+const handleEditorFileDelete = async (flMngNo: string) => {
+    try {
+        await deleteFile(flMngNo);
+        pendingAttachmentIds.value = pendingAttachmentIds.value.filter(id => id !== flMngNo);
+        editorAttachments.value = editorAttachments.value.filter(item => item.flMngNo !== flMngNo);
+        toast.add({ severity: 'success', summary: '삭제 완료', detail: '파일이 서버에서 삭제되었습니다.', life: 3000 });
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '삭제 실패', detail: e?.data?.message || '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
+        throw e;
+    }
+};
+
 /* ── 저장 처리 ── */
 const isSaving = ref(false);
 
@@ -168,15 +208,18 @@ const onSave = async () => {
             await uploadFilesBulk(pendingAttachments.value, '첨부파일', docMngNo, '요구사항정의서');
         }
 
-        // 3단계: 에디터 내 이미지의 orcPkVl을 실제 docMngNo로 업데이트
-        // (업로드 시 PK가 없어 빈 문자열로 임시 등록했던 이미지들)
+        // 3단계: 에디터 내 이미지 및 첨부파일의 orcPkVl을 실제 docMngNo로 업데이트
         for (const flMngNo of pendingImageIds.value) {
+            await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+        }
+        for (const flMngNo of pendingAttachmentIds.value) {
             await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
         }
 
         toast.add({ severity: 'success', summary: '저장 완료', detail: '요구사항 정의서가 등록되었습니다.', life: 3000 });
-        // 저장 후 목록 페이지로 이동
-        await navigateTo('/info/documents');
+        /* 저장 후 상세 화면으로 이동 + form 탭 닫기 */
+        await router.push(`/info/documents/${docMngNo}`);
+        removeTab('/info/documents/form');
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '저장 실패', detail: e?.data?.message || '저장 중 오류가 발생했습니다.', life: 4000 });
     } finally {
@@ -184,7 +227,10 @@ const onSave = async () => {
     }
 };
 
-const onCancel = () => navigateTo('/info/documents');
+const onCancel = () => {
+    router.push('/info/documents');
+    removeTab('/info/documents/form');
+};
 
 /* ── AI 반영 처리 ── */
 /**
@@ -400,6 +446,9 @@ onUnmounted(() => {
                         <ClientOnly>
                             <TiptapEditor v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세요..."
                                 :imageUploadFn="handleEditorImageUpload"
+                                :fileUploadFn="handleEditorFileUpload"
+                                :fileDeleteFn="handleEditorFileDelete"
+                                :attachmentList="editorAttachments"
                                 @update:toc="handleUpdateToc" />
                             <template #fallback>
                                 <div

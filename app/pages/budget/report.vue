@@ -33,11 +33,12 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onActivated } from 'vue';
 import { type ProjectDetail, useProjects } from '~/composables/useProjects';
 import { type ItCost, useCost } from '~/composables/useCost';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
+import { formatKoreanDate } from '~/utils/common';
 import { useApprovals, type CreateApplicationRequest, type OrcItem } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
 import type { OrgUser } from '~/composables/useOrganization';
@@ -83,7 +84,7 @@ const approvalLine = ref({
     drafter: {
         name: user.value?.empNm || '',
         rank: '',
-        date: new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\. /g, '.').replace(/\.$/, ''),
+        date: formatKoreanDate(),
         id: user.value?.eno || ''
     },
     /** 팀장 결재자 (직원 검색으로 설정) */
@@ -128,14 +129,10 @@ const onEmployeeSelect = (employee: EmployeeSelectResult) => {
     const rank = employee.ptCNm || '';
     const id = employee.eno;
 
-    const dateStr = new Date()
-        .toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' })
-        .replace(/\. /g, '.').replace(/\.$/, '');
-
     if (currentSearchTarget.value === 'teamLead') {
-        approvalLine.value.teamLead = { name, rank, date: dateStr, id };
+        approvalLine.value.teamLead = { name, rank, date: '', id };
     } else {
-        approvalLine.value.deptHead = { name, rank, date: dateStr, id };
+        approvalLine.value.deptHead = { name, rank, date: '', id };
     }
 
     /* 결재자 변경 시 PDF 자동 재생성 */
@@ -154,7 +151,6 @@ const generatePdf = async () => {
     if (projects.value.length === 0 && costs.value.length === 0) return;
 
     try {
-        console.log('=== STARTING PDF GENERATION ===');
         const url = await generateReport(projects.value, approvalLine.value, costs.value);
 
         if (url) {
@@ -163,21 +159,27 @@ const generatePdf = async () => {
                 URL.revokeObjectURL(pdfUrl.value);
             }
             pdfUrl.value = url;
-            console.log('✓ PDF URL set successfully');
-        } else {
-            console.error('✗ No URL received from generateReport');
         }
     } catch (error) {
-        console.error('✗ Error generating PDF:', error);
+        console.error('PDF 생성 실패:', error);
     }
 };
 
 /**
  * 초기 데이터 로드
- * sessionStorage에서 선택된 ID들을 읽고,
- * 정보화사업/전산업무비 상세 데이터를 병렬로 일괄 조회한 후 PDF를 초기 생성합니다.
+ * app.vue에서 <NuxtPage keepalive>로 페이지가 캐시되므로,
+ * onMounted 대신 onActivated를 사용하여 재방문 시에도 데이터를 새로 로드합니다.
+ * - 첫 방문/재방문: sessionStorage 읽기 → 데이터 병렬 조회 → PDF 생성
+ * - sessionStorage가 비어 있고 기존 데이터가 있으면 PDF만 재생성
  */
-onMounted(async () => {
+onActivated(async () => {
+    /* 이전 PDF URL 메모리 해제 및 상태 초기화 */
+    if (pdfUrl.value) {
+        URL.revokeObjectURL(pdfUrl.value);
+        pdfUrl.value = null;
+    }
+    loading.value = true;
+
     let pIds: string[] = [];
     let cIds: string[] = [];
 
@@ -205,11 +207,17 @@ onMounted(async () => {
         }
     }
 
-    /* 아무것도 선택되지 않은 경우 목록으로 리다이렉트 */
+    /* sessionStorage에 새 데이터가 없으면 기존 상태 유지 (탭 클릭으로 재방문한 경우) */
     if (pIds.length === 0 && cIds.length === 0) {
+        if (projects.value.length === 0 && costs.value.length === 0) {
+            loading.value = false;
+            alert('선택된 항목이 없습니다.');
+            navigateTo('/budget/list');
+            return;
+        }
+        /* 이전 데이터가 있으면 PDF만 재생성 */
+        await generatePdf();
         loading.value = false;
-        alert('선택된 항목이 없습니다.');
-        navigateTo('/budget/list');
         return;
     }
 
@@ -237,12 +245,10 @@ onMounted(async () => {
 
 /**
  * 전자결재 상신 처리
- * 팀장/부서장 지정 확인 후 정보화사업/전산업무비 각각의
- * CreateApplicationRequest를 구성하여 Promise.all로 동시 상신합니다.
+ * 팀장/부서장 지정 확인 후 정보화사업/전산업무비를 통합하여 단일 결재 신청을 생성합니다.
  *
  * [apfDtlCone 구조]
- * - 정보화사업: { projects: [ProjectDetail], approvalLine } JSON 문자열
- * - 전산업무비: { costs: [ItCost], approvalLine } JSON 문자열
+ * { projects: [ProjectDetail], costs: [ItCost], approvalLine } 단일 JSON 문자열
  */
 const submitApproval = async () => {
     /* 1. 결재 라인 유효성 검사 */

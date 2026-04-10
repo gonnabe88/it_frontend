@@ -18,7 +18,7 @@ export async function mockLoginApi(
     page: Page,
     user = { eno: 'E001', empNm: '홍길동' }
 ) {
-    await page.route('**/api/auth/login', route => {
+    await page.route('**/api/auth/login*', route => {
         route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -41,8 +41,13 @@ export async function mockApi<T>(
     body: T,
     status = 200
 ) {
-    await page.route(`**${urlPattern}`, route => {
-        route.fulfill({
+    // 정규식을 사용하여 더욱 유연하고 확실하게 매칭합니다.
+    const escapedPattern = urlPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedPattern);
+
+    await page.route(regex, async route => {
+        console.log(`[Mock Hit] ${route.request().method()} ${route.request().url()}`);
+        await route.fulfill({
             status,
             contentType: 'application/json',
             body: JSON.stringify(body)

@@ -18,14 +18,13 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import * as XLSX from 'xlsx';
-import ApprovalTimeline from '~/components/approval/ApprovalTimeline.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { getApprovalTagClass, formatBudget as formatBudgetUtil } from '~/utils/common';
+import { formatBudget as formatBudgetUtil, formatKoreanDate } from '~/utils/common';
 
 definePageMeta({
     title: '전산예산 결재 상신'
@@ -54,6 +53,7 @@ interface UnifiedBudgetItem {
     _link: string;
     name: string;
     category: string;
+    bgYy: string;
     totalBg: number;
     assetBg: number;
     costBg: number;
@@ -61,9 +61,7 @@ interface UnifiedBudgetItem {
     managerNm: string;
     sttDt: string;
     endDt: string;
-    apfSts: string;
     lstChgDtm: string;
-    applicationInfo?: any;
 }
 
 /**
@@ -75,7 +73,8 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         _type: (p as any).ornYn === 'Y' ? '경상' : '사업',
         _link: `/info/projects/${p.prjMngNo}`,
         name: p.prjNm,
-        category: p.prjTp,
+        category: (p as any).pulDtt || '',
+        bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
         assetBg: p.assetBg || 0,
         costBg: p.costBg || 0,
@@ -83,27 +82,25 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         managerNm: p.svnDpmCgprNm || '',
         sttDt: p.sttDt || '',
         endDt: p.endDt || '',
-        apfSts: p.applicationInfo?.apfSts || '',
-        lstChgDtm: (p as any).lstChgDtm || '',
-        applicationInfo: p.applicationInfo
+        lstChgDtm: (p as any).lstChgDtm || ''
     }));
 
+    /* 전산업무비 매핑 (assetBg/costBg는 백엔드에서 비목코드 기준으로 계산) */
     const costItems: UnifiedBudgetItem[] = costs.value.map((c: ItCost) => ({
         _id: c.itMngcNo || '',
         _type: '비용',
-        _link: `/info/cost/${c.itMngcNo}`,
+        _link: '/info/cost/',
         name: c.cttNm,
-        category: c.cttTp,
+        category: c.pulDtt || '',
+        bgYy: String(c.bgYy || ''),
         totalBg: c.itMngcBg || 0,
         assetBg: c.assetBg || 0,
-        costBg: c.itMngcBg || 0,
-        deptNm: c.pulDpmNm || '',
-        managerNm: c.pulCgprNm || '',
+        costBg: c.costBg || 0,
+        deptNm: c.biceDpmNm || '',
+        managerNm: c.cgprNm || '',
         sttDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         endDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
-        apfSts: c.apfSts || '',
-        lstChgDtm: (c as any).lstChgDtm || '',
-        applicationInfo: (c as any).applicationInfo
+        lstChgDtm: (c as any).lstChgDtm || ''
     }));
 
     return [...projectItems, ...costItems];
@@ -131,8 +128,6 @@ const getPrjTypeClass = (type: string) =>
 /** 텍스트 검색어 */
 const search = ref('');
 
-/* filteredItems는 조회 필터 Drawer 섹션에서 정의됩니다. */
-
 /* ── 페이지 크기 ── */
 const pageSizeOptions = [
     { label: '10건', value: 10 },
@@ -147,11 +142,9 @@ const selectedItems = ref<UnifiedBudgetItem[]>([]);
 
 /**
  * 선택 가능한 항목이 모두 선택됐을 때 true
- * (apfSts 존재 항목은 선택 불가)
  */
 const headerChecked = computed(() => {
-    const selectable = filteredItems.value.filter(i => !i.apfSts);
-    return selectable.length > 0 && selectedItems.value.length === selectable.length;
+    return filteredItems.value.length > 0 && selectedItems.value.length === filteredItems.value.length;
 });
 
 /** 일부만 선택된 경우 인디터미네이트 */
@@ -161,7 +154,7 @@ const headerIndeterminate = computed(() =>
 
 /** 헤더 체크박스: 전체 선택 / 전체 해제 */
 const toggleSelectAll = (val: boolean) => {
-    selectedItems.value = val ? filteredItems.value.filter(i => !i.apfSts) : [];
+    selectedItems.value = val ? [...filteredItems.value] : [];
 };
 
 /** 행 선택 여부 확인 */
@@ -170,7 +163,6 @@ const isSelected = (data: UnifiedBudgetItem) =>
 
 /** 개별 행 토글 */
 const toggleRow = (data: UnifiedBudgetItem, val: boolean) => {
-    if (data.apfSts) return; // 결재 진행 중 항목은 선택 불가
     selectedItems.value = val
         ? [...selectedItems.value, data]
         : selectedItems.value.filter(i => i._id !== data._id);
@@ -228,53 +220,32 @@ const requestApproval = () => {
 };
 
 /**
- * BudgetSummaryCards에 전달할 정보화사업 목록 (경상사업 제외)
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
+ * 현재 조회 필터가 적용된 항목 ID 셋 (카드 통계에 사용)
+ * 선택된 항목이 있으면 선택된 것만, 없으면 필터링된 목록 기준으로 표시합니다.
  */
-const cardProjects = computed(() =>
-    hasSelection.value
-        ? projects.value.filter(p =>
-            (p as any).ornYn !== 'Y' &&
-            selectedItems.value.some(i => i._type === '사업' && i._id === p.prjMngNo))
-        : projects.value.filter(p => (p as any).ornYn !== 'Y')
+const cardSourceItems = computed(() =>
+    hasSelection.value ? selectedItems.value : filteredItems.value
 );
 
 /**
- * BudgetSummaryCards에 전달할 경상사업 목록
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
+ * BudgetSummaryCards에 전달할 정보화사업/경상사업/전산업무비 목록
+ * cardSourceItems를 한 번만 순회하여 유형별 ID 셋을 구성합니다.
  */
-const cardOrdinary = computed(() =>
-    hasSelection.value
-        ? projects.value.filter(p =>
-            (p as any).ornYn === 'Y' &&
-            selectedItems.value.some(i => i._type === '경상' && i._id === p.prjMngNo))
-        : projects.value.filter(p => (p as any).ornYn === 'Y')
-);
-
-/**
- * BudgetSummaryCards에 전달할 전산업무비 목록
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
- */
-const cardCosts = computed(() =>
-    hasSelection.value
-        ? costs.value.filter(c =>
-            selectedItems.value.some(i => i._type === '비용' && i._id === c.itMngcNo))
-        : costs.value
-);
-
-/* ── 결재 타임라인 다이얼로그 ── */
-const showTimelineDialog = ref(false);
-const selectedTimelineData = ref<any>(null);
-
-/**
- * 결재 진행 상황 타임라인 열기
- * @param data - 결재 항목
- */
-const openTimeline = (data: any) => {
-    if (!data.applicationInfo) return;
-    selectedTimelineData.value = data.applicationInfo;
-    showTimelineDialog.value = true;
-};
+const categorizedCards = computed(() => {
+    const projectIds = new Set<string>();
+    const ordinaryIds = new Set<string>();
+    const costIds = new Set<string>();
+    for (const item of cardSourceItems.value) {
+        if (item._type === '사업') projectIds.add(item._id);
+        else if (item._type === '경상') ordinaryIds.add(item._id);
+        else costIds.add(item._id);
+    }
+    return {
+        projects: projects.value.filter(p => (p as any).ornYn !== 'Y' && projectIds.has(p.prjMngNo)),
+        ordinary: projects.value.filter(p => (p as any).ornYn === 'Y' && ordinaryIds.has(p.prjMngNo)),
+        costs: costs.value.filter(c => costIds.has(c.itMngcNo || ''))
+    };
+});
 
 /* ── 조회 필터 Drawer ── */
 /** Drawer 표시 여부 */
@@ -284,36 +255,67 @@ const visibleDrawer = ref(false);
  * [ApprovalFilters] 결재 상신 페이지 조회 필터 구조
  */
 interface ApprovalFilters {
-    type: string[];    // 구분 (사업/비용)
-    deptNm: string[];  // 담당부서
-    apfSts: string[];  // 결재현황
+    type: string[];        // 구분 (사업/비용/경상)
+    bgYy: string;          // 예산연도
+    category: string[];    // 신규/계속
+    totalBgMin: number | null;  // 총예산 최소
+    totalBgMax: number | null;  // 총예산 최대
+    assetBgMin: number | null;  // 자본예산 최소
+    assetBgMax: number | null;  // 자본예산 최대
+    costBgMin: number | null;   // 일반관리비 최소
+    costBgMax: number | null;   // 일반관리비 최대
+    deptNm: string[];      // 담당부서
 }
+
+/* ── 예산연도 기본값: 1~9월 → 올해, 10~12월 → 내년 ── */
+const now = new Date();
+const defaultBgYy = now.getMonth() < 9
+    ? String(now.getFullYear())
+    : String(now.getFullYear() + 1);
+
+/** 예산연도 옵션 (전년/올해/내년) */
+const bgYyOptions = [
+    String(now.getFullYear() - 1),
+    String(now.getFullYear()),
+    String(now.getFullYear() + 1),
+];
+
+/** 신규/계속 옵션 (데이터에서 추출) */
+const categoryOptions = computed(() =>
+    [...new Set(unifiedItems.value.map(i => i.category).filter(Boolean))]
+);
 
 /** 현재 적용된 조회 필터 */
 const filters = ref<ApprovalFilters>({
     type: [],
-    deptNm: [],
-    apfSts: []
+    bgYy: defaultBgYy,
+    category: [],
+    totalBgMin: null,
+    totalBgMax: null,
+    assetBgMin: null,
+    assetBgMax: null,
+    costBgMin: null,
+    costBgMax: null,
+    deptNm: []
 });
 
 /** 필터 적용 여부 (조회 버튼 뱃지 표시용) */
-const hasFilters = computed(() =>
-    filters.value.type.length > 0 ||
-    filters.value.deptNm.length > 0 ||
-    filters.value.apfSts.length > 0
-);
+const hasFilters = computed(() => {
+    const f = filters.value;
+    return f.type.length > 0 ||
+        f.bgYy !== defaultBgYy ||
+        f.category.length > 0 ||
+        f.totalBgMin !== null || f.totalBgMax !== null ||
+        f.assetBgMin !== null || f.assetBgMax !== null ||
+        f.costBgMin !== null || f.costBgMax !== null ||
+        f.deptNm.length > 0;
+});
 
 /** 구분 AutoComplete 옵션 */
 const typeOptions = ['사업', '비용', '경상'];
 
 /** 담당부서 AutoComplete 검색 결과 */
 const deptSuggestions = ref<string[]>([]);
-
-/** 결재현황 AutoComplete 옵션 */
-const apfStsOptions = computed(() => {
-    const set = new Set(unifiedItems.value.map(i => i.apfSts).filter(Boolean));
-    return Array.from(set);
-});
 
 /**
  * 담당부서 AutoComplete 검색
@@ -328,7 +330,13 @@ const searchDept = (query: string) => {
 
 /** 필터 초기화 */
 const resetFilters = () => {
-    filters.value = { type: [], deptNm: [], apfSts: [] };
+    filters.value = {
+        type: [], bgYy: '', category: [],
+        totalBgMin: null, totalBgMax: null,
+        assetBgMin: null, assetBgMax: null,
+        costBgMin: null, costBgMax: null,
+        deptNm: []
+    };
 };
 
 /**
@@ -337,6 +345,7 @@ const resetFilters = () => {
  */
 const filteredItems = computed(() =>
     unifiedItems.value.filter(item => {
+        const f = filters.value;
         /* 텍스트 검색 */
         if (search.value) {
             const kw = search.value.toLowerCase();
@@ -347,11 +356,22 @@ const filteredItems = computed(() =>
             if (!textMatch) return false;
         }
         /* 구분 필터 */
-        if (filters.value.type.length > 0 && !filters.value.type.includes(item._type)) return false;
+        if (f.type.length > 0 && !f.type.includes(item._type)) return false;
+        /* 예산연도 필터 */
+        if (f.bgYy && item.bgYy !== f.bgYy) return false;
+        /* 신규/계속 필터 */
+        if (f.category.length > 0 && !f.category.includes(item.category)) return false;
+        /* 총예산 범위 필터 */
+        if (f.totalBgMin !== null && item.totalBg < f.totalBgMin) return false;
+        if (f.totalBgMax !== null && item.totalBg > f.totalBgMax) return false;
+        /* 자본예산 범위 필터 */
+        if (f.assetBgMin !== null && item.assetBg < f.assetBgMin) return false;
+        if (f.assetBgMax !== null && item.assetBg > f.assetBgMax) return false;
+        /* 일반관리비 범위 필터 */
+        if (f.costBgMin !== null && item.costBg < f.costBgMin) return false;
+        if (f.costBgMax !== null && item.costBg > f.costBgMax) return false;
         /* 담당부서 필터 */
-        if (filters.value.deptNm.length > 0 && !filters.value.deptNm.includes(item.deptNm)) return false;
-        /* 결재현황 필터 */
-        if (filters.value.apfSts.length > 0 && !filters.value.apfSts.includes(item.apfSts)) return false;
+        if (f.deptNm.length > 0 && !f.deptNm.includes(item.deptNm)) return false;
         return true;
     })
 );
@@ -371,8 +391,7 @@ const downloadExcel = () => {
         '담당부서': item.deptNm,
         '담당자': item.managerNm,
         '시작일': item.sttDt,
-        '종료일': item.endDt,
-        '결재현황': item.apfSts
+        '종료일': item.endDt
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -383,6 +402,8 @@ const downloadExcel = () => {
 /* ── PDF 보고서 다운로드 ── */
 /** PDF 생성 로딩 상태 */
 const reportLoading = ref(false);
+/** 마지막으로 생성된 PDF Blob URL (메모리 해제용) */
+const lastPdfUrl = ref<string | null>(null);
 const { user } = useAuth();
 const { generateReport } = usePdfReport();
 
@@ -395,27 +416,23 @@ const downloadPdf = async () => {
         const projectIds = filteredItems.value.filter(i => i._type === '사업' || i._type === '경상').map(i => i._id);
         const costIds = filteredItems.value.filter(i => i._type === '비용').map(i => i._id);
 
-        const projectDetails: ProjectDetail[] = projectIds.length
-            ? await fetchProjectsBulk(projectIds)
-            : [];
-        const costDetails: ItCost[] = costIds.length
-            ? await fetchCostsBulk(costIds)
-            : [];
-
-        // 결재선: 기안자는 로그인 사용자, 팀장/부서장은 미지정
-        const today = new Date().toLocaleDateString('ko-KR', {
-            year: 'numeric', month: '2-digit', day: '2-digit'
-        }).replace(/\. /g, '.').replace(/\.$/, '');
+        const [projectDetails, costDetails]: [ProjectDetail[], ItCost[]] = await Promise.all([
+            projectIds.length ? fetchProjectsBulk(projectIds) : Promise.resolve([]),
+            costIds.length ? fetchCostsBulk(costIds) : Promise.resolve([])
+        ]);
 
         const approvalLine = {
-            drafter: { name: user.value?.empNm || '', rank: '', date: today, id: user.value?.eno || '' },
+            drafter: { name: user.value?.empNm || '', rank: '', date: formatKoreanDate(), id: user.value?.eno || '' },
             teamLead: { name: '', rank: '', date: '', id: '' },
             deptHead: { name: '', rank: '', date: '', id: '' }
         };
 
-        const pdfUrl = await generateReport(projectDetails, approvalLine, costDetails);
-        if (pdfUrl) {
-            window.open(pdfUrl, '_blank');
+        const url = await generateReport(projectDetails, approvalLine, costDetails);
+        if (url) {
+            /* 이전 Blob URL 메모리 해제 */
+            if (lastPdfUrl.value) URL.revokeObjectURL(lastPdfUrl.value);
+            lastPdfUrl.value = url;
+            window.open(url, '_blank');
         }
     } catch (e) {
         console.error('PDF 생성 실패:', e);
@@ -424,6 +441,10 @@ const downloadPdf = async () => {
         reportLoading.value = false;
     }
 };
+
+onBeforeUnmount(() => {
+    if (lastPdfUrl.value) URL.revokeObjectURL(lastPdfUrl.value);
+});
 
 </script>
 
@@ -463,7 +484,7 @@ const downloadPdf = async () => {
         </div>
 
         <!-- 예산 현황 요약 카드 -->
-        <BudgetSummaryCards :projects="cardProjects" :costs="cardCosts" :ordinary="cardOrdinary"
+        <BudgetSummaryCards :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
             :selectedUnit="selectedUnit" />
 
         <!-- 통합 DataTable -->
@@ -495,7 +516,7 @@ const downloadPdf = async () => {
             <!-- 통합 DataTable -->
             <DataTable :value="filteredItems" paginator :rows="pageSize" dataKey="_id" sortField="lstChgDtm"
                 :sortOrder="-1" tableStyle="min-width: 50rem"
-                :rowClass="(data: any) => data.apfSts ? 'row-apf-locked' : ''" :pt="{
+                :pt="{
                     headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                     bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                 }">
@@ -507,7 +528,7 @@ const downloadPdf = async () => {
                             @update:modelValue="toggleSelectAll" />
                     </template>
                     <template #body="{ data }">
-                        <Checkbox binary :modelValue="isSelected(data)" :disabled="!!data.apfSts"
+                        <Checkbox binary :modelValue="isSelected(data)"
                             @update:modelValue="(val: boolean) => toggleRow(data, val)" />
                     </template>
                 </Column>
@@ -523,6 +544,9 @@ const downloadPdf = async () => {
                             class="border-0" rounded />
                     </template>
                 </Column>
+
+                <!-- 예산연도 -->
+                <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
 
                 <!-- 사업명/계약명: 상세 링크 -->
                 <Column field="name" header="사업명/계약명" sortable headerClass="font-bold">
@@ -575,25 +599,18 @@ const downloadPdf = async () => {
                 <!-- 종료일 -->
                 <Column field="endDt" header="종료일" sortable></Column>
 
-                <!-- 결재현황 -->
-                <Column field="apfSts" header="결재현황" sortable>
-                    <template #body="slotProps">
-                        <Tag v-if="slotProps.data.apfSts" :value="slotProps.data.apfSts"
-                            :class="[getApprovalTagClass(slotProps.data.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
-                            class="border-0" rounded @click="openTimeline(slotProps.data)" v-tooltip="'결재 진행 상황 보기'" />
-                        <span v-else class="text-zinc-400">-</span>
-                    </template>
-                </Column>
             </DataTable>
         </div>
 
-        <!-- 결재 타임라인 다이얼로그 -->
-        <ApprovalTimeline v-if="selectedTimelineData" v-model:visible="showTimelineDialog"
-            :approvalData="selectedTimelineData" />
-
         <!-- 조회 필터 Drawer -->
-        <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-96">
+        <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[480px]">
             <div class="flex flex-col gap-6 py-2">
+
+                <!-- 예산연도 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">예산연도</label>
+                    <SelectButton v-model="filters.bgYy" :options="bgYyOptions" :allowEmpty="true" />
+                </div>
 
                 <!-- 구분 필터 -->
                 <div class="flex flex-col gap-2">
@@ -606,22 +623,58 @@ const downloadPdf = async () => {
                     </div>
                 </div>
 
+                <!-- 신규/계속 필터 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">신규/계속</label>
+                    <div class="flex gap-2 flex-wrap">
+                        <Button v-for="opt in categoryOptions" :key="opt" :label="opt" size="small" outlined
+                            :severity="filters.category.includes(opt) ? 'primary' : 'secondary'" @click="filters.category.includes(opt)
+                                ? filters.category.splice(filters.category.indexOf(opt), 1)
+                                : filters.category.push(opt)" />
+                    </div>
+                </div>
+
+                <!-- 총예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">총예산 (원)</label>
+                    <div class="flex gap-2">
+                        <InputNumber v-model="filters.totalBgMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <span class="self-center text-zinc-400">~</span>
+                        <InputNumber v-model="filters.totalBgMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                    </div>
+                </div>
+
+                <!-- 자본예산 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">자본예산 (원)</label>
+                    <div class="flex gap-2">
+                        <InputNumber v-model="filters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <span class="self-center text-zinc-400">~</span>
+                        <InputNumber v-model="filters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                    </div>
+                </div>
+
+                <!-- 일반관리비 범위 -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">일반관리비 (원)</label>
+                    <div class="flex gap-2">
+                        <InputNumber v-model="filters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <span class="self-center text-zinc-400">~</span>
+                        <InputNumber v-model="filters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                    </div>
+                </div>
+
                 <!-- 담당부서 필터 -->
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">담당부서</label>
                     <AutoComplete v-model="filters.deptNm" :suggestions="deptSuggestions" multiple fluid
                         @complete="searchDept($event.query)" placeholder="부서명 검색..." />
-                </div>
-
-                <!-- 결재현황 필터 -->
-                <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">결재현황</label>
-                    <div class="flex gap-2 flex-wrap">
-                        <Button v-for="opt in apfStsOptions" :key="opt" :label="opt" size="small" outlined
-                            :severity="filters.apfSts.includes(opt) ? 'primary' : 'secondary'" @click="filters.apfSts.includes(opt)
-                                ? filters.apfSts.splice(filters.apfSts.indexOf(opt), 1)
-                                : filters.apfSts.push(opt)" />
-                    </div>
                 </div>
 
             </div>

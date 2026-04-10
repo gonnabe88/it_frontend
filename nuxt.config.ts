@@ -20,6 +20,7 @@ import Aura from '@primevue/themes/aura';
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
+  ssr: process.env.NUXT_SSR !== 'false', // 환경변수에 따라 SSR 비활성화 가능 (E2E 테스트용)
 
   /* ── Nuxt 4 호환 모드: app/ 디렉토리를 소스 루트(~)로 사용 ── */
   future: {
@@ -129,9 +130,7 @@ export default defineNuxtConfig({
 
   /* ── 글로벌 CSS 파일 ── */
   css: [
-    'primeicons/primeicons.css',                           // PrimeVue 아이콘 폰트
     '~/assets/css/main.css',                               // Tailwind CSS + 커스텀 유틸리티 클래스
-    '@excalidraw/excalidraw/index.css'                     // Excalidraw UI 스타일
   ],
 
   /* ── PostCSS 플러그인: Tailwind CSS + 자동 벤더 프리픽스 ── */

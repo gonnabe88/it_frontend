@@ -73,7 +73,7 @@ const totalCostBudget = computed(() =>
 const costByCategory = computed(() => {
     const map: Record<string, number> = {};
     props.costs.forEach(c => {
-        const key = c.ioeNm || '기타';
+        const key = c.ioeC || '기타';
         map[key] = (map[key] || 0) + (c.itMngcBg || 0);
     });
     return map;

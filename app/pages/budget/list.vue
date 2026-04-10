@@ -55,6 +55,9 @@ const { data: ordinaryData, error: ordinaryError } = await fetchProjects({ ornYn
 /** 경상사업 목록 (null 안전 처리) */
 const ordinary = computed(() => ordinaryData.value || []);
 
+/* ── 공통코드 코드명 변환 ── */
+const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
+
 /* ── 전산업무비 데이터 ── */
 const { fetchCosts } = useCost();
 const { data: costsData, error: costsError } = await fetchCosts();
@@ -70,7 +73,8 @@ interface UnifiedBudgetItem {
     _type: string;       // 구분 ('정보화사업' | '전산업무비')
     _link: string;       // 상세 페이지 링크
     name: string;        // 사업명/계약명
-    category: string;    // 신규/계속 (prjTp / cttTp)
+    category: string;    // 신규/계속 (pulDtt)
+    bgYy: string;        // 예산연도
     totalBg: number;     // 총 예산
     assetBg: number;     // 자본예산
     costBg: number;      // 일반관리비
@@ -93,7 +97,8 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         _type: '사업',
         _link: `/info/projects/${p.prjMngNo}`,
         name: p.prjNm,
-        category: p.prjTp,
+        category: (p as any).pulDtt || '',
+        bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
         assetBg: p.assetBg || 0,
         costBg: p.costBg || 0,
@@ -105,18 +110,19 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         lstChgDtm: (p as any).lstChgDtm || '',
         applicationInfo: p.applicationInfo
     }));
-    /* 전산업무비 매핑 */
+    /* 전산업무비 매핑 (assetBg/costBg는 백엔드에서 비목코드 기준으로 계산) */
     const costItems: UnifiedBudgetItem[] = costs.value.map((c: ItCost) => ({
         _id: c.itMngcNo || '',
         _type: '비용',
-        _link: `/info/cost/${c.itMngcNo}`,
+        _link: '/info/cost/',
         name: c.cttNm,
-        category: c.cttTp,
+        category: c.pulDtt || '',
+        bgYy: String(c.bgYy || ''),
         totalBg: c.itMngcBg || 0,
         assetBg: c.assetBg || 0,
-        costBg: c.itMngcBg || 0,
-        deptNm: c.pulDpmNm || '',
-        managerNm: c.pulCgprNm || '',
+        costBg: c.costBg || 0,
+        deptNm: c.biceDpmNm || '',
+        managerNm: c.cgprNm || '',
         sttDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         endDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         apfSts: c.apfSts || '',
@@ -127,9 +133,10 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
     const ordinaryItems: UnifiedBudgetItem[] = ordinary.value.map((p: Project) => ({
         _id: p.prjMngNo,
         _type: '경상',
-        _link: `/info/projects/ordinary/form?id=${p.prjMngNo}`,
+        _link: `/info/projects/${p.prjMngNo}`,
         name: p.prjNm,
-        category: p.prjTp,
+        category: (p as any).pulDtt || '',
+        bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
         assetBg: p.assetBg || 0,
         costBg: p.costBg || 0,
@@ -257,9 +264,11 @@ const resetProjectFilters = () => {
 
 /* ── 전산업무비 Drawer 필터 ── */
 const costFilters = ref({
+    ioeC: [] as string[],
     ioeNm: [] as string[],
     cttTp: [] as string[],
     cttOpp: [] as string[],
+    biceDpmNm: [] as string[],
     pulDpmNm: [] as string[],
     apfSts: [] as string[],
     budgetMin: null as number | null,
@@ -272,9 +281,11 @@ const costFilters = ref({
 
 /** 전산업무비 필터 적용 여부 */
 const hasCostFilters = computed(() =>
+    costFilters.value.ioeC.length > 0 ||
     costFilters.value.ioeNm.length > 0 ||
     costFilters.value.cttTp.length > 0 ||
     costFilters.value.cttOpp.length > 0 ||
+    costFilters.value.biceDpmNm.length > 0 ||
     costFilters.value.pulDpmNm.length > 0 ||
     costFilters.value.apfSts.length > 0 ||
     costFilters.value.budgetMin !== null ||
@@ -285,10 +296,10 @@ const hasCostFilters = computed(() =>
     costFilters.value.costBgMax !== null
 );
 
-const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeNm).filter(Boolean))]);
+const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeC).filter(Boolean))]);
 const costCttTps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttTp).filter(Boolean))]);
 const costCttOpps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttOpp).filter(Boolean))]);
-const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.pulDpmNm).filter(Boolean))]);
+const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.biceDpmNm).filter(Boolean))]);
 const costApfStsOpts = computed(() => [...new Set(costs.value.map((c: ItCost) => c.apfSts).filter(Boolean))]);
 
 const filteredCostIoeNms = ref<string[]>([]);
@@ -305,20 +316,20 @@ const searchCostApfSts = (e: { query: string }) => { filteredCostApfSts.value = 
 
 /** 전산업무비 필터 초기화 */
 const resetCostFilters = () => {
-    costFilters.value = { ioeNm: [], cttTp: [], cttOpp: [], pulDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
+    costFilters.value = { ioeC: [], ioeNm: [], cttTp: [], cttOpp: [], biceDpmNm: [], pulDpmNm: [], apfSts: [], budgetMin: null, budgetMax: null, assetBgMin: null, assetBgMax: null, costBgMin: null, costBgMax: null };
 };
 
 /* ── 경상사업 Drawer 필터 ── */
 const ordinaryFilters = ref({
     name: '',
-    prjYy: '',
+    bgYy: '',
     status: [] as string[]
 });
 
 /** 경상사업 필터 적용 여부 */
 const hasOrdinaryFilters = computed(() =>
     ordinaryFilters.value.name !== '' ||
-    ordinaryFilters.value.prjYy !== '' ||
+    ordinaryFilters.value.bgYy !== '' ||
     ordinaryFilters.value.status.length > 0
 );
 
@@ -330,7 +341,7 @@ const searchOrdinaryStatus = (e: { query: string }) => {
 
 /** 경상사업 필터 초기화 */
 const resetOrdinaryFilters = () => {
-    ordinaryFilters.value = { name: '', prjYy: '', status: [] };
+    ordinaryFilters.value = { name: '', bgYy: '', status: [] };
 };
 
 /* ── 전체 탭 Drawer 필터 ── */
@@ -420,15 +431,15 @@ const filteredCosts = computed(() => {
         /* 텍스트 검색 */
         if (costSearch.value) {
             const kw = costSearch.value.toLowerCase();
-            if (!c.ioeNm?.toLowerCase().includes(kw) &&
+            if (!c.ioeC?.toLowerCase().includes(kw) &&
                 !c.cttNm?.toLowerCase().includes(kw) &&
                 !c.cttOpp?.toLowerCase().includes(kw)) return false;
         }
         /* Drawer 필터 */
-        if (costFilters.value.ioeNm.length > 0 && !costFilters.value.ioeNm.includes(c.ioeNm)) return false;
+        if (costFilters.value.ioeC.length > 0 && !costFilters.value.ioeC.includes(c.ioeC)) return false;
         if (costFilters.value.cttTp.length > 0 && !costFilters.value.cttTp.includes(c.cttTp)) return false;
         if (costFilters.value.cttOpp.length > 0 && !costFilters.value.cttOpp.includes(c.cttOpp)) return false;
-        if (costFilters.value.pulDpmNm.length > 0 && !costFilters.value.pulDpmNm.includes(c.pulDpmNm)) return false;
+        if (costFilters.value.biceDpmNm.length > 0 && !costFilters.value.biceDpmNm.includes(c.biceDpmNm)) return false;
         if (costFilters.value.apfSts.length > 0 && !costFilters.value.apfSts.includes(c.apfSts)) return false;
         if (costFilters.value.budgetMin !== null && c.itMngcBg < costFilters.value.budgetMin) return false;
         if (costFilters.value.budgetMax !== null && c.itMngcBg > costFilters.value.budgetMax) return false;
@@ -482,7 +493,7 @@ const filteredOrdinary = computed(() => {
         }
         /* Drawer 필터 */
         if (ordinaryFilters.value.name && !p.prjNm?.includes(ordinaryFilters.value.name)) return false;
-        if (ordinaryFilters.value.prjYy && String((p as any).prjYy) !== ordinaryFilters.value.prjYy) return false;
+        if (ordinaryFilters.value.bgYy && String((p as any).bgYy) !== ordinaryFilters.value.bgYy) return false;
         if (ordinaryFilters.value.status.length > 0 && !ordinaryFilters.value.status.includes(p.prjSts)) return false;
         return true;
     });
@@ -624,13 +635,13 @@ const downloadProjectsExcel = () => {
 const downloadCostsExcel = () => {
     const rows = filteredCosts.value.map((c: ItCost) => ({
         '계약명': c.cttNm,
-        '비목명': c.ioeNm,
+        '비목코드': c.ioeC,
         '신규/계속': c.cttTp,
         '총 예산(원)': c.itMngcBg,
         '자본예산(원)': c.assetBg || 0,
         '계약상대처': c.cttOpp,
-        '추진부서': c.pulDpmNm,
-        '담당자': c.pulCgprNm,
+        '담당부서': c.biceDpmNm,
+        '담당자': c.cgprNm,
         '지급예정월': c.fstDfrDt,
         '결재현황': c.apfSts
     }));
@@ -899,6 +910,8 @@ const openTimeline = (data: any) => {
                                         : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'" class="border-0" rounded />
                         </template>
                     </Column>
+                    <!-- 예산연도 -->
+                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
                     <!-- 사업명/계약명: 상세 페이지 링크 -->
                     <Column field="name" header="사업명/계약명" sortable headerClass="font-bold">
                         <template #body="slotProps">
@@ -972,6 +985,8 @@ const openTimeline = (data: any) => {
                         headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                         bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                     }">
+                    <!-- 예산연도 -->
+                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
                     <!-- 사업명: 상세 페이지 링크 -->
                     <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
                         <template #body="slotProps">
@@ -984,7 +999,7 @@ const openTimeline = (data: any) => {
                     <!-- 신규/계속 태그 -->
                     <Column field="prjTp" header="신규/계속" sortable>
                         <template #body="slotProps">
-                            <Tag :value="slotProps.data.prjTp" :class="getPrjTypeClass(slotProps.data.prjTp)"
+                            <Tag :value="getPrjTpName(slotProps.data.prjTp)" :class="getPrjTypeClass(slotProps.data.prjTp)"
                                 class="border-0" rounded />
                         </template>
                     </Column>
@@ -1045,10 +1060,12 @@ const openTimeline = (data: any) => {
                         headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                         bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                     }">
+                    <!-- 예산연도 -->
+                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
                     <!-- 계약명: 상세 페이지 링크 -->
                     <Column field="cttNm" header="계약명" sortable headerClass="font-bold">
                         <template #body="slotProps">
-                            <NuxtLink :to="`/info/cost/${slotProps.data.itMngcNo}`"
+                            <NuxtLink to="/info/cost/"
                                 class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                                 {{ slotProps.data.cttNm }}
                             </NuxtLink>
@@ -1107,10 +1124,12 @@ const openTimeline = (data: any) => {
                         headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
                         bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
                     }">
+                    <!-- 예산연도 -->
+                    <Column field="bgYy" header="예산연���" sortable style="width: 100px"></Column>
                     <!-- 사업명: 수정 폼 링크 -->
                     <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
                         <template #body="slotProps">
-                            <NuxtLink :to="`/info/projects/ordinary/form?id=${slotProps.data.prjMngNo}`"
+                            <NuxtLink :to="`/info/projects/${slotProps.data.prjMngNo}`"
                                 class="hover:underline hover:text-amber-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                                 {{ slotProps.data.prjNm }}
                             </NuxtLink>
@@ -1119,7 +1138,7 @@ const openTimeline = (data: any) => {
                     <!-- 신규/계속 태그 -->
                     <Column field="prjTp" header="신규/계속" sortable>
                         <template #body="slotProps">
-                            <Tag :value="slotProps.data.prjTp" :class="getPrjTypeClass(slotProps.data.prjTp)"
+                            <Tag :value="getPrjTpName(slotProps.data.prjTp)" :class="getPrjTypeClass(slotProps.data.prjTp)"
                                 class="border-0" rounded />
                         </template>
                     </Column>
@@ -1364,7 +1383,7 @@ const openTimeline = (data: any) => {
                 <!-- 사업연도 -->
                 <div class="flex flex-col gap-2">
                     <label class="font-semibold">사업연도</label>
-                    <InputText v-model="ordinaryFilters.prjYy" placeholder="예: 2026" />
+                    <InputText v-model="ordinaryFilters.bgYy" placeholder="예: 2026" />
                 </div>
                 <!-- 진행 상태 -->
                 <div class="flex flex-col gap-2">

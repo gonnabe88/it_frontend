@@ -35,7 +35,10 @@ const id = route.params.id as string;
 definePageMeta({ title: '전산업무비 상세' });
 
 /** 전산업무비 상세 데이터 조회 */
-const { data: cost, error } = await fetchCost(id);
+const { data: cost, error, refresh: refreshCost } = await fetchCost(id);
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshCost());
 
 /**
  * 삭제 확인 다이얼로그 표시 및 처리
@@ -52,7 +55,7 @@ const handleDelete = () => {
         accept: async () => {
             try {
                 await deleteCost(id);
-                router.push('/info/cost');
+                if (window.history.length > 1) { router.back(); } else { router.push('/info/cost'); }
             } catch (err) {
                 console.error('Failed to delete cost:', err);
                 toast.add({
@@ -160,9 +163,9 @@ onUnmounted(() => {
                 <Button icon="pi pi-arrow-left" text rounded aria-label="Back" @click="router.back()"
                     class="mt-1 w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors" />
                 <div class="space-y-2">
-                    <!-- 계약구분 태그 + 관리번호 + 최초지급일 -->
+                    <!-- 신규/계속 태그 + 관리번호 + 최초지급일 -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                        <Tag :value="cost.cttTp"
+                        <Tag :value="cost.pulDtt"
                             class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <span class="font-mono text-zinc-400">#{{ cost.itMngcNo }}</span>
@@ -186,8 +189,8 @@ onUnmounted(() => {
 
             <!-- 액션 버튼: 목록 / 삭제 / 수정 -->
             <div class="flex gap-2 self-end md:self-center">
-                <Button label="목록" icon="pi pi-list" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
-                    @click="navigateTo('/info/cost')" />
+                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
+                    @click="router.back()" />
                 <Button label="삭제" icon="pi pi-trash" severity="danger" outlined class="bg-white dark:bg-zinc-900"
                     @click="handleDelete" />
                 <Button label="수정" icon="pi pi-pencil" class="shadow-lg shadow-indigo-500/20"
@@ -210,12 +213,12 @@ onUnmounted(() => {
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
-                            <span class="text-zinc-500 text-sm font-medium">비목명</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.ioeNm || '-' }}</span>
+                            <span class="text-zinc-500 text-sm font-medium">비목코드</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.ioeC || '-' }}</span>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
-                            <span class="text-zinc-500 text-sm font-medium">계약구분</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.cttTp || '-' }}</span>
+                            <span class="text-zinc-500 text-sm font-medium">신규/계속</span>
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ cost.pulDtt || '-' }}</span>
                         </div>
                         <div
                             class="col-span-2 flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
@@ -250,9 +253,9 @@ onUnmounted(() => {
                                 <i class="pi pi-building text-lg"></i>
                             </div>
                             <div>
-                                <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">추진부서</div>
+                                <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">담당부서</div>
                                 <div class="font-extrabold text-base text-zinc-900 dark:text-zinc-100 leading-tight">
-                                    {{ cost.pulDpmNm || '-' }}
+                                    {{ cost.biceDpmNm || '-' }}
                                 </div>
                             </div>
                         </div>
@@ -260,12 +263,12 @@ onUnmounted(() => {
                         <div class="flex flex-col gap-2 pt-3 border-t border-blue-100 dark:border-zinc-700 z-10">
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400 font-medium">담당자</span>
-                                <span class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{ cost.pulCgprNm ||
+                                <span class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{ cost.cgprNm ||
                                     '-' }}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-zinc-400 font-medium">사번</span>
-                                <span class="text-zinc-900 dark:text-zinc-100 font-mono text-sm">{{ cost.pulCgpr || '-'
+                                <span class="text-zinc-900 dark:text-zinc-100 font-mono text-sm">{{ cost.cgpr || '-'
                                     }}</span>
                             </div>
                         </div>
