@@ -49,6 +49,7 @@ interface CodeResponse {
     cdva: string;
     cttTp: string;
     cttTpDes: string;
+    cdSqn?: number | null;
 }
 
 /** CascadeSelect 옵션 노드 타입 */
@@ -292,7 +293,7 @@ onMounted(async () => {
                 $apiFetch<CodeResponse[]>(`${config.public.apiBase}/api/ccodem/type/${cttTp}`)
             )
         );
-        ioeCodes.value = results.flat();
+        ioeCodes.value = results.flat().sort((a, b) => (a.cdSqn ?? Infinity) - (b.cdSqn ?? Infinity));
     } catch (e) {
         console.error('IOE 비목 코드 조회 실패', e);
     }

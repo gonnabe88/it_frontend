@@ -57,6 +57,7 @@ const ordinary = computed(() => ordinaryData.value || []);
 
 /* ── 공통코드 코드명 변환 ── */
 const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
+const { getCodeName: getPulDttName } = useCodeOptions('PUL_DTT');
 
 /* ── 전산업무비 데이터 ── */
 const { fetchCosts } = useCost();
@@ -77,6 +78,9 @@ interface UnifiedBudgetItem {
     bgYy: string;        // 예산연도
     totalBg: number;     // 총 예산
     assetBg: number;     // 자본예산
+    devBg: number;       // 개발비
+    machBg: number;      // 기계장치
+    intanBg: number;     // 기타무형자산
     costBg: number;      // 일반관리비
     deptNm: string;      // 담당부서
     managerNm: string;   // 담당자
@@ -101,6 +105,9 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
         assetBg: p.assetBg || 0,
+        devBg: p.devBg || 0,
+        machBg: p.machBg || 0,
+        intanBg: p.intanBg || 0,
         costBg: p.costBg || 0,
         deptNm: p.svnDpmNm || '',
         managerNm: p.svnDpmCgprNm || '',
@@ -120,6 +127,9 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         bgYy: String(c.bgYy || ''),
         totalBg: c.itMngcBg || 0,
         assetBg: c.assetBg || 0,
+        devBg: c.devBg || 0,
+        machBg: c.machBg || 0,
+        intanBg: c.intanBg || 0,
         costBg: c.costBg || 0,
         deptNm: c.biceDpmNm || '',
         managerNm: c.cgprNm || '',
@@ -139,6 +149,9 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
         assetBg: p.assetBg || 0,
+        devBg: p.devBg || 0,
+        machBg: p.machBg || 0,
+        intanBg: p.intanBg || 0,
         costBg: p.costBg || 0,
         deptNm: p.svnDpmNm || '',
         managerNm: p.svnDpmCgprNm || '',
@@ -164,7 +177,7 @@ const selectedUnit = ref('백만원');
  * @param amount - 원(KRW) 단위 금액
  * @returns 단위 변환된 포맷 문자열
  */
-const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.value);
+const formatBudget = (amount: number) => amount ? formatBudgetUtil(amount, selectedUnit.value) : '-';
 
 /**
  * 정보화사업 유형에 따른 태그 색상 CSS 클래스 반환
@@ -594,7 +607,7 @@ const downloadAllExcel = () => {
     const rows = filteredAll.value.map(item => ({
         '구분': item._type,
         '사업명/계약명': item.name,
-        '신규/계속': item.category,
+        '신규/계속': getPulDttName(item.category),
         '총 예산(원)': item.totalBg,
         '자본예산(원)': item.assetBg,
         '일반관리비(원)': item.costBg,
@@ -614,7 +627,7 @@ const downloadAllExcel = () => {
 const downloadProjectsExcel = () => {
     const rows = filteredProjects.value.map((p: Project) => ({
         '사업명': p.prjNm,
-        '신규/계속': p.prjTp,
+        '신규/계속': getPulDttName((p as any).pulDtt),
         '총 예산(원)': p.prjBg,
         '자본예산(원)': p.assetBg || 0,
         '일반관리비(원)': p.costBg || 0,
@@ -636,7 +649,7 @@ const downloadCostsExcel = () => {
     const rows = filteredCosts.value.map((c: ItCost) => ({
         '계약명': c.cttNm,
         '비목코드': c.ioeC,
-        '신규/계속': c.cttTp,
+        '신규/계속': getPulDttName(c.pulDtt),
         '총 예산(원)': c.itMngcBg,
         '자본예산(원)': c.assetBg || 0,
         '계약상대처': c.cttOpp,
@@ -655,7 +668,7 @@ const downloadCostsExcel = () => {
 const downloadOrdinaryExcel = () => {
     const rows = filteredOrdinary.value.map((p: Project) => ({
         '사업명': p.prjNm,
-        '신규/계속': p.prjTp,
+        '신규/계속': getPulDttName((p as any).pulDtt),
         '총 예산(원)': p.prjBg,
         '자본예산(원)': p.assetBg || 0,
         '담당부서': p.svnDpmNm,
@@ -924,26 +937,38 @@ const openTimeline = (data: any) => {
                     <!-- 신규/계속 -->
                     <Column field="category" header="신규/계속" sortable>
                         <template #body="slotProps">
-                            <Tag :value="slotProps.data.category" :class="getPrjTypeClass(slotProps.data.category)"
+                            <Tag :value="getPulDttName(slotProps.data.category)" :class="getPrjTypeClass(getPulDttName(slotProps.data.category))"
                                 class="border-0" rounded />
                         </template>
                     </Column>
                     <!-- 총 예산 -->
                     <Column field="totalBg" :header="`총 예산`" sortable>
                         <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.totalBg) }}{{ selectedUnit }}</span>
+                            <span>{{ formatBudget(slotProps.data.totalBg) }}{{ slotProps.data.totalBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
-                    <!-- 자본예산 -->
-                    <Column field="assetBg" :header="`자본예산`" sortable>
+                    <!-- 개발비 -->
+                    <Column field="devBg" :header="`개발비`" sortable>
                         <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.assetBg) }}{{ selectedUnit }}</span>
+                            <span>{{ formatBudget(slotProps.data.devBg) }}{{ slotProps.data.devBg ? selectedUnit : '' }}</span>
+                        </template>
+                    </Column>
+                    <!-- 기계장치 -->
+                    <Column field="machBg" :header="`기계장치`" sortable>
+                        <template #body="slotProps">
+                            <span>{{ formatBudget(slotProps.data.machBg) }}{{ slotProps.data.machBg ? selectedUnit : '' }}</span>
+                        </template>
+                    </Column>
+                    <!-- 기타무형자산 -->
+                    <Column field="intanBg" :header="`기타무형자산`" sortable>
+                        <template #body="slotProps">
+                            <span>{{ formatBudget(slotProps.data.intanBg) }}{{ slotProps.data.intanBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
                     <!-- 일반관리비 -->
                     <Column field="costBg" :header="`일반관리비`" sortable>
                         <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.costBg) }}{{ selectedUnit }}</span>
+                            <span>{{ formatBudget(slotProps.data.costBg) }}{{ slotProps.data.costBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
                     <!-- 담당부서 -->
@@ -997,9 +1022,9 @@ const openTimeline = (data: any) => {
                         </template>
                     </Column>
                     <!-- 신규/계속 태그 -->
-                    <Column field="prjTp" header="신규/계속" sortable>
+                    <Column field="pulDtt" header="신규/계속" sortable>
                         <template #body="slotProps">
-                            <Tag :value="getPrjTpName(slotProps.data.prjTp)" :class="getPrjTypeClass(slotProps.data.prjTp)"
+                            <Tag :value="getPulDttName(slotProps.data.pulDtt)" :class="getPrjTypeClass(getPulDttName(slotProps.data.pulDtt))"
                                 class="border-0" rounded />
                         </template>
                     </Column>
@@ -1009,10 +1034,22 @@ const openTimeline = (data: any) => {
                             <span>{{ formatBudget(slotProps.data.prjBg) }}</span>
                         </template>
                     </Column>
-                    <!-- 자본예산 -->
-                    <Column field="assetBg" :header="`자본예산 (${selectedUnit})`" sortable>
+                    <!-- 개발비 -->
+                    <Column field="devBg" :header="`개발비 (${selectedUnit})`" sortable>
                         <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.assetBg || 0) }}</span>
+                            <span>{{ formatBudget(slotProps.data.devBg || 0) }}</span>
+                        </template>
+                    </Column>
+                    <!-- 기계장치 -->
+                    <Column field="machBg" :header="`기계장치 (${selectedUnit})`" sortable>
+                        <template #body="slotProps">
+                            <span>{{ formatBudget(slotProps.data.machBg || 0) }}</span>
+                        </template>
+                    </Column>
+                    <!-- 기타무형자산 -->
+                    <Column field="intanBg" :header="`기타무형자산 (${selectedUnit})`" sortable>
+                        <template #body="slotProps">
+                            <span>{{ formatBudget(slotProps.data.intanBg || 0) }}</span>
                         </template>
                     </Column>
                     <!-- 일반관리비 -->
@@ -1074,17 +1111,34 @@ const openTimeline = (data: any) => {
                     <!-- 비목명 -->
                     <Column field="ioeNm" header="비목명" sortable></Column>
                     <!-- 신규/계속 -->
-                    <Column field="cttTp" header="신규/계속" sortable></Column>
+                    <Column field="pulDtt" header="신규/계속" sortable>
+                        <template #body="slotProps">
+                            <Tag :value="getPulDttName(slotProps.data.pulDtt)" :class="getPrjTypeClass(getPulDttName(slotProps.data.pulDtt))"
+                                class="border-0" rounded />
+                        </template>
+                    </Column>
                     <!-- 총 예산 -->
                     <Column field="itMngcBg" :header="`총 예산 (${selectedUnit})`" sortable>
                         <template #body="slotProps">
                             <span>{{ formatBudget(slotProps.data.itMngcBg) }}</span>
                         </template>
                     </Column>
-                    <!-- 자본예산 -->
-                    <Column field="assetBg" :header="`자본예산 (${selectedUnit})`" sortable>
+                    <!-- 개발비 -->
+                    <Column field="devBg" :header="`개발비 (${selectedUnit})`" sortable>
                         <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.assetBg || 0) }}</span>
+                            <span>{{ formatBudget(slotProps.data.devBg || 0) }}</span>
+                        </template>
+                    </Column>
+                    <!-- 기계장치 -->
+                    <Column field="machBg" :header="`기계장치 (${selectedUnit})`" sortable>
+                        <template #body="slotProps">
+                            <span>{{ formatBudget(slotProps.data.machBg || 0) }}</span>
+                        </template>
+                    </Column>
+                    <!-- 기타무형자산 -->
+                    <Column field="intanBg" :header="`기타무형자산 (${selectedUnit})`" sortable>
+                        <template #body="slotProps">
+                            <span>{{ formatBudget(slotProps.data.intanBg || 0) }}</span>
                         </template>
                     </Column>
                     <!-- 담당부서 -->
@@ -1136,9 +1190,9 @@ const openTimeline = (data: any) => {
                         </template>
                     </Column>
                     <!-- 신규/계속 태그 -->
-                    <Column field="prjTp" header="신규/계속" sortable>
+                    <Column field="pulDtt" header="신규/계속" sortable>
                         <template #body="slotProps">
-                            <Tag :value="getPrjTpName(slotProps.data.prjTp)" :class="getPrjTypeClass(slotProps.data.prjTp)"
+                            <Tag :value="getPulDttName(slotProps.data.pulDtt)" :class="getPrjTypeClass(getPulDttName(slotProps.data.pulDtt))"
                                 class="border-0" rounded />
                         </template>
                     </Column>

@@ -30,6 +30,9 @@ definePageMeta({
     title: '전산예산 결재 상신'
 });
 
+/* ── 공통코드 코드명 변환 ── */
+const { getCodeName: getPulDttName } = useCodeOptions('PUL_DTT');
+
 /* ── 데이터 조회 ── */
 const { fetchProjects, fetchProjectsBulk } = useProjects();
 /* apfSts=none: 결재 신청이 없는 항목(미상신)만 조회 */
@@ -60,6 +63,9 @@ interface UnifiedBudgetItem {
     bgYy: string;
     totalBg: number;
     assetBg: number;
+    devBg: number;
+    machBg: number;
+    intanBg: number;
     costBg: number;
     deptNm: string;
     managerNm: string;
@@ -81,6 +87,9 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
         assetBg: p.assetBg || 0,
+        devBg: p.devBg || 0,
+        machBg: p.machBg || 0,
+        intanBg: p.intanBg || 0,
         costBg: p.costBg || 0,
         deptNm: p.svnDpmNm || '',
         managerNm: p.svnDpmCgprNm || '',
@@ -99,6 +108,9 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         bgYy: String(c.bgYy || ''),
         totalBg: c.itMngcBg || 0,
         assetBg: c.assetBg || 0,
+        devBg: c.devBg || 0,
+        machBg: c.machBg || 0,
+        intanBg: c.intanBg || 0,
         costBg: c.costBg || 0,
         deptNm: c.biceDpmNm || '',
         managerNm: c.cgprNm || '',
@@ -118,7 +130,7 @@ const selectedUnit = ref('백만원');
  * 예산 금액을 선택된 단위로 변환
  * @param amount - 원(KRW) 단위 금액
  */
-const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.value);
+const formatBudget = (amount: number) => amount ? formatBudgetUtil(amount, selectedUnit.value) : '-';
 
 /**
  * 항목 유형 태그 색상 클래스
@@ -388,7 +400,7 @@ const downloadExcel = () => {
     const rows = filteredItems.value.map(item => ({
         '구분': item._type,
         '사업명/계약명': item.name,
-        '유형': item.category,
+        '유형': getPulDttName(item.category),
         '총 예산(원)': item.totalBg,
         '자본예산(원)': item.assetBg,
         '일반관리비(원)': item.costBg,
@@ -571,7 +583,7 @@ onBeforeUnmount(() => {
                 <!-- 신규/계속 -->
                 <Column field="category" header="신규/계속" sortable>
                     <template #body="slotProps">
-                        <Tag :value="slotProps.data.category" :class="getPrjTypeClass(slotProps.data.category)"
+                        <Tag :value="getPulDttName(slotProps.data.category)" :class="getPrjTypeClass(getPulDttName(slotProps.data.category))"
                             class="border-0" rounded />
                     </template>
                 </Column>
@@ -579,21 +591,35 @@ onBeforeUnmount(() => {
                 <!-- 총 예산 -->
                 <Column field="totalBg" header="총 예산" sortable>
                     <template #body="slotProps">
-                        <span>{{ formatBudget(slotProps.data.totalBg) }}{{ selectedUnit }}</span>
+                        <span>{{ formatBudget(slotProps.data.totalBg) }}{{ slotProps.data.totalBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
-                <!-- 자본예산 -->
-                <Column field="assetBg" header="자본예산" sortable>
+                <!-- 개발비 -->
+                <Column field="devBg" header="개발비" sortable>
                     <template #body="slotProps">
-                        <span>{{ formatBudget(slotProps.data.assetBg) }}{{ selectedUnit }}</span>
+                        <span>{{ formatBudget(slotProps.data.devBg) }}{{ slotProps.data.devBg ? selectedUnit : '' }}</span>
+                    </template>
+                </Column>
+
+                <!-- 기계장치 -->
+                <Column field="machBg" header="기계장치" sortable>
+                    <template #body="slotProps">
+                        <span>{{ formatBudget(slotProps.data.machBg) }}{{ slotProps.data.machBg ? selectedUnit : '' }}</span>
+                    </template>
+                </Column>
+
+                <!-- 기타무형자산 -->
+                <Column field="intanBg" header="기타무형자산" sortable>
+                    <template #body="slotProps">
+                        <span>{{ formatBudget(slotProps.data.intanBg) }}{{ slotProps.data.intanBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
                 <!-- 일반관리비 -->
                 <Column field="costBg" header="일반관리비" sortable>
                     <template #body="slotProps">
-                        <span>{{ formatBudget(slotProps.data.costBg) }}{{ selectedUnit }}</span>
+                        <span>{{ formatBudget(slotProps.data.costBg) }}{{ slotProps.data.costBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
@@ -637,7 +663,7 @@ onBeforeUnmount(() => {
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">신규/계속</label>
                     <div class="flex gap-2 flex-wrap">
-                        <Button v-for="opt in categoryOptions" :key="opt" :label="opt" size="small" outlined
+                        <Button v-for="opt in categoryOptions" :key="opt" :label="getPulDttName(opt)" size="small" outlined
                             :severity="filters.category.includes(opt) ? 'primary' : 'secondary'" @click="filters.category.includes(opt)
                                 ? filters.category.splice(filters.category.indexOf(opt), 1)
                                 : filters.category.push(opt)" />
