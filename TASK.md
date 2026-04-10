@@ -1,6 +1,6 @@
 # 프로젝트 백로그 (Project Backlog)
 
-> 마지막 갱신일: 2026-04-09
+> 마지막 갱신일: 2026-04-10
 
 ## 🔴 우선순위 높음
 
@@ -16,6 +16,8 @@
 - [ ] `pages/budget/index.vue` — 경상사업 카드의 "준비 중" 상태를 실제 기능으로 구현
 - [ ] `pages/info/cost/form.vue` — 행 삭제 시 기존 DB 데이터에 대한 삭제 API 연동 정책 결정
 - [x] `pages/info/cost/index.vue` — `filteredCosts` 실제 검색 기능 구현 (5개 필드 통합)
+- [ ] `stores/review.ts` — 사전협의 세션/코멘트 서버 API 연동 (현재 메모리 전용, 새로고침 시 초기화)
+- [ ] `stores/review.ts` — `defaultReviewers` 하드코딩 모의 데이터를 프로젝트별 동적 검토자 API 조회로 전환
 
 ### 코드 품질
 - [x] `pages/approval/index.vue` — 컴포넌트 분리 완료 (`ApprovalTimeline.vue`)
@@ -23,8 +25,9 @@
 - [ ] `composables/usePdfReport.ts` (638줄) — PDF 빌더 패턴 도입 또는 모듈 분리 검토
 - [ ] `pages/budget/list.vue` (560줄) — 탭별 콘텐츠를 별도 컴포넌트로 분리 검토
 - [x] `components/TiptapEditor.vue` — 툴바 섹션, 표 조작 로직 분리 및 최적화
-- [ ] `components/TiptapEditor.vue` — Excalidraw 디버그 `console.log` 제거 (상용 배포 전)
+- [ ] `components/extensions/tiptap-extensions.ts` — Excalidraw 디버그 `console.log` 제거 (상용 배포 전, 117행)
 - [x] `pages/info/projects/form.vue` — 타입 안전한 방식으로 리팩토링 완료
+- [ ] `composables/useAdminApi.ts` — CRUD 함수에 공통 에러 핸들링/Toast 알림 추가 검토
 
 ### 타입 안전성
 - [x] `pages/approval/index.vue` — `timelineApprovers` 전용 인터페이스 정의
@@ -43,15 +46,16 @@
 
 ---
 
-## ✅ 완료 항목 (2026-04-09)
+## ✅ 완료 항목 (2026-04-10)
 
 | 항목 | 완료일 |
 |------|--------|
+| 전체 프로젝트 문서/주석 리프레시 (Task1~4 기반 전수 점검) | 2026-04-10 |
+| 전체 소스 코드 주석 리프레시 (E2E 테스트 포함) | 2026-04-09 |
+| README.md / TASK.md 최신 정보 업데이트 | 2026-04-09 |
 | Playwright E2E 테스트 안정화 및 API 모킹 개선 | 2026-04-02 |
 | Tiptap 수식 지원, 표 정렬, 파일첨부 다이얼로그 연동 | 2026-03-30 |
 | 프로젝트 작성 폼 UX 검증 및 다크모드 대응 개선 | 2026-03-28 |
-| 전체 소스 코드 주석 리프레시 (E2E 테스트 포함) | 2026-04-09 |
-| README.md / TASK.md 최신 정보 업데이트 | 2026-04-09 |
 | `app.vue` — 전역 `<Toast />` 컴포넌트 추가 | 2026-03-02 |
 | `pages/info/projects/[id].vue` — 삭제 실패 시 Toast 표시 | 2026-03-02 |
 | `composables/useApprovals.ts` — API 응답 `any` → 명시적 인터페이스 | 2026-03-02 |

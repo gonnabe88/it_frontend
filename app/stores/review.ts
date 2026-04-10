@@ -1,4 +1,27 @@
-// Design Ref: §3.3 — Pinia store (세션 내 메모리 전용, 새로고침 시 초기화)
+/**
+ * ============================================================================
+ * [stores/review.ts] 사전협의(문서 검토) Pinia 스토어
+ * ============================================================================
+ * 사전협의 세션 상태를 전역으로 관리하는 Pinia 스토어입니다.
+ * 문서 검토 프로세스의 핵심 상태(세션, 버전, 코멘트, 검토자)를 담당합니다.
+ *
+ * [상태 관리 전략]
+ *  - 세션 내 메모리 전용: 새로고침 시 초기화됩니다 (localStorage 미사용).
+ *  - 문서 전환 시 loadSession()으로 새 세션을 생성합니다.
+ *
+ * [버전 관리]
+ *  - v0.0: 초안 (문서 진입 시 자동 생성)
+ *  - v0.1~: 검토요청 시마다 draftContent를 불변 스냅샷으로 저장
+ *  - draftContent: 편집 중인 본문 (버전 스냅샷과 분리)
+ *
+ * [사용처]
+ *  - composables/useReview.ts를 통해 컴포넌트에서 사용
+ *
+ * TODO: 서버 API 연동 시 세션/코멘트를 서버에 저장하도록 개선 필요
+ * FIXME: defaultReviewers가 하드코딩된 모의 데이터로 구성되어 있어
+ *        실서비스에서는 프로젝트별 검토자를 동적으로 조회해야 함
+ * ============================================================================
+ */
 import { defineStore } from 'pinia';
 import type {
   ReviewSession,
@@ -8,16 +31,28 @@ import type {
   ReviewSessionStatus,
 } from '~/types/review';
 
-/** UUID 생성 (간이) */
+/**
+ * UUID 생성 (간이)
+ * crypto.randomUUID가 지원되지 않는 환경에서는 타임스탬프 기반 대체 ID를 생성합니다.
+ */
 const generateId = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-/** 다음 버전 번호 계산 */
+/**
+ * 다음 버전 번호 계산
+ * 현재 버전에서 0.1을 증가시켜 소수점 1자리 문자열로 반환합니다.
+ *
+ * @param current - 현재 버전 번호 (예: '0.1')
+ * @returns 다음 버전 번호 (예: '0.2')
+ */
 const nextVersion = (current: string): string => {
   const num = parseFloat(current);
   return (num + 0.1).toFixed(1);
 };
 
-/** 기본 검토자 목록 (모의 데이터) */
+/**
+ * 기본 검토자 목록 (모의 데이터)
+ * FIXME: 실서비스에서는 프로젝트별 검토자를 서버 API로 조회해야 합니다.
+ */
 const defaultReviewers: Reviewer[] = [
   { eno: 'R001', empNm: '홍길동', team: '개발/운영팀', status: 'pending' },
   { eno: 'R002', empNm: '김영희', team: '계약팀', status: 'pending' },

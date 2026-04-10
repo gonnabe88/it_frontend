@@ -288,7 +288,15 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
 };
 
 /**
- * 현재 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 반환
+ * ISO 날짜/시간 문자열을 'YYYY-MM-DD HH:mm' 형식으로 변환
+ * @param dtm - ISO 형식 날짜 문자열 (예: '2026-01-15T09:30:00')
+ * @returns 포맷된 날짜 문자열 또는 '-'
+ */
+export const formatDateTime = (dtm?: string | null): string =>
+    dtm?.substring(0, 16).replace('T', ' ') || '-';
+
+/**
+ * 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 반환
  *
  * @param date - 변환할 Date 객체 (기본값: 현재 날짜)
  * @returns 한국어 날짜 문자열 (예: '2026년 04월 10일')
@@ -297,14 +305,6 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
  * formatKoreanDate()                        // → '2026년 04월 10일'
  * formatKoreanDate(new Date('2026-01-15'))   // → '2026년 01월 15일'
  */
-/**
- * ISO 날짜/시간 문자열을 'YYYY-MM-DD HH:mm' 형식으로 변환
- * @param dtm - ISO 형식 날짜 문자열 (예: '2026-01-15T09:30:00')
- * @returns 포맷된 날짜 문자열 또는 '-'
- */
-export const formatDateTime = (dtm?: string | null): string =>
-    dtm?.substring(0, 16).replace('T', ' ') || '-';
-
 export const formatKoreanDate = (date: Date = new Date()): string => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');

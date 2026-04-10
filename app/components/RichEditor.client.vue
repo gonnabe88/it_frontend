@@ -1,9 +1,35 @@
+<!--
+================================================================================
+[components/RichEditor.client.vue] PrimeVue Quill 기반 리치 에디터 컴포넌트
+================================================================================
+PrimeVue Editor(Quill) 래퍼 컴포넌트입니다.
+TiptapEditor 도입 전 기존 페이지에서 사용하던 간단한 에디터입니다.
+
+[기능]
+  - 폰트 선택: Noto Sans KR, Sans Serif, Serif, Monospace
+  - 글자 크기: 8px ~ 20px
+  - 서식: 굵게, 기울임, 밑줄, 취소선
+  - 색상: 글자색, 배경색
+  - 정렬: 좌/중앙/우/양쪽
+  - 목록: 번호 매기기, 글머리 기호
+
+[한글 IME 이슈 해결]
+  - 한글 조합 중 placeholder가 사라지지 않는 Quill 버그를 compositionstart/
+    compositionend 이벤트 리스너로 수정합니다.
+
+[Props]
+  - modelValue  : HTML 문자열 (v-model)
+  - placeholder : 입력 안내 텍스트
+  - editorStyle : 에디터 영역 인라인 스타일 (기본: height: 200px)
+
+[클라이언트 전용]
+  - 파일명 접미사 .client.vue로 SSR에서 렌더링하지 않습니다.
+================================================================================
+-->
 <script setup lang="ts">
 import Quill from 'quill';
 
-// Quill Configuration (Fonts & Sizes)
-// Check if already registered to avoid re-registration warnings if possible, 
-// though Quill.register(..., true) allows overwriting.
+// Quill 폰트/크기 설정 (모듈 수준에서 1회 등록, 중복 등록 허용)
 const Font = Quill.import('formats/font') as any;
 Font.whitelist = ['notosanskr', 'sans-serif', 'serif', 'monospace'];
 Quill.register(Font, true);

@@ -84,12 +84,16 @@ import DOMPurify from 'isomorphic-dompurify';
 
 **Nuxt 4는 소스 루트가 `app/` 디렉토리입니다. 파일 생성 시 반드시 `app/` 하위에 위치시킵니다.**
 
-> **백엔드 패키지 구조 참고** (2026-03-27 domain-refactor 완료)
+> **백엔드 패키지 구조 참고** (2026-04-10 기준)
 > 백엔드 API 경로(`/api/**`)는 변경 없음. 백엔드 내부 클래스는 도메인 기반으로 재구조화됨:
 > - `common/system` — 인증 (AuthController, JwtUtil)
 > - `common/iam` — 사용자·조직 (UserRepository, OrganizationRepository)
+> - `common/admin` — 시스템관리 (AdminController, AdminService — ROLE_ADMIN 전용)
 > - `budget/project` — 정보화사업 (ProjectController, ProjectService)
 > - `budget/cost` — 전산업무비 (CostController, CostService)
+> - `budget/plan` — 정보기술부문 계획 (PlanController, PlanService)
+> - `budget/work` — 예산 작업 (BudgetWorkController, BudgetWorkService)
+> - `council` — 정보화실무협의회 (CouncilController, 8개 서비스)
 > - `infra/file` — 파일 (FileController, FileService)
 > - `infra/ai` — Gemini AI (GeminiController, GeminiService)
 
@@ -102,9 +106,12 @@ it_frontend/
 │   ├── layouts/                 레이아웃
 │   ├── middleware/              미들웨어
 │   ├── pages/                   페이지 라우트
+│   │   ├── admin/               시스템 관리 (ROLE_ADMIN 전용)
 │   │   ├── info/projects/       프로젝트(정보화사업) 관리
 │   │   ├── info/cost/           프로젝트(전산업무비) 관리
-│   │   ├── budget/              전산예산 관리
+│   │   ├── info/documents/      요구사항 정의서 + 사전협의
+│   │   ├── info/plan/           정보기술부문 계획
+│   │   ├── budget/              전산예산 관리 + 예산 작업
 │   │   ├── diagnosis/           사전진단
 │   │   ├── audit/               IT 감사
 │   │   └── approval/            전자결재
@@ -120,20 +127,45 @@ it_frontend/
 새 기능 개발 전 아래 파일의 존재를 확인하여 중복 구현을 방지합니다.
 
 **Composables**
+- `composables/useAdminApi.ts` - 관리자 전용 API (24개 CRUD 함수)
 - `composables/useApiFetch.ts` - 인증 GET 요청 (useFetch 래핑)
 - `composables/useAuth.ts` - 인증 store 노출
-- `composables/useOrganization.ts` - 조직도/사용자 조회
-- `composables/useProjects.ts` - 정보화사업 프로젝트 조회
-- `composables/useCost.ts` - 전산업무비 조회
 - `composables/useApprovals.ts` - 전자결재 조회
+- `composables/useCost.ts` - 전산업무비 조회
 - `composables/useCurrencyRates.ts` - 환율 조회
+- `composables/useDateRangeValidation.ts` - 날짜 범위 유효성 검사
+- `composables/useDocuments.ts` - 요구사항 정의서 CRUD
+- `composables/useEmployeeSearch.ts` - 직원 검색 (AutoComplete + 다이얼로그)
+- `composables/useFiles.ts` - 첨부파일 업로드/다운로드/미리보기
+- `composables/useGuideDocuments.ts` - 가이드 문서 CRUD
+- `composables/useHwpxExport.ts` - HWPX(한글) 파일 내보내기
+- `composables/useOrganization.ts` - 조직도/사용자 조회
 - `composables/usePdfReport.ts` - PDF 리포트 생성
+- `composables/usePlan.ts` - 정보기술부문 계획 CRUD
+- `composables/useProjectOptions.ts` - 프로젝트 옵션 (연도/분류/상태 코드)
+- `composables/useProjects.ts` - 정보화사업 프로젝트 조회
+- `composables/useReview.ts` - 사전협의 세션 관리
 - `composables/useTabs.ts` - 탭 상태 관리
 
-**Stores / Utils**
+**Stores / Utils / Types**
 - `stores/auth.ts` - 로그인/로그아웃/토큰갱신/세션복원
+- `stores/review.ts` - 사전협의 세션/버전/코멘트/검토자 상태 관리
 - `plugins/auth.ts` - `$apiFetch` provide, 401 처리
 - `utils/common.ts` - `formatBudget`, `getApprovalTagClass`, `getProjectTagClass`
+- `types/auth.ts` - 인증 타입 + ROLE 상수 (ADMIN/USER/DEPT_MANAGER)
+- `types/budget-work.ts` - 예산 작업 타입 (편성비목/편성결과)
+- `types/review.ts` - 사전협의 타입 (세션/코멘트/검토자/버전)
+
+### 4.9 관리자 접근 제어 패턴
+관리자 전용 페이지(`/admin/**`)는 다음 3단계로 보호합니다:
+1. `middleware/admin.ts`: 클라이언트에서 `ROLE.ADMIN` 포함 여부 검증 → 미보유 시 `/` 리다이렉트
+2. `layouts/admin.vue`: 관리자 전용 레이아웃 적용 (`definePageMeta({ layout: 'admin' })`)
+3. 백엔드: `@PreAuthorize("hasRole('ADMIN')")` + SecurityConfig URL 패턴 이중 보호
+
+### 4.10 공통 컴포넌트 사용 규칙
+- `StyledDataTable.vue`: 모든 DataTable에 파란 헤더/gridlines 일관 적용 시 이 래퍼를 사용합니다.
+- `EmployeeSearchDialog.vue`: 직원 검색이 필요한 모든 폼에서 재사용합니다. `useEmployeeSearch.ts`와 함께 사용합니다.
+- `components/common/` 하위 컴포넌트는 Nuxt 자동 등록 시 `Common` 접두사가 붙으므로, 기존 코드와의 일관성을 위해 **명시적 import**를 사용합니다.
 
 ### 4.7 테스트 작성 원칙
 
@@ -182,10 +214,19 @@ await page.route('**/api/projects', route =>
 
 ```ts
 // types/auth.ts - 인증용 (로그인 세션)
-type User = { eno: string; empNm: string; }
+type User = { eno: string; empNm: string; athIds: string[]; bbrC: string; temC: string; }
 
 // composables/useOrganization.ts - 조직도용 (사용자 검색)
 type OrgUser = { eno: string; usrNm: string; bbrNm: string; /* ... */ }
+
+// composables/useEmployeeSearch.ts - 직원 검색용 (AutoComplete)
+type UserSuggestion = { eno: string; usrNm: string; bbrNm: string; bbrC: string; /* ... */ }
+```
+
+자격등급(역할) 상수는 `types/auth.ts`의 `ROLE` 객체를 사용합니다:
+```ts
+import { ROLE } from '~/types/auth';
+// ROLE.USER = 'ITPZZ001', ROLE.DEPT_MANAGER = 'ITPZZ002', ROLE.ADMIN = 'ITPAD001'
 ```
 
 ## 5. 주석 및 타입 작성 예시

@@ -1,3 +1,29 @@
+<!--
+================================================================================
+[components/common/EmployeeSearchDialog.vue] 직원 조회 다이얼로그 컴포넌트
+================================================================================
+조직도 트리에서 부서를 선택하고, 해당 부서의 직원 목록에서
+담당자를 검색·선택하는 공용 다이얼로그입니다.
+
+[기능]
+  - 좌측: 조직도 트리 (PrimeVue Tree, 전체 펼치기/접기)
+  - 우측: 선택된 부서의 직원 목록 (DataTable)
+  - 직원 행 클릭 시 select 이벤트를 emit하여 부모에 선택 결과 전달
+
+[Props]
+  - visible : 다이얼로그 표시 여부 (v-model)
+  - header  : 다이얼로그 제목 (기본값: '직원 조회')
+
+[Events]
+  - update:visible : 다이얼로그 닫힘 시 visible 상태 동기화
+  - select         : 직원 선택 시 OrgUser 객체 전달
+
+[사용처]
+  - pages/info/projects/form.vue : 프로젝트 담당자 선택
+  - pages/info/cost/form.vue     : 전산업무비 담당자 선택
+  - components/cost/*            : 담당자 검색 필드
+================================================================================
+-->
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
