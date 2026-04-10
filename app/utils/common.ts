@@ -311,3 +311,25 @@ export const formatKoreanDate = (date: Date = new Date()): string => {
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}년 ${m}월 ${d}일`;
 };
+
+/**
+ * 파일 크기를 사람이 읽기 쉬운 단위로 변환
+ *
+ * @param bytes - 변환할 바이트 수
+ * @returns 단위가 포함된 문자열 (예: '1.5 MB', '512 KB', '0 B')
+ *
+ * @example
+ * formatFileSize(0)           // → '0 B'
+ * formatFileSize(1024)        // → '1.0 KB'
+ * formatFileSize(1572864)     // → '1.5 MB'
+ */
+export const formatFileSize = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const index = Math.min(i, units.length - 1);
+    const value = bytes / Math.pow(1024, index);
+    return index === 0
+        ? `${bytes} B`
+        : `${value.toFixed(1)} ${units[index]}`;
+};

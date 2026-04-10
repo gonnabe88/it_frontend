@@ -360,7 +360,7 @@ watch(() => props.modelValue, (val) => {
         // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환하여
         // Tiptap의 updateColumns()가 덮어쓰기 전에 너비 정보를 보존합니다.
         const processed = process.client ? injectColwidthsFromColgroup(val || '') : (val || '');
-        editor.value.commands.setContent(processed, false);
+        editor.value.commands.setContent(processed, { emitUpdate: false });
         // 저장된 테이블 너비 복원
         nextTick(applyTableWidths);
     }

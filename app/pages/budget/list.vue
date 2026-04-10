@@ -309,11 +309,11 @@ const hasCostFilters = computed(() =>
     costFilters.value.costBgMax !== null
 );
 
-const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeC).filter(Boolean))]);
-const costCttTps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttTp).filter(Boolean))]);
-const costCttOpps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttOpp).filter(Boolean))]);
-const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.biceDpmNm).filter(Boolean))]);
-const costApfStsOpts = computed(() => [...new Set(costs.value.map((c: ItCost) => c.apfSts).filter(Boolean))]);
+const costIoeNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.ioeC).filter((v): v is string => Boolean(v)))]);
+const costCttTps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.pulDtt).filter((v): v is string => Boolean(v)))]);
+const costCttOpps = computed(() => [...new Set(costs.value.map((c: ItCost) => c.cttOpp).filter((v): v is string => Boolean(v)))]);
+const costPulDpmNms = computed(() => [...new Set(costs.value.map((c: ItCost) => c.biceDpmNm).filter((v): v is string => Boolean(v)))]);
+const costApfStsOpts = computed(() => [...new Set(costs.value.map((c: ItCost) => c.apfSts).filter((v): v is string => Boolean(v)))]);
 
 const filteredCostIoeNms = ref<string[]>([]);
 const filteredCostCttTps = ref<string[]>([]);
@@ -450,10 +450,10 @@ const filteredCosts = computed(() => {
         }
         /* Drawer 필터 */
         if (costFilters.value.ioeC.length > 0 && !costFilters.value.ioeC.includes(c.ioeC)) return false;
-        if (costFilters.value.cttTp.length > 0 && !costFilters.value.cttTp.includes(c.cttTp)) return false;
+        if (costFilters.value.cttTp.length > 0 && !costFilters.value.cttTp.includes(c.pulDtt)) return false;
         if (costFilters.value.cttOpp.length > 0 && !costFilters.value.cttOpp.includes(c.cttOpp)) return false;
-        if (costFilters.value.biceDpmNm.length > 0 && !costFilters.value.biceDpmNm.includes(c.biceDpmNm)) return false;
-        if (costFilters.value.apfSts.length > 0 && !costFilters.value.apfSts.includes(c.apfSts)) return false;
+        if (costFilters.value.biceDpmNm.length > 0 && !costFilters.value.biceDpmNm.includes(c.biceDpmNm ?? '')) return false;
+        if (costFilters.value.apfSts.length > 0 && !costFilters.value.apfSts.includes(c.apfSts ?? '')) return false;
         if (costFilters.value.budgetMin !== null && c.itMngcBg < costFilters.value.budgetMin) return false;
         if (costFilters.value.budgetMax !== null && c.itMngcBg > costFilters.value.budgetMax) return false;
         if (costFilters.value.assetBgMin !== null && (c.assetBg || 0) < costFilters.value.assetBgMin) return false;

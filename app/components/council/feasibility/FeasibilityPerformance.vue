@@ -199,7 +199,7 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                         placeholder="YYYY-MM-DD"
                         showIcon
                         fluid
-                        @update:modelValue="(v: Date | null) => updateField(index, 'msmSttDt', v ? v.toISOString().slice(0, 10) : null)"
+                        @update:modelValue="(v) => updateField(index, 'msmSttDt', v instanceof Date ? v.toISOString().slice(0, 10) : null)"
                     />
                 </div>
 
@@ -213,7 +213,7 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                         placeholder="YYYY-MM-DD"
                         showIcon
                         fluid
-                        @update:modelValue="(v: Date | null) => updateField(index, 'msmEndDt', v ? v.toISOString().slice(0, 10) : null)"
+                        @update:modelValue="(v) => updateField(index, 'msmEndDt', v instanceof Date ? v.toISOString().slice(0, 10) : null)"
                     />
                 </div>
 

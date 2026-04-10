@@ -118,7 +118,7 @@ export const useTabs = () => {
             if (route.path === path) {
                 if (tabs.value.length > 0) {
                     // 삭제된 탭의 이전 위치 또는 첫 번째 탭으로 이동
-                    const nextTab = tabs.value[Math.max(0, index - 1)];
+                    const nextTab = tabs.value[Math.max(0, index - 1)]!;
                     router.push(nextTab.fullPath);
                 } else {
                     // 탭이 모두 닫힌 경우 홈으로 이동

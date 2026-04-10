@@ -573,7 +573,7 @@ const executeSave = async () => {
         if (isEditMode.value && projectId.value) {
             savedPrjMngNo = await updateProject(projectId.value, payload);
         } else {
-            savedPrjMngNo = await createProject(payload);
+            savedPrjMngNo = await createProject(payload) as string;
         }
 
         /* 저장 완료 확인 다이얼로그 → 상세 화면으로 이동 */

@@ -234,8 +234,8 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                             <CouncilNotice
                                 v-if="noticeTabEnabled"
                                 :asctId="asctId"
-                                :councilDetail="councilDetail"
-                                :feasibility="feasibilityData"
+                                :councilDetail="councilDetail ?? null"
+                                :feasibility="feasibilityData ?? null"
                             />
                             <div v-else class="text-sm text-zinc-400 py-8 text-center">
                                 일정 확정 후 표출됩니다.
