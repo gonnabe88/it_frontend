@@ -324,8 +324,44 @@ export const usePdfReport = () => {
             // ====================================================================
 
             /**
+             * 날짜 문자열을 날짜(YYYY-MM-DD)와 시간(HH:mm:ss) 두 파트로 분리합니다.
+             * ISO 형식(예: "2026-04-11T09:30:00.000Z")에서 T 구분자로 직접 슬라이싱합니다.
+             * T 이후 밀리초(.000)와 Z는 제거하고 순수 HH:mm:ss만 추출합니다.
+             *
+             * @param dateStr - ISO 날짜 문자열 또는 빈 문자열
+             * @returns { datePart: "YYYY-MM-DD", timePart: "HH:mm:ss" }
+             */
+            const splitDateTime = (dateStr: string): { datePart: string; timePart: string } => {
+                if (!dateStr) return { datePart: '', timePart: '' };
+                const tIdx = dateStr.indexOf('T');
+                if (tIdx === -1) return { datePart: dateStr, timePart: '' };
+                // "2026-04-11" — T 앞부분
+                const datePart = dateStr.slice(0, tIdx);
+                // "09:30:00.000Z" → "09:30:00" — 밀리초와 Z 제거
+                const timePart = dateStr.slice(tIdx + 1, tIdx + 9);
+                return { datePart, timePart };
+            };
+
+            /**
+             * 날짜 셀 생성 (YYYY-MM-DD\nHH:mm:ss 2줄 표시)
+             * pdfmake text 배열 + \n 방식으로 개행을 보장합니다.
+             * 날짜가 없으면 빈 문자열 셀을 반환합니다.
+             */
+            const buildDateCell = (dateStr: string) => {
+                const { datePart, timePart } = splitDateTime(dateStr);
+                if (!datePart) return { text: '', fontSize: 8 };
+                return {
+                    text: [
+                        { text: datePart, fontSize: 8, color: colors.textGray },
+                        { text: timePart ? `\n${timePart}` : '', fontSize: 7, color: colors.textGray }
+                    ],
+                    alignment: 'center'
+                };
+            };
+
+            /**
              * 결재선 테이블 생성 (기안자 / 팀장 / 부서장)
-             * 각 열에 직위, 이름, 결재일자를 표시합니다.
+             * 각 열에 직위, 이름, 결재일자(YYYY-MM-DD / HH:mm:ss 2줄)를 표시합니다.
              * 결재자가 미지정된 경우 회색 텍스트로 표시합니다.
              */
             const buildApprovalTable = () => ({
@@ -363,11 +399,11 @@ export const usePdfReport = () => {
                                 height: 50
                             }
                         ],
-                        // 결재일자 행
+                        // 결재일자 행 (YYYY-MM-DD / HH:mm:ss 2줄)
                         [
-                            { text: approvalLine.drafter.date,  fontSize: 8, alignment: 'center', color: colors.textGray },
-                            { text: approvalLine.teamLead.date, fontSize: 8, alignment: 'center', color: colors.textGray },
-                            { text: approvalLine.deptHead.date, fontSize: 8, alignment: 'center', color: colors.textGray }
+                            buildDateCell(approvalLine.drafter.date),
+                            buildDateCell(approvalLine.teamLead.date),
+                            buildDateCell(approvalLine.deptHead.date)
                         ]
                     ]
                 },

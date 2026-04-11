@@ -15,6 +15,7 @@
 import { ref, computed, onActivated } from 'vue';
 import { usePlan, type Plan } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 /* 페이지 탭 제목 설정 */
 const title = '정보기술부문 계획';
@@ -86,20 +87,15 @@ const onRowClick = (event: { data: Plan }) => {
             </div>
 
             <!-- 계획 목록 테이블 -->
-            <DataTable
+            <StyledDataTable
                 v-else
                 :value="plans"
                 paginator
                 :rows="10"
                 :rowsPerPageOptions="[10, 20, 50]"
                 dataKey="plnMngNo"
-                tableStyle="min-width: 50rem"
                 selectionMode="single"
                 @rowClick="onRowClick"
-                :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer' }
-                }"
             >
                 <!-- 대상연도 -->
                 <Column field="plnYy" header="대상연도" sortable headerClass="font-bold" style="width: 8rem" />
@@ -160,7 +156,7 @@ const onRowClick = (event: { data: Plan }) => {
                         등록된 계획이 없습니다.
                     </div>
                 </template>
-            </DataTable>
+            </StyledDataTable>
         </div>
     </div>
 </template>

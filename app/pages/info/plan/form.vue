@@ -22,6 +22,7 @@ import { ref, computed } from 'vue';
 import { useProjects, type Project } from '~/composables/useProjects';
 import { usePlan, type PlanProjectItem } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 /* 페이지 탭 제목 설정 */
 const title = '정보기술부문 계획 등록';
@@ -314,7 +315,7 @@ const handleSave = async () => {
             </div>
 
             <!-- 사업 목록 테이블 -->
-            <DataTable
+            <StyledDataTable
                 v-else
                 :value="projects"
                 v-model:selection="selectedProjects"
@@ -322,11 +323,6 @@ const handleSave = async () => {
                 paginator
                 :rows="10"
                 :rowsPerPageOptions="[10, 20, 50]"
-                tableStyle="min-width: 50rem"
-                :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                }"
             >
                 <!-- 다중 선택 체크박스 -->
                 <Column selectionMode="multiple" headerStyle="width: 3rem" />
@@ -372,7 +368,7 @@ const handleSave = async () => {
                         {{ plnYy }}년도에 해당하는 사업이 없습니다.
                     </div>
                 </template>
-            </DataTable>
+            </StyledDataTable>
         </div>
 
         <!-- ③ 미리보기 (생성 버튼 클릭 후 표시) -->
@@ -417,13 +413,9 @@ const handleSave = async () => {
                         <Tag :value="dept.svnHdq" severity="info" />
                         <span class="text-sm text-zinc-500">{{ dept.projects.length }}건</span>
                     </div>
-                    <DataTable
+                    <StyledDataTable
                         :value="dept.projects"
                         dataKey="prjMngNo"
-                        :pt="{
-                            headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm' },
-                            bodyRow: { class: 'text-sm' }
-                        }"
                     >
                         <Column field="prjNm" header="사업명" />
                         <Column field="prjTp" header="사업유형" style="width: 8rem">
@@ -445,7 +437,7 @@ const handleSave = async () => {
                                 <span class="tabular-nums">{{ formatBudget(slotProps.data.costBg) }}</span>
                             </template>
                         </Column>
-                    </DataTable>
+                    </StyledDataTable>
                 </div>
             </div>
 
@@ -457,13 +449,9 @@ const handleSave = async () => {
                         <Tag :value="getPrjTpName(typeGroup.prjTp)" severity="secondary" />
                         <span class="text-sm text-zinc-500">{{ typeGroup.projects.length }}건</span>
                     </div>
-                    <DataTable
+                    <StyledDataTable
                         :value="typeGroup.projects"
                         dataKey="prjMngNo"
-                        :pt="{
-                            headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm' },
-                            bodyRow: { class: 'text-sm' }
-                        }"
                     >
                         <Column field="prjNm" header="사업명" />
                         <Column field="svnHdq" header="주관부문" style="width: 10rem" />
@@ -483,7 +471,7 @@ const handleSave = async () => {
                                 <span class="tabular-nums">{{ formatBudget(slotProps.data.costBg) }}</span>
                             </template>
                         </Column>
-                    </DataTable>
+                    </StyledDataTable>
                 </div>
             </div>
         </template>

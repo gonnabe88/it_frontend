@@ -2,6 +2,7 @@
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useCost } from '~/composables/useCost';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -96,7 +97,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
                         <i class="pi pi-list text-indigo-500"></i> 단말기 상세 내역 ({{ cost.terminals?.length || 0 }}대)
                     </h2>
-                    <DataTable :value="cost.terminals" class="p-datatable-sm" responsiveLayout="scroll">
+                    <StyledDataTable :value="cost.terminals" class="p-datatable-sm" responsiveLayout="scroll">
                         <Column field="tmnNm" header="단말기명" />
                         <Column field="tmnTuzManr" header="이동방법" />
                         <Column field="tmnUsg" header="용도" />
@@ -105,7 +106,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                                 {{ formatCurrency(slotProps.data.tmlAmt, slotProps.data.cur) }}
                             </template>
                         </Column>
-                    </DataTable>
+                    </StyledDataTable>
                 </section>
             </div>
 

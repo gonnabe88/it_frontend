@@ -251,8 +251,5 @@ const handleCompleteReview = (reviewerEno: string) => {
       @resolve="handleResolve"
     />
 
-    <!-- Toast -->
-    <Toast />
-    <ConfirmDialog />
   </div>
 </template>

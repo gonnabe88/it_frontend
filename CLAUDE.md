@@ -163,9 +163,124 @@ it_frontend/
 3. 백엔드: `@PreAuthorize("hasRole('ADMIN')")` + SecurityConfig URL 패턴 이중 보호
 
 ### 4.10 공통 컴포넌트 사용 규칙
-- `StyledDataTable.vue`: 모든 DataTable에 파란 헤더/gridlines 일관 적용 시 이 래퍼를 사용합니다.
+- `StyledDataTable.vue`: 모든 DataTable에 파란 헤더/gridlines 일관 적용 시 이 래퍼를 사용합니다. (상세: 4.11 참조)
 - `EmployeeSearchDialog.vue`: 직원 검색이 필요한 모든 폼에서 재사용합니다. `useEmployeeSearch.ts`와 함께 사용합니다.
 - `components/common/` 하위 컴포넌트는 Nuxt 자동 등록 시 `Common` 접두사가 붙으므로, 기존 코드와의 일관성을 위해 **명시적 import**를 사용합니다.
+
+### 4.11 표준 테이블 레이아웃 (StyledDataTable)
+
+모든 DataTable은 `StyledDataTable` 공통 컴포넌트를 사용하여 **파란 헤더(blue-900), gridlines, resizable 컬럼** 스타일을 통일합니다.
+
+#### 사용법
+
+```ts
+// 반드시 명시적 import (Nuxt 자동 등록 시 CommonStyledDataTable이 되므로)
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
+```
+
+```html
+<!-- PrimeVue DataTable과 동일하게 사용, Column은 slot으로 전달 -->
+<StyledDataTable :value="rows" :loading="pending" stripedRows dataKey="id">
+    <Column field="name" header="이름" />
+    <Column field="amount" header="금액">
+        <template #body="{ data }">
+            <span class="text-right block">{{ fmt(data.amount) }}</span>
+        </template>
+        <template #footer>
+            <span class="text-right block font-bold">{{ fmt(total) }}</span>
+        </template>
+    </Column>
+</StyledDataTable>
+```
+
+#### 자동 적용 속성 (수동 지정 불필요)
+
+| 속성 | 값 | 설명 |
+|------|----|------|
+| `showGridlines` | `true` | 셀 경계선 표시 |
+| `resizableColumns` | `true` | 컬럼 크기 조절 가능 |
+| `columnResizeMode` | `"fit"` | 리사이즈 시 전체 너비 유지 |
+| `tableStyle` | `min-width: 50rem` | 최소 테이블 너비 |
+| 헤더 배경색 | `blue-900` | CSS로 자동 적용 |
+| 행 hover | `bg-zinc-50` | `pt.bodyRow`로 자동 적용 |
+
+#### 내부 구조 및 CSS 동작 원리
+
+```
+┌── <div class="kdb-it-table">          ← CSS 타겟팅 래퍼
+│   └── <DataTable v-bind="$attrs">     ← PrimeVue DataTable
+│       └── <table>
+│           ├── <thead>
+│           │   └── <tr>
+│           │       └── <th class="p-datatable-header-cell">  ← CSS 직접 적용 대상
+│           └── <tbody>
+│               └── <tr>
+│                   └── <td class="p-datatable-body-cell">
+└──
+```
+
+#### ⚠️ PrimeVue 래퍼 컴포넌트 CSS 주의사항
+
+PrimeVue 컴포넌트를 Vue 컴포넌트로 래핑할 때 반드시 알아야 할 제약입니다.
+
+**1. `<style scoped>` + `:deep()`는 PrimeVue 내부 요소에 적용되지 않을 수 있음**
+
+```html
+<!-- ❌ 동작하지 않는 패턴 -->
+<template>
+    <DataTable v-bind="$attrs"> <!-- PrimeVue 컴포넌트가 루트 -->
+        <slot />
+    </DataTable>
+</template>
+
+<style scoped>
+/* Vue가 data-v-xxxx를 DataTable 루트에 정상적으로 부여하지 못해 매칭 실패 */
+:deep(.p-datatable-header-cell) { color: white; }
+</style>
+```
+
+```html
+<!-- ✅ 올바른 패턴: 래퍼 div + 비스코프 CSS + 고유 클래스 -->
+<template>
+    <div class="kdb-it-table">  <!-- 래퍼 div가 CSS 앵커 역할 -->
+        <DataTable v-bind="$attrs">
+            <slot />
+        </DataTable>
+    </div>
+</template>
+
+<style>  <!-- scoped 제거 -->
+.kdb-it-table .p-datatable-header-cell { color: white; }
+</style>
+```
+
+**2. PrimeVue `pt` (Pass Through)로 `<tr>`에 클래스를 주입해도 CSS `inherit`에 의존하면 안 됨**
+
+```css
+/* ❌ p-datatable-header-row 클래스가 <tr>에 존재하지 않을 수 있음 */
+.kdb-it-table .p-datatable-header-row { background-color: blue; }
+.kdb-it-table .p-datatable-header-cell { background: inherit; }
+
+/* ✅ <th>에 직접 배경색 지정 — 확인된 CSS 클래스(p-datatable-header-cell)만 사용 */
+.kdb-it-table .p-datatable-header-cell { background-color: rgb(30 58 138) !important; }
+```
+
+**3. 반드시 렌더링된 HTML에서 확인된 CSS 클래스만 타겟팅할 것**
+
+| 요소 | 확인된 CSS 클래스 | 사용 가능 |
+|------|-------------------|-----------|
+| `<th>` | `p-datatable-header-cell` | ✅ |
+| `<td>` | `p-datatable-body-cell` | ✅ |
+| `<tr>` (헤더) | (클래스 없음, `pt`로만 부여) | ❌ CSS 직접 타겟팅 불가 |
+
+#### 기존 페이지 마이그레이션 시 체크리스트
+
+- [ ] `import StyledDataTable from '~/components/common/StyledDataTable.vue'` 추가
+- [ ] `<DataTable>` → `<StyledDataTable>` 태그 변경
+- [ ] 중복 속성 제거: `showGridlines`, `resizableColumns`, `tableStyle`, `:pt` (헤더 관련)
+- [ ] `class="text-sm"` 등 테이블 자체 스타일 클래스 제거 (StyledDataTable이 관리)
+- [ ] `</DataTable>` → `</StyledDataTable>` 닫는 태그 변경
+- [ ] 브라우저에서 파란 헤더 + gridlines 표시 확인
 
 ### 4.7 테스트 작성 원칙
 

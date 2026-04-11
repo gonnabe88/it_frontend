@@ -768,7 +768,6 @@ onUnmounted(() => {
     </div>
 
     <ConfirmPopup />
-    <Toast />
 
     <!-- AI 채팅 플로팅 패널 -->
     <GeminiChat

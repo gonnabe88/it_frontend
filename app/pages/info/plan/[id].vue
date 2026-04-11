@@ -19,6 +19,7 @@
 import { ref, computed, onActivated } from 'vue';
 import { usePlan, type PlanSnapshot } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 /* 페이지 탭 제목 설정 */
 const title = '정보기술부문 계획 상세';
@@ -225,13 +226,9 @@ const handleDelete = async () => {
                             <Tag :value="dept.svnHdq" severity="info" />
                             <span class="text-sm text-zinc-500">{{ dept.projects.length }}건</span>
                         </div>
-                        <DataTable
+                        <StyledDataTable
                             :value="dept.projects"
                             dataKey="prjMngNo"
-                            :pt="{
-                                headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm' },
-                                bodyRow: { class: 'text-sm' }
-                            }"
                         >
                             <Column field="prjNm" header="사업명" />
                             <Column field="prjTp" header="사업유형" style="width: 8rem">
@@ -253,7 +250,7 @@ const handleDelete = async () => {
                                     <span class="tabular-nums">{{ formatBudget(slotProps.data.costBg) }}</span>
                                 </template>
                             </Column>
-                        </DataTable>
+                        </StyledDataTable>
                     </div>
                 </div>
 
@@ -269,13 +266,9 @@ const handleDelete = async () => {
                             <Tag :value="getPrjTpName(typeGroup.prjTp)" severity="secondary" />
                             <span class="text-sm text-zinc-500">{{ typeGroup.projects.length }}건</span>
                         </div>
-                        <DataTable
+                        <StyledDataTable
                             :value="typeGroup.projects"
                             dataKey="prjMngNo"
-                            :pt="{
-                                headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm' },
-                                bodyRow: { class: 'text-sm' }
-                            }"
                         >
                             <Column field="prjNm" header="사업명" />
                             <Column field="svnHdq" header="주관부문" style="width: 10rem" />
@@ -295,7 +288,7 @@ const handleDelete = async () => {
                                     <span class="tabular-nums">{{ formatBudget(slotProps.data.costBg) }}</span>
                                 </template>
                             </Column>
-                        </DataTable>
+                        </StyledDataTable>
                     </div>
                 </div>
 

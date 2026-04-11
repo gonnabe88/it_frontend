@@ -21,6 +21,7 @@ import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminRoleResponse, type AdminRoleRequest } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -112,9 +113,6 @@ const saveNewRow = async () => {
 
 <template>
     <div>
-        <Toast />
-        <ConfirmDialog />
-
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between mb-6">
             <div>
@@ -125,7 +123,7 @@ const saveNewRow = async () => {
         </div>
 
         <!-- 역할 DataTable -->
-        <DataTable
+        <StyledDataTable
             :value="roles ?? []"
             :loading="pending"
             editMode="row"
@@ -203,7 +201,7 @@ const saveNewRow = async () => {
                             v-tooltip.top="'삭제'" />
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 신규 행 추가 다이얼로그 -->
         <Dialog v-model:visible="newRowVisible" header="역할 추가" :style="{ width: '400px' }" modal>

@@ -33,6 +33,7 @@
 import { ref, computed } from 'vue';
 import { useAuth } from '~/composables/useAuth';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 import { useApprovals, type BulkApprovalItem } from '~/composables/useApprovals';
 
@@ -257,9 +258,9 @@ definePageMeta({
 
         <!-- 전자결재 목록 DataTable -->
         <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <DataTable :value="approvals || []" dataKey="apfMngNo" v-model:selection="selectedApprovals"
+            <StyledDataTable :value="approvals || []" dataKey="apfMngNo" v-model:selection="selectedApprovals"
                 :isDataSelectable="isRowSelectable" :rowClass="rowClass" sortField="apfMngNo" :sortOrder="-1"
-                stripedRows paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]" tableStyle="min-width: 50rem">
+                stripedRows paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]">
                 <template #empty>
                     <div class="text-center py-8 text-zinc-500">
                         데이터가 없습니다.
@@ -302,7 +303,7 @@ definePageMeta({
                         </div>
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
 
         <!-- 직원 검색 다이얼로그 -->

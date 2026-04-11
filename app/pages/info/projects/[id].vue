@@ -41,6 +41,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import { useToast } from 'primevue/usetoast';
 import { PROJECT_STAGES, getProjectTagClass, getApprovalAuthorityBasis } from '~/utils/common';
 import { useCurrencyRates } from '~/composables/useCurrencyRates';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -932,7 +933,7 @@ onUnmounted(() => {
                         소요자원 상세내용
                     </h3>
                     <div class="rounded-xl overflow-hidden">
-                        <DataTable :value="project.items || []" resizableColumns columnResizeMode="fit" size="small"
+                        <StyledDataTable :value="project.items || []" size="small"
                             stripedRows class="resource-table-modern">
                             <template #empty>
                                 <div class="text-center text-zinc-500 py-12 flex flex-col items-center gap-3">
@@ -1041,7 +1042,7 @@ onUnmounted(() => {
                                     <Column :colspan="5" />
                                 </Row>
                             </ColumnGroup>
-                        </DataTable>
+                        </StyledDataTable>
                     </div>
                 </section>
 

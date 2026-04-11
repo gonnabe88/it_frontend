@@ -20,6 +20,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 /**
  * 소요자원 항목 인터페이스 (UI 모델)
@@ -317,8 +318,8 @@ onMounted(async () => {
         <p v-if="error" class="text-red-500 text-xs">소요자원을 1개 이상 등록해주세요.</p>
 
         <div class="overflow-x-auto">
-            <DataTable :value="items" resizableColumns columnResizeMode="fit" showGridlines size="small"
-                class="resource-table">
+            <StyledDataTable :value="items" size="small"
+                scrollable scrollHeight="400px" class="resource-table">
                 <template #empty>
                     <div class="flex flex-col items-center justify-center text-zinc-500" style="min-height: 350px;">
                         등록된 소요자원이 없습니다. 품목 추가 버튼을 눌러 등록해주세요.
@@ -426,39 +427,28 @@ onMounted(async () => {
                         <Button icon="pi pi-trash" text severity="danger" @click="removeRow(index)" />
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
     </div>
 </template>
 
-<style scoped>
-/** 소요자원 테이블 헤더 배경색 및 텍스트 색상 */
-.resource-table :deep(.p-datatable-thead > tr > th .p-column-header-content) {
-    justify-content: center;
-}
+<style>
+/*
+ * 비스코프 CSS — StyledDataTable 래퍼(kdb-it-table) 내부 PrimeVue 요소에
+ * <style scoped> + :deep()이 도달하지 못하므로 .resource-table 클래스를 앵커로 사용
+ */
 
-.resource-table :deep(.p-datatable-thead > tr > th) {
-    background-color: #f4f4f5 !important;
-    color: #27272a !important;
-}
-
-/** 소요자원 테이블 최소 높이 */
-.resource-table :deep(.p-datatable-table-container) {
+/** 소요자원 테이블: 스크롤 영역 최소 높이 고정 */
+.resource-table .p-datatable-table-container {
     min-height: 400px;
 }
 
 /** 수량/소계 컬럼 InputNumber: PrimeVue 기본 min-width 강제 제거 */
-.resource-table :deep(.col-quantity .p-inputnumber),
-.resource-table :deep(.col-quantity .p-inputnumber-input),
-.resource-table :deep(.col-subtotal .p-inputnumber),
-.resource-table :deep(.col-subtotal .p-inputnumber-input) {
+.resource-table .col-quantity .p-inputnumber,
+.resource-table .col-quantity .p-inputnumber-input,
+.resource-table .col-subtotal .p-inputnumber,
+.resource-table .col-subtotal .p-inputnumber-input {
     min-width: 0 !important;
     width: 100% !important;
-}
-
-/** 다크모드: html.dark는 컴포넌트 외부 조상 요소이므로 :global()로 선언 */
-:global(html.dark) .resource-table :deep(.p-datatable-thead > tr > th) {
-    background-color: #27272a !important;
-    color: #e4e4e7 !important;
 }
 </style>

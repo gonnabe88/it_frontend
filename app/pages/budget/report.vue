@@ -38,7 +38,6 @@ import { type ProjectDetail, useProjects } from '~/composables/useProjects';
 import { type ItCost, useCost } from '~/composables/useCost';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { formatKoreanDate } from '~/utils/common';
 import { useApprovals, type CreateApplicationRequest, type OrcItem } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
 import type { OrgUser } from '~/composables/useOrganization';
@@ -84,7 +83,7 @@ const approvalLine = ref({
     drafter: {
         name: user.value?.empNm || '',
         rank: '',
-        date: formatKoreanDate(),
+        date: new Date().toISOString(),
         id: user.value?.eno || ''
     },
     /** 팀장 결재자 (직원 검색으로 설정) */

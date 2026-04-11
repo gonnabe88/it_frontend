@@ -17,6 +17,7 @@
 import { useAdminApi } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -56,7 +57,7 @@ const isExpired = (endDtm: string): boolean => {
         </div>
 
         <!-- 토큰 DataTable -->
-        <DataTable
+        <StyledDataTable
             :value="tokens ?? []"
             :loading="pending"
             dataKey="tokMasked"
@@ -103,7 +104,7 @@ const isExpired = (endDtm: string): boolean => {
                     {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 직원정보 팝업 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" />

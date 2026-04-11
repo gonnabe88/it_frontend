@@ -16,6 +16,7 @@
 import type { AdminPageResponse, AdminLoginHistoryResponse } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -97,7 +98,7 @@ const lgnTpLabel = (lgnTp: string): string => {
         </div>
 
         <!-- 로그인 이력 DataTable -->
-        <DataTable
+        <StyledDataTable
             :value="historyData?.content ?? []"
             :loading="pending"
             dataKey="fstEnrDtm"
@@ -147,7 +148,7 @@ const lgnTpLabel = (lgnTp: string): string => {
                     </span>
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 페이지네이션 -->
         <div class="mt-4 flex justify-center">

@@ -21,6 +21,7 @@ import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminAuthGradeResponse, type AdminAuthGradeRequest } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 // 관리자 미들웨어 + 레이아웃 적용
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -123,9 +124,6 @@ const saveNewRow = async () => {
 
 <template>
     <div>
-        <Toast />
-        <ConfirmDialog />
-
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between mb-6">
             <div>
@@ -136,7 +134,7 @@ const saveNewRow = async () => {
         </div>
 
         <!-- 자격등급 DataTable -->
-        <DataTable
+        <StyledDataTable
             :value="authGrades ?? []"
             :loading="pending"
             editMode="row"
@@ -215,7 +213,7 @@ const saveNewRow = async () => {
                             v-tooltip.top="'삭제'" />
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 신규 행 추가 다이얼로그 -->
         <Dialog v-model:visible="newRowVisible" header="자격등급 추가" :style="{ width: '460px' }" modal>

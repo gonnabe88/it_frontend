@@ -661,6 +661,4 @@ onUnmounted(() => {
         </div>
     </div>
 
-    <Toast />
-    <ConfirmDialog />
 </template>

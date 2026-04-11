@@ -20,6 +20,7 @@
 <script setup lang="ts">
 import { useDocuments } from '~/composables/useDocuments';
 import type { RequirementDocument } from '~/composables/useDocuments';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 const title = '요구사항 정의서';
 definePageMeta({ title });
@@ -117,13 +118,9 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
             </div>
 
             <!-- DataTable -->
-            <DataTable v-else :value="filteredDocuments" :loading="pending"
+            <StyledDataTable v-else :value="filteredDocuments" :loading="pending"
                 paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]"
                 dataKey="docMngNo" sortField="fstEnrDtm" :sortOrder="-1"
-                :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800/50' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer' }
-                }"
                 @row-click="(e: any) => navigateTo(`/info/documents/${e.data.docMngNo}`)">
 
                 <!-- 문서번호 -->
@@ -196,10 +193,9 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
                             @click="navigateTo('/info/documents/form')" />
                     </div>
                 </template>
-            </DataTable>
+            </StyledDataTable>
         </div>
     </div>
 
     <ConfirmPopup />
-    <Toast />
 </template>

@@ -20,6 +20,7 @@
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount } from 'vue';
 import * as XLSX from 'xlsx';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
@@ -511,7 +512,7 @@ onBeforeUnmount(() => {
 
         <!-- 통합 DataTable -->
         <div v-if="!isLoading"
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
 
             <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
             <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
@@ -535,13 +536,9 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
-            <!-- 통합 DataTable -->
-            <DataTable :value="filteredItems" paginator :rows="pageSize" dataKey="_id" sortField="lstChgDtm"
-                :sortOrder="-1" tableStyle="min-width: 50rem"
-                :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                }">
+            <!-- 통합 DataTable (StyledDataTable: 파란 헤더, gridlines 자동 적용) -->
+            <StyledDataTable :value="filteredItems" paginator :rows="pageSize" dataKey="_id" sortField="lstChgDtm"
+                :sortOrder="-1">
 
                 <!-- 커스텀 체크박스 컬럼 -->
                 <Column headerStyle="width: 3rem">
@@ -635,7 +632,15 @@ onBeforeUnmount(() => {
                 <!-- 종료일 -->
                 <Column field="endDt" header="종료일" sortable></Column>
 
-            </DataTable>
+                <!-- 데이터 없을 때 메시지 -->
+                <template #empty>
+                    <div class="flex items-center justify-center py-20 text-zinc-400 dark:text-zinc-500">
+                        <i class="pi pi-inbox text-3xl mr-3"></i>
+                        <span class="text-lg">{{ filters.bgYy || defaultBgYy }}년도 미상신 전산예산 항목이 없습니다.</span>
+                    </div>
+                </template>
+
+            </StyledDataTable>
         </div>
 
         <!-- 조회 필터 Drawer -->

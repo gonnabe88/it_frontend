@@ -21,6 +21,7 @@ import { useAuth } from '~/composables/useAuth';
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 
 const title = '전산업무비 목록';
@@ -754,13 +755,8 @@ const applyContinuation = async () => {
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
 
-            <DataTable v-else v-model:selection="selectedRows" :value="filteredCosts" showGridlines resizableColumns
-                columnResizeMode="fit" paginator :rows="pageSize" :sortField="currentSortField"
-                :sortOrder="currentSortOrder" removableSort :dataKey="(row) => row.itMngcNo || row._localId"
-                tableStyle="min-width: 50rem" :pt="{
-                    headerRow: { class: 'bg-blue-900 text-white dark:bg-blue-950' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' },
-                }">
+            <StyledDataTable v-else v-model:selection="selectedRows" :value="filteredCosts" paginator :rows="pageSize" :sortField="currentSortField"
+                :sortOrder="currentSortOrder" removableSort :dataKey="(row) => row.itMngcNo || row._localId">
                 <!-- 체크박스 선택 컬럼 -->
                 <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
@@ -917,7 +913,7 @@ const applyContinuation = async () => {
                             @click="navigateTo(`/info/cost/terminal/form?id=${data.itMngcNo}`)" />
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
 
         <!-- 계속 계약 전년도 데이터 불러오기 확인 다이얼로그 -->
@@ -966,7 +962,6 @@ const applyContinuation = async () => {
 /* 테이블 헤더 텍스트 가운데 정렬 */
 :deep(.p-datatable-header-cell) {
     text-align: center;
-    background: inherit !important;
     color: white !important;
     border-color: rgba(255, 255, 255, 0.2);
     padding-top: 0.4rem;

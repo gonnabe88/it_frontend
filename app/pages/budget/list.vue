@@ -2,25 +2,18 @@
 ================================================================================
 [pages/budget/list.vue] 예산 통합 목록 페이지
 ================================================================================
-정보화사업과 전산업무비 예산을 탭으로 구분하여 통합 조회하는 페이지입니다.
-상단에 예산 요약 카드를 표시하고, 탭 전환으로 각 목록을 확인할 수 있습니다.
+정보화사업, 전산업무비, 경상사업 예산을 하나의 통합 테이블로 조회하는 페이지입니다.
+상단에 예산 요약 카드를 표시하고, Drawer 필터로 상세 조건 검색이 가능합니다.
 
 [주요 기능]
   - 예산 단위 변환: SelectButton으로 원/천원/백만원/억원 단위 전환
-  - 예산 요약 카드: 정보화사업 예산 합계, 전산업무비 예산 합계, 전체 합계
-  - 정보화사업 탭: 검색(사업명/주관부서/IT부서) + DataTable
-  - 전산업무비 탭: 검색(비목명/계약명/계약상대처) + DataTable
-  - 각 탭 헤더에 전체 항목 수(Badge) 표시
-
-[탭 구성]
-  - TabView: activeTab ref로 탭 인덱스 관리
-  - 탭 0: 전체 (pi-th-large 아이콘, 통합 조회)
-  - 탭 1: 정보화사업 (pi-desktop 아이콘, indigo 테마)
-  - 탭 2: 전산업무비 (pi-wallet 아이콘, emerald 테마)
+  - 예산 요약 카드: 정보화사업/전산업무비/경상사업 예산 합계
+  - 통합 목록: StyledDataTable + 구분 태그(사업/비용/경상)
+  - 상세 조회 Drawer: 구분/담당부서/예산 범위/결재현황 필터
 
 [라우팅 링크]
-  - 정보화사업 목록 → /info/projects/:prjMngNo
-  - 전산업무비 목록 → /info/cost/:itMngcNo
+  - 정보화사업 → /info/projects/:prjMngNo
+  - 전산업무비 → /info/cost/
   - 결재신청 → /budget/report
 ================================================================================
 -->
@@ -28,6 +21,7 @@
 import { ref, computed } from 'vue';
 import * as XLSX from 'xlsx';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import ApprovalTimeline from '~/components/approval/ApprovalTimeline.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
@@ -40,9 +34,7 @@ definePageMeta({
     title: '예산 목록'
 });
 
-/* ── 탭 관리 ── */
-/** 현재 활성화된 탭 인덱스 (0: 전체, 1: 정보화사업, 2: 전산업무비) */
-const activeTab = ref(0);
+/* ── (탭 제거됨 — 통합 목록만 표시) ── */
 
 /* ── 정보화사업 데이터 (일반 정보화사업만: ornYn != 'Y') ── */
 const { fetchProjects, fetchProjectsBulk } = useProjects();
@@ -205,17 +197,6 @@ const ordinarySearch = ref('');
 /* ── 조회 Drawer ── */
 /** Drawer 표시 여부 */
 const visibleDrawer = ref(false);
-/**
- * 현재 Drawer에 표시할 탭 (0: 전체, 1: 정보화사업, 2: 전산업무비)
- * 각 탭의 "조회" 버튼 클릭 시 해당 인덱스로 설정됩니다.
- */
-const drawerActiveTab = ref(0);
-
-/** 조회 Drawer 열기 */
-const openDrawer = (tabIdx: number) => {
-    drawerActiveTab.value = tabIdx;
-    visibleDrawer.value = true;
-};
 
 /* ── 정보화사업 Drawer 필터 ── */
 const projectFilters = ref({
@@ -528,40 +509,7 @@ const costPageSize = ref(10);
 /** 경상사업 탭 페이지당 표시 건수 */
 const ordinaryPageSize = ref(10);
 
-/** 현재 활성 탭의 pageSize — 단일 Select 컴포넌트에 바인딩 */
-const currentPageSize = computed({
-    get() {
-        if (activeTab.value === 1) return projectPageSize.value;
-        if (activeTab.value === 2) return costPageSize.value;
-        if (activeTab.value === 3) return ordinaryPageSize.value;
-        return allPageSize.value;
-    },
-    set(val: number) {
-        if (activeTab.value === 1) projectPageSize.value = val;
-        else if (activeTab.value === 2) costPageSize.value = val;
-        else if (activeTab.value === 3) ordinaryPageSize.value = val;
-        else allPageSize.value = val;
-    }
-});
-
-
-
-/**
- * 탭 헤더 아이템 정의
- * 라벨, 아이콘, 뱃지(항목 수)로 구성됩니다.
- */
-const tabItems = computed(() => [
-    {
-        label: '정보화사업',
-        icon: 'pi pi-desktop',
-        badge: projects.value.length.toString()
-    },
-    {
-        label: '전산업무비',
-        icon: 'pi pi-wallet',
-        badge: costs.value.length.toString()
-    }
-]);
+/* (탭 제거: currentPageSize, tabItems 불필요) */
 
 /* ── 엑셀/보고서 다운로드 ── */
 const { user } = useAuth();
@@ -687,32 +635,15 @@ const downloadOrdinaryExcel = () => {
  * 보고서 PDF 다운로드
  * 현재 필터링된 항목(정보화사업 + 전산업무비)에 대해 예산편성 신청서 PDF를 생성합니다.
  * 기안자는 현재 로그인 사용자로 자동 설정하고, 팀장/부서장은 미지정으로 처리합니다.
- *
- * @param tabIdx - 현재 탭 인덱스 (0: 전체, 1: 정보화사업, 2: 전산업무비)
  */
-const downloadReport = async (tabIdx: number) => {
+const downloadReport = async () => {
     reportLoading.value = true;
     try {
-        /* 현재 탭에 따라 대상 ID 결정 */
-        let projectIdList: string[] = [];
-        let costList: ItCost[] = [];
-
-        if (tabIdx === 0) {
-            /* 전체 탭: 통합 목록에서 유형별 분리 */
-            projectIdList = filteredAll.value.filter(i => i._type === '사업' || i._type === '경상').map(i => i._id);
-            costList = filteredCosts.value.filter(c =>
-                filteredAll.value.some(i => i._type === '비용' && i._id === c.itMngcNo)
-            );
-        } else if (tabIdx === 1) {
-            /* 정보화사업 탭 */
-            projectIdList = filteredProjects.value.map((p: Project) => p.prjMngNo);
-        } else if (tabIdx === 3) {
-            /* 경상사업 탭 */
-            projectIdList = filteredOrdinary.value.map((p: Project) => p.prjMngNo);
-        } else {
-            /* 전산업무비 탭 */
-            costList = filteredCosts.value;
-        }
+        /* 통합 목록에서 유형별 분리 */
+        const projectIdList = filteredAll.value.filter(i => i._type === '사업' || i._type === '경상').map(i => i._id);
+        const costList = filteredCosts.value.filter(c =>
+            filteredAll.value.some(i => i._type === '비용' && i._id === c.itMngcNo)
+        );
 
         /* 정보화사업 상세 데이터 일괄 조회 (품목 포함) */
         let projectDetails: ProjectDetail[] = [];
@@ -792,126 +723,31 @@ const openTimeline = (data: any) => {
             </div>
         </Transition>
 
-        <!-- 탭 영역: 탭 버튼(좌) + 검색 바(우)가 같은 nav 행에 배치 -->
+        <!-- 통합 목록 영역 -->
         <div
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
 
-            <!-- ── 탭 네비게이션 바 (좌: 페이지크기 | 중앙: 탭 | 우: 검색/액션) ── -->
-            <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
-
-                <!-- 좌측: 페이지당 표시 건수 Select -->
-                <div class="flex items-center px-3 shrink-0">
-                    <Select v-model="currentPageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
-                        class="shrink-0" />
-                </div>
-
-                <!-- 탭 버튼 4종 -->
-                <div class="flex">
-                    <!-- 전체 탭 -->
-                    <button @click="activeTab = 0" :class="[
-                        'flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap',
-                        activeTab === 0
-                            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                            : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    ]">
-                        <i class="pi pi-th-large text-xs"></i>
-                        <span>전체</span>
-                        <Tag :value="unifiedItems.length"
-                            class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-0"
-                            rounded />
-                    </button>
-                    <!-- 정보화사업 탭 -->
-                    <button @click="activeTab = 1" :class="[
-                        'flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap',
-                        activeTab === 1
-                            ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                            : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    ]">
-                        <i class="pi pi-desktop text-xs"></i>
-                        <span>정보화사업</span>
-                        <Tag :value="projects.length"
-                            class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-0"
-                            rounded />
-                    </button>
-                    <!-- 전산업무비 탭 -->
-                    <button @click="activeTab = 2" :class="[
-                        'flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap',
-                        activeTab === 2
-                            ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                            : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    ]">
-                        <i class="pi pi-wallet text-xs"></i>
-                        <span>전산업무비</span>
-                        <Tag :value="costs.length"
-                            class="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0"
-                            rounded />
-                    </button>
-                    <!-- 경상사업 탭 -->
-                    <button @click="activeTab = 3" :class="[
-                        'flex items-center gap-2 px-4 py-3 text-base font-medium border-b-2 transition-colors whitespace-nowrap',
-                        activeTab === 3
-                            ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                            : 'border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
-                    ]">
-                        <i class="pi pi-briefcase text-xs"></i>
-                        <span>경상사업</span>
-                        <Tag :value="ordinary.length"
-                            class="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0"
-                            rounded />
-                    </button>
-                </div>
-
-                <!-- 우측: 탭별 통합검색 + 액션 버튼 — 1/4 고정 -->
-                <div class="flex flex-1 items-center justify-end gap-2 px-3 py-2">
-                    <!-- 전체 탭 -->
-                    <template v-if="activeTab === 0">
-                        <IconField class="w-[30rem] shrink-0">
-                            <InputIcon class="pi pi-search" />
-                            <InputText v-model="allSearch" placeholder="통합 검색..." class="w-full" />
-                        </IconField>
-                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasAllFilters"
-                            @excel="downloadAllExcel" @pdf="downloadReport(0)" @filter="openDrawer(0)" />
-                    </template>
-                    <!-- 정보화사업 탭 -->
-                    <template v-else-if="activeTab === 1">
-                        <IconField class="w-[30rem] shrink-0">
-                            <InputIcon class="pi pi-search" />
-                            <InputText v-model="projectSearch" placeholder="사업명, 주관부서, IT부서..." class="w-full" />
-                        </IconField>
-                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasProjectFilters"
-                            @excel="downloadProjectsExcel" @pdf="downloadReport(1)" @filter="openDrawer(1)" />
-                    </template>
-                    <!-- 전산업무비 탭 -->
-                    <template v-else-if="activeTab === 2">
-                        <IconField class="w-[30rem] shrink-0">
-                            <InputIcon class="pi pi-search" />
-                            <InputText v-model="costSearch" placeholder="비목명, 계약명, 계약상대처..." class="w-full" />
-                        </IconField>
-                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasCostFilters"
-                            @excel="downloadCostsExcel" @pdf="downloadReport(2)" @filter="openDrawer(2)" />
-                    </template>
-                    <!-- 경상사업 탭 -->
-                    <template v-else>
-                        <IconField class="w-[30rem] shrink-0">
-                            <InputIcon class="pi pi-search" />
-                            <InputText v-model="ordinarySearch" placeholder="사업명, 담당부서 검색..." class="w-full" />
-                        </IconField>
-                        <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasOrdinaryFilters"
-                            @excel="downloadOrdinaryExcel" @pdf="downloadReport(3)" @filter="openDrawer(3)" />
-                    </template>
-                </div>
+            <!-- ── 툴바: 페이지크기 | 건수 | 검색 | 액션 ── -->
+            <div class="flex items-center gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
+                <!-- 페이지당 표시 건수 Select -->
+                <Select v-model="allPageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
+                    class="shrink-0" />
+                <!-- 전체 건수 Badge -->
+                <Badge :value="filteredAll.length" severity="info" />
+                <div class="flex-1"></div>
+                <!-- 통합 검색 -->
+                <IconField class="w-[30rem] shrink-0">
+                    <InputIcon class="pi pi-search" />
+                    <InputText v-model="allSearch" placeholder="사업명, 담당부서, 담당자 검색..." class="w-full" />
+                </IconField>
+                <!-- 엑셀/보고서/필터 액션 -->
+                <BudgetTableActions class="shrink-0" :reportLoading="reportLoading" :hasFilters="hasAllFilters"
+                    @excel="downloadAllExcel" @pdf="downloadReport()" @filter="visibleDrawer = true" />
             </div>
 
-            <!-- ── 탭 컨텐츠 ── -->
-
-            <!-- 전체 통합 탭 컨텐츠 -->
-            <div v-show="activeTab === 0">
-                <!-- 전체 통합 DataTable -->
-                <DataTable :value="filteredAll" paginator :rows="allPageSize" dataKey="_id" sortField="lstChgDtm"
-                    :sortOrder="-1" tableStyle="min-width: 50rem" :pt="{
-                        headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                        bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                    }">
+            <!-- ── 통합 DataTable ── -->
+            <StyledDataTable :value="filteredAll" paginator :rows="allPageSize" dataKey="_id" sortField="lstChgDtm"
+                :sortOrder="-1">
                     <!-- 구분: 정보화사업/전산업무비/경상사업 태그 -->
                     <Column field="_type" header="구분" sortable style="width: 100px">
                         <template #body="slotProps">
@@ -996,462 +832,62 @@ const openTimeline = (data: any) => {
                             <span v-else class="text-zinc-400">-</span>
                         </template>
                     </Column>
-                </DataTable>
-            </div>
-
-            <!-- 정보화사업 탭 컨텐츠 -->
-            <div v-show="activeTab === 1">
-                <!-- 정보화사업 DataTable -->
-                <div v-if="projectsError" class="p-4 text-red-500">
-                    데이터를 불러오는 중 오류가 발생했습니다: {{ projectsError.message }}
-                </div>
-                <DataTable v-else :value="filteredProjects" paginator :rows="projectPageSize" dataKey="prjMngNo"
-                    sortField="lstChgDtm" :sortOrder="-1" tableStyle="min-width: 50rem" :pt="{
-                        headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                        bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                    }">
-                    <!-- 예산연도 -->
-                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
-                    <!-- 사업명: 상세 페이지 링크 -->
-                    <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
-                        <template #body="slotProps">
-                            <NuxtLink :to="`/info/projects/${slotProps.data.prjMngNo}`"
-                                class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
-                                {{ slotProps.data.prjNm }}
-                            </NuxtLink>
-                        </template>
-                    </Column>
-                    <!-- 신규/계속 태그 -->
-                    <Column field="pulDtt" header="신규/계속" sortable>
-                        <template #body="slotProps">
-                            <Tag :value="getPulDttName(slotProps.data.pulDtt)" :class="getPrjTypeClass(getPulDttName(slotProps.data.pulDtt))"
-                                class="border-0" rounded />
-                        </template>
-                    </Column>
-                    <!-- 총 예산 -->
-                    <Column field="prjBg" :header="`총 예산 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.prjBg) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 개발비 -->
-                    <Column field="devBg" :header="`개발비 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.devBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 기계장치 -->
-                    <Column field="machBg" :header="`기계장치 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.machBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 기타무형자산 -->
-                    <Column field="intanBg" :header="`기타무형자산 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.intanBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 일반관리비 -->
-                    <Column field="costBg" :header="`일반관리비 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.costBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 담당부서 -->
-                    <Column field="svnDpmNm" header="담당부서" sortable></Column>
-                    <!-- 담당자 -->
-                    <Column field="svnDpmCgprNm" header="담당자" sortable></Column>
-                    <!-- 시작일 -->
-                    <Column field="sttDt" header="시작일" sortable></Column>
-                    <!-- 종료일 -->
-                    <Column field="endDt" header="종료일" sortable></Column>
-                    <!-- 결재현황 태그 + 신청서 조회 버튼 -->
-                    <Column field="apfSts" header="결재현황" sortable style="min-width: 150px">
-                        <template #body="slotProps">
-                            <div v-if="slotProps.data.apfSts" class="flex items-center gap-2">
-                                <Tag :value="slotProps.data.apfSts"
-                                    :class="[getApprovalTagClass(slotProps.data.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
-                                    class="border-0" rounded @click="openTimeline(slotProps.data)"
-                                    v-tooltip="'결재 진행 상황 보기'" />
-                                <!-- 신청서 조회 버튼: applicationInfo.apfMngNo가 있을 때만 표시 -->
-                                <Button v-if="slotProps.data.applicationInfo?.apfMngNo" icon="pi pi-file-pdf"
-                                    size="small" severity="secondary" text rounded title="신청서 조회"
-                                    @click="openApplicationViewer(slotProps.data.applicationInfo.apfMngNo)"
-                                    v-tooltip="'신청서 조회'" />
-                            </div>
-                            <span v-else class="text-zinc-400">-</span>
-                        </template>
-                    </Column>
-                </DataTable>
-            </div>
-
-            <!-- 전산업무비 탭 컨텐츠 -->
-            <div v-show="activeTab === 2">
-                <!-- 전산업무비 DataTable -->
-                <div v-if="costsError" class="p-4 text-red-500">
-                    데이터를 불러오는 중 오류가 발생했습니다: {{ costsError.message }}
-                </div>
-                <DataTable v-else :value="filteredCosts" paginator :rows="costPageSize" dataKey="itMngcNo"
-                    sortField="lstChgDtm" :sortOrder="-1" tableStyle="min-width: 50rem" :pt="{
-                        headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                        bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                    }">
-                    <!-- 예산연도 -->
-                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
-                    <!-- 계약명: 상세 페이지 링크 -->
-                    <Column field="cttNm" header="계약명" sortable headerClass="font-bold">
-                        <template #body="slotProps">
-                            <NuxtLink to="/info/cost/"
-                                class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
-                                {{ slotProps.data.cttNm }}
-                            </NuxtLink>
-                        </template>
-                    </Column>
-                    <!-- 비목명 -->
-                    <Column field="ioeNm" header="비목명" sortable></Column>
-                    <!-- 신규/계속 -->
-                    <Column field="pulDtt" header="신규/계속" sortable>
-                        <template #body="slotProps">
-                            <Tag :value="getPulDttName(slotProps.data.pulDtt)" :class="getPrjTypeClass(getPulDttName(slotProps.data.pulDtt))"
-                                class="border-0" rounded />
-                        </template>
-                    </Column>
-                    <!-- 총 예산 -->
-                    <Column field="itMngcBg" :header="`총 예산 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.itMngcBg) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 개발비 -->
-                    <Column field="devBg" :header="`개발비 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.devBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 기계장치 -->
-                    <Column field="machBg" :header="`기계장치 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.machBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 기타무형자산 -->
-                    <Column field="intanBg" :header="`기타무형자산 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.intanBg || 0) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 담당부서 -->
-                    <Column field="pulDpmNm" header="담당부서" sortable></Column>
-                    <!-- 담당자 -->
-                    <Column field="pulCgprNm" header="담당자" sortable></Column>
-                    <!-- 지급예정월 -->
-                    <Column field="fstDfrDt" header="지급예정월" sortable></Column>
-                    <!-- 결재현황 태그 + 신청서 조회 버튼 -->
-                    <Column field="apfSts" header="결재현황" sortable style="min-width: 150px">
-                        <template #body="slotProps">
-                            <div v-if="slotProps.data.apfSts" class="flex items-center gap-2">
-                                <Tag :value="slotProps.data.apfSts"
-                                    :class="[getApprovalTagClass(slotProps.data.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
-                                    class="border-0" rounded @click="openTimeline(slotProps.data)"
-                                    v-tooltip="'결재 진행 상황 보기'" />
-                                <!-- 신청서 조회 버튼: applicationInfo.apfMngNo가 있을 때만 표시 -->
-                                <Button v-if="slotProps.data.applicationInfo?.apfMngNo" icon="pi pi-file-pdf"
-                                    size="small" severity="secondary" text rounded title="신청서 조회"
-                                    @click="openApplicationViewer(slotProps.data.applicationInfo.apfMngNo)"
-                                    v-tooltip="'신청서 조회'" />
-                            </div>
-                            <span v-else class="text-zinc-400">-</span>
-                        </template>
-                    </Column>
-                </DataTable>
-            </div>
-
-            <!-- 경상사업 탭 컨텐츠 -->
-            <div v-show="activeTab === 3">
-                <!-- 경상사업 DataTable -->
-                <div v-if="ordinaryError" class="p-4 text-red-500">
-                    데이터를 불러오는 중 오류가 발생했습니다: {{ ordinaryError.message }}
-                </div>
-                <DataTable v-else :value="filteredOrdinary" paginator :rows="ordinaryPageSize" dataKey="prjMngNo"
-                    sortField="lstChgDtm" :sortOrder="-1" tableStyle="min-width: 50rem" :pt="{
-                        headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                        bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                    }">
-                    <!-- 예산연도 -->
-                    <Column field="bgYy" header="예산연���" sortable style="width: 100px"></Column>
-                    <!-- 사업명: 수정 폼 링크 -->
-                    <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
-                        <template #body="slotProps">
-                            <NuxtLink :to="`/info/projects/${slotProps.data.prjMngNo}`"
-                                class="hover:underline hover:text-amber-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
-                                {{ slotProps.data.prjNm }}
-                            </NuxtLink>
-                        </template>
-                    </Column>
-                    <!-- 신규/계속 태그 -->
-                    <Column field="pulDtt" header="신규/계속" sortable>
-                        <template #body="slotProps">
-                            <Tag :value="getPulDttName(slotProps.data.pulDtt)" :class="getPrjTypeClass(getPulDttName(slotProps.data.pulDtt))"
-                                class="border-0" rounded />
-                        </template>
-                    </Column>
-                    <!-- 총 예산 -->
-                    <Column field="prjBg" :header="`총 예산 (${selectedUnit})`" sortable>
-                        <template #body="slotProps">
-                            <span>{{ formatBudget(slotProps.data.prjBg) }}</span>
-                        </template>
-                    </Column>
-                    <!-- 담당부서 -->
-                    <Column field="svnDpmNm" header="담당부서" sortable></Column>
-                    <!-- 담당자 -->
-                    <Column field="svnDpmCgprNm" header="담당자" sortable></Column>
-                    <!-- 시작일 -->
-                    <Column field="sttDt" header="시작일" sortable></Column>
-                    <!-- 종료일 -->
-                    <Column field="endDt" header="종료일" sortable></Column>
-                    <!-- 결재현황 태그 + 신청서 조회 버튼 -->
-                    <Column field="applicationInfo.apfSts" header="결재현황" sortable style="min-width: 150px">
-                        <template #body="slotProps">
-                            <div v-if="slotProps.data.applicationInfo?.apfSts" class="flex items-center gap-2">
-                                <Tag :value="slotProps.data.applicationInfo.apfSts"
-                                    :class="[getApprovalTagClass(slotProps.data.applicationInfo.apfSts), 'cursor-pointer hover:opacity-80 transition-opacity']"
-                                    class="border-0" rounded @click="openTimeline(slotProps.data)"
-                                    v-tooltip="'결재 진행 상황 보기'" />
-                                <Button v-if="slotProps.data.applicationInfo?.apfMngNo" icon="pi pi-file-pdf"
-                                    size="small" severity="secondary" text rounded title="신청서 조회"
-                                    @click="openApplicationViewer(slotProps.data.applicationInfo.apfMngNo)"
-                                    v-tooltip="'신청서 조회'" />
-                            </div>
-                            <span v-else class="text-zinc-400">-</span>
-                        </template>
-                    </Column>
-                </DataTable>
-            </div>
+                </StyledDataTable>
 
         </div>
     </div>
 
-    <!-- ====================================================
-         상세 조회 Drawer (오른쪽 슬라이드)
-         drawerActiveTab에 따라 전체/정보화사업/전산업무비 필터 표시
-         ==================================================== -->
+    <!-- 상세 조회 Drawer (오른쪽 슬라이드) -->
     <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[600px]">
         <div class="flex flex-col gap-6">
-
-            <!-- ── 전체 탭 필터 ── -->
-            <template v-if="drawerActiveTab === 0">
-                <!-- 구분 (사업/비용) -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">구분</label>
-                    <AutoComplete v-model="allFilters.type" :suggestions="filteredAllTypes" @complete="searchAllType"
-                        multiple dropdown placeholder="사업 / 비용 선택 (다중)" fluid />
-                </div>
-                <!-- 담당부서 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">담당부서</label>
-                    <AutoComplete v-model="allFilters.deptNm" :suggestions="filteredAllDeptNms"
-                        @complete="searchAllDeptNm" multiple dropdown placeholder="담당부서 선택 (다중)" fluid />
-                </div>
-                <!-- 예산 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">총 예산 (원)</label>
-                    <InputNumber v-model="allFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="allFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 자본예산 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">자본예산 (원)</label>
-                    <InputNumber v-model="allFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="allFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 일반관리비 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">일반관리비 (원)</label>
-                    <InputNumber v-model="allFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="allFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 결재현황 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">결재현황</label>
-                    <AutoComplete v-model="allFilters.apfSts" :suggestions="filteredAllApfSts"
-                        @complete="searchAllApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
-                </div>
-                <!-- 액션 버튼 -->
-                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetAllFilters"
-                        class="flex-1" />
-                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
-                </div>
-            </template>
-
-            <!-- ── 정보화사업 탭 필터 ── -->
-            <template v-else-if="drawerActiveTab === 1">
-                <!-- 주관부문 및 본부 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">주관부문 및 본부</label>
-                    <AutoComplete v-model="projectFilters.major_hdq" :suggestions="filteredProjMajorHdqs"
-                        @complete="searchProjMajorHdq" multiple dropdown placeholder="주관부문 선택 (다중)" fluid />
-                </div>
-                <!-- 주관부서 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">주관부서</label>
-                    <AutoComplete v-model="projectFilters.major_department" :suggestions="filteredProjMajorDepts"
-                        @complete="searchProjMajorDept" multiple dropdown placeholder="주관부서 선택 (다중)" fluid />
-                </div>
-                <!-- IT부서 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">IT부서</label>
-                    <AutoComplete v-model="projectFilters.it_department" :suggestions="filteredProjItDepts"
-                        @complete="searchProjItDept" multiple dropdown placeholder="IT부서 선택 (다중)" fluid />
-                </div>
-                <!-- 총 예산 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">총 예산 (원)</label>
-                    <InputNumber v-model="projectFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="projectFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 자본예산 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">자본예산 (원)</label>
-                    <InputNumber v-model="projectFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="projectFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 일반관리비 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">일반관리비 (원)</label>
-                    <InputNumber v-model="projectFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="projectFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 사업 기간 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">사업 기간</label>
-                    <DatePicker v-model="projectFilters.startDate" placeholder="시작일" showIcon fluid
-                        dateFormat="yy-mm-dd" />
-                    <DatePicker v-model="projectFilters.endDate" placeholder="종료일" showIcon fluid
-                        dateFormat="yy-mm-dd" />
-                </div>
-                <!-- 진행 상태 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">진행 상태</label>
-                    <AutoComplete v-model="projectFilters.status" :suggestions="filteredProjStatuses"
-                        @complete="searchProjStatus" multiple dropdown placeholder="상태 선택 (다중)" fluid />
-                </div>
-                <!-- 결재현황 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">결재현황</label>
-                    <AutoComplete v-model="projectFilters.apfSts" :suggestions="filteredProjApfSts"
-                        @complete="searchProjApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
-                </div>
-                <!-- 액션 버튼 -->
-                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetProjectFilters"
-                        class="flex-1" />
-                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
-                </div>
-            </template>
-
-            <!-- ── 전산업무비 탭 필터 ── -->
-            <template v-else-if="drawerActiveTab === 2">
-                <!-- 비목명 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">비목명</label>
-                    <AutoComplete v-model="costFilters.ioeNm" :suggestions="filteredCostIoeNms"
-                        @complete="searchCostIoeNm" multiple dropdown placeholder="비목명 선택 (다중)" fluid />
-                </div>
-                <!-- 계약구분 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">계약구분</label>
-                    <AutoComplete v-model="costFilters.cttTp" :suggestions="filteredCostCttTps"
-                        @complete="searchCostCttTp" multiple dropdown placeholder="계약구분 선택 (다중)" fluid />
-                </div>
-                <!-- 계약상대처 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">계약상대처</label>
-                    <AutoComplete v-model="costFilters.cttOpp" :suggestions="filteredCostCttOpps"
-                        @complete="searchCostCttOpp" multiple dropdown placeholder="계약상대처 선택 (다중)" fluid />
-                </div>
-                <!-- 추진부서 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">추진부서</label>
-                    <AutoComplete v-model="costFilters.pulDpmNm" :suggestions="filteredCostPulDpmNms"
-                        @complete="searchCostPulDpmNm" multiple dropdown placeholder="추진부서 선택 (다중)" fluid />
-                </div>
-                <!-- 총 예산 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">총 예산 (원)</label>
-                    <InputNumber v-model="costFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="costFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 자본예산 범위 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">자본예산 (원)</label>
-                    <InputNumber v-model="costFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="costFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 일반관리비 범위 (= 총예산 - 자본예산) -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">일반관리비 (원)</label>
-                    <InputNumber v-model="costFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                    <InputNumber v-model="costFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
-                        locale="ko-KR" :minFractionDigits="0" class="w-full" />
-                </div>
-                <!-- 결재현황 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">결재현황</label>
-                    <AutoComplete v-model="costFilters.apfSts" :suggestions="filteredCostApfSts"
-                        @complete="searchCostApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
-                </div>
-                <!-- 액션 버튼 -->
-                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetCostFilters"
-                        class="flex-1" />
-                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
-                </div>
-            </template>
-
-            <!-- ── 경상사업 탭 필터 ── -->
-            <template v-else-if="drawerActiveTab === 3">
-                <!-- 사업명 검색 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">사업명</label>
-                    <InputText v-model="ordinaryFilters.name" placeholder="사업명을 입력하세요" />
-                </div>
-                <!-- 사업연도 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">사업연도</label>
-                    <InputText v-model="ordinaryFilters.bgYy" placeholder="예: 2026" />
-                </div>
-                <!-- 진행 상태 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold">진행 상태</label>
-                    <AutoComplete v-model="ordinaryFilters.status" :suggestions="filteredOrdinaryStatuses"
-                        @complete="searchOrdinaryStatus" multiple dropdown placeholder="상태 선택 (다중)" fluid />
-                </div>
-                <!-- 액션 버튼 -->
-                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetOrdinaryFilters"
-                        class="flex-1" />
-                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
-                </div>
-            </template>
+            <!-- 구분 (사업/비용/경상) -->
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold">구분</label>
+                <AutoComplete v-model="allFilters.type" :suggestions="filteredAllTypes" @complete="searchAllType"
+                    multiple dropdown placeholder="사업 / 비용 / 경상 선택 (다중)" fluid />
+            </div>
+            <!-- 담당부서 -->
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold">담당부서</label>
+                <AutoComplete v-model="allFilters.deptNm" :suggestions="filteredAllDeptNms"
+                    @complete="searchAllDeptNm" multiple dropdown placeholder="담당부서 선택 (다중)" fluid />
+            </div>
+            <!-- 총 예산 범위 -->
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold">총 예산 (원)</label>
+                <InputNumber v-model="allFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
+                    locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                <InputNumber v-model="allFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
+                    locale="ko-KR" :minFractionDigits="0" class="w-full" />
+            </div>
+            <!-- 자본예산 범위 -->
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold">자본예산 (원)</label>
+                <InputNumber v-model="allFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
+                    locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                <InputNumber v-model="allFilters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
+                    locale="ko-KR" :minFractionDigits="0" class="w-full" />
+            </div>
+            <!-- 일반관리비 범위 -->
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold">일반관리비 (원)</label>
+                <InputNumber v-model="allFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
+                    locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                <InputNumber v-model="allFilters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
+                    locale="ko-KR" :minFractionDigits="0" class="w-full" />
+            </div>
+            <!-- 결재현황 -->
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold">결재현황</label>
+                <AutoComplete v-model="allFilters.apfSts" :suggestions="filteredAllApfSts"
+                    @complete="searchAllApfSts" multiple dropdown placeholder="결재현황 선택 (다중)" fluid />
+            </div>
+            <!-- 액션 버튼 -->
+            <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetAllFilters"
+                    class="flex-1" />
+                <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
+            </div>
 
         </div>
     </Drawer>
@@ -1462,17 +898,3 @@ const openTimeline = (data: any) => {
     <!-- 신청서 조회 PDF 뷰어 다이얼로그 (재사용 컴포넌트) -->
     <ApplicationViewerDialog v-model:visible="showApplicationViewer" :apfMngNo="viewerApfMngNo" />
 </template>
-
-<style scoped>
-/** 탭 버튼에 패딩을 적용하여 inkbar 길이 보정 (li 대신 버튼 안쪽에 패딩) */
-:deep(.p-tabview-tablist-item .p-tab),
-:deep(.p-tablist .p-tab) {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-}
-
-/** 탭 간 여백 추가 */
-:deep(.p-tablist-tab-list) {
-    gap: 0.5rem;
-}
-</style>

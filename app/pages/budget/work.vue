@@ -26,6 +26,7 @@ import { formatBudget } from '~/utils/common'
 import type { IoeCategoryResponse, SummaryResponse, ApplyResponse } from '~/types/budget-work'
 import type { Project } from '~/composables/useProjects'
 import type { ItCost } from '~/composables/useCost'
+import StyledDataTable from '~/components/common/StyledDataTable.vue'
 
 /** 페이지 메타 설정 */
 definePageMeta({
@@ -160,11 +161,6 @@ const setRate = (cdId: string, value: number | null) => {
     rateMap.value[cdId] = value ?? 0
 }
 
-/** 편성비목 요청금액 합계 */
-const categoriesTotalRequestAmount = computed(() =>
-    categories.value.reduce((sum, cat) => sum + (cat.requestAmount || 0), 0)
-)
-
 /**
  * 특정 비목의 편성금액 계산 (요청금액 × 편성률 / 100, 소수점 반올림)
  */
@@ -174,9 +170,41 @@ const getDupAmount = (cat: IoeCategoryResponse): number => {
     return Math.round(amount * rate / 100)
 }
 
-/** 편성비목 편성금액 합계 (편성률 변경 시 실시간 재계산) */
-const categoriesTotalDupAmount = computed(() =>
-    categories.value.reduce((sum, cat) => sum + getDupAmount(cat), 0)
+/** 자본예산 해당 비목명 키워드 (개발비, 기계장치, 기타무형자산) */
+const CAPITAL_KEYWORDS = ['개발비', '기계장치', '기타무형자산']
+
+/** 자본예산 편성비목 */
+const capitalCategories = computed(() =>
+    categories.value.filter(cat =>
+        CAPITAL_KEYWORDS.some(kw => cat.cdNm.includes(kw))
+    )
+)
+
+/** 일반관리비 편성비목 (자본예산 제외 나머지) */
+const expenseCategories = computed(() =>
+    categories.value.filter(cat =>
+        !CAPITAL_KEYWORDS.some(kw => cat.cdNm.includes(kw))
+    )
+)
+
+/** 자본예산 요청금액 합계 */
+const capitalTotalRequestAmount = computed(() =>
+    capitalCategories.value.reduce((sum, cat) => sum + (cat.requestAmount || 0), 0)
+)
+
+/** 자본예산 편성금액 합계 */
+const capitalTotalDupAmount = computed(() =>
+    capitalCategories.value.reduce((sum, cat) => sum + getDupAmount(cat), 0)
+)
+
+/** 일반관리비 요청금액 합계 */
+const expenseTotalRequestAmount = computed(() =>
+    expenseCategories.value.reduce((sum, cat) => sum + (cat.requestAmount || 0), 0)
+)
+
+/** 일반관리비 편성금액 합계 */
+const expenseTotalDupAmount = computed(() =>
+    expenseCategories.value.reduce((sum, cat) => sum + getDupAmount(cat), 0)
 )
 
 /* ── 저장 처리 ── */
@@ -280,8 +308,7 @@ const fmt = (amount: number | null | undefined): string => {
                 <span class="text-sm font-normal text-zinc-500 ml-2">결재완료된 정보화사업 · 전산업무비</span>
             </h2>
 
-            <DataTable :value="targetItems" :loading="targetLoading" stripedRows dataKey="_id"
-                class="text-sm" tableStyle="min-width: 50rem">
+            <StyledDataTable :value="targetItems" :loading="targetLoading" stripedRows dataKey="_id">
 
                 <!-- 구분 -->
                 <Column field="_type" header="구분" style="width: 5rem">
@@ -343,15 +370,16 @@ const fmt = (amount: number | null | undefined): string => {
                         결재완료된 항목이 없습니다.
                     </div>
                 </template>
-            </DataTable>
+            </StyledDataTable>
         </div>
 
         <!-- 편성비목 설정 테이블 -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
             <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">편성비목 설정</h2>
 
-            <DataTable :value="categories" :loading="categoriesPending" stripedRows
-                class="text-sm" tableStyle="min-width: 40rem">
+            <!-- 자본예산 테이블 (개발비, 기계장치, 기타무형자산) -->
+            <h3 class="text-base font-semibold text-indigo-700 dark:text-indigo-400 mb-2">자본예산</h3>
+            <StyledDataTable :value="capitalCategories" :loading="categoriesPending" stripedRows class="mb-6">
 
                 <!-- 편성비목명 -->
                 <Column field="cdNm" header="편성비목" style="min-width: 12rem">
@@ -382,27 +410,82 @@ const fmt = (amount: number | null | undefined): string => {
                         <span class="text-right block">{{ fmt(data.requestAmount) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(categoriesTotalRequestAmount) }}</span>
+                        <span class="text-right block font-bold">{{ fmt(capitalTotalRequestAmount) }}</span>
                     </template>
                 </Column>
 
-                <!-- 편성금액 (요청금액 × 편성률 / 100, 실시간 계산) -->
+                <!-- 편성금액 (실시간 계산) -->
                 <Column header="편성금액" style="min-width: 10rem">
                     <template #body="{ data }">
                         <span class="text-right block">{{ fmt(getDupAmount(data)) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(categoriesTotalDupAmount) }}</span>
+                        <span class="text-right block font-bold">{{ fmt(capitalTotalDupAmount) }}</span>
                     </template>
                 </Column>
 
                 <!-- 데이터 없음 -->
                 <template #empty>
                     <div class="text-center py-8 text-zinc-500">
-                        편성비목 데이터가 없습니다.
+                        자본예산 편성비목 데이터가 없습니다.
                     </div>
                 </template>
-            </DataTable>
+            </StyledDataTable>
+
+            <!-- 일반관리비 테이블 (나머지) -->
+            <h3 class="text-base font-semibold text-emerald-700 dark:text-emerald-400 mb-2">일반관리비</h3>
+            <StyledDataTable :value="expenseCategories" :loading="categoriesPending" stripedRows>
+
+                <!-- 편성비목명 -->
+                <Column field="cdNm" header="편성비목" style="min-width: 12rem">
+                    <template #body="{ data }">
+                        <span class="font-medium">{{ data.cdNm }}</span>
+                    </template>
+                    <template #footer>
+                        <span class="font-bold">합계</span>
+                    </template>
+                </Column>
+
+                <!-- 편성률 입력 -->
+                <Column header="편성률(%)" style="width: 10rem">
+                    <template #body="{ data }">
+                        <InputNumber :modelValue="getRate(data.cdId)"
+                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100"
+                            suffix=" %" :showButtons="true" :step="5"
+                            class="w-full" inputClass="text-right" />
+                    </template>
+                    <template #footer>
+                        <span class="text-right block">-</span>
+                    </template>
+                </Column>
+
+                <!-- 요청금액 -->
+                <Column header="요청금액" style="min-width: 10rem">
+                    <template #body="{ data }">
+                        <span class="text-right block">{{ fmt(data.requestAmount) }}</span>
+                    </template>
+                    <template #footer>
+                        <span class="text-right block font-bold">{{ fmt(expenseTotalRequestAmount) }}</span>
+                    </template>
+                </Column>
+
+                <!-- 편성금액 (실시간 계산) -->
+                <Column header="편성금액" style="min-width: 10rem">
+                    <template #body="{ data }">
+                        <span class="text-right block">{{ fmt(getDupAmount(data)) }}</span>
+                    </template>
+                    <template #footer>
+                        <span class="text-right block font-bold">{{ fmt(expenseTotalDupAmount) }}</span>
+                    </template>
+                </Column>
+
+                <!-- 데이터 없음 -->
+                <template #empty>
+                    <div class="text-center py-8 text-zinc-500">
+                        일반관리비 편성비목 데이터가 없습니다.
+                    </div>
+                </template>
+            </StyledDataTable>
 
             <!-- 저장 버튼 -->
             <div class="flex justify-end mt-4">
@@ -415,7 +498,7 @@ const fmt = (amount: number | null | undefined): string => {
         <div v-if="summaryData" class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
             <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">편성 결과</h2>
 
-            <DataTable :value="summaryData.data" stripedRows class="text-sm" tableStyle="min-width: 40rem">
+            <StyledDataTable :value="summaryData.data" stripedRows>
 
                 <!-- 비목명 -->
                 <Column field="ioeCategory" header="비목" style="min-width: 12rem">
@@ -456,7 +539,7 @@ const fmt = (amount: number | null | undefined): string => {
                         <span class="text-right block">-</span>
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
     </div>
 </template>

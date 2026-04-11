@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 const props = defineProps({
     visible: {
@@ -141,7 +142,7 @@ const onUserSelect = (event: any) => {
                     </Tree>
                 </SplitterPanel>
                 <SplitterPanel :size="70" :minSize="50" class="h-full flex flex-col p-2 relative">
-                    <DataTable :value="users" :loading="loadingUsers" size="small" stripedRows selectionMode="single"
+                    <StyledDataTable :value="users" :loading="loadingUsers" size="small" stripedRows selectionMode="single"
                         v-model:selection="selectedUser" @row-select="onUserSelect" dataKey="eno" :paginator="true"
                         :rows="10" scrollable scrollHeight="flex">
                         <template #empty>
@@ -159,7 +160,7 @@ const onUserSelect = (event: any) => {
                                 {{ data.ptCNm || '-' }}
                             </template>
                         </Column>
-                    </DataTable>
+                    </StyledDataTable>
                 </SplitterPanel>
             </Splitter>
         </div>

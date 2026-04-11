@@ -16,6 +16,7 @@
 import { useAdminApi } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -54,7 +55,7 @@ const flDttSeverity = (flDtt: string): string => {
         </div>
 
         <!-- 첨부파일 DataTable -->
-        <DataTable
+        <StyledDataTable
             :value="files ?? []"
             :loading="pending"
             dataKey="flMngNo"
@@ -98,7 +99,7 @@ const flDttSeverity = (flDtt: string): string => {
                     {{ formatDateTime(data.fstEnrDtm) }}
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 직원정보 팝업 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" />

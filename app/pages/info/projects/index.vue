@@ -28,6 +28,7 @@
 import { ref, computed, onActivated } from 'vue';
 import { useProjects } from '~/composables/useProjects';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 const title = '사업 목록';
 definePageMeta({
@@ -257,12 +258,8 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
             <div v-if="error" class="p-4 text-red-500">
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
-            <DataTable v-else :value="filteredProjects" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]"
-                v-model:selection="selectedProjects" sortField="prjMngNo" :sortOrder="-1" dataKey="prjMngNo"
-                tableStyle="min-width: 50rem" :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                }">
+            <StyledDataTable v-else :value="filteredProjects" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]"
+                v-model:selection="selectedProjects" sortField="prjMngNo" :sortOrder="-1" dataKey="prjMngNo">
                 <!-- 다중 선택 체크박스 -->
                 <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
@@ -337,7 +334,7 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                         <Button icon="pi pi-search" text rounded aria-label="Search" />
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
 
         <!-- 상세 조회 Drawer (오른쪽 슬라이드) -->

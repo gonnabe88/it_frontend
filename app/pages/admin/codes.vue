@@ -21,6 +21,7 @@ import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminCodeResponse, type AdminCodeRequest } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import * as XLSX from 'xlsx';
 
 // 관리자 미들웨어 + 레이아웃 적용
@@ -292,9 +293,6 @@ const saveNewRow = async () => {
 
 <template>
     <div>
-        <Toast />
-        <ConfirmDialog />
-
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between mb-6">
             <div>
@@ -368,7 +366,7 @@ const saveNewRow = async () => {
         </div>
 
         <!-- 공통코드 DataTable -->
-        <DataTable
+        <StyledDataTable
             :value="filteredCodes"
             :loading="pending"
             editMode="row"
@@ -511,7 +509,7 @@ const saveNewRow = async () => {
                             v-tooltip.top="'삭제'" />
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 신규 행 추가 다이얼로그 -->
         <Dialog v-model:visible="newRowVisible" header="공통코드 추가" :style="{ width: '500px' }" modal>
