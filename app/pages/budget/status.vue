@@ -21,6 +21,7 @@ import { ref, computed, watch } from 'vue'
 import * as XLSX from 'xlsx'
 import DOMPurify from 'isomorphic-dompurify'
 import StyledDataTable from '~/components/common/StyledDataTable.vue'
+import EmployeeInfoDialog from '~/components/common/EmployeeInfoDialog.vue'
 import { useBudgetStatus } from '~/composables/useBudgetStatus'
 import { formatBudget as formatBudgetUtil } from '~/utils/common'
 import type { ProjectStatusItem, CostStatusItem, OrdinaryStatusItem, ColumnDef } from '~/types/budgetStatus'
@@ -72,11 +73,11 @@ const projectColumns: ColumnDef[] = [
     { field: 'prjDes', header: '사업개요', group: '기본정보', align: 'left', width: 250 },
     { field: 'svnHdq', header: '주관부문', group: '기본정보', align: 'center', width: 100 },
     { field: 'svnDpm', header: '주관부서', group: '기본정보', align: 'center', width: 100 },
-    { field: 'svnDpmTlr', header: '주관팀장', group: '기본정보', align: 'center', width: 100 },
-    { field: 'svnDpmCgpr', header: '주관담당자', group: '기본정보', align: 'center', width: 100 },
+    { field: 'svnDpmTlrNm', header: '주관팀장', group: '기본정보', align: 'center', width: 100 },
+    { field: 'svnDpmCgprNm', header: '주관담당자', group: '기본정보', align: 'center', width: 100 },
     { field: 'itDpm', header: 'IT담당부서', group: '기본정보', align: 'center', width: 100 },
-    { field: 'itDpmTlr', header: 'IT담당팀장', group: '기본정보', align: 'center', width: 100 },
-    { field: 'itDpmCgpr', header: 'IT담당자', group: '기본정보', align: 'center', width: 100 },
+    { field: 'itDpmTlrNm', header: 'IT담당팀장', group: '기본정보', align: 'center', width: 100 },
+    { field: 'itDpmCgprNm', header: 'IT담당자', group: '기본정보', align: 'center', width: 100 },
     { field: 'prjPulPtt', header: '추진가능성', group: '기본정보', align: 'center', width: 80 },
     { field: 'sttDt', header: '시작일자', group: '기본정보', align: 'center', width: 100 },
     { field: 'endDt', header: '종료일자', group: '기본정보', align: 'center', width: 100 },
@@ -177,7 +178,7 @@ const filteredProjectCols = computed(() => projectColumns.filter(c => visiblePro
 const filteredCostCols = computed(() => costColumns.filter(c => visibleCostCols.value.includes(c.field)))
 const filteredOrdinaryCols = computed(() => ordinaryColumns.filter(c => visibleOrdinaryCols.value.includes(c.field)))
 
-/** 컬럼 설정 다이얼로그 표시 상태 */
+/** 컬럼 설정 Drawer 표시 상태 */
 const showColSettings = ref(false)
 
 /** 현재 탭에 따른 컬럼 설정 데이터 */
@@ -199,6 +200,52 @@ const currentVisibleCols = computed({
     }
 })
 
+/** 그룹별 컬럼 목록 (Drawer에서 그룹 단위로 표시) */
+const groupedColOptions = computed(() => {
+    const groups: { name: string; columns: ColumnDef[] }[] = []
+    const map = new Map<string, ColumnDef[]>()
+    for (const col of currentColOptions.value) {
+        const g = col.group || '기타'
+        if (!map.has(g)) {
+            const arr: ColumnDef[] = []
+            map.set(g, arr)
+            groups.push({ name: g, columns: arr })
+        }
+        map.get(g)!.push(col)
+    }
+    return groups
+})
+
+/** 개별 컬럼 토글 */
+const toggleCol = (field: string) => {
+    const cols = [...currentVisibleCols.value]
+    const idx = cols.indexOf(field)
+    if (idx >= 0) cols.splice(idx, 1)
+    else cols.push(field)
+    currentVisibleCols.value = cols
+}
+
+/** 그룹 전체 선택/해제 */
+const toggleGroup = (group: { name: string; columns: ColumnDef[] }) => {
+    const fields = group.columns.map(c => c.field)
+    const allChecked = fields.every(f => currentVisibleCols.value.includes(f))
+    const cols = [...currentVisibleCols.value]
+    if (allChecked) {
+        currentVisibleCols.value = cols.filter(f => !fields.includes(f))
+    } else {
+        const toAdd = fields.filter(f => !cols.includes(f))
+        currentVisibleCols.value = [...cols, ...toAdd]
+    }
+}
+
+/** 그룹 내 모든 컬럼이 선택되었는지 */
+const isGroupAllChecked = (group: { name: string; columns: ColumnDef[] }) =>
+    group.columns.every(c => currentVisibleCols.value.includes(c.field))
+
+/** 그룹 내 일부 컬럼만 선택되었는지 */
+const isGroupPartial = (group: { name: string; columns: ColumnDef[] }) =>
+    !isGroupAllChecked(group) && group.columns.some(c => currentVisibleCols.value.includes(c.field))
+
 /* ── 고정 컬럼 (사업명/계약명) ── */
 const frozenField = computed(() => {
     if (activeTab.value === '1') return 'cttNm'
@@ -208,6 +255,31 @@ const frozenHeader = computed(() => {
     if (activeTab.value === '1') return '계약명'
     return '사업명'
 })
+
+/* ── 직원 정보 다이얼로그 ── */
+const showEmployeeInfo = ref(false)
+const selectedEno = ref<string | null>(null)
+
+/** 직원 이름 필드 목록 및 행번 필드 매핑 */
+const EMPLOYEE_FIELDS = ['svnDpmTlrNm', 'svnDpmCgprNm', 'itDpmTlrNm', 'itDpmCgprNm'] as const
+const EMPLOYEE_ENO_FIELDS: Record<string, string> = {
+    svnDpmTlrNm: 'svnDpmTlr',
+    svnDpmCgprNm: 'svnDpmCgpr',
+    itDpmTlrNm: 'itDpmTlr',
+    itDpmCgprNm: 'itDpmCgpr',
+}
+
+/** 직원 이름 클릭 시 직원 정보 다이얼로그 열기 */
+const openEmployeeInfo = (data: any, field: string) => {
+    const enoField = EMPLOYEE_ENO_FIELDS[field]
+    if (enoField && data[enoField]) {
+        selectedEno.value = data[enoField]
+        showEmployeeInfo.value = true
+    }
+}
+
+/** 직원 이름 필드인지 여부 */
+const isEmployeeField = (field: string) => EMPLOYEE_FIELDS.includes(field as any)
 
 /* ── 엑셀 다운로드 ── */
 const exportExcel = () => {
@@ -253,22 +325,19 @@ const exportExcel = () => {
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">예산 현황</h1>
             <div class="flex items-center gap-2">
                 <!-- 연도 선택 -->
-                <Select v-model="bgYy" :options="yearOptions" optionLabel="label" optionValue="value"
-                    class="w-32" />
+                <Select v-model="bgYy" :options="yearOptions" optionLabel="label" optionValue="value" class="w-32" />
                 <!-- 금액 단위 -->
                 <SelectButton v-model="unit" :options="unitOptions" :allowEmpty="false" />
                 <!-- 컬럼 설정 -->
-                <Button label="컬럼 설정" icon="pi pi-cog" severity="secondary" outlined
-                    @click="showColSettings = true" />
+                <Button label="컬럼 설정" icon="pi pi-cog" severity="secondary" outlined @click="showColSettings = true" />
                 <!-- 엑셀 다운로드 -->
-                <Button label="엑셀" icon="pi pi-file-excel" severity="success" outlined
-                    @click="exportExcel" />
+                <Button label="엑셀" icon="pi pi-file-excel" severity="success" outlined @click="exportExcel" />
             </div>
         </div>
 
         <!-- 탭 -->
         <Tabs v-model:value="activeTab">
-            <TabList>
+            <TabList class="mb-4">
                 <Tab value="0">정보화사업</Tab>
                 <Tab value="1">전산업무비</Tab>
                 <Tab value="2">경상사업</Tab>
@@ -276,118 +345,162 @@ const exportExcel = () => {
 
             <!-- 정보화사업 탭 -->
             <TabPanel value="0">
-              <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                <StyledDataTable :value="projects" :loading="projectsPending"
-                    scrollable scrollHeight="70vh" dataKey="prjMngNo"
-                    stripedRows>
-                    <!-- 고정 컬럼: 사업명 -->
-                    <Column field="prjNm" header="사업명" frozen style="min-width: 200px" />
-                    <!-- 동적 컬럼 -->
-                    <Column v-for="col in filteredProjectCols" :key="col.field"
-                        :field="col.field" :header="col.header"
-                        :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
-                        <template #body="{ data }">
-                            <template v-if="col.isCurrency">
-                                <span class="block text-right">{{ fmt((data as any)[col.field]) }}</span>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+                    <StyledDataTable :value="projects" :loading="projectsPending" scrollable scrollHeight="70vh"
+                        dataKey="prjMngNo" stripedRows>
+                        <!-- 고정 컬럼: 사업명 (클릭 시 상세 화면 이동) -->
+                        <Column field="prjNm" header="사업명" frozen style="min-width: 200px">
+                            <template #body="{ data }">
+                                <NuxtLink :to="`/info/projects/${(data as ProjectStatusItem).prjMngNo}`"
+                                    class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+                                    {{ (data as ProjectStatusItem).prjNm }}
+                                </NuxtLink>
                             </template>
-                            <template v-else-if="col.field === 'prjTp'">
-                                {{ getPrjTpName((data as ProjectStatusItem).prjTp) }}
+                        </Column>
+                        <!-- 동적 컬럼 -->
+                        <Column v-for="col in filteredProjectCols" :key="col.field" :field="col.field"
+                            :header="col.header"
+                            :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
+                            <template #body="{ data }">
+                                <template v-if="col.isCurrency">
+                                    <span class="block text-right">{{ fmt((data as any)[col.field]) }}</span>
+                                </template>
+                                <template v-else-if="col.field === 'prjTp'">
+                                    {{ getPrjTpName((data as ProjectStatusItem).prjTp) }}
+                                </template>
+                                <template v-else-if="col.field === 'pulDtt'">
+                                    {{ getPulDttName((data as ProjectStatusItem).pulDtt) }}
+                                </template>
+                                <template v-else-if="col.field === 'svnDpm'">
+                                    {{ (data as ProjectStatusItem).svnDpmNm ?? (data as ProjectStatusItem).svnDpm }}
+                                </template>
+                                <template v-else-if="col.field === 'itDpm'">
+                                    {{ (data as ProjectStatusItem).itDpmNm ?? (data as ProjectStatusItem).itDpm }}
+                                </template>
+                                <template v-else-if="col.field === 'prjPulPtt'">
+                                    {{ (data as ProjectStatusItem).prjPulPtt != null ? (data as
+                                    ProjectStatusItem).prjPulPtt + '%' : '-' }}
+                                </template>
+                                <template v-else-if="isEmployeeField(col.field)">
+                                    <a v-if="(data as any)[col.field]"
+                                        class="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300"
+                                        @click="openEmployeeInfo(data, col.field)">
+                                        {{ (data as any)[col.field] }}
+                                    </a>
+                                    <span v-else>-</span>
+                                </template>
+                                <template v-else-if="col.field === 'prjDes'">
+                                    <div class="line-clamp-2" v-html="DOMPurify.sanitize((data as any).prjDes || '')" />
+                                </template>
+                                <template v-else>
+                                    {{ (data as any)[col.field] ?? '-' }}
+                                </template>
                             </template>
-                            <template v-else-if="col.field === 'pulDtt'">
-                                {{ getPulDttName((data as ProjectStatusItem).pulDtt) }}
-                            </template>
-                            <template v-else-if="col.field === 'prjPulPtt'">
-                                {{ (data as ProjectStatusItem).prjPulPtt != null ? (data as ProjectStatusItem).prjPulPtt + '%' : '-' }}
-                            </template>
-                            <template v-else-if="col.field === 'prjDes'">
-                                <div class="line-clamp-2" v-html="DOMPurify.sanitize((data as any).prjDes || '')" />
-                            </template>
-                            <template v-else>
-                                {{ (data as any)[col.field] ?? '-' }}
-                            </template>
-                        </template>
-                    </Column>
-                </StyledDataTable>
-              </div>
+                        </Column>
+                    </StyledDataTable>
+                </div>
             </TabPanel>
 
             <!-- 전산업무비 탭 -->
             <TabPanel value="1">
-              <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                <StyledDataTable :value="costs" :loading="costsPending"
-                    scrollable scrollHeight="70vh" dataKey="itMngcNo"
-                    stripedRows>
-                    <Column field="cttNm" header="계약명" frozen style="min-width: 200px" />
-                    <Column v-for="col in filteredCostCols" :key="col.field"
-                        :field="col.field" :header="col.header"
-                        :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
-                        <template #body="{ data }">
-                            <template v-if="col.isCurrency">
-                                <span class="block text-right">{{ fmt((data as any)[col.field]) }}</span>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+                    <StyledDataTable :value="costs" :loading="costsPending" scrollable scrollHeight="70vh"
+                        dataKey="itMngcNo" stripedRows>
+                        <!-- 고정 컬럼: 계약명 (클릭 시 상세 화면 이동) -->
+                        <Column field="cttNm" header="계약명" frozen style="min-width: 200px">
+                            <template #body="{ data }">
+                                <NuxtLink :to="`/info/cost/${(data as CostStatusItem).itMngcNo}`"
+                                    class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+                                    {{ (data as CostStatusItem).cttNm }}
+                                </NuxtLink>
                             </template>
-                            <template v-else-if="col.field === 'pulDtt'">
-                                {{ getPulDttName((data as CostStatusItem).pulDtt) }}
+                        </Column>
+                        <Column v-for="col in filteredCostCols" :key="col.field" :field="col.field" :header="col.header"
+                            :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
+                            <template #body="{ data }">
+                                <template v-if="col.isCurrency">
+                                    <span class="block text-right">{{ fmt((data as any)[col.field]) }}</span>
+                                </template>
+                                <template v-else-if="col.field === 'pulDtt'">
+                                    {{ getPulDttName((data as CostStatusItem).pulDtt) }}
+                                </template>
+                                <template v-else>
+                                    {{ (data as any)[col.field] ?? '-' }}
+                                </template>
                             </template>
-                            <template v-else>
-                                {{ (data as any)[col.field] ?? '-' }}
-                            </template>
-                        </template>
-                    </Column>
-                </StyledDataTable>
-              </div>
+                        </Column>
+                    </StyledDataTable>
+                </div>
             </TabPanel>
 
             <!-- 경상사업 탭 -->
             <TabPanel value="2">
-              <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                <StyledDataTable :value="ordinary" :loading="ordinaryPending"
-                    scrollable scrollHeight="70vh" dataKey="prjMngNo"
-                    stripedRows>
-                    <Column field="prjNm" header="사업명" frozen style="min-width: 200px" />
-                    <Column v-for="col in filteredOrdinaryCols" :key="col.field"
-                        :field="col.field" :header="col.header"
-                        :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
-                        <template #body="{ data }">
-                            <template v-if="col.isCurrency">
-                                <span class="block text-right">{{ fmt((data as any)[col.field]) }}</span>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+                    <StyledDataTable :value="ordinary" :loading="ordinaryPending" scrollable scrollHeight="70vh"
+                        dataKey="prjMngNo" stripedRows>
+                        <!-- 고정 컬럼: 사업명 (클릭 시 상세 화면 이동) -->
+                        <Column field="prjNm" header="사업명" frozen style="min-width: 200px">
+                            <template #body="{ data }">
+                                <NuxtLink :to="`/info/projects/${(data as OrdinaryStatusItem).prjMngNo}`"
+                                    class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+                                    {{ (data as OrdinaryStatusItem).prjNm }}
+                                </NuxtLink>
                             </template>
-                            <template v-else-if="col.field === 'pulDtt'">
-                                {{ getPulDttName((data as OrdinaryStatusItem).pulDtt) }}
+                        </Column>
+                        <Column v-for="col in filteredOrdinaryCols" :key="col.field" :field="col.field"
+                            :header="col.header"
+                            :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
+                            <template #body="{ data }">
+                                <template v-if="col.isCurrency">
+                                    <span class="block text-right">{{ fmt((data as any)[col.field]) }}</span>
+                                </template>
+                                <template v-else-if="col.field === 'pulDtt'">
+                                    {{ getPulDttName((data as OrdinaryStatusItem).pulDtt) }}
+                                </template>
+                                <template v-else-if="col.field === 'prjDes'">
+                                    <div class="line-clamp-2" v-html="DOMPurify.sanitize((data as any).prjDes || '')" />
+                                </template>
+                                <template v-else>
+                                    {{ (data as any)[col.field] ?? '-' }}
+                                </template>
                             </template>
-                            <template v-else-if="col.field === 'prjDes'">
-                                <div class="line-clamp-2" v-html="DOMPurify.sanitize((data as any).prjDes || '')" />
-                            </template>
-                            <template v-else>
-                                {{ (data as any)[col.field] ?? '-' }}
-                            </template>
-                        </template>
-                    </Column>
-                </StyledDataTable>
-              </div>
+                        </Column>
+                    </StyledDataTable>
+                </div>
             </TabPanel>
         </Tabs>
 
-        <!-- 컬럼 설정 다이얼로그 -->
-        <Dialog v-model:visible="showColSettings" header="표시할 컬럼 선택" modal
-            :style="{ width: '500px' }">
-            <MultiSelect
-                v-model="currentVisibleCols"
-                :options="currentColOptions"
-                optionLabel="header"
-                optionValue="field"
-                placeholder="컬럼 선택"
-                display="chip"
-                :maxSelectedLabels="5"
-                class="w-full"
-                filter
-            />
-            <template #footer>
-                <div class="flex justify-end gap-2">
-                    <Button label="전체 선택" severity="secondary" text
-                        @click="currentVisibleCols = currentColOptions.map(c => c.field)" />
-                    <Button label="닫기" @click="showColSettings = false" />
+        <!-- 컬럼 설정 Drawer (우측) -->
+        <Drawer v-model:visible="showColSettings" header="표시할 컬럼 선택" position="right" :style="{ width: '340px' }">
+            <!-- 전체 선택 / 전체 해제 버튼 -->
+            <div class="flex gap-2 mb-4">
+                <Button label="전체 선택" severity="secondary" text size="small"
+                    @click="currentVisibleCols = currentColOptions.map(c => c.field)" />
+                <Button label="전체 해제" severity="secondary" text size="small"
+                    @click="currentVisibleCols = []" />
+            </div>
+
+            <!-- 그룹별 컬럼 체크박스 -->
+            <div v-for="group in groupedColOptions" :key="group.name" class="mb-4">
+                <!-- 그룹 헤더 (전체 토글) -->
+                <div class="flex items-center gap-2 mb-2 cursor-pointer" @click="toggleGroup(group)">
+                    <Checkbox :modelValue="isGroupAllChecked(group)" :binary="true"
+                        :indeterminate="isGroupPartial(group)" @click.stop="toggleGroup(group)" />
+                    <span class="font-semibold text-sm text-zinc-700 dark:text-zinc-300">{{ group.name }}</span>
+                    <span class="text-xs text-zinc-400">({{ group.columns.filter(c => currentVisibleCols.includes(c.field)).length }}/{{ group.columns.length }})</span>
                 </div>
-            </template>
-        </Dialog>
+                <!-- 개별 컬럼 -->
+                <div v-for="col in group.columns" :key="col.field"
+                    class="flex items-center gap-2 py-1 pl-6 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded"
+                    @click="toggleCol(col.field)">
+                    <Checkbox :modelValue="currentVisibleCols.includes(col.field)" :binary="true"
+                        @click.stop="toggleCol(col.field)" />
+                    <span class="text-sm">{{ col.header }}</span>
+                </div>
+            </div>
+        </Drawer>
+
+        <!-- 직원 정보 다이얼로그 -->
+        <EmployeeInfoDialog v-model:visible="showEmployeeInfo" :eno="selectedEno" />
     </div>
 </template>

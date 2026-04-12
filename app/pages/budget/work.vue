@@ -228,6 +228,10 @@ interface SummaryDisplayRow {
     bigNmRowspan: number
     /** 중분류 비목 (자본예산 세부비목, 일반관리비 서브그룹명, 합계 행에 표시) */
     midNm: string
+    /** 중분류 비목 rowspan (첫 행: 병합할 행 수, 0: 병합으로 숨김) */
+    midNmRowspan: number
+    /** 자본예산 개별 비목 행 여부 (midNm + dtlNm 가로 병합용) */
+    capItem: boolean
     /** 세부비목 (일반관리비 데이터 및 소계 행에 표시) */
     dtlNm: string
     /** 당해 요청금액 */
@@ -270,6 +274,11 @@ const summaryRowClass = (data: SummaryDisplayRow) => {
     // bigNm 병합 위치별 클래스 (CSS로 셀 경계 제거용)
     if (data.bigNmRowspan > 1) classes.push('bigNm-merge-start')
     else if (data.bigNmRowspan === 0) classes.push('bigNm-merge-cont')
+    // midNm 병합 위치별 클래스
+    if (data.midNmRowspan > 1) classes.push('midNm-merge-start')
+    else if (data.midNmRowspan === 0) classes.push('midNm-merge-cont')
+    // 자본예산 개별 비목: midNm-dtlNm 가로 병합
+    if (data.capItem) classes.push('capItem-colspan')
     return classes.join(' ')
 }
 
@@ -304,19 +313,23 @@ const summaryRows = computed<SummaryDisplayRow[]>(() => {
     /* 자본예산 개별 비목: 첫 행에 bigNm='자본예산' + rowspan 설정 */
     capitalItems.forEach((item, idx) => {
         const p = prev(item.ioeC)
-        rows.push({ id: `cap-${item.ioeC}`, ioeCategory: item.ioeCategory, rowType: 'data', indent: 0,
+        rows.push({
+            id: `cap-${item.ioeC}`, ioeCategory: item.ioeCategory, rowType: 'data', indent: 0,
             bigNm: idx === 0 ? '자본예산' : '', bigNmRowspan: idx === 0 ? capRowCount : 0,
-            midNm: item.ioeCategory, dtlNm: '',
+            midNm: item.ioeCategory, midNmRowspan: 1, capItem: true, dtlNm: '',
             requestAmount: item.requestAmount, dupAmount: item.dupAmount,
-            prevRequestAmount: p?.requestAmount || 0, prevDupAmount: p?.dupAmount || 0, dupRt: item.dupRt })
+            prevRequestAmount: p?.requestAmount || 0, prevDupAmount: p?.dupAmount || 0, dupRt: item.dupRt
+        })
     })
     /* 자본예산 합계 */
     const capSum = sum(capitalItems)
-    rows.push({ id: 'cap-total', ioeCategory: '합계', rowType: 'total', indent: 0,
+    rows.push({
+        id: 'cap-total', ioeCategory: '합계', rowType: 'total', indent: 0,
         bigNm: capitalItems.length === 0 ? '자본예산' : '', bigNmRowspan: capitalItems.length === 0 ? 1 : 0,
-        midNm: '합계', dtlNm: '',
+        midNm: '합계', midNmRowspan: 1, capItem: false, dtlNm: '',
         requestAmount: capSum.req, dupAmount: capSum.dup,
-        prevRequestAmount: capSum.prevReq, prevDupAmount: capSum.prevDup, dupRt: null })
+        prevRequestAmount: capSum.prevReq, prevDupAmount: capSum.prevDup, dupRt: null
+    })
 
     // ── 일반관리비: 중분류 그룹(전산임차료/전산여비/전산용역비/전산제비) 기반 그룹핑 ──
     const expenseItems = allItems.filter(item => !item.capital)
@@ -344,33 +357,42 @@ const summaryRows = computed<SummaryDisplayRow[]>(() => {
         const items = grouped.get(gn) || []
         if (items.length === 0) continue
 
+        /* 중분류 그룹 행 수: 데이터 + 소계 1행 */
+        const midRowCount = items.length + 1
+
         /* 세부 비목: 중분류 그룹 첫 행에 midNm, 일반관리비 첫 행에 bigNm 표시 */
         items.forEach((item, idx) => {
             const p = prev(item.ioeC)
-            rows.push({ id: `exp-${item.ioeC}`, ioeCategory: item.ioeCategory, rowType: 'data', indent: 0,
+            rows.push({
+                id: `exp-${item.ioeC}`, ioeCategory: item.ioeCategory, rowType: 'data', indent: 0,
                 bigNm: isFirstExpenseRow ? '일반관리비' : '', bigNmRowspan: isFirstExpenseRow ? expRowCount : 0,
-                midNm: idx === 0 ? gn : '',
+                midNm: idx === 0 ? gn : '', midNmRowspan: idx === 0 ? midRowCount : 0, capItem: false,
                 dtlNm: item.ioeCategory,
                 requestAmount: item.requestAmount, dupAmount: item.dupAmount,
-                prevRequestAmount: p?.requestAmount || 0, prevDupAmount: p?.dupAmount || 0, dupRt: item.dupRt })
+                prevRequestAmount: p?.requestAmount || 0, prevDupAmount: p?.dupAmount || 0, dupRt: item.dupRt
+            })
             isFirstExpenseRow = false
         })
 
         /* 소계 */
         const gSum = sum(items)
-        rows.push({ id: `exp-sub-${gn}`, ioeCategory: '소계', rowType: 'subtotal', indent: 0,
-            bigNm: '', bigNmRowspan: 0, midNm: '', dtlNm: '소계',
+        rows.push({
+            id: `exp-sub-${gn}`, ioeCategory: '소계', rowType: 'subtotal', indent: 0,
+            bigNm: '', bigNmRowspan: 0, midNm: '', midNmRowspan: 0, capItem: false, dtlNm: '소계',
             requestAmount: gSum.req, dupAmount: gSum.dup,
-            prevRequestAmount: gSum.prevReq, prevDupAmount: gSum.prevDup, dupRt: null })
+            prevRequestAmount: gSum.prevReq, prevDupAmount: gSum.prevDup, dupRt: null
+        })
     }
 
     /* 일반관리비 합계 */
     const expSum = sum(expenseItems)
-    rows.push({ id: 'exp-total', ioeCategory: '합계', rowType: 'total', indent: 0,
+    rows.push({
+        id: 'exp-total', ioeCategory: '합계', rowType: 'total', indent: 0,
         bigNm: isFirstExpenseRow ? '일반관리비' : '', bigNmRowspan: isFirstExpenseRow ? 1 : 0,
-        midNm: '합계', dtlNm: '',
+        midNm: '합계', midNmRowspan: 1, capItem: false, dtlNm: '',
         requestAmount: expSum.req, dupAmount: expSum.dup,
-        prevRequestAmount: expSum.prevReq, prevDupAmount: expSum.prevDup, dupRt: null })
+        prevRequestAmount: expSum.prevReq, prevDupAmount: expSum.prevDup, dupRt: null
+    })
 
     return rows
 })
@@ -486,8 +508,8 @@ const onSave = async () => {
 
 /* ── 금액 포맷 ── */
 
-/** 예산 단위 (기본: 원) */
-const budgetUnit = ref('원')
+/** 예산 단위 (기본: 천원) */
+const budgetUnit = ref('천원')
 const unitOptions = ['원', '천원', '백만원', '억원']
 
 /**
@@ -522,20 +544,22 @@ const fmt = (amount: number | null | undefined): string => {
 
         <!-- 대상 목록 (결재완료 정보화사업 + 전산업무비) -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">
-                대상 목록
-                <span class="text-sm font-normal text-zinc-500 ml-2">결재완료된 정보화사업 · 전산업무비</span>
-            </h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+                    대상 목록
+                    <span class="text-sm font-normal text-zinc-500 ml-2">결재완료된 정보화사업 · 전산업무비</span>
+                </h2>
+                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+            </div>
 
             <StyledDataTable :value="targetItems" :loading="targetLoading" stripedRows dataKey="_id">
 
                 <!-- 구분 -->
                 <Column field="_type" header="구분" style="width: 5rem">
                     <template #body="{ data }">
-                        <Tag :value="data._type"
-                            :class="data._type === '사업'
-                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                        <Tag :value="data._type" :class="data._type === '사업'
+                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
                             class="border-0" rounded />
                     </template>
                 </Column>
@@ -594,7 +618,10 @@ const fmt = (amount: number | null | undefined): string => {
 
         <!-- 편성비목 설정 테이블 -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">편성비목 설정</h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">편성비목 설정</h2>
+                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+            </div>
 
             <!-- 자본예산 테이블 (개발비, 기계장치, 기타무형자산) -->
             <h3 class="text-base font-semibold text-indigo-700 dark:text-indigo-400 mb-2">자본예산</h3>
@@ -614,9 +641,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <Column header="편성률(%)" style="width: 10rem">
                     <template #body="{ data }">
                         <InputNumber :modelValue="getRate(data.cdId)"
-                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100"
-                            suffix=" %" :showButtons="true" :step="5"
-                            class="w-full" inputClass="text-right" />
+                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100" suffix=" %"
+                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
                     </template>
                     <template #footer>
                         <span class="text-right block">-</span>
@@ -669,9 +695,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <Column header="편성률(%)" style="width: 10rem">
                     <template #body="{ data }">
                         <InputNumber :modelValue="getRate(data.cdId)"
-                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100"
-                            suffix=" %" :showButtons="true" :step="5"
-                            class="w-full" inputClass="text-right" />
+                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100" suffix=" %"
+                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
                     </template>
                     <template #footer>
                         <span class="text-right block">-</span>
@@ -714,24 +739,24 @@ const fmt = (amount: number | null | undefined): string => {
         </div>
 
         <!-- 비목별 편성 결과 테이블 (계층 구조: 자본예산/일반관리비 → 비목그룹 → 세부비목) -->
-        <div v-if="summaryData" class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">비목별 편성 결과</h2>
+        <div v-if="summaryData"
+            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">비목별 편성 결과</h2>
+                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+            </div>
 
             <StyledDataTable :value="summaryRows" dataKey="id" :rowClass="summaryRowClass">
 
                 <!-- 2단 헤더 그룹: 비목(3컬럼) + 요청금액(3컬럼) + 편성금액(3컬럼) + 편성률 -->
                 <ColumnGroup type="header">
                     <Row>
-                        <Column header="비목" :colspan="3" />
+                        <Column header="비목" :colspan="3" :rowspan="2" />
                         <Column header="요청금액" :colspan="3" />
                         <Column header="편성금액" :colspan="3" />
                         <Column header="편성률(%)" :rowspan="2" style="width: 7rem" />
                     </Row>
                     <Row>
-                        <!-- 비목 3단계 서브헤더 (레이블 없음) -->
-                        <Column header="" style="min-width: 6rem" />
-                        <Column header="" style="min-width: 7rem" />
-                        <Column header="" style="min-width: 10rem" />
                         <!-- 요청금액 서브헤더 -->
                         <Column :header="`${prevYear}`" style="min-width: 8rem" />
                         <Column :header="`${selectedYear}`" style="min-width: 8rem" />
@@ -746,7 +771,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 대분류 비목 (자본예산/일반관리비 그룹 헤더 행) -->
                 <Column field="bigNm">
                     <template #body="{ data }">
-                        <span v-if="data.bigNm" class="font-bold text-blue-900 dark:text-blue-300">{{ data.bigNm }}</span>
+                        <span v-if="data.bigNm" class="font-bold text-blue-900 dark:text-blue-300">{{ data.bigNm
+                        }}</span>
                     </template>
                     <template #footer></template>
                 </Column>
@@ -781,7 +807,8 @@ const fmt = (amount: number | null | undefined): string => {
                             class="text-right block text-zinc-500">{{ fmt(data.prevRequestAmount) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold text-zinc-500">{{ fmt(prevSummaryData?.totals.requestAmount) }}</span>
+                        <span class="text-right block font-bold text-zinc-500">{{
+                            fmt(prevSummaryData?.totals.requestAmount) }}</span>
                     </template>
                 </Column>
 
@@ -801,15 +828,16 @@ const fmt = (amount: number | null | undefined): string => {
                     <template #body="{ data }">
                         <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block" :class="{
-                            'text-red-600': data.requestAmount - data.prevRequestAmount > 0,
-                            'text-blue-600': data.requestAmount - data.prevRequestAmount < 0
-                        }">{{ calcChangeRate(data.requestAmount, data.prevRequestAmount) }}</span>
+                                'text-red-600': data.requestAmount - data.prevRequestAmount > 0,
+                                'text-blue-600': data.requestAmount - data.prevRequestAmount < 0
+                            }">{{ calcChangeRate(data.requestAmount, data.prevRequestAmount) }}</span>
                     </template>
                     <template #footer>
                         <span class="text-right block font-bold" :class="{
                             'text-red-600': (summaryData!.totals.requestAmount - (prevSummaryData?.totals.requestAmount || 0)) > 0,
                             'text-blue-600': (summaryData!.totals.requestAmount - (prevSummaryData?.totals.requestAmount || 0)) < 0
-                        }">{{ calcChangeRate(summaryData!.totals.requestAmount, prevSummaryData?.totals.requestAmount || 0) }}</span>
+                        }">{{ calcChangeRate(summaryData!.totals.requestAmount, prevSummaryData?.totals.requestAmount
+                            || 0) }}</span>
                     </template>
                 </Column>
 
@@ -820,7 +848,8 @@ const fmt = (amount: number | null | undefined): string => {
                             class="text-right block text-zinc-500">{{ fmt(data.prevDupAmount) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold text-zinc-500">{{ fmt(prevSummaryData?.totals.dupAmount) }}</span>
+                        <span class="text-right block font-bold text-zinc-500">{{ fmt(prevSummaryData?.totals.dupAmount)
+                        }}</span>
                     </template>
                 </Column>
 
@@ -840,23 +869,26 @@ const fmt = (amount: number | null | undefined): string => {
                     <template #body="{ data }">
                         <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block" :class="{
-                            'text-red-600': data.dupAmount - data.prevDupAmount > 0,
-                            'text-blue-600': data.dupAmount - data.prevDupAmount < 0
-                        }">{{ calcChangeRate(data.dupAmount, data.prevDupAmount) }}</span>
+                                'text-red-600': data.dupAmount - data.prevDupAmount > 0,
+                                'text-blue-600': data.dupAmount - data.prevDupAmount < 0
+                            }">{{ calcChangeRate(data.dupAmount, data.prevDupAmount) }}</span>
                     </template>
                     <template #footer>
                         <span class="text-right block font-bold" :class="{
                             'text-red-600': (summaryData!.totals.dupAmount - (prevSummaryData?.totals.dupAmount || 0)) > 0,
                             'text-blue-600': (summaryData!.totals.dupAmount - (prevSummaryData?.totals.dupAmount || 0)) < 0
-                        }">{{ calcChangeRate(summaryData!.totals.dupAmount, prevSummaryData?.totals.dupAmount || 0) }}</span>
+                        }">{{ calcChangeRate(summaryData!.totals.dupAmount, prevSummaryData?.totals.dupAmount || 0)
+                        }}</span>
                     </template>
                 </Column>
 
                 <!-- 편성률 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data'" class="text-right block">{{ data.dupRt != null ? `${data.dupRt}%` : '-' }}</span>
-                        <span v-else-if="data.rowType === 'subtotal' || data.rowType === 'total'" class="text-right block">-</span>
+                        <span v-if="data.rowType === 'data'" class="text-right block">{{ data.dupRt != null ?
+                            `${data.dupRt}%` : '-' }}</span>
+                        <span v-else-if="data.rowType === 'subtotal' || data.rowType === 'total'"
+                            class="text-right block">-</span>
                     </template>
                     <template #footer>
                         <span class="text-right block">-</span>
@@ -868,18 +900,21 @@ const fmt = (amount: number | null | undefined): string => {
         <!-- 사업별 편성 결과 테이블 (비목별 편성률 동적 컬럼) -->
         <div v-if="projectSummaryData && projectSummaryData.data.length > 0"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mb-4">사업별 편성 결과</h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">사업별 편성 결과</h2>
+                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+            </div>
 
-            <StyledDataTable :value="projectSummaryData.data" stripedRows dataKey="orcPkVl"
-                scrollable scrollHeight="flex">
+            <StyledDataTable :value="projectSummaryData.data" stripedRows dataKey="orcPkVl" scrollable
+                scrollHeight="flex">
 
                 <!-- 2단 헤더: 고정 컬럼 + 비목별 동적 컬럼 + 합계 -->
                 <ColumnGroup type="header">
                     <Row>
                         <Column header="구분" :rowspan="2" style="width: 5rem" />
                         <Column header="사업명/계약명" :rowspan="2" style="min-width: 14rem" />
-                        <Column v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix"
-                            :header="cat.cdNm" :colspan="2" />
+                        <Column v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix" :header="cat.cdNm"
+                            :colspan="2" />
                         <Column header="합계" :colspan="2" />
                     </Row>
                     <Row>
@@ -897,10 +932,9 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 구분 -->
                 <Column>
                     <template #body="{ data }">
-                        <Tag :value="data.orcTb === 'BPROJM' ? '사업' : '비용'"
-                            :class="data.orcTb === 'BPROJM'
-                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                        <Tag :value="data.orcTb === 'BPROJM' ? '사업' : '비용'" :class="data.orcTb === 'BPROJM'
+                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
                             class="border-0" rounded />
                     </template>
                 </Column>
@@ -953,7 +987,8 @@ const fmt = (amount: number | null | undefined): string => {
                         <span class="text-right block font-semibold">{{ fmt(data.requestAmount) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(projectSummaryData!.totals.requestAmount) }}</span>
+                        <span class="text-right block font-bold">{{ fmt(projectSummaryData!.totals.requestAmount)
+                        }}</span>
                     </template>
                 </Column>
 
@@ -974,16 +1009,19 @@ const fmt = (amount: number | null | undefined): string => {
 <style>
 /* 비목별 편성 결과 — 행 유형별 배경색 */
 /* PrimeVue v4에서 <td>에 클래스가 없으므로 data-pc-section 속성으로 타겟팅 */
-.kdb-it-table .summary-row-subtotal > td {
+.kdb-it-table .summary-row-subtotal>td {
     background-color: rgb(244 244 245) !important;
 }
-.dark .kdb-it-table .summary-row-subtotal > td {
+
+.dark .kdb-it-table .summary-row-subtotal>td {
     background-color: rgb(39 39 42 / 0.3) !important;
 }
-.kdb-it-table .summary-row-total > td {
+
+.kdb-it-table .summary-row-total>td {
     background-color: rgb(228 228 231) !important;
 }
-.dark .kdb-it-table .summary-row-total > td {
+
+.dark .kdb-it-table .summary-row-total>td {
     background-color: rgb(39 39 42) !important;
 }
 
@@ -994,31 +1032,79 @@ const fmt = (amount: number | null | undefined): string => {
  * 마지막 행(total)은 하단 경계선 유지
  */
 /* 병합 시작 행: 첫 번째 셀 하단 경계 제거 */
-.kdb-it-table .bigNm-merge-start > td:first-child {
+.kdb-it-table .bigNm-merge-start>td:first-child {
     border-bottom-color: transparent !important;
 }
+
 /* 병합 연속 행: 첫 번째 셀 상/하단 경계 제거 + 배경색 통일 */
-.kdb-it-table .bigNm-merge-cont > td:first-child {
+.kdb-it-table .bigNm-merge-cont>td:first-child {
     border-top-color: transparent !important;
     border-bottom-color: transparent !important;
     background-color: white !important;
 }
-.dark .kdb-it-table .bigNm-merge-cont > td:first-child {
+
+.dark .kdb-it-table .bigNm-merge-cont>td:first-child {
     background-color: rgb(24 24 27) !important;
 }
+
 /* 병합 연속 행 중 소계 행: 첫 셀 배경색 유지 (소계 색상 무시) */
-.kdb-it-table .bigNm-merge-cont.summary-row-subtotal > td:first-child {
+.kdb-it-table .bigNm-merge-cont.summary-row-subtotal>td:first-child {
     background-color: white !important;
 }
-.dark .kdb-it-table .bigNm-merge-cont.summary-row-subtotal > td:first-child {
+
+.dark .kdb-it-table .bigNm-merge-cont.summary-row-subtotal>td:first-child {
     background-color: rgb(24 24 27) !important;
 }
+
 /* 병합 연속 행 중 합계 행: 하단 경계 복원 (그룹 끝) + 첫 셀 배경색 유지 */
-.kdb-it-table .bigNm-merge-cont.summary-row-total > td:first-child {
+.kdb-it-table .bigNm-merge-cont.summary-row-total>td:first-child {
     border-bottom-color: var(--p-datatable-body-cell-border-color, rgb(228 228 231)) !important;
     background-color: white !important;
 }
-.dark .kdb-it-table .bigNm-merge-cont.summary-row-total > td:first-child {
+
+.dark .kdb-it-table .bigNm-merge-cont.summary-row-total>td:first-child {
     background-color: rgb(24 24 27) !important;
 }
+
+/*
+ * 중분류 비목(midNm) 셀 병합 — 2번째 컬럼 (td:nth-child(2))
+ * midNm-merge-start: 병합 시작 행 (하단 경계선 제거)
+ * midNm-merge-cont:  병합 연속 행 (상/하단 경계선 제거)
+ */
+.kdb-it-table .midNm-merge-start>td:nth-child(2) {
+    border-bottom-color: transparent !important;
+}
+
+.kdb-it-table .midNm-merge-cont>td:nth-child(2) {
+    border-top-color: transparent !important;
+    border-bottom-color: transparent !important;
+    background-color: white !important;
+}
+
+.dark .kdb-it-table .midNm-merge-cont>td:nth-child(2) {
+    background-color: rgb(24 24 27) !important;
+}
+
+/* 소계 행: 하단 경계 복원 (그룹 끝) + 배경색 유지 */
+.kdb-it-table .midNm-merge-cont.summary-row-subtotal>td:nth-child(2) {
+    border-bottom-color: var(--p-datatable-body-cell-border-color, rgb(228 228 231)) !important;
+    background-color: white !important;
+}
+
+.dark .kdb-it-table .midNm-merge-cont.summary-row-subtotal>td:nth-child(2) {
+    background-color: rgb(24 24 27) !important;
+}
+
+/*
+ * 자본예산 개별 비목 — midNm(2번째)과 dtlNm(3번째) 가로 병합
+ * 2번째 셀의 오른쪽 경계, 3번째 셀의 왼쪽 경계를 제거하여 하나로 보이게 합니다.
+ */
+.kdb-it-table .capItem-colspan>td:nth-child(2) {
+    border-right-color: transparent !important;
+}
+
+.kdb-it-table .capItem-colspan>td:nth-child(3) {
+    border-left-color: transparent !important;
+}
+
 </style>

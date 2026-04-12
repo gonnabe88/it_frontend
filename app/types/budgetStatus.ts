@@ -25,11 +25,17 @@ export interface ProjectStatusItem {
     prjDes: string
     svnHdq: string
     svnDpm: string
+    svnDpmNm: string | null
     svnDpmTlr: string
+    svnDpmTlrNm: string | null
     svnDpmCgpr: string
+    svnDpmCgprNm: string | null
     itDpm: string
+    itDpmNm: string | null
     itDpmTlr: string
+    itDpmTlrNm: string | null
     itDpmCgpr: string
+    itDpmCgprNm: string | null
     prjPulPtt: number | null
     sttDt: string
     endDt: string
