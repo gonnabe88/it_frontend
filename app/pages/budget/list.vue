@@ -725,15 +725,13 @@ const openTimeline = (data: any) => {
 
         <!-- 통합 목록 영역 -->
         <div
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
 
             <!-- ── 툴바: 페이지크기 | 건수 | 검색 | 액션 ── -->
             <div class="flex items-center gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
                 <!-- 페이지당 표시 건수 Select -->
                 <Select v-model="allPageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
                     class="shrink-0" />
-                <!-- 전체 건수 Badge -->
-                <Badge :value="filteredAll.length" severity="info" />
                 <div class="flex-1"></div>
                 <!-- 통합 검색 -->
                 <IconField class="w-[30rem] shrink-0">
@@ -749,7 +747,8 @@ const openTimeline = (data: any) => {
             <StyledDataTable :value="filteredAll" paginator :rows="allPageSize" dataKey="_id" sortField="lstChgDtm"
                 :sortOrder="-1">
                     <!-- 구분: 정보화사업/전산업무비/경상사업 태그 -->
-                    <Column field="_type" header="구분" sortable style="width: 100px">
+                    <Column field="_type" header="구분" sortable style="width: 100px"
+                        :pt="{ bodyCell: { style: 'text-align: center' } }">
                         <template #body="slotProps">
                             <Tag :value="slotProps.data._type"
                                 :class="slotProps.data._type === '사업'
@@ -760,7 +759,8 @@ const openTimeline = (data: any) => {
                         </template>
                     </Column>
                     <!-- 예산연도 -->
-                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
+                    <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"
+                        :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
                     <!-- 사업명/계약명: 상세 페이지 링크 -->
                     <Column field="name" header="사업명/계약명" sortable headerClass="font-bold">
                         <template #body="slotProps">
@@ -771,38 +771,44 @@ const openTimeline = (data: any) => {
                         </template>
                     </Column>
                     <!-- 신규/계속 -->
-                    <Column field="category" header="신규/계속" sortable>
+                    <Column field="category" header="신규/계속" sortable
+                        :pt="{ bodyCell: { style: 'text-align: center' } }">
                         <template #body="slotProps">
                             <Tag :value="getPulDttName(slotProps.data.category)" :class="getPrjTypeClass(getPulDttName(slotProps.data.category))"
                                 class="border-0" rounded />
                         </template>
                     </Column>
                     <!-- 총 예산 -->
-                    <Column field="totalBg" :header="`총 예산`" sortable>
+                    <Column field="totalBg" :header="`총 예산`" sortable
+                        :pt="{ bodyCell: { style: 'text-align: right' } }">
                         <template #body="slotProps">
                             <span>{{ formatBudget(slotProps.data.totalBg) }}{{ slotProps.data.totalBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
                     <!-- 개발비 -->
-                    <Column field="devBg" :header="`개발비`" sortable>
+                    <Column field="devBg" :header="`개발비`" sortable
+                        :pt="{ bodyCell: { style: 'text-align: right' } }">
                         <template #body="slotProps">
                             <span>{{ formatBudget(slotProps.data.devBg) }}{{ slotProps.data.devBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
                     <!-- 기계장치 -->
-                    <Column field="machBg" :header="`기계장치`" sortable>
+                    <Column field="machBg" :header="`기계장치`" sortable
+                        :pt="{ bodyCell: { style: 'text-align: right' } }">
                         <template #body="slotProps">
                             <span>{{ formatBudget(slotProps.data.machBg) }}{{ slotProps.data.machBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
                     <!-- 기타무형자산 -->
-                    <Column field="intanBg" :header="`기타무형자산`" sortable>
+                    <Column field="intanBg" :header="`기타무형자산`" sortable
+                        :pt="{ bodyCell: { style: 'text-align: right' } }">
                         <template #body="slotProps">
                             <span>{{ formatBudget(slotProps.data.intanBg) }}{{ slotProps.data.intanBg ? selectedUnit : '' }}</span>
                         </template>
                     </Column>
                     <!-- 일반관리비 -->
-                    <Column field="costBg" :header="`일반관리비`" sortable>
+                    <Column field="costBg" :header="`일반관리비`" sortable
+                        :pt="{ bodyCell: { style: 'text-align: right' } }">
                         <template #body="slotProps">
                             <span>{{ formatBudget(slotProps.data.costBg) }}{{ slotProps.data.costBg ? selectedUnit : '' }}</span>
                         </template>
@@ -810,13 +816,15 @@ const openTimeline = (data: any) => {
                     <!-- 담당부서 -->
                     <Column field="deptNm" header="담당부서" sortable></Column>
                     <!-- 담당자 -->
-                    <Column field="managerNm" header="담당자" sortable></Column>
+                    <Column field="managerNm" header="담당자" sortable
+                        :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
                     <!-- 시작일 -->
                     <Column field="sttDt" header="시작일" sortable></Column>
                     <!-- 종료일 -->
                     <Column field="endDt" header="종료일" sortable></Column>
                     <!-- 결재현황 태그 + 신청서 조회 버튼 -->
-                    <Column field="apfSts" header="결재현황" sortable style="min-width: 150px">
+                    <Column field="apfSts" header="결재현황" sortable style="min-width: 150px"
+                        :pt="{ bodyCell: { style: 'text-align: center' } }">
                         <template #body="slotProps">
                             <div v-if="slotProps.data.apfSts" class="flex items-center gap-2">
                                 <Tag :value="slotProps.data.apfSts"

@@ -98,7 +98,7 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
         </div>
 
         <!-- 검색 + 테이블 카드 -->
-        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
 
             <!-- 검색 영역 -->
             <div class="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">

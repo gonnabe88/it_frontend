@@ -512,7 +512,7 @@ onBeforeUnmount(() => {
 
         <!-- 통합 DataTable -->
         <div v-if="!isLoading"
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
 
             <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
             <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">

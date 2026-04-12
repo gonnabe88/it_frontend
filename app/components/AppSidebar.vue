@@ -19,6 +19,7 @@
 <script setup lang="ts">
 import { useProjects } from '~/composables/useProjects';
 import { useCost } from '~/composables/useCost';
+import IconCrown from '~/components/icons/IconCrown.vue';
 
 /**
  * 사이드바 축소 상태
@@ -118,7 +119,8 @@ const menuItems = computed(() => {
                 { label: '예산 작성', to: '/budget' },
                 { label: '결재 상신', to: '/budget/approval' },
                 { label: '예산 목록', to: '/budget/list' },
-                { label: '예산 작업', to: '/budget/work' }
+                { label: '예산 작업', to: '/budget/work', admin: true },
+                { label: '예산 현황', to: '/budget/status', admin: true }
             ]
         },
         {
@@ -265,7 +267,11 @@ watch(menuItems, (items) => {
                                     <NuxtLink :to="sub.to"
                                         class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
                                         active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
-                                        <span>{{ sub.label }}</span>
+                                        <span class="flex items-center">
+                                            {{ sub.label }}
+                                            <!-- 관리자 전용 메뉴: 왕관 아이콘 -->
+                                            <IconCrown v-if="sub.admin" class="w-4 h-4 ml-1 text-yellow-500" />
+                                        </span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
                                         <span v-if="sub.to === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
