@@ -7,7 +7,7 @@
 [업무 흐름]
   1. 대상년도(YYYY) 입력
   2. 계획구분(신규/조정) 선택
-  3. 해당 연도의 정보화사업 목록 조회 후 체크박스로 다중 선택
+  3. 해당 연도의 정보화사업 + 전산업무비 목록 조회 후 체크박스로 다중 선택
   4. [생성] 버튼 클릭 → 선택된 사업들의 예산 총계, 부문별/사업유형별 목록 미리보기 표시
   5. [저장] 버튼 클릭 → BPLANM + BPROJA 저장, 목록 페이지로 이동
 
@@ -20,15 +20,44 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useProjects, type Project } from '~/composables/useProjects';
+import { useCost, type ItCost } from '~/composables/useCost';
 import { usePlan, type PlanProjectItem } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+
+/**
+ * 정보화사업과 전산업무비를 통합하여 표시하기 위한 인터페이스
+ * sourceType으로 원본 데이터 구분
+ */
+interface UnifiedProject {
+    /** 관리번호 (prjMngNo 또는 itMngcNo) */
+    id: string;
+    /** 원본 구분 ('project' | 'cost') */
+    sourceType: 'project' | 'cost';
+    /** 사업명/계약명 */
+    prjNm: string;
+    /** 사업유형 */
+    prjTp: string;
+    /** 주관부문 */
+    svnHdq: string;
+    /** 주관부서명/담당부서명 */
+    svnDpmNm: string;
+    /** 총예산 */
+    prjBg: number;
+    /** 자본예산 */
+    assetBg: number;
+    /** 일반관리비 */
+    costBg: number;
+    /** 원본 관리번호 (프로젝트: prjMngNo, 전산업무비: itMngcNo) */
+    prjMngNo: string;
+}
 
 /* 페이지 탭 제목 설정 */
 const title = '정보기술부문 계획 등록';
 definePageMeta({ title });
 
 const { fetchProjectsBulk } = useProjects();
+const { fetchCostsBulk } = useCost();
 const { createPlan } = usePlan();
 const router = useRouter();
 const { removeTab } = useTabs();
@@ -45,10 +74,11 @@ const plnTp = ref<string>('신규');
 
 /* ── 공통코드 코드명 변환 ── */
 const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
+const { getCodeName: getItMngcTpName } = useCodeOptions('IT_MNGC_TP');
 
 /* ── 사업 목록 조회 상태 ── */
-/** 조회된 사업 목록 */
-const projects = ref<Project[]>([]);
+/** 조회된 통합 사업 목록 (정보화사업 + 전산업무비) */
+const projects = ref<UnifiedProject[]>([]);
 
 /** 사업 목록 조회 중 여부 */
 const projectsPending = ref(false);
@@ -57,7 +87,7 @@ const projectsPending = ref(false);
 const searched = ref(false);
 
 /** 체크박스로 선택된 사업 목록 */
-const selectedProjects = ref<Project[]>([]);
+const selectedProjects = ref<UnifiedProject[]>([]);
 
 /* ── 예산 단위 선택 ── */
 const units = ['원', '천원', '백만원', '억원'];
@@ -91,11 +121,47 @@ const handleSearch = async () => {
 
     projectsPending.value = true;
     try {
-        const result = await $apiFetch<Project[]>(
-            `${config.public.apiBase}/api/projects`,
-            { query: { bgYy: plnYy.value } }
-        );
-        projects.value = result || [];
+        // 정보화사업과 전산업무비를 병렬 조회
+        const [prjResult, costResult] = await Promise.all([
+            $apiFetch<Project[]>(
+                `${config.public.apiBase}/api/projects`,
+                { query: { bgYy: plnYy.value } }
+            ),
+            $apiFetch<ItCost[]>(
+                `${config.public.apiBase}/api/cost`,
+                { query: { bgYy: plnYy.value } }
+            ),
+        ]);
+
+        // 정보화사업 → 통합 형식 변환
+        const unifiedProjects: UnifiedProject[] = (prjResult || []).map(p => ({
+            id: p.prjMngNo,
+            sourceType: 'project' as const,
+            prjNm: p.prjNm,
+            prjTp: p.prjTp,
+            svnHdq: p.svnHdq,
+            svnDpmNm: p.svnDpmNm,
+            prjBg: p.prjBg,
+            assetBg: p.assetBg,
+            costBg: p.costBg,
+            prjMngNo: p.prjMngNo,
+        }));
+
+        // 전산업무비 → 통합 형식 변환
+        const unifiedCosts: UnifiedProject[] = (costResult || []).map(c => ({
+            id: c.itMngcNo!,
+            sourceType: 'cost' as const,
+            prjNm: c.cttNm,
+            prjTp: c.itMngcTp,
+            svnHdq: '',
+            svnDpmNm: c.biceDpmNm || '',
+            prjBg: c.itMngcBg,
+            assetBg: c.assetBg || 0,
+            costBg: c.costBg || 0,
+            prjMngNo: c.itMngcNo!,
+        }));
+
+        projects.value = [...unifiedProjects, ...unifiedCosts];
         searched.value = true;
     } catch (e) {
         console.error('사업 목록 조회 실패:', e);
@@ -129,19 +195,22 @@ const handleGenerate = async () => {
 
     generating.value = true;
     try {
-        // 선택된 사업들의 상세 정보 일괄 조회
-        const prjMngNos = selectedProjects.value.map(p => p.prjMngNo);
-        const details = await fetchProjectsBulk(prjMngNos);
+        // 선택된 항목을 정보화사업 / 전산업무비로 분리
+        const selectedPrjs = selectedProjects.value.filter(p => p.sourceType === 'project');
+        const selectedCosts = selectedProjects.value.filter(p => p.sourceType === 'cost');
 
-        // 예산 총계 계산
-        totalBudget.value = {
-            ttlBg: details.reduce((sum, p) => sum + (p.prjBg || 0), 0),
-            cptBg: details.reduce((sum, p) => sum + (p.assetBg || 0), 0),
-            mngc: details.reduce((sum, p) => sum + (p.costBg || 0), 0),
-        };
+        // 정보화사업 상세 조회 (선택된 항목이 있을 때만)
+        const prjDetails = selectedPrjs.length > 0
+            ? await fetchProjectsBulk(selectedPrjs.map(p => p.prjMngNo))
+            : [];
 
-        // 프로젝트 스냅샷 변환
-        const snapshots: PlanProjectItem[] = details.map(p => ({
+        // 전산업무비 상세 조회 (선택된 항목이 있을 때만)
+        const costDetails = selectedCosts.length > 0
+            ? await fetchCostsBulk(selectedCosts.map(p => p.prjMngNo))
+            : [];
+
+        // 정보화사업 스냅샷 변환
+        const prjSnapshots: PlanProjectItem[] = prjDetails.map(p => ({
             prjMngNo: p.prjMngNo,
             prjNm: p.prjNm,
             prjTp: p.prjTp,
@@ -152,6 +221,28 @@ const handleGenerate = async () => {
             assetBg: p.assetBg || 0,
             costBg: p.costBg || 0,
         }));
+
+        // 전산업무비 스냅샷 변환
+        const costSnapshots: PlanProjectItem[] = costDetails.map(c => ({
+            prjMngNo: c.itMngcNo!,
+            prjNm: c.cttNm,
+            prjTp: c.itMngcTp,
+            svnHdq: '미분류',
+            svnDpm: c.biceDpm,
+            svnDpmNm: c.biceDpmNm || '',
+            prjBg: c.itMngcBg,
+            assetBg: c.assetBg || 0,
+            costBg: c.costBg || 0,
+        }));
+
+        const snapshots = [...prjSnapshots, ...costSnapshots];
+
+        // 예산 총계 계산
+        totalBudget.value = {
+            ttlBg: snapshots.reduce((sum, p) => sum + (p.prjBg || 0), 0),
+            cptBg: snapshots.reduce((sum, p) => sum + (p.assetBg || 0), 0),
+            mngc: snapshots.reduce((sum, p) => sum + (p.costBg || 0), 0),
+        };
 
         // 부문(SVN_HDQ)별 그룹핑
         const deptMap = new Map<string, PlanProjectItem[]>();
@@ -208,10 +299,19 @@ const handleSave = async () => {
 
     saving.value = true;
     try {
+        // 정보화사업 / 전산업무비 관리번호 분리
+        const prjMngNos = selectedProjects.value
+            .filter(p => p.sourceType === 'project')
+            .map(p => p.prjMngNo);
+        const itMngcNos = selectedProjects.value
+            .filter(p => p.sourceType === 'cost')
+            .map(p => p.prjMngNo);
+
         await createPlan({
             plnYy: plnYy.value,
             plnTp: plnTp.value,
-            prjMngNos: selectedProjects.value.map(p => p.prjMngNo),
+            prjMngNos,
+            itMngcNos,
         });
         alert('계획이 등록되었습니다.');
         await router.push('/info/plan');
@@ -319,7 +419,7 @@ const handleSave = async () => {
                 v-else
                 :value="projects"
                 v-model:selection="selectedProjects"
-                dataKey="prjMngNo"
+                dataKey="id"
                 paginator
                 :rows="10"
                 :rowsPerPageOptions="[10, 20, 50]"
@@ -327,12 +427,26 @@ const handleSave = async () => {
                 <!-- 다중 선택 체크박스 -->
                 <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
+                <!-- 구분 (정보화사업/전산업무비) -->
+                <Column field="sourceType" header="구분" sortable headerClass="font-bold" style="width: 7rem">
+                    <template #body="slotProps">
+                        <Tag
+                            :value="slotProps.data.sourceType === 'project' ? '정보화사업' : '전산업무비'"
+                            :severity="slotProps.data.sourceType === 'project' ? 'info' : 'warn'"
+                        />
+                    </template>
+                </Column>
+
                 <!-- 사업명 -->
                 <Column field="prjNm" header="사업명" sortable headerClass="font-bold" />
 
                 <!-- 사업유형 -->
                 <Column field="prjTp" header="사업유형" sortable headerClass="font-bold" style="width: 8rem">
-                    <template #body="slotProps">{{ getPrjTpName(slotProps.data.prjTp) }}</template>
+                    <template #body="slotProps">
+                        {{ slotProps.data.sourceType === 'project'
+                            ? getPrjTpName(slotProps.data.prjTp)
+                            : getItMngcTpName(slotProps.data.prjTp) }}
+                    </template>
                 </Column>
 
                 <!-- 주관부문 -->

@@ -40,6 +40,7 @@ import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
 import { useApprovals, type CreateApplicationRequest, type OrcItem } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
+import { useTabs } from '~/composables/useTabs';
 import type { OrgUser } from '~/composables/useOrganization';
 
 /**
@@ -55,6 +56,7 @@ const { fetchCostsBulk } = useCost();
 const { generateReport } = usePdfReport();
 const { createApplication } = useApprovals();
 const { user } = useAuth();
+const { removeTab } = useTabs();
 
 /** sessionStorage에서 로드한 정보화사업 관리번호 목록 */
 const projectIds = ref<string[]>([]);
@@ -68,6 +70,10 @@ const costs = ref<ItCost[]>([]);
 
 /** 데이터 로딩 중 상태 (spinner 표시용) */
 const loading = ref(true);
+/** 상신 완료 다이얼로그 표시 여부 */
+const showSubmitComplete = ref(false);
+/** 상신 완료 메시지 */
+const submitCompleteMessage = ref('');
 /** 생성된 PDF Blob URL (iframe src에 사용, 이전 URL은 revoke) */
 const pdfUrl = ref<string | null>(null);
 
@@ -83,7 +89,7 @@ const approvalLine = ref({
     drafter: {
         name: user.value?.empNm || '',
         rank: '',
-        date: new Date().toISOString(),
+        date: '',
         id: user.value?.eno || ''
     },
     /** 팀장 결재자 (직원 검색으로 설정) */
@@ -256,10 +262,14 @@ const submitApproval = async () => {
         return;
     }
 
-    /* 결재 저장 시 결재 날짜를 빈 값으로 초기화 (처리 시점에 채워짐) */
+    /* 상신 시점의 날짜·시각을 기안자에 기록, 기안자==팀장이면 팀장도 자동승인 시각 기록 */
+    const now = new Date().toISOString();
+    const isTeamLeadSameAsDrafter = approvalLine.value.drafter.id === approvalLine.value.teamLead.id;
+
     const savedApprovalLine = {
         ...approvalLine.value,
-        teamLead: { ...approvalLine.value.teamLead, date: '' },
+        drafter: { ...approvalLine.value.drafter, date: now },
+        teamLead: { ...approvalLine.value.teamLead, date: isTeamLeadSameAsDrafter ? now : '' },
         deptHead: { ...approvalLine.value.deptHead, date: '' }
     };
 
@@ -307,8 +317,8 @@ const submitApproval = async () => {
             approverEnos
         });
 
-        alert(`${totalCount.value}건의 결재 상신이 완료되었습니다.`);
-        navigateTo('/budget/list');
+        submitCompleteMessage.value = `${totalCount.value}건의 결재 상신이 완료되었습니다.`;
+        showSubmitComplete.value = true;
     } catch (e) {
         console.error('Approval failed', e);
         alert('결재 상신 중 오류가 발생했습니다.');
@@ -378,6 +388,18 @@ const submitApproval = async () => {
 
         <!-- 직원 검색 다이얼로그 (결재권자 검색) -->
         <EmployeeSearchDialog v-model:visible="showEmployeeSearch" @select="onEmployeeSelect" header="결재권자 검색" />
+
+        <!-- 상신 완료 다이얼로그 -->
+        <Dialog v-model:visible="showSubmitComplete" header="상신 완료" modal :closable="false"
+            :style="{ width: '400px' }">
+            <div class="flex items-center gap-3">
+                <i class="pi pi-check-circle text-green-500 text-2xl"></i>
+                <span>{{ submitCompleteMessage }}</span>
+            </div>
+            <template #footer>
+                <Button label="확인" icon="pi pi-check" @click="showSubmitComplete = false; removeTab('/budget/report')" />
+            </template>
+        </Dialog>
     </div>
 </template>
 

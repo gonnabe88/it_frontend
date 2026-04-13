@@ -78,10 +78,10 @@ const isOrdinary = computed(() => {
 /** 페이지 타이틀 동적 변경 */
 const title = computed(() => isOrdinary.value ? '경상사업 예산 작성' : '정보화사업 예산 작성');
 
-/** 폼 데이터 상태 (신규/수정 공통) */
-const form = ref({
+/** 폼 초기값 생성 함수 (KeepAlive 재활성화 시 리셋용) */
+const createInitialForm = () => ({
     prjNm: '',
-    pulDtt: '신규',
+    pulDtt: '',
     prjTp: '',
     svnDpm: '',        // 주관부서코드
     svnDpmNm: '',      // 주관부서명 (직원 검색에서 자동 세팅)
@@ -123,6 +123,9 @@ const form = ref({
     resourceItems: [] as ResourceItem[] // UI용 소요자원 상세내용 (저장 시 items로 변환)
 });
 
+/** 폼 데이터 상태 (신규/수정 공통) */
+const form = ref(createInitialForm());
+
 /**
  * 날짜 범위 유효성 검사 (시작일/종료일)
  * - 날짜 형식 오류 시 해당 input을 붉게 표시하고 에러 메시지 출력
@@ -162,7 +165,7 @@ const handleEndDtInput = (event: Event) => {
 /**
  * 사업연도(bgYy) 선택지 옵션 생성 (현재 연도 기준: 올해, 내년)
  */
-const { yearOptions, prjTypeOptions } = useProjectOptions();
+const { yearOptions } = useProjectOptions();
 
 const currencyOptions = computed(() => Object.keys(exchangeRates.value));
 const statusOptions = PROJECT_STAGES;
@@ -176,6 +179,25 @@ const { options: tchnTpOptions } = useCodeOptions('TCHN_TP');
 const { options: mnUsrOptions } = useCodeOptions('MN_USR');
 const { options: rprStsOptions } = useCodeOptions('RPR_STS');
 const { options: prjPulPttOptions } = useCodeOptions('PRJ_PUL_PTT');
+const { options: pulDttOptions, getCodeName: getPulDttName } = useCodeOptions('PUL_DTT');
+
+/**
+ * 현재 선택된 pulDtt가 '계속' 사업인지 판별
+ * 코드명에 '계속'이 포함된 경우 true (코드ID가 아닌 코드명 기반 비교)
+ */
+const isContinueProject = computed(() => {
+    const name = getPulDttName(form.value.pulDtt);
+    return name.includes('계속');
+});
+
+/**
+ * PUL_DTT 옵션 로드 후 신규 등록 모드일 때 기본값(첫 번째 옵션) 자동 세팅
+ */
+watch(pulDttOptions, (opts) => {
+    if (!form.value.pulDtt && opts.length > 0 && !isEditMode.value) {
+        form.value.pulDtt = opts[0]!.cdId;
+    }
+}, { immediate: true });
 
 /** cdId가 999로 끝나는지 판별 (직접입력 코드) */
 const isCustomCode = (cdId: string) => cdId?.endsWith('999');
@@ -266,6 +288,11 @@ const showEmployeeDialog = ref(false);
 const activeDialogField = ref<
     'svnDpm' | 'svnDpmTlr' | 'svnDpmCgpr' | 'itDpm' | 'itDpmTlr' | 'itDpmCgpr'
 >('svnDpm');
+
+/* ── 작성자 소속 부서 정보 (자동 입력 및 부서 불일치 경고용) ── */
+const { user } = useAuth();
+/** 작성자 소속 부서코드 (로그인 사용자 기준) */
+const myBbrC = computed(() => user.value?.bbrC || '');
 
 /** 필드별 다이얼로그 헤더 — activeDialogField에서 파생되므로 별도 ref 불필요 */
 const FIELD_HEADERS = {
@@ -360,19 +387,65 @@ const fetchTlrDeptInfo = async (eno: string, field: 'svn' | 'it') => {
  * svnDpmTlr(주관부서 담당팀장) → fetchTlrDeptInfo('svn')으로 주관부서 + 주관부문 자동 세팅
  * itDpmTlr(IT부서 담당팀장)    → fetchTlrDeptInfo('it')으로 IT부서 자동 세팅
  *
- * @param user - EmployeeSearchDialog에서 emit된 직원 정보
+ * @param selectedUser - EmployeeSearchDialog에서 emit된 직원 정보
  */
-const onEmployeeSelected = (user: EmployeeSelectResult) => {
+/**
+ * 주관부서 담당팀장/담당자 선택 시 작성자 소속 부서와 다른 부서 직원인지 확인
+ * 불일치 시 경고 다이얼로그를 표시합니다.
+ *
+ * @param selectedEno - 선택된 직원의 사원번호
+ * @param selectedName - 선택된 직원의 이름
+ * @param fieldLabel - 필드 표시명 (예: '주관부서 담당팀장')
+ */
+const checkDeptMismatch = async (selectedEno: string, selectedName: string, fieldLabel: string) => {
+    if (!selectedEno || !myBbrC.value) return;
+    try {
+        const config = useRuntimeConfig();
+        const { $apiFetch } = useNuxtApp();
+        const userData = await $apiFetch<any>(`${config.public.apiBase}/api/users/${selectedEno}`);
+        if (userData && userData.bbrC && userData.bbrC !== myBbrC.value) {
+            confirm.require({
+                message: `선택한 ${fieldLabel} "${selectedName}"은(는) 작성자와 다른 부서(${userData.bbrNm || userData.bbrC}) 소속입니다.\n계속 진행하시겠습니까?`,
+                header: '부서 불일치 확인',
+                icon: 'pi pi-exclamation-triangle',
+                acceptLabel: '확인',
+                rejectLabel: '취소',
+                accept: () => { /* 사용자 확인: 선택 유지 */ },
+                reject: () => {
+                    /* 취소: 선택 초기화 */
+                    if (fieldLabel.includes('담당팀장')) {
+                        form.value.svnDpmTlr = '';
+                        form.value.svnDpmTlrNm = '';
+                    } else {
+                        form.value.svnDpmCgpr = '';
+                        form.value.svnDpmCgprNm = '';
+                    }
+                },
+            });
+        }
+    } catch (e) {
+        console.error('직원 부서 정보 확인 실패:', e);
+    }
+};
+
+const onEmployeeSelected = (selectedUser: EmployeeSelectResult) => {
     const { valueKey, labelKey } = FIELD_CONFIG[activeDialogField.value];
     // FIELD_CONFIG의 valueKey/labelKey로 실제 값과 표시명을 추출
-    const value = user[valueKey] || '';
-    const label = user[labelKey] || '';
+    const value = selectedUser[valueKey] || '';
+    const label = selectedUser[labelKey] || '';
 
     // 필드별 타입 안전한 setter 맵 (TypeScript가 form.value 필드 존재를 검증)
     const setters: Record<typeof activeDialogField.value, () => void> = {
         svnDpm: () => { form.value.svnDpm = value; form.value.svnDpmNm = label; },
-        svnDpmTlr: () => { form.value.svnDpmTlr = value; form.value.svnDpmTlrNm = label; fetchTlrDeptInfo(value, 'svn'); },
-        svnDpmCgpr: () => { form.value.svnDpmCgpr = value; form.value.svnDpmCgprNm = label; },
+        svnDpmTlr: () => {
+            form.value.svnDpmTlr = value; form.value.svnDpmTlrNm = label;
+            fetchTlrDeptInfo(value, 'svn');
+            checkDeptMismatch(value, label, '주관부서 담당팀장');
+        },
+        svnDpmCgpr: () => {
+            form.value.svnDpmCgpr = value; form.value.svnDpmCgprNm = label;
+            checkDeptMismatch(value, label, '주관부서 담당자');
+        },
         itDpm: () => { form.value.itDpm = value; form.value.itDpmNm = label; },
         itDpmTlr: () => { form.value.itDpmTlr = value; form.value.itDpmTlrNm = label; fetchTlrDeptInfo(value, 'it'); },
         itDpmCgpr: () => { form.value.itDpmCgpr = value; form.value.itDpmCgprNm = label; },
@@ -388,6 +461,39 @@ const onEmployeeSelected = (user: EmployeeSelectResult) => {
 onActivated(async () => {
     /* ── 재활성화 시 상태 초기화 (KeepAlive로 이전 데이터 잔존 방지) ── */
     codeRestored.value = false;
+
+    /* ── 신규 등록 모드: 폼 및 코드 선택 상태 전체 리셋 ── */
+    if (!isEditMode.value) {
+        form.value = createInitialForm();
+        selectedBzDtt.value = '';
+        selectedPrjTp.value = '';
+        selectedTchnTp.value = '';
+        selectedMnUsr.value = '';
+        selectedRprSts.value = '';
+        selectedPrjPulPtt.value = '';
+        customBzDtt.value = '';
+        customPrjTp.value = '';
+        customTchnTp.value = '';
+        customMnUsr.value = '';
+        customRprSts.value = '';
+        customPrjPulPtt.value = '';
+
+        /* 신규 등록: 작성자 소속 기준 주관부문/주관부서 자동 입력 */
+        if (user.value?.eno) {
+            try {
+                const config = useRuntimeConfig();
+                const { $apiFetch } = useNuxtApp();
+                const userData = await $apiFetch<any>(`${config.public.apiBase}/api/users/${user.value.eno}`);
+                if (userData) {
+                    if (userData.bbrC) form.value.svnDpm = userData.bbrC;
+                    if (userData.bbrNm) form.value.svnDpmNm = userData.bbrNm;
+                    if (userData.prlmHrkOgzCNm) form.value.svnHdq = userData.prlmHrkOgzCNm;
+                }
+            } catch (e) {
+                console.error('작성자 소속 정보 조회 실패:', e);
+            }
+        }
+    }
 
     /* ── 수정 모드: 사업 데이터 로드 ── */
     if (isEditMode.value && projectId.value) {
@@ -798,8 +904,8 @@ watch(continueProjectAC, (val) => {
 });
 
 /** 사업구분이 '계속'으로 변경될 때 현재 사업명으로 AutoComplete 초기화 */
-watch(() => form.value.pulDtt, (val) => {
-    if (val === '계속') continueProjectAC.value = form.value.prjNm;
+watch(isContinueProject, (isContinue) => {
+    if (isContinue) continueProjectAC.value = form.value.prjNm;
 });
 
 /** 주관/IT 부서 동일 여부 제어 */
@@ -896,11 +1002,11 @@ const cancel = () => {
                     </div>
                     <!-- 사업 구분 선택 (신규/계속) -->
                     <div class="flex flex-col gap-2">
-                        <Select v-model="form.pulDtt" :options="prjTypeOptions" placeholder="구분 선택" class="w-32" />
+                        <Select v-model="form.pulDtt" :options="pulDttOptions" optionLabel="cdNm" optionValue="cdId" placeholder="구분 선택" class="w-32" />
                     </div>
                     <!-- 사업명: 계속이면 전년도 사업 AutoComplete, 신규이면 일반 입력 -->
                     <div class="flex flex-col gap-2 flex-1">
-                        <AutoComplete v-if="form.pulDtt === '계속'" v-model="continueProjectAC" dropdown
+                        <AutoComplete v-if="isContinueProject" v-model="continueProjectAC" dropdown
                             :suggestions="continueSuggestions" optionLabel="prjNm" placeholder="전년도 사업명으로 검색 후 선택..."
                             fluid :delay="300" :invalid="formErrors.prjNm" @complete="searchContinueProjects"
                             @item-select="onContinueProjectSelect" />

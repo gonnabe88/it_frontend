@@ -25,6 +25,7 @@ import { useProjects, type Project, type ProjectDetail } from '~/composables/use
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
 import { usePdfReport } from '~/composables/usePdfReport';
+import { onActivated } from 'vue';
 import { formatBudget as formatBudgetUtil, formatKoreanDate } from '~/utils/common';
 
 definePageMeta({
@@ -38,18 +39,24 @@ const { getCodeName: getPulDttName } = useCodeOptions('PUL_DTT');
 const { fetchProjects, fetchProjectsBulk } = useProjects();
 /* apfSts=none: 결재 신청이 없는 항목(미상신)만 조회 */
 /* await 제거: keepalive + server:false 환경에서 Suspense 블로킹 방지 */
-const { data: projectsData, pending: projectsPending } = fetchProjects({ apfSts: 'none' });
+const { data: projectsData, pending: projectsPending, refresh: refreshProjects } = fetchProjects({ apfSts: 'none' });
 /** 정보화사업 목록 */
 const projects = computed(() => projectsData.value || []);
 
 const { fetchCosts, fetchCostsBulk } = useCost();
 /* apfSts=none: 결재 신청이 없는 항목(미상신)만 조회 */
-const { data: costsData, pending: costsPending } = fetchCosts({ apfSts: 'none' });
+const { data: costsData, pending: costsPending, refresh: refreshCosts } = fetchCosts({ apfSts: 'none' });
 /** 전산업무비 목록 */
 const costs = computed(() => costsData.value || []);
 
 /** 데이터 로딩 중 여부 */
 const isLoading = computed(() => projectsPending.value || costsPending.value);
+
+/** keepalive 페이지 재방문 시 데이터 갱신 (상신 후 돌아왔을 때 최신 상태 반영) */
+onActivated(() => {
+    refreshProjects();
+    refreshCosts();
+});
 
 /**
  * [UnifiedBudgetItem] 통합 예산 항목 인터페이스
@@ -553,7 +560,7 @@ onBeforeUnmount(() => {
                 </Column>
 
                 <!-- 구분: 사업 / 비용 / 경상 태그 -->
-                <Column field="_type" header="구분" sortable style="width: 100px">
+                <Column field="_type" header="구분" sortable style="width: 100px; text-align: center">
                     <template #body="slotProps">
                         <Tag :value="slotProps.data._type" :class="slotProps.data._type === '사업'
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
@@ -565,10 +572,10 @@ onBeforeUnmount(() => {
                 </Column>
 
                 <!-- 예산연도 -->
-                <Column field="bgYy" header="예산연도" sortable style="min-width: 120px"></Column>
+                <Column field="bgYy" header="예산연도" sortable style="width: 90px; text-align: center"></Column>
 
                 <!-- 사업명/계약명: 상세 링크 -->
-                <Column field="name" header="사업명/계약명" sortable headerClass="font-bold">
+                <Column field="name" header="사업명/계약명" sortable headerClass="font-bold" style="min-width: 250px">
                     <template #body="slotProps">
                         <NuxtLink :to="slotProps.data._link"
                             class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
@@ -578,7 +585,7 @@ onBeforeUnmount(() => {
                 </Column>
 
                 <!-- 신규/계속 -->
-                <Column field="category" header="신규/계속" sortable>
+                <Column field="category" header="신규/계속" sortable style="width: 90px; text-align: center">
                     <template #body="slotProps">
                         <Tag :value="getPulDttName(slotProps.data.category)" :class="getPrjTypeClass(getPulDttName(slotProps.data.category))"
                             class="border-0" rounded />
@@ -586,35 +593,35 @@ onBeforeUnmount(() => {
                 </Column>
 
                 <!-- 총 예산 -->
-                <Column field="totalBg" header="총 예산" sortable>
+                <Column field="totalBg" header="총 예산" sortable style="text-align: right">
                     <template #body="slotProps">
                         <span>{{ formatBudget(slotProps.data.totalBg) }}{{ slotProps.data.totalBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
                 <!-- 개발비 -->
-                <Column field="devBg" header="개발비" sortable>
+                <Column field="devBg" header="개발비" sortable style="text-align: right">
                     <template #body="slotProps">
                         <span>{{ formatBudget(slotProps.data.devBg) }}{{ slotProps.data.devBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
                 <!-- 기계장치 -->
-                <Column field="machBg" header="기계장치" sortable>
+                <Column field="machBg" header="기계장치" sortable style="text-align: right">
                     <template #body="slotProps">
                         <span>{{ formatBudget(slotProps.data.machBg) }}{{ slotProps.data.machBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
                 <!-- 기타무형자산 -->
-                <Column field="intanBg" header="기타무형자산" sortable>
+                <Column field="intanBg" header="기타무형자산" sortable style="text-align: right">
                     <template #body="slotProps">
                         <span>{{ formatBudget(slotProps.data.intanBg) }}{{ slotProps.data.intanBg ? selectedUnit : '' }}</span>
                     </template>
                 </Column>
 
                 <!-- 일반관리비 -->
-                <Column field="costBg" header="일반관리비" sortable>
+                <Column field="costBg" header="일반관리비" sortable style="text-align: right">
                     <template #body="slotProps">
                         <span>{{ formatBudget(slotProps.data.costBg) }}{{ slotProps.data.costBg ? selectedUnit : '' }}</span>
                     </template>
@@ -624,13 +631,13 @@ onBeforeUnmount(() => {
                 <Column field="deptNm" header="담당부서" sortable></Column>
 
                 <!-- 담당자 -->
-                <Column field="managerNm" header="담당자" sortable></Column>
+                <Column field="managerNm" header="담당자" sortable style="text-align: center"></Column>
 
                 <!-- 시작일 -->
-                <Column field="sttDt" header="시작일" sortable></Column>
+                <Column field="sttDt" header="시작일" sortable style="text-align: center"></Column>
 
                 <!-- 종료일 -->
-                <Column field="endDt" header="종료일" sortable></Column>
+                <Column field="endDt" header="종료일" sortable style="text-align: center"></Column>
 
                 <!-- 데이터 없을 때 메시지 -->
                 <template #empty>

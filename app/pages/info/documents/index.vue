@@ -21,8 +21,9 @@
 import { useDocuments } from '~/composables/useDocuments';
 import type { RequirementDocument } from '~/composables/useDocuments';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import EmployeeInfoDialog from '~/components/common/EmployeeInfoDialog.vue';
 
-const title = '요구사항 정의서';
+const title = '사전협의';
 definePageMeta({ title });
 
 const { fetchDocuments, deleteDocument } = useDocuments();
@@ -81,6 +82,17 @@ const onDeleteClick = (event: Event, doc: RequirementDocument) => {
     });
 };
 
+/* ── 직원 정보 다이얼로그 ── */
+const showEmployeeInfo = ref(false);
+const selectedEno = ref<string | null>(null);
+
+/** 작성자 이름 클릭 시 직원 정보 다이얼로그 열기 */
+const openEmployeeInfo = (eno: string) => {
+    if (!eno) return;
+    selectedEno.value = eno;
+    showEmployeeInfo.value = true;
+};
+
 /* ── 날짜 포맷 ── */
 const formatDate = (str: string) => str?.substring(0, 10) || '-';
 </script>
@@ -92,7 +104,7 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">IT 정보화사업 요구사항 정의서를 작성하고 관리합니다.</p>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">IT 사전협의 문서를 작성하고 관리합니다.</p>
             </div>
             <Button label="신규 작성" icon="pi pi-plus" @click="navigateTo('/info/documents/form')" />
         </div>
@@ -118,68 +130,71 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
             </div>
 
             <!-- DataTable -->
-            <StyledDataTable v-else :value="filteredDocuments" :loading="pending"
-                paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]"
-                dataKey="docMngNo" sortField="fstEnrDtm" :sortOrder="-1"
-                @row-click="(e: any) => navigateTo(`/info/documents/${e.data.docMngNo}`)">
+            <StyledDataTable v-else :value="filteredDocuments" :loading="pending" paginator :rows="10"
+                :rowsPerPageOptions="[10, 20, 50]" dataKey="docMngNo" sortField="fstEnrDtm" :sortOrder="-1"
+                >
 
                 <!-- 문서번호 -->
-                <Column field="docMngNo" header="문서번호" sortable style="width: 14%">
-                    <template #body="{ data }">
-                        <span class="text-xs font-mono text-zinc-500">{{ data.docMngNo }}</span>
-                    </template>
-                </Column>
+                <Column field="docMngNo" header="문서번호" sortable style="width: 14%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
 
-                <!-- 요구사항명 -->
-                <Column field="reqNm" header="요구사항명" sortable>
+                <!-- 요구사항명: 상세 페이지 링크 -->
+                <Column field="reqNm" header="요구사항명" sortable headerClass="font-bold">
                     <template #body="{ data }">
-                        <span class="font-medium text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400">
+                        <NuxtLink :to="`/info/documents/${data.docMngNo}`"
+                            class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                             {{ data.reqNm }}
-                        </span>
+                        </NuxtLink>
                     </template>
                 </Column>
 
                 <!-- 요청구분 -->
-                <Column field="reqDtt" header="요청구분" style="width: 12%">
-                    <template #body="{ data }">
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">{{ data.reqDtt || '-' }}</span>
-                    </template>
-                </Column>
+                <Column field="reqDtt" header="요청구분" sortable style="width: 12%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
 
                 <!-- 업무구분 -->
-                <Column field="bzDtt" header="업무구분" style="width: 12%">
-                    <template #body="{ data }">
-                        <span class="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">{{ data.bzDtt || '-' }}</span>
-                    </template>
-                </Column>
+                <Column field="bzDtt" header="업무구분" sortable style="width: 12%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
 
                 <!-- 완료기한 -->
                 <Column field="fsgTlm" header="완료기한" sortable style="width: 10%">
                     <template #body="{ data }">
-                        <span :class="data.fsgTlm && data.fsgTlm < new Date().toISOString().slice(0,10) ? 'text-red-500 font-semibold' : ''">
+                        <span
+                            :class="data.fsgTlm && data.fsgTlm < new Date().toISOString().slice(0, 10) ? 'text-red-500 font-semibold' : ''">
                             {{ formatDate(data.fsgTlm) }}
                         </span>
                     </template>
                 </Column>
 
                 <!-- 등록일시 -->
-                <Column field="fstEnrDtm" header="등록일시" sortable style="width: 13%">
+                <Column field="fstEnrDtm" header="등록일시" sortable style="width: 11%">
                     <template #body="{ data }">
-                        <span class="text-sm text-zinc-500">{{ data.fstEnrDtm?.substring(0, 16).replace('T', ' ') }}</span>
+                        {{ data.fstEnrDtm?.substring(0, 16).replace('T', ' ') }}
+                    </template>
+                </Column>
+
+                <!-- 작성자 -->
+                <Column field="fstEnrUsNm" header="작성자" sortable style="width: 8%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }">
+                    <template #body="{ data }">
+                        <span v-if="data.fstEnrUsNm"
+                            class="hover:underline hover:text-indigo-600 cursor-pointer transition-colors"
+                            @click="openEmployeeInfo(data.fstEnrUsid)">
+                            {{ data.fstEnrUsNm }}
+                        </span>
+                        <span v-else class="text-zinc-400">-</span>
                     </template>
                 </Column>
 
                 <!-- 액션 버튼 -->
-                <Column header="" style="width: 8%">
+                <Column header="" style="width: 8%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }">
                     <template #body="{ data }">
-                        <div class="flex gap-1.5">
+                        <div class="flex justify-center gap-1.5">
                             <Button icon="pi pi-pencil" size="small" text rounded
-                                @click.stop="navigateTo(`/info/documents/${data.docMngNo}`)"
-                                v-tooltip="'편집'" />
-                            <Button icon="pi pi-trash" size="small" text rounded severity="danger"
-                                :loading="isDeleting"
-                                @click.stop="(e: Event) => onDeleteClick(e, data)"
-                                v-tooltip="'삭제'" />
+                                @click.stop="navigateTo(`/info/documents/${data.docMngNo}`)" v-tooltip="'편집'" />
+                            <Button icon="pi pi-trash" size="small" text rounded severity="danger" :loading="isDeleting"
+                                @click.stop="(e: Event) => onDeleteClick(e, data)" v-tooltip="'삭제'" />
                         </div>
                     </template>
                 </Column>
@@ -198,4 +213,5 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
     </div>
 
     <ConfirmPopup />
+    <EmployeeInfoDialog v-model:visible="showEmployeeInfo" :eno="selectedEno" />
 </template>

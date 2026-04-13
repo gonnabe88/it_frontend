@@ -54,6 +54,12 @@ const approvalOpinion = ref('');
 /** 결재 처리 중 로딩 상태 (버튼 비활성화용) */
 const isSubmitting = ref(false);
 
+/* ── 결재 완료 다이얼로그 상태 ── */
+/** 결재 완료 다이얼로그 표시 여부 */
+const showResultDialog = ref(false);
+/** 결재 완료 메시지 */
+const resultMessage = ref('');
+
 /**
  * 직원 검색 선택 콜백 (미래 구현용 placeholder)
  *
@@ -185,7 +191,8 @@ const processApproval = async (status: '승인' | '반려') => {
         await refresh(); // 목록 새로고침
         selectedApprovals.value = []; // 선택 초기화
         showApprovalDialog.value = false;
-        alert(`${items.length}건이 ${status} 처리되었습니다.`);
+        resultMessage.value = `${items.length}건이 ${status} 처리되었습니다.`;
+        showResultDialog.value = true;
     } catch (e) {
         console.error('Approval failed', e);
         alert('결재 처리 중 오류가 발생했습니다.');
@@ -341,6 +348,18 @@ definePageMeta({
         <!-- 결재 진행 상황 타임라인 (컴포넌트 분리) -->
         <ApprovalTimeline v-model:visible="showTimelineDialog" :approvalData="selectedTimelineData" />
 
+
+        <!-- 결재 완료 다이얼로그 -->
+        <Dialog v-model:visible="showResultDialog" header="결재 처리 완료" modal :closable="false"
+            :style="{ width: '400px' }">
+            <div class="flex items-center gap-3">
+                <i class="pi pi-check-circle text-green-500 text-2xl"></i>
+                <span>{{ resultMessage }}</span>
+            </div>
+            <template #footer>
+                <Button label="확인" icon="pi pi-check" @click="showResultDialog = false" />
+            </template>
+        </Dialog>
 
         <!-- 신청서 조회 PDF 뷰어 다이얼로그 (재사용 컴포넌트) -->
         <ApplicationViewerDialog
