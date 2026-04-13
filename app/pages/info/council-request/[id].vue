@@ -27,7 +27,8 @@ import { ref, computed } from 'vue';
 import type { FeasibilityData, CheckItemData, PerformanceItem } from '~/types/council';
 import { useCouncil } from '~/composables/useCouncil';
 import { useFiles } from '~/composables/useFiles';
-import { getCouncilStatusLabel } from '~/utils/common';
+
+const { getStatusLabel } = useCouncilCodes();
 
 const title = '타당성검토표 작성';
 definePageMeta({ title });
@@ -415,7 +416,7 @@ const submitApproval = async () => {
         -->
         <Message v-if="readonly" severity="info" :closable="false">
             <template #default>
-                {{ getCouncilStatusLabel(councilStatus) }} 상태입니다. 타당성검토표를 수정할 수 없습니다.
+                {{ getStatusLabel(councilStatus) }} 상태입니다. 타당성검토표를 수정할 수 없습니다.
             </template>
         </Message>
 

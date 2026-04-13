@@ -59,7 +59,18 @@ const tokenRefreshSignal = ref(0);
  *   query: { orgCode: '1001' }
  * });
  */
-export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOptions<T> = {}) => {
+/**
+ * useApiFetch 확장 옵션
+ * suppressNotFound: true 시 404 응답에서 Toast를 표시하지 않습니다.
+ * 코드 조회 등 데이터 없음이 정상인 API에 사용합니다.
+ */
+interface ApiFetchOptions<T> extends UseFetchOptions<T> {
+    suppressNotFound?: boolean;
+}
+
+export const useApiFetch = <T>(url: string | (() => string), options: ApiFetchOptions<T> = {}) => {
+    const { suppressNotFound, ...fetchOptions } = options;
+    options = fetchOptions as ApiFetchOptions<T>;
     // 인증 store에서 인증 관련 함수를 가져옴
     const { refresh, logout } = useAuth();
     // 사용자 친화적 에러 메시지 표시용 Toast 서비스
@@ -139,7 +150,7 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
                     detail: '해당 리소스에 접근 권한이 없습니다.',
                     life: 4000
                 });
-            } else if (response.status === 404) {
+            } else if (response.status === 404 && !suppressNotFound) {
                 toast.add({
                     severity: 'warn',
                     summary: '데이터 없음',

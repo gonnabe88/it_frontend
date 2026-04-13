@@ -38,8 +38,8 @@ export type CouncilStatus =
   | 'FINAL_APPROVAL'  // 결과보고 결재 중
   | 'COMPLETED';      // 완료
 
-/** 심의유형 */
-export type HearingType = 'INFO_SYS' | 'INFO_SEC' | 'ETC';
+/** 심의유형 (CCODEM DBR_TP 기준 5개) */
+export type HearingType = 'MID_PLAN' | 'IT_PLAN' | 'INFO_SYS' | 'INFO_SEC' | 'ETC';
 
 /** 위원유형 */
 export type CommitteeType = 'MAND' | 'CALL' | 'SECR';

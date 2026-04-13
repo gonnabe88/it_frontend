@@ -28,7 +28,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useCouncil } from '~/composables/useCouncil';
-import { getCouncilStatusLabel, getHearingTypeLabel } from '~/utils/common';
 
 const title = '정보화실무협의회';
 definePageMeta({ title });
@@ -36,6 +35,9 @@ definePageMeta({ title });
 /* ── 데이터 로드 ── */
 const { fetchCouncilList, createCouncil } = useCouncil();
 const { data: councilsData, pending, error, refresh } = await fetchCouncilList();
+
+/** CCODEM 기반 코드 변환 */
+const { getStatusLabel, getHearingTypeLabel, hearingTypeOptions } = useCouncilCodes();
 
 /** 협의회 목록 (null 안전 처리) */
 const councils = computed(() => councilsData.value ?? []);
@@ -53,18 +55,11 @@ const selectedStatus = ref<string | null>(null);
 /** 심의유형 필터 */
 const selectedHearingType = ref<string | null>(null);
 
-/** 목록에서 추출한 유니크 상태 옵션 (신청 전 null 제외) */
+/** 목록에서 추출한 유니크 상태 옵션 (신청 전 null 제외, CCODEM 기반 레이블) */
 const statusOptions = computed(() => {
     const statuses = [...new Set(councils.value.map(c => c.asctSts))].filter((s): s is NonNullable<typeof s> => s !== null);
-    return statuses.map(s => ({ label: getCouncilStatusLabel(s), value: s }));
+    return statuses.map(s => ({ label: getStatusLabel(s), value: s }));
 });
-
-/** 심의유형 옵션 */
-const hearingTypeOptions = [
-    { label: '정보시스템', value: 'INFO_SYS' },
-    { label: '정보보호',   value: 'INFO_SEC' },
-    { label: '기타',       value: 'ETC' },
-];
 
 /**
  * 사업명 + 진행상태 + 심의유형 필터링된 협의회 목록

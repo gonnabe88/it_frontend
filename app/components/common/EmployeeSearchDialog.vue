@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useOrganization, type OrgUser } from '~/composables/useOrganization';
 
 const props = defineProps({
@@ -30,14 +30,16 @@ const users = ref<OrgUser[]>([]);
 const loadingUsers = ref(false);
 const selectedUser = ref();
 
-// Load organization tree
-onMounted(async () => {
-    const { data } = await fetchOrganizations();
-    if (data.value) {
-        nodes.value = buildOrgTree(data.value);
+// setup() 최상위에서 호출해야 useFetch가 정상 동작함 (onMounted 내부 호출 불가)
+const { data: orgData } = fetchOrganizations();
+
+// 조직 데이터 로드 완료 시 트리 구성
+watch(orgData, (val) => {
+    if (val) {
+        nodes.value = buildOrgTree(val);
         expandAll();
     }
-});
+}, { immediate: true });
 
 const expandNode = (node: any, keys: any) => {
     if (node.children && node.children.length) {

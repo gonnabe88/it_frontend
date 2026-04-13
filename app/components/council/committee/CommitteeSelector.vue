@@ -37,6 +37,7 @@ const emit = defineEmits<{
 
 const { fetchCommittee, saveCommittee } = useCouncil();
 const toast = useToast();
+const { getMemberTypeLabel } = useCouncilCodes();
 
 // ── 위원 목록 상태 ──────────────────────────────────────────────────
 /** 당연위원 목록 */
@@ -171,15 +172,8 @@ const handleSave = async () => {
     }
 };
 
-// ── 위원유형 한글 레이블 ─────────────────────────────────────────────
-const typeLabel = (type: CommitteeType): string => {
-    const map: Record<CommitteeType, string> = {
-        MAND: '당연위원',
-        CALL: '소집위원',
-        SECR: '간사',
-    };
-    return map[type];
-};
+// ── 위원유형 한글 레이블 (CCODEM VLR_TP) ────────────────────────────
+const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
 </script>
 
 <template>
@@ -196,7 +190,7 @@ const typeLabel = (type: CommitteeType): string => {
             <!-- ── 당연위원 섹션 ── -->
             <div>
                 <div class="flex items-center gap-2 mb-3">
-                    <Tag value="당연위원" severity="info" class="text-xs" />
+                    <Tag :value="typeLabel('MAND')" severity="info" class="text-xs" />
                     <span class="text-xs text-zinc-400">(심의유형에 따라 자동 배정)</span>
                 </div>
 
@@ -232,7 +226,7 @@ const typeLabel = (type: CommitteeType): string => {
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
-                        <Tag value="소집위원" severity="success" class="text-xs" />
+                        <Tag :value="typeLabel('CALL')" severity="success" class="text-xs" />
                         <span class="text-xs text-zinc-400">(추가 선정)</span>
                     </div>
                     <Button
@@ -283,11 +277,11 @@ const typeLabel = (type: CommitteeType): string => {
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
-                        <Tag value="간사" severity="warn" class="text-xs" />
+                        <Tag :value="typeLabel('SECR')" severity="warn" class="text-xs" />
                     </div>
                     <Button
                         v-if="!readonly"
-                        label="간사 추가"
+                        :label="`${typeLabel('SECR')} 추가`"
                         icon="pi pi-plus"
                         size="small"
                         severity="secondary"
