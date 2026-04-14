@@ -19,7 +19,8 @@
 
 [UI 구성]
   - 인라인 편집 DataTable (editMode="cell" 방식)
-  - 비목명, 계약명, 계약구분, 계약상대처, 예산, 통화, 지급주기, 최초지급일, 담당자
+  - 비목코드, 계약명, 계약구분, 계약상대처, 예산, 통화, 지급주기, 최초지급일, 담당자(직원조회), 사업코드, 유형, 구분
+  - 담당부서·담당팀은 담당자 선택 시 자동입력 (입력폼에서 제거)
   - 행 추가 / 개별 행 삭제 버튼
 
 [저장 로직]
@@ -29,15 +30,35 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onActivated } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import { useCost, type ItCost } from '~/composables/useCost';
+import { useAuth } from '~/composables/useAuth';
+import CostFormTableSection from '~/components/cost/CostFormTableSection.vue';
 
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
-const { fetchCost, createCost, updateCost, fetchCostsBulk } = useCost();
+const { removeTab } = useTabs();
+const { fetchCostOnce, createCost, updateCost, fetchCostsBulk } = useCost();
+const { user } = useAuth();
+
+/* ── 공통코드 옵션 로드 ──────────────────────────────────── */
+interface CodeOption { cdId: string; cdNm: string; }
+
+const { $apiFetch } = useNuxtApp();
+const config = useRuntimeConfig();
+const CCODEM_BASE = `${config.public.apiBase}/api/ccodem/type`;
+
+/** 비목코드 옵션 (IOE_LEAFE · IOE_XPN · IOE_SEVS · IOE_IDR 병합) */
+const ioeCOptions = ref<CodeOption[]>([]);
+/** 구분 옵션 (PUL_DTT) */
+const pulDttOptions = ref<CodeOption[]>([]);
+/** 지급주기 옵션 (DFR_CLE) */
+const dfrCleOptions = ref<CodeOption[]>([]);
+/** 사업코드 옵션 (ABUS_C) */
+const abusCOptions = ref<CodeOption[]>([]);
 
 const title = '전산업무비 신청/수정';
 definePageMeta({
@@ -47,6 +68,9 @@ definePageMeta({
 /** 현재 편집 중인 전산업무비 항목 목록 */
 const costs = ref<ItCost[]>([]);
 
+/** 현재 로그인 사용자의 부서/팀 정보 (신규 행 자동입력용) */
+const currentUserDetail = ref<{ bbrC: string; bbrNm: string; temC: string; temNm: string } | null>(null);
+
 /**
  * 초기 데이터 로드
  * 쿼리 파라미터(id/ids)에 따라 적절한 API를 호출합니다.
@@ -55,16 +79,41 @@ const costs = ref<ItCost[]>([]);
  * - ids가 있으면 복수 조회(Bulk) 후 rows에 추가
  * - 둘 다 없으면 빈 행 1개 추가 (신규 등록)
  */
-onMounted(async () => {
+onActivated(async () => {
+    /* 공통코드 + 현재 사용자 상세정보 병렬 로드 */
+    try {
+        const userEno = user.value?.eno ?? '';
+        const userBase = `${config.public.apiBase}/api/users`;
+        const [ioeLeafe, ioeXpn, ioeSevs, ioeIdr, pulDttList, dfrCleList, abusCList, userDetail] = await Promise.all([
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_LEAFE`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_XPN`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_SEVS`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/IOE_IDR`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/PUL_DTT`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/DFR_CLE`),
+            $apiFetch<CodeOption[]>(`${CCODEM_BASE}/ABUS_C`),
+            userEno ? $apiFetch<{ bbrC: string; bbrNm: string; temC: string; temNm: string }>(`${userBase}/${userEno}`) : Promise.resolve(null),
+        ]);
+        ioeCOptions.value   = [...ioeLeafe, ...ioeXpn, ...ioeSevs, ...ioeIdr];
+        pulDttOptions.value = pulDttList;
+        dfrCleOptions.value = dfrCleList;
+        abusCOptions.value  = abusCList;
+        if (userDetail) currentUserDetail.value = userDetail;
+    } catch (e) {
+        console.error('초기 데이터 로드 실패', e);
+    }
+
+    /* 재활성화 시 이전 데이터 초기화 (KeepAlive로 이전 데이터 잔존 방지) */
+    costs.value = [];
+
     const id = route.query.id as string;
     const ids = route.query.ids as string;
 
     if (id) {
         /* 단건 수정 모드: 지정된 관리번호 1건 로드 */
         try {
-            const { data } = await fetchCost(id);
-            if (data.value) {
-                const costData = { ...data.value };
+            const costData = await fetchCostOnce(id);
+            if (costData) {
                 /* 최초지급일을 Date 객체로 변환 (DatePicker 바인딩용) */
                 if (costData.fstDfrDt) {
                     costData.fstDfrDt = new Date(costData.fstDfrDt);
@@ -101,12 +150,12 @@ onMounted(async () => {
 /**
  * 새 행 추가
  * 기본값으로 초기화된 빈 전산업무비 항목을 목록에 추가합니다.
+ * 담당자·담당부서·담당팀은 현재 로그인 사용자 정보로 자동입력됩니다.
  */
 const addCostRow = () => {
     costs.value.push({
-        ioeNm: '',
+        ioeC: '',
         cttNm: '',
-        cttTp: '',
         cttOpp: '',
         itMngcBg: 0,
         dfrCle: '',
@@ -116,33 +165,21 @@ const addCostRow = () => {
         xcrBseDt: '',
         infPrtYn: 'N',
         indRsn: '',
-        pulCgpr: '',
+        /* 담당자: 현재 로그인 사용자로 자동입력 */
+        cgpr: user.value?.eno ?? '',
+        cgprNm: user.value?.empNm ?? '',
+        biceDpm: currentUserDetail.value?.bbrC ?? user.value?.bbrC ?? '',
+        biceDpmNm: currentUserDetail.value?.bbrNm ?? '',
+        biceTem: currentUserDetail.value?.temC ?? user.value?.temC ?? '',
+        biceTemNm: currentUserDetail.value?.temNm ?? '',
+        abusC: '',
+        itMngcTp: 'IT_MNGC_TP_001',
+        pulDtt: '',
+        assetBg: 0,
+        apfSts: '예산 작성',
         lstYn: 'Y',
         delYn: 'N'
     });
-};
-
-/**
- * 지정된 인덱스의 행 삭제
- * UI 목록에서만 제거합니다.
- * (실제 DB 삭제는 상세 화면의 삭제 버튼에서 처리)
- *
- * @param index - 삭제할 행의 인덱스
- */
-const removeCostRow = (index: number) => {
-    const item = costs.value[index];
-    if (item?.itMngcNo) {
-        // 기존 데이터 삭제 시 (여기서는 UI에서만 제거하고 저장은 안함, 혹은 별도 처리)
-        // 요구사항이 "행추가/삭제하는 형식"이므로 UI에서 제거.
-        // 실제 삭제 API 호출은 저장 시점에는 하지 않고, UI 목록에서만 뺌.
-        // 만약 삭제 API도 호출해야 한다면 로직 추가 필요.
-        // 여기서는 "신청/수정" 화면이므로, 수정 모드일 때 행을 지우면 삭제로 간주할지 여부가 모호함.
-        // 보통 이런 그리드 폼에서는 저장 시점에 삭제된 항목을 처리하거나,
-        // 단순히 입력 폼에서만 제거하는 방식임.
-        // 안전하게 UI 제거만 하고, 실제 데이터 삭제는 상세 화면에서 하도록 유도하거나,
-        // 명시적으로 삭제 API를 호출하지 않음 (사용자가 실수로 지울 수 있으므로).
-    }
-    costs.value.splice(index, 1);
 };
 
 /**
@@ -158,8 +195,8 @@ const saveCosts = async () => {
 
     /* 간단한 필수 입력값 유효성 검사 */
     for (const cost of costs.value) {
-        if (!cost.ioeNm) {
-            alert('비목명을 입력해주세요.');
+        if (!cost.ioeC) {
+            alert('비목코드를 입력해주세요.');
             return;
         }
     }
@@ -191,8 +228,9 @@ const saveCosts = async () => {
             header: '완료',
             icon: 'pi pi-check',
             acceptLabel: '확인',
-            accept: () => {
-                router.push('/info/cost');
+            accept: async () => {
+                await router.push('/info/cost');
+                removeTab('/info/cost/form');
             }
         });
     } catch (e) {
@@ -209,9 +247,6 @@ const cancel = () => {
     router.back();
 };
 
-/* 드롭다운 선택지 옵션 */
-const currencyOptions = ['KRW', 'USD', 'EUR', 'JPY', 'CNY'];
-const ynOptions = ['Y', 'N'];
 </script>
 
 <template>
@@ -227,84 +262,16 @@ const ynOptions = ['Y', 'N'];
             </div>
         </div>
 
-        <!-- 인라인 편집 DataTable -->
+        <!-- 인라인 편집 DataTable (CostFormTableSection 컴포넌트) -->
         <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <DataTable :value="costs" editMode="cell" tableClass="editable-cells-table" :pt="{
-                headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-            }">
-                <!-- 비목명: 필수 입력 -->
-                <Column header="비목명" style="min-width: 150px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.ioeNm" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 계약명 -->
-                <Column header="계약명" style="min-width: 150px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.cttNm" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 계약구분 -->
-                <Column header="계약구분" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.cttTp" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 계약상대처 -->
-                <Column header="계약상대처" style="min-width: 120px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.cttOpp" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 예산: 통화에 따라 동적 서식 적용 -->
-                <Column header="예산" style="min-width: 120px">
-                    <template #body="{ data }">
-                        <InputNumber v-model="data.itMngcBg" mode="currency" :currency="data.cur || 'KRW'"
-                            locale="ko-KR" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 통화: 드롭다운 선택 -->
-                <Column header="통화" style="width: 100px">
-                    <template #body="{ data }">
-                        <Select v-model="data.cur" :options="currencyOptions" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 지급주기 -->
-                <Column header="지급주기" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.dfrCle" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 최초지급일: 월 단위(YYYY-MM) 선택 -->
-                <Column header="최초지급일" style="min-width: 140px">
-                    <template #body="{ data }">
-                        <DatePicker v-model="data.fstDfrDt" view="month" dateFormat="yy-mm" showIcon fluid
-                            placeholder="최초지급일" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 담당자 사원번호 입력 -->
-                <Column header="담당자" style="min-width: 100px">
-                    <template #body="{ data }">
-                        <InputText v-model="data.pulCgpr" class="w-full" />
-                    </template>
-                </Column>
-
-                <!-- 행 삭제 버튼 -->
-                <Column header="삭제" style="width: 50px; text-align: center">
-                    <template #body="{ index }">
-                        <Button icon="pi pi-trash" text severity="danger" @click="removeCostRow(index)" />
-                    </template>
-                </Column>
-            </DataTable>
+            <CostFormTableSection
+                v-model="costs"
+                :ioe-c-options="ioeCOptions"
+                :pul-dtt-options="pulDttOptions"
+                :dfr-cle-options="dfrCleOptions"
+                :abus-c-options="abusCOptions"
+                :show-delete-column="true"
+            />
         </div>
     </div>
 </template>

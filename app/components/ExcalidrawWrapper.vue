@@ -71,10 +71,12 @@ const exportData = async (): Promise<{ svgContent: string; sceneData: string } |
 
         // 장면 데이터 JSON 직렬화
         // collaborators는 Map이라 JSON.stringify 시 빠지므로 명시적으로 제외
+        // files는 이미지 첨부 데이터(base64 dataURL)를 포함하므로 반드시 저장해야 합니다.
         const { collaborators: _collaborators, ...safeAppState } = appState;
         const sceneData = JSON.stringify({
             elements,
-            appState: safeAppState
+            appState: safeAppState,
+            files
         });
 
         return { svgContent, sceneData };
@@ -108,7 +110,9 @@ onMounted(async () => {
                         ...(parsed.appState || {}),
                         // collaborators는 Excalidraw 내부에서 Map으로 관리되므로 빈 Map으로 초기화
                         collaborators: new Map()
-                    }
+                    },
+                    // 이미지 첨부 파일 데이터 복원 (없으면 빈 객체)
+                    files: parsed.files || {}
                 };
             } catch {
                 console.warn('[ExcalidrawWrapper] 초기 데이터 파싱 실패, 빈 캔버스로 시작합니다.');
@@ -121,6 +125,12 @@ onMounted(async () => {
             React.createElement(Excalidraw, {
                 excalidrawAPI: (api: any) => {
                     excalidrawAPI = api;
+                    // Dialog 트랜지션 완료 후 캔버스 좌표 재보정
+                    // PrimeVue Dialog의 CSS transform 애니메이션(~300ms) 이후
+                    // resize 이벤트를 발생시켜 Excalidraw가 bounding rect를 재측정하게 합니다.
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    }, 350);
                 },
                 initialData,
                 // 자체 저장/내보내기 버튼 숨김 (툴바에서 처리)
@@ -161,6 +171,11 @@ watch(() => props.initialSceneData, (newSceneData) => {
                 collaborators: new Map()
             }
         });
+        // 이미지 첨부 파일 데이터 복원
+        // updateScene은 files를 처리하지 않으므로 addFiles로 별도 로드합니다.
+        if (parsed.files && Object.keys(parsed.files).length > 0) {
+            excalidrawAPI.addFiles(Object.values(parsed.files));
+        }
         // 도형이 보이도록 뷰포트를 자동 이동
         setTimeout(() => {
             excalidrawAPI?.scrollToContent();

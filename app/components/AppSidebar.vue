@@ -46,7 +46,11 @@ const toggleSidebar = () => {
 };
 
 const route = useRoute();
-const context = computed(() => route.path.startsWith('/audit') ? 'audit' : 'info');
+const context = computed(() => {
+    if (route.path.startsWith('/audit')) return 'audit';
+    if (route.path.startsWith('/admin')) return 'admin';
+    return 'info';
+});
 
 const menuItems = computed(() => {
     if (context.value === 'audit') {
@@ -72,15 +76,41 @@ const menuItems = computed(() => {
             }
         ];
     }
+
+    // 시스템 관리자 전용 컨텍스트
+    if (context.value === 'admin') {
+        return [
+            { label: '대시보드', icon: 'pi pi-chart-line', to: '/admin/dashboard' },
+            {
+                label: '데이터 관리', icon: 'pi pi-database', items: [
+                    { label: '공통코드', to: '/admin/codes' },
+                    { label: '자격등급', to: '/admin/auth-grades' },
+                    { label: '사용자', to: '/admin/users' },
+                    { label: '역할', to: '/admin/roles' },
+                    { label: '조직', to: '/admin/organizations' },
+                ]
+            },
+            {
+                label: '이력 · 보안', icon: 'pi pi-shield', items: [
+                    { label: '로그인 이력', to: '/admin/login-history' },
+                    { label: 'JWT 갱신토큰', to: '/admin/tokens' },
+                    { label: '첨부파일', to: '/admin/files' },
+                ]
+            },
+        ];
+    }
+
     // Default: Info
     return [
         { label: 'Home', icon: 'pi pi-home', to: '/info' },
+        { label: '사전협의', icon: 'pi pi-file-edit', to: '/info/documents' },
         { label: '사업 가이드', icon: 'pi pi-book', to: '/guide' },
         {
             label: '전산예산', icon: 'pi pi-wallet', items: [
                 { label: '예산 작성', to: '/budget' },
                 { label: '결재 상신', to: '/budget/approval' },
-                { label: '예산 목록', to: '/budget/list' }
+                { label: '예산 목록', to: '/budget/list' },
+                { label: '예산 작업', to: '/budget/work' }
             ]
         },
         {
@@ -109,14 +139,6 @@ const menuItems = computed(() => {
                 { label: '정보화추진위원회 운영', to: '/info/council/committee' }
             ]
         },
-        // 시스템관리자(ITPAD001) 전용 메뉴: isAdmin() 조건으로 렌더링 여부를 결정합니다.
-        ...(isAdmin() ? [{
-            label: '시스템 관리', icon: 'pi pi-shield', adminOnly: true, items: [
-                { label: '사용자 관리', to: '/admin/users' },
-                { label: '자격등급 관리', to: '/admin/roles' },
-                { label: '코드 관리', to: '/admin/codes' }
-            ]
-        }] : [])
     ];
 });
 
@@ -237,8 +259,7 @@ watch(menuItems, (items) => {
                                         active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
                                         <span>{{ sub.label }}</span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
-                                        <span
-                                            v-if="sub.to === '/budget/approval' && approvalCount > 0"
+                                        <span v-if="sub.to === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
                                             {{ approvalCount > 99 ? '99+' : approvalCount }}
                                         </span>

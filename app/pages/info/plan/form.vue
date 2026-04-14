@@ -12,7 +12,7 @@
   5. [저장] 버튼 클릭 → BPLANM + BPROJA 저장, 목록 페이지로 이동
 
 [데이터 흐름]
-  - 사업 목록: fetchProjects({ prjYy }) → 연도 필터 조회
+  - 사업 목록: fetchProjects({ bgYy }) → 연도 필터 조회
   - 선택 사업 상세: fetchProjectsBulk(selectedIds) → 예산 집계용
   - 저장: createPlan({ plnYy, plnTp, prjMngNos })
 ================================================================================
@@ -30,6 +30,7 @@ definePageMeta({ title });
 const { fetchProjectsBulk } = useProjects();
 const { createPlan } = usePlan();
 const router = useRouter();
+const { removeTab } = useTabs();
 const config = useRuntimeConfig();
 const { $apiFetch } = useNuxtApp();
 
@@ -40,6 +41,9 @@ const plnYy = ref<string>(String(new Date().getFullYear()));
 /** 계획구분 옵션 */
 const plnTpOptions = ['신규', '조정'];
 const plnTp = ref<string>('신규');
+
+/* ── 공통코드 코드명 변환 ── */
+const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
 
 /* ── 사업 목록 조회 상태 ── */
 /** 조회된 사업 목록 */
@@ -88,7 +92,7 @@ const handleSearch = async () => {
     try {
         const result = await $apiFetch<Project[]>(
             `${config.public.apiBase}/api/projects`,
-            { query: { prjYy: plnYy.value } }
+            { query: { bgYy: plnYy.value } }
         );
         projects.value = result || [];
         searched.value = true;
@@ -209,7 +213,8 @@ const handleSave = async () => {
             prjMngNos: selectedProjects.value.map(p => p.prjMngNo),
         });
         alert('계획이 등록되었습니다.');
-        router.push('/info/plan');
+        await router.push('/info/plan');
+        removeTab('/info/plan/form');
     } catch (e) {
         console.error('계획 저장 실패:', e);
         alert('계획 저장 중 오류가 발생했습니다.');
@@ -330,7 +335,9 @@ const handleSave = async () => {
                 <Column field="prjNm" header="사업명" sortable headerClass="font-bold" />
 
                 <!-- 사업유형 -->
-                <Column field="prjTp" header="사업유형" sortable headerClass="font-bold" style="width: 8rem" />
+                <Column field="prjTp" header="사업유형" sortable headerClass="font-bold" style="width: 8rem">
+                    <template #body="slotProps">{{ getPrjTpName(slotProps.data.prjTp) }}</template>
+                </Column>
 
                 <!-- 주관부문 -->
                 <Column field="svnHdq" header="주관부문" sortable headerClass="font-bold" style="width: 10rem" />
@@ -419,7 +426,9 @@ const handleSave = async () => {
                         }"
                     >
                         <Column field="prjNm" header="사업명" />
-                        <Column field="prjTp" header="사업유형" style="width: 8rem" />
+                        <Column field="prjTp" header="사업유형" style="width: 8rem">
+                            <template #body="slotProps">{{ getPrjTpName(slotProps.data.prjTp) }}</template>
+                        </Column>
                         <Column field="svnDpmNm" header="주관부서" style="width: 10rem" />
                         <Column field="prjBg" :header="`총예산 (${selectedUnit})`" style="width: 10rem">
                             <template #body="slotProps">
@@ -445,7 +454,7 @@ const handleSave = async () => {
                 <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 border-b pb-2">사업유형별 사업목록</h2>
                 <div v-for="typeGroup in byProjectType" :key="typeGroup.prjTp" class="space-y-2">
                     <div class="flex items-center gap-2">
-                        <Tag :value="typeGroup.prjTp" severity="secondary" />
+                        <Tag :value="getPrjTpName(typeGroup.prjTp)" severity="secondary" />
                         <span class="text-sm text-zinc-500">{{ typeGroup.projects.length }}건</span>
                     </div>
                     <DataTable

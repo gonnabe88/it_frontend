@@ -20,6 +20,29 @@
  */
 
 /**
+ * [Terminal] 금융정보단말기 상세 항목 인터페이스
+ */
+export interface Terminal {
+    tmnMngNo?: string;      // 단말기관리번호
+    tmnSno?: string;        // 단말기일련번호
+    tmnNm: string;          // 단말기명
+    tmnTuzManr: string;     // 단말기이용방법
+    tmnUsg: string;         // 단말기용도
+    tmnSvc: string;         // 단말기서비스
+    tmlAmt: number;         // 단말기금액
+    cur: string;            // 통화
+    xcr?: number;           // 환율
+    xcrBseDt?: string | Date; // 환율기준일자
+    dfrCle: string;         // 지급주기
+    indRsn: string;         // 증감사유
+    cgpr: string;           // 담당자
+    cgprNm?: string;        // 담당자명
+    biceTem: string;        // 담당팀
+    biceDpm: string;        // 담당부서
+    rmk: string;            // 비고
+}
+
+/**
  * [ItCost] IT 관리비(전산업무비) 항목 인터페이스
  * 서버 API의 응답 및 요청 데이터 구조를 정의합니다.
  */
@@ -27,24 +50,33 @@ export interface ItCost {
     itMngcNo?: string;      // 전산업무비 관리번호 (PK, 서버에서 채번)
     itMngcSno?: number;     // 전산업무비 일련번호 (버전 관리용)
     lstYn?: string;         // 최종여부 (Y: 최신 데이터 / N: 이력 데이터)
-    ioeNm: string;          // 비목명 (지출 항목의 분류명)
+    ioeC: string;           // 비목코드 (지출 항목의 코드)
     cttNm: string;          // 계약명 (계약서상 명칭)
-    cttTp: string;          // 계약구분 (유지보수, 라이선스, 서비스 등)
+    // cttTp 제거됨 - pulDtt(전산업무비구분)로 대체
     cttOpp: string;         // 계약상대처 (벤더/공급사명)
     itMngcBg: number;       // 전산업무비 예산 금액
     dfrCle: string;         // 지급주기 (월별, 분기별, 연간 등)
     fstDfrDt: string | Date;// 지급예정월 / 최초지급일자
     cur: string;            // 통화 (KRW, USD, EUR 등)
     xcr?: number;           // 환율 (외화 계약 시 사용, optional)
-    xcrBseDt?: string;      // 환율기준일자 (환율 적용 기준 날짜, optional)
+    xcrBseDt?: string | Date; // 환율기준일자 (환율 적용 기준 날짜, optional)
     infPrtYn: string;       // 정보보호여부 (Y: 정보보호 관련 항목 / N: 일반)
     indRsn: string;         // 증감사유 (전년 대비 예산 증감 사유)
-    pulCgpr: string;        // 추진담당자 사번 (해당 계약의 IT 담당자)
-    pulCgprNm: string;      // 추진담당자명 (사용자명 조회 결과)
-    pulDpmNm: string;       // 추진부서명 (조직명 조회 결과)
-    assetBg: number;        // 자본예산 (원 단위)
-    apfSts: string;         // 결재현황 (전자결재 신청 상태)
+    cgpr: string;           // 담당자 사번 (해당 계약의 IT 담당자)
+    cgprNm?: string;        // 담당자명 (사용자명 조회 결과)
+    biceDpm: string;        // 담당부서 코드
+    biceDpmNm?: string;     // 담당부서명 (조직명 조회 결과)
+    biceTem: string;        // 담당팀 코드
+    biceTemNm?: string;     // 담당팀명 (조직명 조회 결과)
+    abusC: string;          // 사업코드
+    itMngcTp: string;       // 전산업무비유형
+    pulDtt: string;      // 전산업무비구분
+    bgYy?: string;          // 예산연도 (YYYY)
+    assetBg?: number;       // 자본예산 (원 단���, 비목코드 cttTp=IOE_CPIT)
+    costBg?: number;        // 일반관리비 (원 단위, 비목코드 cttTp=IOE_IDR/IOE_SEVS/IOE_XPN/IOE_LEAFE)
+    apfSts?: string;        // 결재현황 (전자결재 신청 상태)
     delYn?: string;         // 삭제여부 (Y: 삭제됨 / N: 유효, optional)
+    terminals?: Terminal[]; // 금융정보단말기 목록 (1:N)
 }
 
 /**
@@ -113,15 +145,6 @@ export const useCost = () => {
      *
      * @param payload - 생성할 IT 관리비 데이터 (ItCost 형식)
      * @returns 서버 처리 결과 (생성된 ItCost 객체)
-     *
-     * @example
-     * await createCost({
-     *   ioeNm: '소프트웨어 유지보수', cttNm: 'Oracle DB 유지보수',
-     *   cttTp: '유지보수', cttOpp: 'Oracle Korea',
-     *   itMngcBg: 50000000, dfrCle: '연간',
-     *   fstDfrDt: '2026-01-01', cur: 'KRW',
-     *   infPrtYn: 'N', indRsn: '전년 동일', pulCgpr: '홍길동'
-     * });
      */
     const createCost = async (payload: ItCost) => {
         return await $apiFetch(API_BASE_URL, {
@@ -136,9 +159,6 @@ export const useCost = () => {
      * @param id      - 수정할 전산업무비 관리번호 (itMngcNo)
      * @param payload - 수정할 데이터 (ItCost 형식)
      * @returns 서버 처리 결과 (수정된 ItCost 객체)
-     *
-     * @example
-     * await updateCost('COST-2026-001', { ...existingCost, itMngcBg: 55000000 });
      */
     const updateCost = async (id: string, payload: ItCost) => {
         return await $apiFetch(`${API_BASE_URL}/${id}`, {
@@ -153,9 +173,6 @@ export const useCost = () => {
      *
      * @param id - 삭제할 전산업무비 관리번호 (itMngcNo)
      * @returns 서버 처리 결과
-     *
-     * @example
-     * await deleteCost('COST-2026-001');
      */
     const deleteCost = async (id: string) => {
         return await $apiFetch(`${API_BASE_URL}/${id}`, {
@@ -163,9 +180,22 @@ export const useCost = () => {
         });
     };
 
+    /**
+     * 단일 IT 관리비 항목 일회성 조회 ($apiFetch 기반, 비반응형)
+     * onMounted 내부 등 비동기 컨텍스트에서 안전하게 사용할 수 있습니다.
+     * (useFetch는 await 이후 호출 시 Vue 인스턴스 컨텍스트 소실 문제가 있음)
+     *
+     * @param id - 조회할 전산업무비 관리번호 (itMngcNo)
+     * @returns ItCost Promise
+     */
+    const fetchCostOnce = async (id: string): Promise<ItCost> => {
+        return await $apiFetch<ItCost>(`${API_BASE_URL}/${id}`);
+    };
+
     return {
         fetchCosts,
         fetchCost,
+        fetchCostOnce,
         fetchCostsBulk,
         createCost,
         updateCost,

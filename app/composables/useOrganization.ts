@@ -40,6 +40,7 @@ export interface OrgUser {
     bbrNm: string;       // 부서명
     eno: string;         // 사원번호 (고유 식별자)
     ptCNm: string | null;// 직위/직급명 (예: 대리, 과장, null 가능)
+    temC: string | null; // 팀코드 (팀 구조가 없는 경우 null)
     temNm: string | null;// 팀명 (팀 구조가 없는 경우 null)
     usrNm: string;       // 사용자 이름
 }

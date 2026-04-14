@@ -35,7 +35,7 @@ import type { FileRecord } from '~/composables/useFiles';
 definePageMeta({ title: '사업 가이드' });
 
 const { fetchGuideDocuments, createGuideDocument, updateGuideDocument, deleteGuideDocument } = useGuideDocuments();
-const { uploadFile, updateFileMeta, getPreviewUrl } = useFiles();
+const { uploadFile, deleteFile, updateFileMeta, getPreviewUrl } = useFiles();
 // $apiFetch: 비동기 이벤트 핸들러 내에서 안전한 명령형 fetch (useApiFetch 대신 사용)
 const { $apiFetch } = useNuxtApp();
 const runtimeConfig = useRuntimeConfig();
@@ -210,6 +210,13 @@ const handleEditorFileUpload = async (file: File): Promise<{ flMngNo: string; fl
         if (!currentGuide.value) {
             // 신규 문서: 저장 후 orcPkVl 업데이트를 위해 추적
             pendingFileIds.value.push(result.flMngNo);
+            
+            // 신규 문서의 경우 목록을 즉시 갱신할 도구가 없으므로 로컬 상태에 추가
+            attachmentListData.value.push({
+                flMngNo: result.flMngNo,
+                flNm: result.orcFlNm,
+                flSz: 0,
+            });
         } else {
             // 기존 문서: 즉시 목록 갱신 (Suggestion 자동완성에 반영)
             await refreshAttachments();
@@ -226,6 +233,26 @@ const handleEditorFileUpload = async (file: File): Promise<{ flMngNo: string; fl
             detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.',
             life: 4000
         });
+        throw e;
+    }
+};
+
+/** Tiptap 에디터 첨부파일 삭제 핸들러 */
+const handleEditorFileDelete = async (flMngNo: string) => {
+    try {
+        await deleteFile(flMngNo);
+        toast.add({ severity: 'success', summary: '삭제 완료', detail: '파일이 서버에서 삭제되었습니다.', life: 3000 });
+        
+        if (!currentGuide.value) {
+            // 신규 문서: 추적 목록 및 로컬 목록에서 제거
+            pendingFileIds.value = pendingFileIds.value.filter(id => id !== flMngNo);
+            attachmentListData.value = attachmentListData.value.filter(item => item.flMngNo !== flMngNo);
+        } else {
+            // 기존 문서: 목록 재조회
+            await refreshAttachments();
+        }
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '삭제 실패', detail: e?.data?.message || '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
         throw e;
     }
 };
@@ -255,11 +282,9 @@ const onSave = async () => {
                 docCone: editContent.value
             });
 
-            // 에디터 내 이미지·첨부파일의 orcPkVl을 실제 docMngNo로 업데이트
+            // 에디터 내 이미지·첨부파일의 orcPkVl을 실제 docMngNo로 병렬 업데이트
             const allPendingIds = [...pendingImageIds.value, ...pendingFileIds.value];
-            for (const flMngNo of allPendingIds) {
-                await updateFileMeta(flMngNo, { orcPkVl: newDocMngNo });
-            }
+            await Promise.all(allPendingIds.map(flMngNo => updateFileMeta(flMngNo, { orcPkVl: newDocMngNo })));
 
             toast.add({ severity: 'success', summary: '저장 완료', detail: '가이드가 등록되었습니다.', life: 3000 });
         }
@@ -356,24 +381,37 @@ const scrollTo = (id: string) => {
 
 /* ── IntersectionObserver: 스크롤 시 목차 활성화 동기화 ── */
 let observer: IntersectionObserver | null = null;
-const observerElements = ref<Set<Element>>(new Set());
+let observerElements = new Set<Element>();
 
 // DOM 렌더링 후 h1~h6 요소를 추적하도록 목차 변경 시마다 갱신
 watch(rawToc, async () => {
     await nextTick();
     if (observer) {
-        observerElements.value.forEach(el => observer?.unobserve(el));
-        observerElements.value.clear();
+        observerElements.forEach(el => observer?.unobserve(el));
+        observerElements.clear();
     }
 
     rawToc.value.forEach(item => {
         const el = document.getElementById(item.id);
         if (el) {
             observer?.observe(el);
-            observerElements.value.add(el);
+            observerElements.add(el);
         }
     });
 }, { deep: true });
+
+/* ── 전체 화면 모드 (Fullscreen) ── */
+const isFullscreen = ref(false);
+const toggleFullscreen = () => {
+    isFullscreen.value = !isFullscreen.value;
+};
+
+// Esc 키로 전체 화면 종료
+const handleKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isFullscreen.value) {
+        isFullscreen.value = false;
+    }
+};
 
 onMounted(() => {
     observer = new IntersectionObserver(
@@ -387,18 +425,33 @@ onMounted(() => {
         },
         { rootMargin: '-10% 0px -80% 0px' }
     );
+
+    // 초기 렌더링된 헤딩 관찰 시작 (watch(rawToc)이 이후 변경을 처리)
+    document.querySelectorAll('.guide-doc h1, .guide-doc h2, .guide-doc h3, .guide-doc h4').forEach(h => {
+        observer?.observe(h);
+        observerElements.add(h);
+    });
+
+    window.addEventListener('keydown', handleKeydown);
 });
 
 onUnmounted(() => {
     if (observer) observer.disconnect();
+    window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
 <template>
-    <div class="space-y-6 pb-20">
+    <div :class="[
+        'flex flex-col overflow-hidden transition-all duration-300',
+        isFullscreen
+            ? 'fixed inset-0 z-[100] bg-zinc-50 dark:bg-zinc-950 p-4'
+            : 'h-full'
+    ]" :style="{ gap: isFullscreen ? '0' : '1.5rem' }">
 
         <!-- 페이지 헤더: 제목 + 정보화사업 단계 타임라인 통합 카드 -->
-        <div
+        <!-- 전체 화면에서는 타임라인을 숨겨 에디터 공간을 극대화 (Clean Workspace) -->
+        <div v-if="!isFullscreen"
             class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md px-5 py-4 flex items-center gap-5 min-h-[80px]">
 
             <!-- 좌: 제목/부제목 -->
@@ -463,31 +516,32 @@ onUnmounted(() => {
         </div>
 
         <!-- 메인: 콘텐츠(3/4) + 바로가기 목차(1/4) -->
-        <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-8 flex-1 min-h-0">
 
-            <!-- 좌측(3/4): 가이드 내용 -->
-            <div class="xl:col-span-3">
+            <!-- 좌측(3/4): 가이드 내용 (조회/편집 모드 통합 카드, 전체 높이 점유) -->
+            <div class="xl:col-span-3 flex flex-col min-h-0 overflow-hidden p-1">
                 <div
-                    class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex-1 flex flex-col min-h-0 overflow-hidden">
 
-                    <!-- 콘텐츠 헤더 -->
+                    <!-- 콘텐츠 헤더 (고정 높이 72px) -->
                     <div
-                        class="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <div class="flex-1">
-                            <h2 class="font-bold text-base text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                        class="flex items-center justify-between px-6 h-[72px] border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-white dark:bg-zinc-900">
+                        <div class="flex-1 min-w-0">
+                            <h2
+                                class="font-bold text-base text-zinc-900 dark:text-zinc-100 flex items-center gap-2 truncate">
                                 <i class="pi pi-book text-indigo-500"></i>
                                 {{ selectedStage }}
                                 <span v-if="isEditing"
-                                    class="text-xs font-normal px-2 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800">
+                                    class="inline-flex items-center text-[10px] font-medium px-2 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800 ml-1">
                                     편집 중
                                 </span>
                                 <span v-else-if="!currentGuide"
-                                    class="text-xs font-normal px-2 py-0.5 bg-zinc-50 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 rounded-full border border-zinc-200 dark:border-zinc-700">
+                                    class="inline-flex items-center text-[10px] font-medium px-2 py-0.5 bg-zinc-50 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 rounded-full border border-zinc-200 dark:border-zinc-700 ml-1">
                                     미작성
                                 </span>
                             </h2>
                             <!-- 마지막 수정 일시 -->
-                            <p v-if="currentGuide && !isEditing" class="text-xs text-zinc-400 mt-0.5">
+                            <p v-if="currentGuide && !isEditing" class="text-[10px] text-zinc-400 mt-0.5 truncate">
                                 마지막 수정: {{ formatDateTime(currentGuide.lstChgDtm) }}
                                 <span v-if="currentGuide.lstChgUsid">· {{ currentGuide.lstChgUsid }}</span>
                             </p>
@@ -502,8 +556,9 @@ onUnmounted(() => {
                             </div>
                             <!-- 조회 모드 섹션 -->
                             <div v-else class="flex gap-2">
-                                <Button v-if="currentGuide" label="삭제" icon="pi pi-trash" severity="danger" outlined
-                                    size="small" @click="onDelete" />
+                                <Button :label="isFullscreen ? '일반 화면' : '전체 화면'"
+                                    :icon="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-expand'" severity="secondary"
+                                    outlined size="small" @click="toggleFullscreen" />
                                 <Button :label="currentGuide ? '편집' : '가이드 작성'"
                                     :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'" size="small"
                                     @click="startEdit" />
@@ -511,21 +566,24 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <!-- 에디터 영역 (guide-doc: 공공기관 문서 헤딩 스타일 적용 범위) -->
-                    <div class="p-4 guide-doc">
+                    <!-- 에디터 영역 (전체 높이 강제 점유) -->
+                    <div
+                        class="p-4 guide-doc flex-1 flex flex-col min-h-0 overflow-hidden bg-zinc-50/10 dark:bg-zinc-800/5">
                         <ClientOnly>
-                            <!-- 편집 모드: 이미지·파일 업로드 활성화 (FR-05) -->
-                            <TiptapEditor v-if="isEditing" v-model="editContent"
-                                placeholder="가이드 내용을 작성하세요. 툴바의 다이어그램 버튼으로 Excalidraw 그림을 삽입할 수 있습니다."
+                            <!-- 편집 모드 -->
+                            <TiptapEditor v-if="isEditing" v-model="editContent" class="h-full min-h-0"
                                 :imageUploadFn="handleEditorImageUpload"
                                 :fileUploadFn="handleEditorFileUpload"
+                                :fileDeleteFn="handleEditorFileDelete"
                                 :attachmentList="attachmentListData"
                                 @update:toc="handleUpdateToc" />
-                            <!-- 조회 모드: 읽기 전용 (가이드 있는 경우) -->
+                            <!-- 조회 모드 -->
                             <TiptapEditor v-else-if="currentGuide" :modelValue="currentGuide.docCone || ''"
-                                :readonly="true" @update:toc="handleUpdateToc" />
-                            <!-- 가이드 없음 (빈 상태) -->
-                            <div v-else class="flex flex-col items-center justify-center py-20 text-center">
+                                class="h-full min-h-0" :readonly="true"
+                                :attachmentList="attachmentListData"
+                                @update:toc="handleUpdateToc" />
+                            <!-- 가이드 없음 -->
+                            <div v-else class="flex-1 flex flex-col items-center justify-center py-20 text-center">
                                 <div
                                     class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
                                     <i class="pi pi-file-edit text-2xl text-zinc-400"></i>
@@ -541,39 +599,39 @@ onUnmounted(() => {
 
                             <template #fallback>
                                 <div
-                                    class="border border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center text-zinc-400">
+                                    class="tiptap-editor-container relative border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-zinc-900 flex-1 flex flex-col min-h-0">
                                     <i class="pi pi-spin pi-spinner text-2xl mb-2 block"></i>
                                     에디터 로딩 중...
                                 </div>
                             </template>
                         </ClientOnly>
 
-                        <!-- 편집 모드 하단 저장/취소 버튼 -->
-                        <div v-if="isEditing"
-                            class="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                            <Button label="취소" severity="secondary" @click="cancelEdit" />
-                            <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 우측(1/4): 바로가기 목차 (xl 이상에서만 표시) -->
-            <div class="xl:col-span-1 relative hidden xl:block">
-                <!-- 스티키 고정 박스 -->
-                <div class="sticky top-6 lg:pl-4">
+            <!-- 우측(1/4): 바로가기 목차 (xl 이상에서만 표시, 독립 스크롤) -->
+            <div
+                class="xl:col-span-1 hidden xl:flex flex-col h-full min-h-0 bg-white/40 dark:bg-zinc-900/40 rounded-2xl border border-zinc-100 dark:border-zinc-800/50 overflow-hidden shadow-sm">
+
+                <!-- 목차 헤더 (좌측 헤더와 높이 동기화: 72px) -->
+                <div
+                    class="h-[72px] border-b border-zinc-100 dark:border-zinc-800/50 flex items-center px-5 shrink-0 bg-white/20">
                     <h3
-                        class="font-bold text-[14px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-3 flex items-center gap-2">
+                        class="font-bold text-[13px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                         <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"></i> 바로가기 목차
                     </h3>
+                </div>
 
+                <!-- 목차 리스트 (독립 스크롤 영역) -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar lg:pl-2 pt-4 pb-10">
                     <!-- 목차가 비어있을 때 안내 문구 -->
-                    <div v-if="rawToc.length === 0" class="text-xs text-zinc-400 dark:text-zinc-600 italic px-3 ml-3">
+                    <div v-if="rawToc.length === 0" class="text-xs text-zinc-400 dark:text-zinc-600 italic px-5 ml-2">
                         본문에 제목을 작성하면 이곳에 목차가 자동 정렬됩니다.
                     </div>
 
                     <!-- 추출된 목차 목록 (평면 다단계 들여쓰기) -->
-                    <ul v-else class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-3 py-1">
+                    <ul v-else class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-5 py-1">
                         <li v-for="item in rawToc" :key="item.id" class="flex flex-col relative py-0.5">
 
                             <!-- 활성화 인디케이터 (왼쪽 보더선) -->
@@ -586,12 +644,12 @@ onUnmounted(() => {
                                     activeSection === item.id
                                         ? 'text-indigo-600 dark:text-indigo-400 font-bold'
                                         : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200',
-                                    item.level === 1 ? 'font-semibold text-[14px] mt-1 pl-4' : '',
-                                    item.level === 2 ? 'text-[14px] pl-4' : '',
-                                    item.level === 3 ? 'text-[13px] pl-7 opacity-90' : '',
-                                    item.level === 4 ? 'text-[13px] pl-10 opacity-80' : '',
-                                    item.level === 5 ? 'text-[12px] pl-12 opacity-70' : '',
-                                    item.level === 6 ? 'text-[12px] pl-14 opacity-60' : ''
+                                    item.level === 1 ? 'font-semibold text-[13px] mt-1 pl-4' : '',
+                                    item.level === 2 ? 'text-[13px] pl-4' : '',
+                                    item.level === 3 ? 'text-[12px] pl-7 opacity-90' : '',
+                                    item.level === 4 ? 'text-[12px] pl-10 opacity-80' : '',
+                                    item.level === 5 ? 'text-[11px] pl-12 opacity-70' : '',
+                                    item.level === 6 ? 'text-[11px] pl-14 opacity-60' : ''
                                 ]" @click="scrollTo(item.id)">
                                 <span class="truncate" :title="item.text">{{ item.text }}</span>
                             </div>

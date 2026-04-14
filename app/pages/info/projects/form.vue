@@ -39,7 +39,7 @@
  *   - 취소 시: router.back()
  * ============================================================================
  */
-import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { ref, reactive, onActivated, computed, watch } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useProjects } from '~/composables/useProjects';
 import type { Project } from '~/composables/useProjects';
@@ -52,24 +52,36 @@ import type { OrgUser } from '~/composables/useOrganization';
 import ResourceTableSection from '~/components/projects/ResourceTableSection.vue';
 import type { ResourceItem } from '~/components/projects/ResourceTableSection.vue';
 
+/** ResourceTableSection 컴포넌트 참조 (getCttTpByCdId 호출용) */
+const resourceTableRef = ref<InstanceType<typeof ResourceTableSection> | null>(null);
+
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
+const { removeTab } = useTabs();
 const { fetchProject, fetchProjectsOnce, fetchProjectDetailOnce, createProject, updateProject } = useProjects();
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 
-const title = '정보화사업 예산 작성';
-definePageMeta({ title });
+definePageMeta({ title: '예산 작성' });
 
-/** 수정 모드의 사업 관리번호 (신규 등록 시 null) */
-const projectId = route.query.id ? (route.query.id as string) : null;
+/** 수정 모드의 사업 관리번호 (라우트 쿼리 변경에 반응하도록 computed로 선언) */
+const projectId = computed(() => route.query.id ? (route.query.id as string) : null);
 /** 수정 모드 여부 (projectId 존재 시 true) */
-const isEditMode = computed(() => !!projectId);
+const isEditMode = computed(() => !!projectId.value);
+
+/** 경상사업 여부: 수정 모드에서는 기존 데이터의 ornYn, 신규 등록에서는 쿼리 파라미터 */
+const isOrdinary = computed(() => {
+    if (isEditMode.value) return form.value.ornYn === 'Y';
+    return route.query.ordinary === 'true';
+});
+
+/** 페이지 타이틀 동적 변경 */
+const title = computed(() => isOrdinary.value ? '경상사업 예산 작성' : '정보화사업 예산 작성');
 
 /** 폼 데이터 상태 (신규/수정 공통) */
 const form = ref({
     prjNm: '',
-    prjDtt: '신규',
+    pulDtt: '신규',
     prjTp: '',
     svnDpm: '',        // 주관부서코드
     svnDpmNm: '',      // 주관부서명 (직원 검색에서 자동 세팅)
@@ -80,7 +92,6 @@ const form = ref({
     sttDt: null as Date | null,
     endDt: null as Date | null,
     prjDes: '',
-    pulRsn: '', // 추진사유
     xptEff: '', // 기대효과
     svnHdq: '', // 주관부문
 
@@ -97,7 +108,7 @@ const form = ref({
     mnUsr: '', // 주요사용자
     ncs: '', // 필요성
     plm: '', // 미추진 시 문제점
-    ornYn: 'N', // 경상여부 (신규 등록 기본값 'N')
+    ornYn: 'N' as 'Y' | 'N', // 경상여부 (isOrdinary 기반 자동 설정)
     prjPulPtt: null as number | null, // 프로젝트추진가능성 (0~100 정수)
     prjRng: '', // 사업범위
     pulPsg: '', // 추진경과
@@ -108,7 +119,7 @@ const form = ref({
     svnDpmTlr: '',     // 주관부서 팀장 사원번호
     svnDpmTlrNm: '',   // 주관부서 팀장명 (직원 검색에서 자동 세팅)
     tchnTp: '', // 기술유형
-    prjYy: new Date().getMonth() + 1 >= 10 ? new Date().getFullYear() + 1 : new Date().getFullYear(), // 사업연도 (10월 이상이면 내년, 아니면 올해)
+    bgYy: new Date().getMonth() + 1 >= 10 ? new Date().getFullYear() + 1 : new Date().getFullYear(), // 사업연도 (10월 이상이면 내년, 아니면 올해)
     resourceItems: [] as ResourceItem[] // UI용 소요자원 상세내용 (저장 시 items로 변환)
 });
 
@@ -149,12 +160,91 @@ const handleEndDtInput = (event: Event) => {
 };
 
 /**
- * 사업연도(prjYy) 선택지 옵션 생성 (현재 연도 기준: 올해, 내년)
+ * 사업연도(bgYy) 선택지 옵션 생성 (현재 연도 기준: 올해, 내년)
  */
 const { yearOptions, prjTypeOptions } = useProjectOptions();
 
 const currencyOptions = computed(() => Object.keys(exchangeRates.value));
 const statusOptions = PROJECT_STAGES;
+
+/* ── 공통코드 기반 드롭박스 옵션 ──────────────────────────── */
+import type { CodeOption } from '~/composables/useCodeOptions';
+
+const { options: bzDttOptions } = useCodeOptions('BZ_DTT');
+const { options: prjTpOptions } = useCodeOptions('PRJ_TP');
+const { options: tchnTpOptions } = useCodeOptions('TCHN_TP');
+const { options: mnUsrOptions } = useCodeOptions('MN_USR');
+const { options: rprStsOptions } = useCodeOptions('RPR_STS');
+const { options: prjPulPttOptions } = useCodeOptions('PRJ_PUL_PTT');
+
+/** cdId가 999로 끝나는지 판별 (직접입력 코드) */
+const isCustomCode = (cdId: string) => cdId?.endsWith('999');
+
+/**
+ * 코드 기반 Select + 직접입력 지원 상태 관리
+ * selectedXxx: Select에서 선택한 cdId (999 코드 포함)
+ * customXxx:   999 코드 선택 시 직접입력한 텍스트
+ *
+ * 저장 시: 999 코드이면 직접입력 텍스트를, 아니면 cdId를 form 필드에 세팅
+ */
+const selectedBzDtt = ref('');
+const selectedPrjTp = ref('');
+const selectedTchnTp = ref('');
+const selectedMnUsr = ref('');
+const selectedRprSts = ref('');
+const selectedPrjPulPtt = ref('');
+
+const customBzDtt = ref('');
+const customPrjTp = ref('');
+const customTchnTp = ref('');
+const customMnUsr = ref('');
+const customRprSts = ref('');
+const customPrjPulPtt = ref('');
+
+/**
+ * 수정 모드에서 기존 값 → Select + 직접입력 복원
+ * 저장된 값이 공통코드 cdId에 있으면 Select 선택, 없으면 999 코드로 간주
+ */
+const restoreCodeField = (
+    savedVal: string,
+    options: CodeOption[],
+    selectedRef: typeof selectedBzDtt,
+    customRef: typeof customBzDtt
+) => {
+    if (!savedVal) return;
+    const found = options.find(o => o.cdId === savedVal);
+    if (found) {
+        /* 저장된 값이 공통코드 목록에 있음 → 해당 코드 선택 */
+        selectedRef.value = savedVal;
+    } else {
+        /* 저장된 값이 공통코드에 없음 → 999(직접입력) 코드 + 텍스트 복원 */
+        const customOpt = options.find(o => isCustomCode(o.cdId));
+        if (customOpt) {
+            selectedRef.value = customOpt.cdId;
+            customRef.value = savedVal;
+        } else {
+            /* 999 코드도 없으면 그대로 세팅 (하위 호환) */
+            selectedRef.value = savedVal;
+        }
+    }
+};
+
+/**
+ * 실제 저장할 값 계산: 999 코드이면 직접입력 텍스트, 아니면 cdId
+ */
+const getCodeValue = (selectedRef: typeof selectedBzDtt, customRef: typeof customBzDtt) =>
+    isCustomCode(selectedRef.value) ? customRef.value : selectedRef.value;
+
+/* ── Select 변경 → form 필드 동기화 watcher ── */
+watch([selectedBzDtt, customBzDtt], () => { form.value.bzDtt = getCodeValue(selectedBzDtt, customBzDtt); });
+watch([selectedPrjTp, customPrjTp], () => { form.value.prjTp = getCodeValue(selectedPrjTp, customPrjTp); });
+watch([selectedTchnTp, customTchnTp], () => { form.value.tchnTp = getCodeValue(selectedTchnTp, customTchnTp); });
+watch([selectedMnUsr, customMnUsr], () => { form.value.mnUsr = getCodeValue(selectedMnUsr, customMnUsr); });
+watch([selectedRprSts, customRprSts], () => { form.value.rprSts = getCodeValue(selectedRprSts, customRprSts); });
+watch([selectedPrjPulPtt, customPrjPulPtt], () => {
+    const val = getCodeValue(selectedPrjPulPtt, customPrjPulPtt);
+    form.value.prjPulPtt = val ? Number(val) : null;
+});
 
 /** 법규상 완료시기 해당사항 없음 체크 (true이면 DatePicker 비활성화 & 값 초기화) */
 const lblFsgTlmNA = ref(false);
@@ -295,22 +385,22 @@ const onEmployeeSelected = (user: EmployeeSelectResult) => {
  * isEditMode가 true이면 fetchProject API를 호출하여 폼 데이터를 채웁니다.
  * API 응답의 items를 UI 모델인 resourceItems로 변환합니다.
  */
-onMounted(async () => {
-    if (isEditMode.value && projectId) {
+onActivated(async () => {
+    /* ── 재활성화 시 상태 초기화 (KeepAlive로 이전 데이터 잔존 방지) ── */
+    codeRestored.value = false;
+
+    /* ── 수정 모드: 사업 데이터 로드 ── */
+    if (isEditMode.value && projectId.value) {
         try {
-            const { data, error } = await fetchProject(projectId);
+            const { data, error } = await fetchProject(projectId.value);
             if (data.value) {
                 const project = data.value;
 
                 /* API 응답의 items를 UI resourceItems 모델로 변환 */
                 const mappedItems = (project.items || []).map((item: any) => {
-                    /* gclDtt가 "개발비 > 일반" 형식이면 대분류/소분류로 분리 */
-                    const parts = (item.gclDtt || '').split(' > ');
-                    const mainCat = parts[0] || '';
-                    const subCat = parts[1] || '';
                     return {
-                        category: mainCat, // 품목구분 대분류
-                        subCategory: subCat, // 품목구분 소분류
+                        category: item.gclDtt || '', // 공통코드 cdId (예: IOE-351-1100-1)
+                        subCategory: '', // 미사용
                         item: item.gclNm, // 품목명
                         quantity: item.gclQtt, // 수량
                         currency: item.cur, // 통화
@@ -327,15 +417,17 @@ onMounted(async () => {
                     };
                 });
 
-                /* API 응답을 폼에 병합 (날짜 필드는 Date 객체로 변환) */
+                /* API 응답을 폼에 병합 (날짜 필드는 Date 객체로 변환, bgYy는 숫자로 보정) */
                 form.value = {
                     ...form.value,
                     ...project,
+                    bgYy: Number(project.bgYy) || form.value.bgYy,
                     sttDt: project.sttDt ? new Date(project.sttDt) : null,
                     endDt: project.endDt ? new Date(project.endDt) : null,
                     lblFsgTlm: project.lblFsgTlm ? new Date(project.lblFsgTlm) : null,
                     resourceItems: mappedItems
                 };
+
             } else if (error.value) {
                 console.error('Failed to load project', error.value);
                 confirm.require({
@@ -349,8 +441,32 @@ onMounted(async () => {
         } catch (e) {
             console.error(e);
         }
+    } else if (route.query.ordinary === 'true') {
+        /* 신규 경상사업 등록: ornYn='Y' 설정 */
+        form.value.ornYn = 'Y';
     }
 });
+
+/**
+ * 공통코드 옵션 로드 완료 시 Select 값 복원 (수정 모드)
+ * useApiFetch 데이터가 비동기로 도착하므로, 옵션이 채워지면 form 값 기준으로 Select 상태를 세팅합니다.
+ */
+/** 공통코드 옵션 + 폼 데이터 모두 준비되면 Select 값 복원 (수정 모드 전용) */
+const codeRestored = ref(false);
+watch(
+    [bzDttOptions, () => form.value.bzDtt],
+    () => {
+        /* 공통코드 옵션과 폼 데이터가 모두 로드된 후 1회만 실행 */
+        if (codeRestored.value || !bzDttOptions.value.length || !form.value.bzDtt) return;
+        codeRestored.value = true;
+        restoreCodeField(form.value.bzDtt, bzDttOptions.value, selectedBzDtt, customBzDtt);
+        restoreCodeField(form.value.prjTp, prjTpOptions.value, selectedPrjTp, customPrjTp);
+        restoreCodeField(form.value.tchnTp, tchnTpOptions.value, selectedTchnTp, customTchnTp);
+        restoreCodeField(form.value.mnUsr, mnUsrOptions.value, selectedMnUsr, customMnUsr);
+        restoreCodeField(form.value.rprSts, rprStsOptions.value, selectedRprSts, customRprSts);
+        restoreCodeField(String(form.value.prjPulPtt ?? ''), prjPulPttOptions.value, selectedPrjPulPtt, customPrjPulPtt);
+    }
+);
 
 /**
  * Date 객체를 YYYY-MM-DD 문자열로 변환
@@ -418,8 +534,7 @@ const autoFormatDateInput = (event: Event) => {
 const executeSave = async () => {
     /* 1. UI의 resourceItems를 API 스펙인 items로 역변환 */
     const items = form.value.resourceItems.map(item => ({
-        /* 소분류가 있으면 "대분류 > 소분류" 형식으로 결합 */
-        gclDtt: item.subCategory ? `${item.category} > ${item.subCategory}` : item.category, // 품목구분
+        gclDtt: item.category, // 공통코드 cdId (예: IOE-351-1100-1)
         gclNm: item.item, // 품목명
         gclQtt: item.quantity, // 수량
         cur: item.currency, // 통화
@@ -444,7 +559,7 @@ const executeSave = async () => {
     /* 2. 전체 Payload 구성 */
     const payload = {
         ...form.value,
-        prjMngNo: projectId,
+        prjMngNo: projectId.value,
         sttDt: formatDate(form.value.sttDt),
         endDt: formatDate(form.value.endDt),
         lblFsgTlm: formatDate(form.value.lblFsgTlm),
@@ -454,22 +569,23 @@ const executeSave = async () => {
     /* 불필요한 UI용 resourceItems 필드는 백엔드에서 무시됨 */
 
     try {
-        let response;
-        if (isEditMode.value && projectId) {
-            response = await updateProject(projectId, payload);
+        let savedPrjMngNo: string;
+        if (isEditMode.value && projectId.value) {
+            savedPrjMngNo = await updateProject(projectId.value, payload);
         } else {
-            response = await createProject(payload);
+            savedPrjMngNo = await createProject(payload);
         }
 
-        /* 저장 완료 확인 다이얼로그 */
+        /* 저장 완료 확인 다이얼로그 → 상세 화면으로 이동 */
         confirm.require({
             message: isEditMode.value ? '수정되었습니다.' : '등록되었습니다.',
             header: '완료',
             icon: 'pi pi-check',
             rejectProps: { class: 'hidden' },
             acceptLabel: '확인',
-            accept: () => {
-                router.push('/info/projects');
+            accept: async () => {
+                await router.push(`/info/projects/${savedPrjMngNo}`);
+                removeTab('/info/projects/form');
             }
         });
     } catch (error: any) {
@@ -604,12 +720,12 @@ const continueSuggestions = ref<Project[]>([]);
 
 /**
  * 계속 사업 AutoComplete 검색
- * 전년도(prjYy - 1) 사업 목록을 조회 후 사업명으로 클라이언트 필터링합니다.
+ * 전년도(bgYy - 1) 사업 목록을 조회 후 사업명으로 클라이언트 필터링합니다.
  */
 const searchContinueProjects = async (event: { query: string }) => {
     try {
-        const prevYear = form.value.prjYy - 1;
-        const all = await fetchProjectsOnce({ prjYy: String(prevYear), ornYn: 'N' });
+        const prevYear = form.value.bgYy - 1;
+        const all = await fetchProjectsOnce({ bgYy: String(prevYear), ornYn: 'N' });
         const q = event.query.trim().toLowerCase();
         continueSuggestions.value = q
             ? all.filter(p => p.prjNm.toLowerCase().includes(q))
@@ -621,7 +737,7 @@ const searchContinueProjects = async (event: { query: string }) => {
 
 /**
  * 전년도 사업 선택 시 폼 자동 채우기
- * prjYy(사업연도), prjDtt(신규/계속)을 제외한 모든 필드와 소요자원을 복사합니다.
+ * bgYy(사업연도), pulDtt(신규/계속)을 제외한 모든 필드와 소요자원을 복사합니다.
  * gclMngNo(품목관리번호)는 신규 등록이므로 null로 초기화합니다.
  */
 const onContinueProjectSelect = async (event: { value: Project }) => {
@@ -630,10 +746,9 @@ const onContinueProjectSelect = async (event: { value: Project }) => {
 
         /* items → resourceItems 변환 */
         const mappedItems = (detail.items || []).map((item: any) => {
-            const parts = (item.gclDtt || '').split(' > ');
             return {
-                category: parts[0] || '',
-                subCategory: parts[1] || '',
+                category: item.gclDtt || '', // 공통코드 cdId
+                subCategory: '',
                 item: item.gclNm,
                 quantity: item.gclQtt,
                 currency: item.cur,
@@ -648,19 +763,27 @@ const onContinueProjectSelect = async (event: { value: Project }) => {
             };
         });
 
-        /* prjYy·prjDtt 유지, 나머지 복사 */
-        const { prjYy, prjDtt } = form.value;
+        /* bgYy·pulDtt 유지, 나머지 복사 */
+        const { bgYy, pulDtt } = form.value;
         form.value = {
             ...form.value,
             ...detail,
-            prjYy,
-            prjDtt,
+            bgYy,
+            pulDtt,
             prjSts: '예산 작성',
             sttDt: detail.sttDt ? new Date(detail.sttDt) : null,
             endDt: detail.endDt ? new Date(detail.endDt) : null,
             lblFsgTlm: detail.lblFsgTlm ? new Date(detail.lblFsgTlm) : null,
             resourceItems: mappedItems,
         };
+
+        /* 공통코드 기반 Select 값 복원 (복사된 전년도 값 반영) */
+        restoreCodeField(form.value.bzDtt, bzDttOptions.value, selectedBzDtt, customBzDtt);
+        restoreCodeField(form.value.prjTp, prjTpOptions.value, selectedPrjTp, customPrjTp);
+        restoreCodeField(form.value.tchnTp, tchnTpOptions.value, selectedTchnTp, customTchnTp);
+        restoreCodeField(form.value.mnUsr, mnUsrOptions.value, selectedMnUsr, customMnUsr);
+        restoreCodeField(form.value.rprSts, rprStsOptions.value, selectedRprSts, customRprSts);
+        restoreCodeField(String(form.value.prjPulPtt ?? ''), prjPulPttOptions.value, selectedPrjPulPtt, customPrjPulPtt);
 
         /* AutoComplete 표시값을 선택된 사업명으로 확정 */
         continueProjectAC.value = detail.prjNm;
@@ -675,7 +798,7 @@ watch(continueProjectAC, (val) => {
 });
 
 /** 사업구분이 '계속'으로 변경될 때 현재 사업명으로 AutoComplete 초기화 */
-watch(() => form.value.prjDtt, (val) => {
+watch(() => form.value.pulDtt, (val) => {
     if (val === '계속') continueProjectAC.value = form.value.prjNm;
 });
 
@@ -709,10 +832,11 @@ watch(() => form.value.resourceItems, (items) => {
         const krwAmt = convertToKRW(item.gclAmt || 0, item.currency || 'KRW');
         totalAmt += krwAmt;
 
-        // 예산 성격에 따라 분리 (자본예산: 개발비/기계장치/기타무형자산, 일반관리비: 전산임차료/전산제비)
-        if (['개발비', '기계장치', '기타무형자산'].includes(item.category)) {
+        // cttTp 기반 예산 성격 분류 (IOE_CPIT: 자본예산, 그 외: 일반관리비)
+        const cttTp = resourceTableRef.value?.getCttTpByCdId(item.category) || '';
+        if (cttTp === 'IOE_CPIT') {
             capitalBudget += krwAmt;
-        } else if (['전산임차료', '전산제비'].includes(item.category)) {
+        } else if (cttTp) {
             operatingExpense += krwAmt;
         }
     });
@@ -767,16 +891,16 @@ const cancel = () => {
                 <div class="flex gap-3">
                     <!-- 사업 연도 선택 (자동 연산된 YYYY, YYYY+1) -->
                     <div class="flex flex-col gap-2">
-                        <Select v-model="form.prjYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
+                        <Select v-model="form.bgYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
                             :disabled="isEditMode" />
                     </div>
                     <!-- 사업 구분 선택 (신규/계속) -->
                     <div class="flex flex-col gap-2">
-                        <Select v-model="form.prjDtt" :options="prjTypeOptions" placeholder="구분 선택" class="w-32" />
+                        <Select v-model="form.pulDtt" :options="prjTypeOptions" placeholder="구분 선택" class="w-32" />
                     </div>
                     <!-- 사업명: 계속이면 전년도 사업 AutoComplete, 신규이면 일반 입력 -->
                     <div class="flex flex-col gap-2 flex-1">
-                        <AutoComplete v-if="form.prjDtt === '계속'" v-model="continueProjectAC" dropdown
+                        <AutoComplete v-if="form.pulDtt === '계속'" v-model="continueProjectAC" dropdown
                             :suggestions="continueSuggestions" optionLabel="prjNm" placeholder="전년도 사업명으로 검색 후 선택..."
                             fluid :delay="300" :invalid="formErrors.prjNm" @complete="searchContinueProjects"
                             @item-select="onContinueProjectSelect" />
@@ -800,8 +924,8 @@ const cancel = () => {
                         <Textarea v-model="form.ncs" style="height: 150px;" />
                     </div>
                 </div>
-                <!-- 기대효과 / 미추진 시 문제점 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 기대효과 / 미추진 시 문제점 (경상사업 숨김) -->
+                <div v-if="!isOrdinary" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="flex flex-col gap-2 col-span-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">기대효과</label>
                         <Textarea v-model="form.xptEff" style="height: 150px;" />
@@ -813,10 +937,10 @@ const cancel = () => {
                 </div>
             </div>
 
-            <Divider />
+            <Divider v-if="!isOrdinary" />
 
-            <!-- 사업 범위 섹션 -->
-            <div class="space-y-3">
+            <!-- 사업 범위 섹션 (경상사업 숨김) -->
+            <div v-if="!isOrdinary" class="space-y-3">
                 <div class="flex items-end gap-2">
                     <span class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">사업범위<span
                             class="text-red-500">*</span></span>
@@ -828,10 +952,10 @@ const cancel = () => {
                 </div>
             </div>
 
-            <Divider />
+            <Divider v-if="!isOrdinary" />
 
-            <!-- 진행 상황 섹션: 추진 경과 / 향후 계획 -->
-            <div class="space-y-3">
+            <!-- 진행 상황 섹션: 추진 경과 / 향후 계획 (경상사업 숨김) -->
+            <div v-if="!isOrdinary" class="space-y-3">
                 <div class="flex items-end gap-2">
                     <span class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">진행상황</span>
                 </div>
@@ -847,41 +971,65 @@ const cancel = () => {
                 </div>
             </div>
 
-            <Divider />
+            <Divider v-if="!isOrdinary" />
 
-            <!-- 사업 구분 섹션: 업무구분/사업유형/기술유형/주요사용자 -->
-            <div class="space-y-3">
+            <!-- 사업 구분 섹션: 업무구분/사업유형/기술유형/주요사용자 (경상사업 숨김) -->
+            <div v-if="!isOrdinary" class="space-y-3">
                 <div class="flex items-end gap-2">
                     <span class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">사업구분</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 업무구분 (BZ_DTT) -->
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">업무 구분<span
                                 class="text-red-500">*</span></label>
-                        <InputText v-model="form.bzDtt" fluid :invalid="formErrors.bzDtt" />
+                        <div class="flex gap-2">
+                            <Select v-model="selectedBzDtt" :options="bzDttOptions" optionLabel="cdNm" optionValue="cdId"
+                                placeholder="업무구분 선택" fluid :invalid="formErrors.bzDtt" />
+                            <InputText v-if="isCustomCode(selectedBzDtt)" v-model="customBzDtt" placeholder="직접 입력"
+                                fluid :invalid="formErrors.bzDtt" />
+                        </div>
                     </div>
+                    <!-- 사업유형 (PRJ_TP) -->
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업 유형<span
                                 class="text-red-500">*</span></label>
-                        <InputText v-model="form.prjTp" fluid />
+                        <div class="flex gap-2">
+                            <Select v-model="selectedPrjTp" :options="prjTpOptions" optionLabel="cdNm" optionValue="cdId"
+                                placeholder="사업유형 선택" fluid />
+                            <InputText v-if="isCustomCode(selectedPrjTp)" v-model="customPrjTp" placeholder="직접 입력"
+                                fluid />
+                        </div>
                     </div>
+                    <!-- 기술유형 (TCHN_TP) -->
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">기술 유형<span
                                 class="text-red-500">*</span></label>
-                        <InputText v-model="form.tchnTp" fluid :invalid="formErrors.tchnTp" />
+                        <div class="flex gap-2">
+                            <Select v-model="selectedTchnTp" :options="tchnTpOptions" optionLabel="cdNm" optionValue="cdId"
+                                placeholder="기술유형 선택" fluid :invalid="formErrors.tchnTp" />
+                            <InputText v-if="isCustomCode(selectedTchnTp)" v-model="customTchnTp" placeholder="직접 입력"
+                                fluid :invalid="formErrors.tchnTp" />
+                        </div>
                     </div>
+                    <!-- 주요사용자 (MN_USR) -->
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">주요 사용자<span
                                 class="text-red-500">*</span></label>
-                        <InputText v-model="form.mnUsr" fluid :invalid="formErrors.mnUsr" />
+                        <div class="flex gap-2">
+                            <Select v-model="selectedMnUsr" :options="mnUsrOptions" optionLabel="cdNm" optionValue="cdId"
+                                placeholder="주요사용자 선택" fluid :invalid="formErrors.mnUsr" />
+                            <InputText v-if="isCustomCode(selectedMnUsr)" v-model="customMnUsr" placeholder="직접 입력"
+                                fluid :invalid="formErrors.mnUsr" />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <Divider />
+            <Divider v-if="!isOrdinary" />
 
-            <!-- 편성 기준 섹션: 중복여부/법규상완료시기 -->
-            <div class="space-y-3">
+            <!-- 편성 기준 섹션: 중복여부/법규상완료시기 (경상사업 숨김) -->
+            <div v-if="!isOrdinary" class="space-y-3">
                 <div class="flex items-end gap-2">
                     <span class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">편성기준</span>
                 </div>
@@ -907,11 +1055,10 @@ const cancel = () => {
                 </div>
             </div>
 
-            <Divider />
+            <Divider v-if="!isOrdinary" />
 
-            <!-- 담당부서 섹션: 주관부문 → 주관부서(팀장/담당자) → IT부서(팀장/담당자) -->
-            <!-- 각 필드는 직원검색 버튼을 클릭하여 EmployeeSearchDialog에서 선택합니다. -->
-            <div class="space-y-3">
+            <!-- 담당부서 섹션: 주관부문 → 주관부서(팀장/담당자) → IT부서(팀장/담당자) (경상사업 숨김) -->
+            <div v-if="!isOrdinary" class="space-y-3">
                 <div class="flex items-end gap-2">
                     <span class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">담당부서<span
                             class="text-red-500">*</span></span>
@@ -1026,14 +1173,20 @@ const cancel = () => {
                         <InputText v-model="form.edrt" readonly placeholder="자동 지정됨" fluid
                             class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
-                    <div class="flex flex-col gap-2 flex-1">
+                    <!-- 보고상태 (RPR_STS) - 경상사업 비해당 -->
+                    <div v-if="!isOrdinary" class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">보고상태</label>
-                        <InputText v-model="form.rprSts" fluid />
+                        <div class="flex gap-2">
+                            <Select v-model="selectedRprSts" :options="rprStsOptions" optionLabel="cdNm" optionValue="cdId"
+                                placeholder="보고상태 선택" fluid />
+                            <InputText v-if="isCustomCode(selectedRprSts)" v-model="customRprSts" placeholder="직접 입력"
+                                fluid />
+                        </div>
                     </div>
                 </div>
 
-                <!-- 시작일/종료일/추진가능성 -->
-                <div class="flex gap-6">
+                <!-- 시작일/종료일/추진가능성 - 경상사업 비해당 -->
+                <div v-if="!isOrdinary" class="flex gap-6">
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">시작일</label>
                         <div class="relative">
@@ -1060,16 +1213,22 @@ const cancel = () => {
                             </span>
                         </div>
                     </div>
+                    <!-- 사업추진 가능성 (PRJ_PUL_PTT) -->
                     <div class="flex flex-col gap-2 flex-1">
-                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업추진 가능성 (%, 0~100)</label>
-                        <InputNumber v-model="form.prjPulPtt" :min="0" :max="100" :useGrouping="false" fluid />
+                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업추진 가능성</label>
+                        <div class="flex gap-2">
+                            <Select v-model="selectedPrjPulPtt" :options="prjPulPttOptions" optionLabel="cdNm" optionValue="cdId"
+                                placeholder="추진가능성 선택" fluid />
+                            <InputText v-if="isCustomCode(selectedPrjPulPtt)" v-model="customPrjPulPtt" placeholder="직접 입력"
+                                fluid />
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- 소요자원 상세내용 (공통 컴포넌트) -->
-        <ResourceTableSection v-model="form.resourceItems" :currencyOptions="currencyOptions"
+        <ResourceTableSection ref="resourceTableRef" v-model="form.resourceItems" :currencyOptions="currencyOptions"
             :error="formErrors.resourceItems" />
     </div>
 </template>

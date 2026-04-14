@@ -215,6 +215,7 @@ export const useAuthStore = defineStore('auth', () => {
             empNm:  data.empNm,
             athIds: data.athIds ?? ['ITPZZ001'], // null 방어: 미등록 사용자 기본값
             bbrC:   data.bbrC ?? '',
+            temC:   data.temC ?? '',
         };
     };
 
