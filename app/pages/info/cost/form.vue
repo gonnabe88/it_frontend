@@ -62,7 +62,8 @@ const abusCOptions = ref<CodeOption[]>([]);
 
 const title = '전산업무비 신청/수정';
 definePageMeta({
-    title
+    title,
+    middleware: ['budget-period']
 });
 
 /** 현재 편집 중인 전산업무비 항목 목록 */

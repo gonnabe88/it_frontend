@@ -3,7 +3,7 @@
 [pages/budget/status.vue] 예산 현황 페이지
 ================================================================================
 정보화사업, 전산업무비, 경상사업 예산을 3개 탭으로 분리하여 조회하는 페이지입니다.
-각 탭은 편성요청 금액과 조정(편성) 금액을 병렬로 표시합니다.
+정보화사업 탭은 편성요청/조정(편성), 전산업무비 탭은 전년도/당해연도 금액을 병렬로 표시합니다.
 
 [주요 기능]
   - 3개 탭: 정보화사업 / 전산업무비 / 경상사업
@@ -108,8 +108,13 @@ const projectColumns: ColumnDef[] = [
     { field: 'adjTotalBg', header: '총예산(합계)', group: '조정(편성)', align: 'right', width: 140, isCurrency: true },
 ]
 
-/* ── 전산업무비 컬럼 정의 ── */
-const costColumns: ColumnDef[] = [
+/* ── 전산업무비 컬럼 정의 (REQ-3: 편성요청→전년도, 조정(편성)→당해년도) ── */
+/** 전년도/당해연도 그룹 헤더 (연도 선택에 따라 동적) */
+const prevYearLabel = computed(() => `${Number(bgYy.value) - 1}년`)
+const currYearLabel = computed(() => `${bgYy.value}년`)
+
+/** 전산업무비 컬럼 (연도 동적 그룹 헤더) */
+const costColumns = computed<ColumnDef[]>(() => [
     { field: 'pulDtt', header: '신규/계속', group: '기본정보', align: 'center', width: 80 },
     { field: 'abusC', header: '사업코드', group: '기본정보', align: 'center', width: 100 },
     { field: 'ioeC', header: '비목코드', group: '기본정보', align: 'center', width: 100 },
@@ -118,18 +123,25 @@ const costColumns: ColumnDef[] = [
     { field: 'cttOpp', header: '계약업체', group: '기본정보', align: 'left', width: 150 },
     { field: 'infPrtYn', header: '정보보호', group: '기본정보', align: 'center', width: 70 },
     { field: 'itMngcTp', header: '유형', group: '기본정보', align: 'center', width: 80 },
-    // 편성요청
-    { field: 'reqRentBg', header: '전산임차료', group: '편성요청', align: 'right', width: 120, isCurrency: true },
-    { field: 'reqTravelBg', header: '전산여비', group: '편성요청', align: 'right', width: 120, isCurrency: true },
-    { field: 'reqServiceBg', header: '전산용역비', group: '편성요청', align: 'right', width: 120, isCurrency: true },
-    { field: 'reqMiscBg', header: '전산제비', group: '편성요청', align: 'right', width: 120, isCurrency: true },
-    { field: 'reqTotalBg', header: '합계', group: '편성요청', align: 'right', width: 130, isCurrency: true },
-    // 조정(편성)
-    { field: 'adjRentBg', header: '전산임차료', group: '조정(편성)', align: 'right', width: 120, isCurrency: true },
-    { field: 'adjTravelBg', header: '전산여비', group: '조정(편성)', align: 'right', width: 120, isCurrency: true },
-    { field: 'adjServiceBg', header: '전산용역비', group: '조정(편성)', align: 'right', width: 120, isCurrency: true },
-    { field: 'adjMiscBg', header: '전산제비', group: '조정(편성)', align: 'right', width: 120, isCurrency: true },
-    { field: 'adjTotalBg', header: '합계', group: '조정(편성)', align: 'right', width: 130, isCurrency: true },
+    // 전년도 (이전 편성요청)
+    { field: 'reqRentBg', header: '전산임차료', group: prevYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'reqTravelBg', header: '전산여비', group: prevYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'reqServiceBg', header: '전산용역비', group: prevYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'reqMiscBg', header: '전산제비', group: prevYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'reqTotalBg', header: '합계', group: prevYearLabel.value, align: 'right', width: 130, isCurrency: true },
+    // 당해연도 (이전 조정/편성)
+    { field: 'adjRentBg', header: '전산임차료', group: currYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'adjTravelBg', header: '전산여비', group: currYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'adjServiceBg', header: '전산용역비', group: currYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'adjMiscBg', header: '전산제비', group: currYearLabel.value, align: 'right', width: 120, isCurrency: true },
+    { field: 'adjTotalBg', header: '합계', group: currYearLabel.value, align: 'right', width: 130, isCurrency: true },
+])
+
+/** 전산업무비 컬럼 필드 목록 (localStorage 용, 정적) */
+const costColumnFields = [
+    'pulDtt', 'abusC', 'ioeC', 'biceDpm', 'biceTem', 'cttOpp', 'infPrtYn', 'itMngcTp',
+    'reqRentBg', 'reqTravelBg', 'reqServiceBg', 'reqMiscBg', 'reqTotalBg',
+    'adjRentBg', 'adjTravelBg', 'adjServiceBg', 'adjMiscBg', 'adjTotalBg'
 ]
 
 /* ── 경상사업 컬럼 정의 ── */
@@ -165,7 +177,7 @@ const loadVisibleCols = (tabKey: string, allCols: ColumnDef[]) => {
 }
 
 const visibleProjectCols = ref<string[]>(loadVisibleCols('project', projectColumns))
-const visibleCostCols = ref<string[]>(loadVisibleCols('cost', costColumns))
+const visibleCostCols = ref<string[]>(loadVisibleCols('cost', costColumns.value))
 const visibleOrdinaryCols = ref<string[]>(loadVisibleCols('ordinary', ordinaryColumns))
 
 /** 컬럼 설정 변경 시 localStorage 저장 */
@@ -175,7 +187,7 @@ watch(visibleOrdinaryCols, (v) => { if (import.meta.client) localStorage.setItem
 
 /** 필터된 컬럼 목록 */
 const filteredProjectCols = computed(() => projectColumns.filter(c => visibleProjectCols.value.includes(c.field)))
-const filteredCostCols = computed(() => costColumns.filter(c => visibleCostCols.value.includes(c.field)))
+const filteredCostCols = computed(() => costColumns.value.filter(c => visibleCostCols.value.includes(c.field)))
 const filteredOrdinaryCols = computed(() => ordinaryColumns.filter(c => visibleOrdinaryCols.value.includes(c.field)))
 
 /** 컬럼 설정 Drawer 표시 상태 */
@@ -184,7 +196,7 @@ const showColSettings = ref(false)
 /** 현재 탭에 따른 컬럼 설정 데이터 */
 const currentColOptions = computed(() => {
     if (activeTab.value === '0') return projectColumns
-    if (activeTab.value === '1') return costColumns
+    if (activeTab.value === '1') return costColumns.value
     return ordinaryColumns
 })
 const currentVisibleCols = computed({
@@ -246,8 +258,12 @@ const isGroupAllChecked = (group: { name: string; columns: ColumnDef[] }) =>
 const isGroupPartial = (group: { name: string; columns: ColumnDef[] }) =>
     !isGroupAllChecked(group) && group.columns.some(c => currentVisibleCols.value.includes(c.field))
 
-/* ── 2단 헤더 그룹 (편성요청/조정(편성)만 2행 처리, 나머지 rowspan=2) ── */
-const MULTI_ROW_GROUPS = ['편성요청', '조정(편성)', '기계장치', '기타무형자산']
+/* ── 2단 헤더 그룹 (편성요청/조정(편성) + 전년도/당해연도 + 기계장치/기타무형자산만 2행 처리) ── */
+const MULTI_ROW_GROUPS = computed(() => [
+    '편성요청', '조정(편성)',
+    prevYearLabel.value, currYearLabel.value,
+    '기계장치', '기타무형자산'
+])
 
 /**
  * ColumnGroup 헤더 행 데이터 생성
@@ -261,7 +277,7 @@ const buildHeaderRows = (cols: ColumnDef[]) => {
     let i = 0
     while (i < cols.length) {
         const col = cols[i]!
-        if (col.group && MULTI_ROW_GROUPS.includes(col.group)) {
+        if (col.group && MULTI_ROW_GROUPS.value.includes(col.group)) {
             // 같은 그룹의 연속 컬럼 수 카운트
             const groupName = col.group
             let count = 0

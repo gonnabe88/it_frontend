@@ -2,28 +2,29 @@
 ================================================================================
 [pages/budget/work.vue] 예산 작업 페이지
 ================================================================================
-편성비목별 편성률을 입력하여 결재완료 예산에 일괄 적용하는 페이지입니다.
+사업별 편성률(자본예산/일반관리비)을 입력하여 결재완료 예산에 적용하는 페이지입니다.
 
 [주요 기능]
-  - 예산년도 선택: Select로 연도 변경 시 편성비목 자동 로드
-  - 편성비목 설정 테이블: DataTable + InputNumber로 편성률(0~100%) 입력
-  - 저장: POST /api/budget/work/apply → BBUGTM Upsert
+  - 예산년도 선택: Select로 연도 변경 시 대상 목록 자동 로드
+  - 대상 목록: 결재완료 정보화사업/전산업무비 + 사업별 편성률(%) 입력
+  - 저장: POST /api/budget/work/apply-items → BBUGTM Upsert
   - 편성 결과 테이블: 비목별 요청금액/편성금액/편성률 + 합계 표시
+  - 사업별 편성 결과: 동적 비목 컬럼 + 요청/편성 금액
 
 [데이터 흐름]
-  1. 연도 선택 → useApiFetch로 편성비목 GET 조회
-  2. 편성률 입력 → 로컬 ref 바인딩
-  3. 저장 클릭 → $apiFetch POST → 결과 표시
-  4. 결과 테이블에 합계 행 포함
+  1. 연도 선택 → useApiFetch로 결재완료 프로젝트/전산업무비 조회
+  2. DUP 공통코드 로드 → 편성률 기본값 자동 계산
+  3. 사업별 편성률 입력 → ref 바인딩
+  4. 저장 클릭 → $apiFetch POST /apply-items → 결과 표시
 
-// Design Ref: §5.1 — 페이지 레이아웃 (Select + DataTable × 2 + Button)
+// Design Ref: §3 — REQ-2 예산 작업 편성률 개선
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { formatBudget } from '~/utils/common'
-import type { IoeCategoryResponse, SummaryResponse, SummaryItem, ApplyResponse, ProjectSummaryResponse } from '~/types/budget-work'
+import type { SummaryResponse, SummaryItem, ApplyResponse, ProjectSummaryResponse } from '~/types/budget-work'
 import type { Project } from '~/composables/useProjects'
 import type { ItCost } from '~/composables/useCost'
 import StyledDataTable from '~/components/common/StyledDataTable.vue'
@@ -66,6 +67,68 @@ const { data: approvedCostsData, pending: costsPending } = useApiFetch<ItCost[]>
 /** 대상 목록 로딩 상태 */
 const targetLoading = computed(() => projectsPending.value || costsPending.value)
 
+/* ── DUP 공통코드 조회 (편성률 기본값 계산용) ── */
+
+/** 자본예산 기준액 (DUP-AMT-300, 기본 2억) */
+const capThreshold = ref(200000000)
+
+/** 자본예산 기본 편성률 (DUP-IOE-351, 기본 70%) */
+const defaultAssetDupRt = ref(70)
+
+/** 일반관리비 기본 편성률 (DUP-IOE-240, 기본 99%) */
+const defaultCostDupRt = ref(99)
+
+/** DUP 공통코드 로드 완료 여부 */
+const dupCodesLoaded = ref(false)
+
+/**
+ * DUP 공통코드 로드
+ * DUP-AMT (기준액), DUP-IOE (비목별 비율) 코드를 조회하여 기본값 설정
+ */
+const loadDupCodes = async () => {
+    try {
+        const { $apiFetch } = useNuxtApp()
+        // DUP-AMT: 기준액 코드 조회
+        const amtCodes = await $apiFetch<Array<{ cdId: string; cdva: string }>>(
+            `${config.public.apiBase}/api/codes`, { params: { cttTp: 'DUP_AMT' } }
+        )
+        const amt300 = amtCodes?.find(c => c.cdId === 'DUP-AMT-300')
+        if (amt300?.cdva) capThreshold.value = Number(amt300.cdva)
+
+        // DUP-IOE: 비목별 비율 코드 조회
+        const ioeCodes = await $apiFetch<Array<{ cdId: string; cdva: string }>>(
+            `${config.public.apiBase}/api/codes`, { params: { cttTp: 'DUP_IOE' } }
+        )
+        const ioe351 = ioeCodes?.find(c => c.cdId === 'DUP-IOE-351')
+        if (ioe351?.cdva) defaultAssetDupRt.value = Number(ioe351.cdva)
+        const ioe240 = ioeCodes?.find(c => c.cdId === 'DUP-IOE-240')
+        if (ioe240?.cdva) defaultCostDupRt.value = Number(ioe240.cdva)
+
+        dupCodesLoaded.value = true
+    } catch {
+        // 코드 조회 실패 시 기본값 유지
+        dupCodesLoaded.value = true
+    }
+}
+
+onMounted(() => { loadDupCodes() })
+
+/**
+ * 편성률 기본값 계산
+ * Design Ref: §3.3 — calculateDefaultRates 의사코드
+ */
+const calculateDefaultRates = (item: { _type: string; pulDtt?: string; assetBg: number }): { assetDupRt: number | null; costDupRt: number } => {
+    if (item._type === '사업') {
+        // 자본예산 편성률: 신규 + 기준액 이상이면 비목별 비율, 그 외 100%
+        const assetDupRt = (item.pulDtt === 'PUL_DTT_001' && item.assetBg >= capThreshold.value)
+            ? defaultAssetDupRt.value
+            : 100
+        return { assetDupRt, costDupRt: defaultCostDupRt.value }
+    }
+    // 전산업무비: 자본예산 없음
+    return { assetDupRt: null, costDupRt: defaultCostDupRt.value }
+}
+
 /**
  * 통합 대상 목록 (정보화사업 + 전산업무비)
  * /budget/list의 [전체] 탭과 동일한 구조: 구분/총예산/자본예산/일반관리비 표시
@@ -73,39 +136,68 @@ const targetLoading = computed(() => projectsPending.value || costsPending.value
 interface TargetItem {
     _id: string
     _type: string
+    _orcTb: string
     _link: string
     name: string
     totalBg: number
     assetBg: number
     costBg: number
     deptNm: string
+    /** 자본예산 편성률 (0~100, null=해당없음) — REQ-2 */
+    assetDupRt: number | null
+    /** 일반관리비 편성률 (0~100) — REQ-2 */
+    costDupRt: number
+    /** 신규/계속 구분 (PUL_DTT) — 기본률 계산용 */
+    pulDtt?: string
 }
 
-const targetItems = computed<TargetItem[]>(() => {
+/** 대상 목록 (반응형 ref — 편성률 v-model 바인딩용) */
+const targetItems = ref<TargetItem[]>([])
+
+/** 대상 목록 데이터 변경 시 재구성 */
+const buildTargetItems = () => {
     /* 정보화사업: totalBg = assetBg + costBg (개별 품목 Σ(gclAmt*xcr) 기준, prjBg 대신) */
-    const projects = (approvedProjectsData.value || []).map((p: Project) => ({
-        _id: p.prjMngNo,
-        _type: '사업',
-        _link: `/info/projects/${p.prjMngNo}`,
-        name: p.prjNm,
-        totalBg: (p.assetBg || 0) + (p.costBg || 0),
-        assetBg: p.assetBg || 0,
-        costBg: p.costBg || 0,
-        deptNm: p.svnDpmNm || ''
-    }))
+    const projects = (approvedProjectsData.value || []).map((p: Project) => {
+        const rates = calculateDefaultRates({
+            _type: '사업', pulDtt: p.pulDtt, assetBg: p.assetBg || 0
+        })
+        return {
+            _id: p.prjMngNo,
+            _type: '사업',
+            _orcTb: 'BPROJM',
+            _link: `/info/projects/${p.prjMngNo}`,
+            name: p.prjNm,
+            totalBg: (p.assetBg || 0) + (p.costBg || 0),
+            assetBg: p.assetBg || 0,
+            costBg: p.costBg || 0,
+            deptNm: p.svnDpmNm || '',
+            assetDupRt: rates.assetDupRt,
+            costDupRt: rates.costDupRt,
+            pulDtt: p.pulDtt
+        }
+    })
     /* 전산업무비: totalBg = assetBg + costBg (백엔드에서 비목코드 기준으로 계산) */
     const costs = (approvedCostsData.value || []).map((c: ItCost) => ({
         _id: c.itMngcNo || '',
         _type: '비용',
+        _orcTb: 'BCOSTM',
         _link: '/info/cost/',
         name: c.cttNm,
         totalBg: (c.assetBg || 0) + (c.costBg || 0),
         assetBg: c.assetBg || 0,
         costBg: c.costBg || 0,
-        deptNm: c.biceDpmNm || ''
+        deptNm: c.biceDpmNm || '',
+        assetDupRt: null,
+        costDupRt: defaultCostDupRt.value,
+        pulDtt: undefined
     }))
-    return [...projects, ...costs]
-})
+    targetItems.value = [...projects, ...costs]
+}
+
+/** 프로젝트/전산업무비 데이터 또는 DUP 코드 변경 시 대상 목록 재구성 */
+watch([approvedProjectsData, approvedCostsData, dupCodesLoaded], () => {
+    buildTargetItems()
+}, { immediate: true })
 
 /** 대상 목록 합계 */
 const targetTotals = computed(() => ({
@@ -113,99 +205,6 @@ const targetTotals = computed(() => ({
     assetBg: targetItems.value.reduce((s, i) => s + i.assetBg, 0),
     costBg: targetItems.value.reduce((s, i) => s + i.costBg, 0)
 }))
-
-/* ── 편성비목 데이터 조회 ── */
-
-/**
- * 편성비목 목록 조회 (GET /api/budget/work/ioe-categories)
- * selectedYear 변경 시 자동 재요청 (useApiFetch의 반응형 query)
- */
-const { data: categoriesData, pending: categoriesPending } = useApiFetch<IoeCategoryResponse[]>(
-    `${config.public.apiBase}/api/budget/work/ioe-categories`,
-    { query: { bgYy: selectedYear } }
-)
-
-/** 편성비목 목록 (null 안전 처리) */
-const categories = computed(() => categoriesData.value || [])
-
-/**
- * 편성률 로컬 상태 관리
- * API 응답의 dupRt를 초기값으로 사용하고, 사용자 입력을 반영합니다.
- * key: cdId, value: dupRt
- */
-const rateMap = ref<Record<string, number>>({})
-
-/**
- * 편성비목 데이터 로드 시 rateMap 초기화
- * 기존 편성률이 있으면 해당 값, 없으면 100(기본값)으로 설정
- */
-watch(categories, (newCategories) => {
-    const newMap: Record<string, number> = {}
-    for (const cat of newCategories) {
-        newMap[cat.cdId] = cat.dupRt ?? 100
-    }
-    rateMap.value = newMap
-}, { immediate: true })
-
-/**
- * 특정 비목의 편성률 반환 (rateMap 우선, 없으면 100)
- */
-const getRate = (cdId: string): number => {
-    return rateMap.value[cdId] ?? 100
-}
-
-/**
- * 특정 비목의 편성률 설정
- */
-const setRate = (cdId: string, value: number | null) => {
-    rateMap.value[cdId] = value ?? 0
-}
-
-/**
- * 특정 비목의 편성금액 계산 (요청금액 × 편성률 / 100, 소수점 반올림)
- */
-const getDupAmount = (cat: IoeCategoryResponse): number => {
-    const amount = cat.requestAmount || 0
-    const rate = getRate(cat.cdId)
-    return Math.round(amount * rate / 100)
-}
-
-/** 자본예산 해당 비목명 키워드 (개발비, 기계장치, 기타무형자산) */
-const CAPITAL_KEYWORDS = ['개발비', '기계장치', '기타무형자산']
-
-/** 자본예산 편성비목 */
-const capitalCategories = computed(() =>
-    categories.value.filter(cat =>
-        CAPITAL_KEYWORDS.some(kw => cat.cdNm.includes(kw))
-    )
-)
-
-/** 일반관리비 편성비목 (자본예산 제외 나머지) */
-const expenseCategories = computed(() =>
-    categories.value.filter(cat =>
-        !CAPITAL_KEYWORDS.some(kw => cat.cdNm.includes(kw))
-    )
-)
-
-/** 자본예산 요청금액 합계 */
-const capitalTotalRequestAmount = computed(() =>
-    capitalCategories.value.reduce((sum, cat) => sum + (cat.requestAmount || 0), 0)
-)
-
-/** 자본예산 편성금액 합계 */
-const capitalTotalDupAmount = computed(() =>
-    capitalCategories.value.reduce((sum, cat) => sum + getDupAmount(cat), 0)
-)
-
-/** 일반관리비 요청금액 합계 */
-const expenseTotalRequestAmount = computed(() =>
-    expenseCategories.value.reduce((sum, cat) => sum + (cat.requestAmount || 0), 0)
-)
-
-/** 일반관리비 편성금액 합계 */
-const expenseTotalDupAmount = computed(() =>
-    expenseCategories.value.reduce((sum, cat) => sum + getDupAmount(cat), 0)
-)
 
 /* ── 비목별 편성 결과 계층 구조 ── */
 
@@ -477,13 +476,15 @@ const onSave = async () => {
     saving.value = true
     try {
         const { $apiFetch } = useNuxtApp()
-        const result = await $apiFetch<ApplyResponse>(`${config.public.apiBase}/api/budget/work/apply`, {
+        const result = await $apiFetch<ApplyResponse>(`${config.public.apiBase}/api/budget/work/apply-items`, {
             method: 'POST',
             body: {
                 bgYy: selectedYear.value,
-                rates: categories.value.map(c => ({
-                    cdId: c.cdId,
-                    dupRt: getRate(c.cdId)
+                items: targetItems.value.map(item => ({
+                    orcTb: item._orcTb,
+                    orcPkVl: item._id,
+                    assetDupRt: item.assetDupRt,
+                    costDupRt: item.costDupRt
                 }))
             }
         })
@@ -574,9 +575,6 @@ const fmt = (amount: number | null | undefined): string => {
                     </template>
                 </Column>
 
-                <!-- 담당부서 -->
-                <Column field="deptNm" header="담당부서" style="min-width: 8rem" />
-
                 <!-- 총예산 -->
                 <Column field="totalBg" header="총예산" style="min-width: 8rem">
                     <template #body="{ data }">
@@ -607,6 +605,27 @@ const fmt = (amount: number | null | undefined): string => {
                     </template>
                 </Column>
 
+                <!-- 자본예산 편성률(%) — REQ-2 -->
+                <Column header="자본예산 편성률(%)" style="width: 10rem">
+                    <template #body="{ data }">
+                        <InputNumber v-if="data.assetDupRt != null"
+                            v-model="data.assetDupRt" :min="0" :max="100" suffix=" %"
+                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
+                        <span v-else class="text-right block text-zinc-400">-</span>
+                    </template>
+                </Column>
+
+                <!-- 일반관리비 편성률(%) — REQ-2 -->
+                <Column header="일반관리비 편성률(%)" style="width: 10rem">
+                    <template #body="{ data }">
+                        <InputNumber v-model="data.costDupRt" :min="0" :max="100" suffix=" %"
+                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
+                    </template>
+                </Column>
+
+                <!-- 담당부서 -->
+                <Column field="deptNm" header="담당부서" style="min-width: 8rem" />
+
                 <!-- 데이터 없음 -->
                 <template #empty>
                     <div class="text-center py-8 text-zinc-500">
@@ -614,127 +633,11 @@ const fmt = (amount: number | null | undefined): string => {
                     </div>
                 </template>
             </StyledDataTable>
-        </div>
-
-        <!-- 편성비목 설정 테이블 -->
-        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">편성비목 설정</h2>
-                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
-            </div>
-
-            <!-- 자본예산 테이블 (개발비, 기계장치, 기타무형자산) -->
-            <h3 class="text-base font-semibold text-indigo-700 dark:text-indigo-400 mb-2">자본예산</h3>
-            <StyledDataTable :value="capitalCategories" :loading="categoriesPending" stripedRows class="mb-6">
-
-                <!-- 편성비목명 -->
-                <Column field="cdNm" header="편성비목" style="min-width: 12rem">
-                    <template #body="{ data }">
-                        <span class="font-medium">{{ data.cdNm }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="font-bold">합계</span>
-                    </template>
-                </Column>
-
-                <!-- 편성률 입력 -->
-                <Column header="편성률(%)" style="width: 10rem">
-                    <template #body="{ data }">
-                        <InputNumber :modelValue="getRate(data.cdId)"
-                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100" suffix=" %"
-                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
-                    </template>
-                    <template #footer>
-                        <span class="text-right block">-</span>
-                    </template>
-                </Column>
-
-                <!-- 요청금액 -->
-                <Column header="요청금액" style="min-width: 10rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(data.requestAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(capitalTotalRequestAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 편성금액 (실시간 계산) -->
-                <Column header="편성금액" style="min-width: 10rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(getDupAmount(data)) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(capitalTotalDupAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 데이터 없음 -->
-                <template #empty>
-                    <div class="text-center py-8 text-zinc-500">
-                        자본예산 편성비목 데이터가 없습니다.
-                    </div>
-                </template>
-            </StyledDataTable>
-
-            <!-- 일반관리비 테이블 (나머지) -->
-            <h3 class="text-base font-semibold text-emerald-700 dark:text-emerald-400 mb-2">일반관리비</h3>
-            <StyledDataTable :value="expenseCategories" :loading="categoriesPending" stripedRows>
-
-                <!-- 편성비목명 -->
-                <Column field="cdNm" header="편성비목" style="min-width: 12rem">
-                    <template #body="{ data }">
-                        <span class="font-medium">{{ data.cdNm }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="font-bold">합계</span>
-                    </template>
-                </Column>
-
-                <!-- 편성률 입력 -->
-                <Column header="편성률(%)" style="width: 10rem">
-                    <template #body="{ data }">
-                        <InputNumber :modelValue="getRate(data.cdId)"
-                            @update:modelValue="(val) => setRate(data.cdId, val)" :min="0" :max="100" suffix=" %"
-                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
-                    </template>
-                    <template #footer>
-                        <span class="text-right block">-</span>
-                    </template>
-                </Column>
-
-                <!-- 요청금액 -->
-                <Column header="요청금액" style="min-width: 10rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(data.requestAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(expenseTotalRequestAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 편성금액 (실시간 계산) -->
-                <Column header="편성금액" style="min-width: 10rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(getDupAmount(data)) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(expenseTotalDupAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 데이터 없음 -->
-                <template #empty>
-                    <div class="text-center py-8 text-zinc-500">
-                        일반관리비 편성비목 데이터가 없습니다.
-                    </div>
-                </template>
-            </StyledDataTable>
 
             <!-- 저장 버튼 -->
             <div class="flex justify-end mt-4">
                 <Button label="저장" severity="primary" icon="pi pi-save" :loading="saving"
-                    :disabled="categories.length === 0" @click="onSave" />
+                    :disabled="targetItems.length === 0" @click="onSave" />
             </div>
         </div>
 

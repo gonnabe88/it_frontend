@@ -62,7 +62,7 @@ const { removeTab } = useTabs();
 const { fetchProject, fetchProjectsOnce, fetchProjectDetailOnce, createProject, updateProject } = useProjects();
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 
-definePageMeta({ title: '예산 작성' });
+definePageMeta({ title: '예산 작성', middleware: ['budget-period'] });
 
 /** 수정 모드의 사업 관리번호 (라우트 쿼리 변경에 반응하도록 computed로 선언) */
 const projectId = computed(() => route.query.id ? (route.query.id as string) : null);

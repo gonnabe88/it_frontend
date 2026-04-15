@@ -160,79 +160,28 @@ const pageSizeOptions = [
 ];
 const pageSize = ref(10);
 
-/* ── 체크박스 선택 관리 ── */
-/** 선택된 통합 항목 목록 */
-const selectedItems = ref<UnifiedBudgetItem[]>([]);
+/** 상신 대상 건수 (필터링된 전체 목록) */
+const totalCount = computed(() => filteredItems.value.length);
+
+/** 상신 가능 여부 */
+const hasItems = computed(() => totalCount.value > 0);
 
 /**
- * 선택 가능한 항목이 모두 선택됐을 때 true
- */
-const headerChecked = computed(() => {
-    return filteredItems.value.length > 0 && selectedItems.value.length === filteredItems.value.length;
-});
-
-/** 일부만 선택된 경우 인디터미네이트 */
-const headerIndeterminate = computed(() =>
-    selectedItems.value.length > 0 && !headerChecked.value
-);
-
-/** 헤더 체크박스: 전체 선택 / 전체 해제 */
-const toggleSelectAll = (val: boolean) => {
-    selectedItems.value = val ? [...filteredItems.value] : [];
-};
-
-/** 행 선택 여부 확인 */
-const isSelected = (data: UnifiedBudgetItem) =>
-    selectedItems.value.some(i => i._id === data._id);
-
-/** 개별 행 토글 */
-const toggleRow = (data: UnifiedBudgetItem, val: boolean) => {
-    selectedItems.value = val
-        ? [...selectedItems.value, data]
-        : selectedItems.value.filter(i => i._id !== data._id);
-};
-
-/** 선택된 정보화사업 건수 */
-const selectedProjectCount = computed(() =>
-    selectedItems.value.filter(i => i._type === '사업').length
-);
-
-/** 선택된 경상사업 건수 */
-const selectedOrdinaryCount = computed(() =>
-    selectedItems.value.filter(i => i._type === '경상').length
-);
-
-/** 선택된 전산업무비 건수 */
-const selectedCostCount = computed(() =>
-    selectedItems.value.filter(i => i._type === '비용').length
-);
-
-/** 결재 상신 버튼 활성화 여부 */
-const hasSelection = computed(() => selectedItems.value.length > 0);
-
-/**
- * 선택 초기화
- */
-const clearSelection = () => {
-    selectedItems.value = [];
-};
-
-/**
- * 결재 상신 처리
- * 선택된 항목의 ID를 유형별로 분리하여 sessionStorage에 저장 후
+ * 결재 상신 처리 (REQ-1: 전체 상신)
+ * 현재 조회된 전체 목록의 ID를 유형별로 분리하여 sessionStorage에 저장 후
  * /budget/report 페이지로 이동합니다.
  */
 const requestApproval = () => {
-    if (!hasSelection.value) {
-        alert('결재할 항목을 선택해주세요.');
+    if (!hasItems.value) {
+        alert('상신할 항목이 없습니다.');
         return;
     }
 
     if (process.client) {
-        const projectIds = selectedItems.value
+        const projectIds = filteredItems.value
             .filter(i => i._type === '사업' || i._type === '경상')
             .map(i => i._id);
-        const costIds = selectedItems.value
+        const costIds = filteredItems.value
             .filter(i => i._type === '비용')
             .map(i => i._id);
 
@@ -244,12 +193,9 @@ const requestApproval = () => {
 };
 
 /**
- * 현재 조회 필터가 적용된 항목 ID 셋 (카드 통계에 사용)
- * 선택된 항목이 있으면 선택된 것만, 없으면 필터링된 목록 기준으로 표시합니다.
+ * 현재 조회 필터가 적용된 항목 (카드 통계에 사용)
  */
-const cardSourceItems = computed(() =>
-    hasSelection.value ? selectedItems.value : filteredItems.value
-);
+const cardSourceItems = computed(() => filteredItems.value);
 
 /**
  * BudgetSummaryCards에 전달할 정보화사업/경상사업/전산업무비 목록
@@ -482,28 +428,14 @@ onBeforeUnmount(() => {
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">결재 상신</h1>
                 <h5 class="text-zinc-500 dark:text-zinc-400">
                     <i class="pi pi-info-circle text-zinc-400 me-1"></i>
-                    <span>상신할 예산 목록을 체크 후 [결재 상신] 버튼을 클릭해주세요.</span>
+                    <span>조회된 전체 미상신 목록이 일괄 상신됩니다.</span>
                 </h5>
-                <!-- 선택 시에만 표시되는 인라인 칩 -->
-                <div v-if="hasSelection"
-                    class="flex items-center gap-1.5 text-sm text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-700">
-                    <i class="pi pi-check-square text-purple-500 dark:text-purple-400 text-xs"></i>
-                    <span v-if="selectedProjectCount > 0" class="font-semibold">사업 {{ selectedProjectCount }}건</span>
-                    <span v-if="selectedProjectCount > 0 && selectedOrdinaryCount > 0"
-                        class="text-purple-300 dark:text-purple-600">·</span>
-                    <span v-if="selectedOrdinaryCount > 0" class="font-semibold">경상 {{ selectedOrdinaryCount }}건</span>
-                    <span v-if="(selectedProjectCount > 0 || selectedOrdinaryCount > 0) && selectedCostCount > 0"
-                        class="text-purple-300 dark:text-purple-600">·</span>
-                    <span v-if="selectedCostCount > 0" class="font-semibold">비용 {{ selectedCostCount }}건</span>
-                    <i class="pi pi-times text-xs text-purple-400 hover:text-purple-600 dark:hover:text-purple-300 ml-0.5 cursor-pointer"
-                        @click="clearSelection"></i>
-                </div>
             </div>
             <!-- 우측: 예산 단위 선택 + 결재 상신 버튼 -->
             <div class="flex items-center gap-4">
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-selector" />
                 <Button label="결재 상신" icon="pi pi-send" severity="help" @click="requestApproval"
-                    :disabled="!hasSelection" :badge="hasSelection ? String(selectedItems.length) : undefined" />
+                    :disabled="!hasItems" :badge="hasItems ? String(totalCount) : undefined" />
             </div>
         </div>
 
@@ -546,18 +478,6 @@ onBeforeUnmount(() => {
             <!-- 통합 DataTable (StyledDataTable: 파란 헤더, gridlines 자동 적용) -->
             <StyledDataTable :value="filteredItems" paginator :rows="pageSize" dataKey="_id" sortField="lstChgDtm"
                 :sortOrder="-1">
-
-                <!-- 커스텀 체크박스 컬럼 -->
-                <Column headerStyle="width: 3rem">
-                    <template #header>
-                        <Checkbox binary :modelValue="headerChecked" :indeterminate="headerIndeterminate"
-                            @update:modelValue="toggleSelectAll" />
-                    </template>
-                    <template #body="{ data }">
-                        <Checkbox binary :modelValue="isSelected(data)"
-                            @update:modelValue="(val: boolean) => toggleRow(data, val)" />
-                    </template>
-                </Column>
 
                 <!-- 구분: 사업 / 비용 / 경상 태그 -->
                 <Column field="_type" header="구분" sortable style="width: 100px; text-align: center">

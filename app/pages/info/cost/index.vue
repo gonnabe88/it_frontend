@@ -22,6 +22,7 @@ import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import InlineEditCell from '~/components/common/InlineEditCell.vue';
 
 
 const title = '전산업무비 목록';
@@ -601,6 +602,33 @@ const handleUpload = async (event: Event) => {
 /** 금융정보단말기 비활성 필드 안내 문구 */
 const TERMINAL_TOOLTIP = '단말기 상세 내용 작성 시 원화 환산 후 자동 계산됩니다.';
 
+/* ── InlineEditCell용 옵션 변환 (CodeOption → { label, value }) ── */
+const pulDttSelectOptions = computed(() => pulDttOptions.value.map(o => ({ label: o.cdNm, value: o.cdId })));
+const abusCSelectOptions = computed(() => abusCOptions.value.map(o => ({ label: o.cdNm, value: o.cdId })));
+const ioeCSelectOptions = computed(() => ioeCOptions.value.map(o => ({ label: o.cdNm, value: o.cdId })));
+const dfrCleSelectOptions = computed(() => dfrCleOptions.value.map(o => ({ label: o.cdNm, value: o.cdId })));
+const curSelectOptions = computed(() => currencyOptions.map(c => ({ label: c, value: c })));
+
+/**
+ * 금융정보단말기 체크박스 클릭 시 네비게이션
+ * - 미체크 → 체크: terminal/form?costId={itMngcNo} 로 연결 신규 작성
+ * - 체크 → 클릭: terminal/form?id={itMngcNo} 로 수정 이동
+ * - 미저장 행(itMngcNo 없음)은 무시
+ */
+const onTerminalCheckClick = (data: ItCost) => {
+    if (!data.itMngcNo) {
+        toast.add({ severity: 'warn', summary: '알림', detail: '행을 먼저 저장해주세요.', life: 2000 });
+        return;
+    }
+    if (isTerminal(data)) {
+        /* 이미 금융정보단말기 → 상세 수정 화면 이동 */
+        navigateTo(`/info/cost/terminal/form?id=${data.itMngcNo}`);
+    } else {
+        /* 일반 → 금융정보단말기 전환: 연결 신규 작성 화면 이동 */
+        navigateTo(`/info/cost/terminal/form?costId=${data.itMngcNo}`);
+    }
+};
+
 /* ── 계속 계약 자동완성 및 전년도 데이터 불러오기 ──────────── */
 
 /** 계약구분이 '계속'인지 확인 */
@@ -756,152 +784,164 @@ const applyContinuation = async () => {
             </div>
 
             <StyledDataTable v-else v-model:selection="selectedRows" :value="filteredCosts" paginator :rows="pageSize" :sortField="currentSortField"
-                :sortOrder="currentSortOrder" removableSort :dataKey="(row) => row.itMngcNo || row._localId">
+                :sortOrder="currentSortOrder" removableSort :dataKey="(row: ItCost & { _localId?: string }) => row.itMngcNo || row._localId">
                 <!-- 체크박스 선택 컬럼 -->
                 <Column selectionMode="multiple" headerStyle="width: 3rem" />
 
-                <!-- 유형 (IT_MNGC_TP) -->
-                <Column field="itMngcTp" header="유형" sortable style="min-width: 140px">
+                <!-- 금융정보단말기 체크박스 (REQ-4: 유형 컬럼 → 체크박스 전환) -->
+                <Column field="itMngcTp" header="단말기" sortable style="width: 70px; text-align: center">
                     <template #body="{ data }">
-                        <Select v-model="data.itMngcTp" :options="itMngcTpOptions" option-label="cdNm"
-                            option-value="cdId" placeholder="유형 선택" class="w-full" @change="saveRow(data)" />
+                        <Checkbox :modelValue="data.itMngcTp === 'IT_MNGC_TP_002'" binary
+                            @update:modelValue="onTerminalCheckClick(data)" />
                     </template>
                 </Column>
 
-                <!-- 신규/계속 (PUL_DTT) -->
-                <Column field="pulDtt" header="신규/계속" sortable style="min-width: 140px">
+                <!-- 신규/계속 (PUL_DTT) — 클릭 편집 (REQ-5) -->
+                <Column field="pulDtt" header="신규/계속" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <Select v-model="data.pulDtt" :options="pulDttOptions" option-label="cdNm" option-value="cdId"
-                            placeholder="신규/계속 선택" class="w-full" :invalid="isFieldInvalid(data, 'pulDtt')"
-                            @change="saveRow(data)" />
+                        <InlineEditCell v-model="data.pulDtt" type="select"
+                            :options="pulDttSelectOptions"
+                            :invalid="isFieldInvalid(data, 'pulDtt')"
+                            placeholder="선택"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 계약명: 신규/계속이 '계속'이면 전년도 계약 자동완성, 아니면 일반 입력 -->
+                <!-- 계약명: 신규/계속이 '계속'이면 전년도 계약 자동완성, 아니면 일반 입력 (REQ-5) -->
                 <Column field="cttNm" header="계약명" sortable style="min-width: 200px">
                     <template #body="{ data }">
-                        <AutoComplete v-if="isKesok(data)"
-                            :modelValue="data.cttNm"
+                        <InlineEditCell v-model="data.cttNm"
+                            :type="isKesok(data) ? 'autocomplete' : 'text'"
                             :suggestions="continuationSuggestions"
                             optionLabel="cttNm"
-                            placeholder="전년도 계약명 검색"
-                            class="w-full"
+                            placeholder="계약명 입력"
                             :invalid="isFieldInvalid(data, 'cttNm')"
                             @complete="searchContinuation($event, data)"
                             @item-select="onContinuationSelect(data, $event.value)"
-                            @update:modelValue="data.cttNm = $event"
-                            @blur="saveRow(data)">
+                            @save="saveRow(data)">
                             <template #option="{ option }">
                                 <div class="py-1 pl-2 border-l-2 border-indigo-400">
                                     <div class="text-sm font-semibold">{{ option.cttNm }}</div>
                                     <div class="text-xs text-zinc-400">{{ option.cttOpp }} · {{ option.bgYy }}년</div>
                                 </div>
                             </template>
-                        </AutoComplete>
-                        <InputText v-else v-model="data.cttNm" class="w-full" :invalid="isFieldInvalid(data, 'cttNm')"
-                            @blur="saveRow(data)" />
+                        </InlineEditCell>
                     </template>
                 </Column>
 
-                <!-- 계약상대처 -->
+                <!-- 계약상대처 — 클릭 편집 (REQ-5) -->
                 <Column field="cttOpp" header="계약상대처" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <InputText v-model="data.cttOpp" class="w-full" :invalid="isFieldInvalid(data, 'cttOpp')"
-                            @blur="saveRow(data)" />
+                        <InlineEditCell v-model="data.cttOpp" type="text"
+                            :invalid="isFieldInvalid(data, 'cttOpp')"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 사업코드 -->
+                <!-- 사업코드 — 클릭 편집 (REQ-5) -->
                 <Column field="abusC" header="사업코드" sortable style="min-width: 160px">
                     <template #body="{ data }">
-                        <Select v-model="data.abusC" :options="abusCOptions" option-label="cdNm" option-value="cdId"
-                            placeholder="사업코드 선택" class="w-full" :invalid="isFieldInvalid(data, 'abusC')"
-                            @change="saveRow(data)" />
+                        <InlineEditCell v-model="data.abusC" type="select"
+                            :options="abusCSelectOptions"
+                            :invalid="isFieldInvalid(data, 'abusC')"
+                            placeholder="선택"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 비목코드 -->
-                <Column field="ioeC" header="비목코드" sortable style="min-width: 180px">
+                <!-- 비목코드 — 클릭 편집 (REQ-5) -->
+                <Column field="ioeC" header="비목코드" sortable style="min-width: 160px">
                     <template #body="{ data }">
-                        <Select v-model="data.ioeC" :options="ioeCOptions" option-label="cdNm" option-value="cdId"
-                            placeholder="비목코드 선택" class="w-full" :invalid="isFieldInvalid(data, 'ioeC')"
-                            @change="saveRow(data)" />
+                        <InlineEditCell v-model="data.ioeC" type="select"
+                            :options="ioeCSelectOptions"
+                            :invalid="isFieldInvalid(data, 'ioeC')"
+                            placeholder="선택"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 예산: 금융정보단말기는 disabled -->
+                <!-- 예산: 금융정보단말기는 disabled — 클릭 편집 (REQ-5) -->
                 <Column field="itMngcBg" header="예산" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP">
-                            <InputNumber v-model="data.itMngcBg" mode="currency" :currency="data.cur || 'KRW'"
-                                locale="ko-KR" fluid disabled />
+                        <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
+                            class="inline-block w-full px-2 py-1 text-zinc-400 cursor-not-allowed min-h-[2rem] leading-[2rem]">
+                            {{ (data.itMngcBg ?? 0).toLocaleString() }} {{ data.cur || 'KRW' }}
                         </span>
-                        <InputNumber v-else v-model="data.itMngcBg" mode="currency" :currency="data.cur || 'KRW'"
-                            locale="ko-KR" fluid @value-change="saveRow(data)" />
+                        <InlineEditCell v-else v-model="data.itMngcBg" type="number"
+                            :suffix="data.cur || 'KRW'"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 통화: 금융정보단말기는 disabled -->
-                <Column field="cur" header="통화" sortable style="width: 100px">
+                <!-- 통화: 금융정보단말기는 disabled — 클릭 편집 (REQ-5) -->
+                <Column field="cur" header="통화" sortable style="width: 90px">
                     <template #body="{ data }">
-                        <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP">
-                            <Select v-model="data.cur" :options="currencyOptions" class="w-full" disabled />
+                        <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
+                            class="inline-block w-full px-2 py-1 text-zinc-400 cursor-not-allowed min-h-[2rem] leading-[2rem]">
+                            KRW
                         </span>
-                        <Select v-else v-model="data.cur" :options="currencyOptions" class="w-full"
-                            @change="saveRow(data)" />
+                        <InlineEditCell v-else v-model="data.cur" type="select"
+                            :options="curSelectOptions"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 지급주기 -->
-                <Column field="dfrCle" header="지급주기" sortable style="min-width: 140px">
+                <!-- 지급주기 — 클릭 편집 (REQ-5) -->
+                <Column field="dfrCle" header="지급주기" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <Select v-model="data.dfrCle" :options="dfrCleOptions" option-label="cdNm" option-value="cdId"
-                            placeholder="지급주기 선택" class="w-full" :invalid="isFieldInvalid(data, 'dfrCle')"
-                            @change="saveRow(data)" />
+                        <InlineEditCell v-model="data.dfrCle" type="select"
+                            :options="dfrCleSelectOptions"
+                            :invalid="isFieldInvalid(data, 'dfrCle')"
+                            placeholder="선택"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 최초지급일 -->
+                <!-- 최초지급일 — 클릭 편집 (REQ-5) -->
                 <Column field="fstDfrDt" header="최초지급일" sortable style="min-width: 140px">
                     <template #body="{ data }">
-                        <DatePicker v-model="data.fstDfrDt" view="month" dateFormat="yy-mm" showIcon fluid
-                            placeholder="최초지급일" class="w-full" :invalid="isFieldInvalid(data, 'fstDfrDt')"
-                            @date-select="saveRow(data)" />
+                        <InlineEditCell v-model="data.fstDfrDt" type="date"
+                            view="month" dateFormat="yy-mm"
+                            placeholder="최초지급일"
+                            :invalid="isFieldInvalid(data, 'fstDfrDt')"
+                            @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 담당자 (AutoComplete + 직원조회 버튼) -->
+                <!-- 담당자 (AutoComplete + 직원조회 버튼) — 클릭 편집 (REQ-5) -->
                 <Column field="cgprNm" header="담당자" sortable style="min-width: 150px; width: 170px">
                     <template #body="{ data }">
-                        <div class="cgpr-cell"
-                            :class="{ 'ring-2 ring-red-500 rounded-md': isFieldInvalid(data, 'cgpr') }">
-                            <AutoComplete :modelValue="data.cgprNm || ''" :suggestions="employeeSuggestions"
-                                optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'" @complete="searchEmployee"
-                                @item-select="onEmployeeSelect(data, $event.value)">
-                                <template #option="{ option }">
-                                    <div class="py-1.5 pl-2.5 border-l-[3px] border-blue-900">
-                                        <div class="leading-tight">
-                                            <div class="flex items-baseline gap-1.5">
-                                                <span class="font-semibold text-sm">{{ option.usrNm }}</span>
-                                                <span class="text-[11px] text-surface-400">{{ option.eno }}</span>
-                                                <span v-if="option.ptCNm" class="text-xs text-primary/70">{{
-                                                    option.ptCNm }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-1 text-xs text-surface-400 mt-0.5">
-                                                <i class="pi pi-building text-[10px]" />
-                                                <span>{{ option.bbrNm }}</span>
-                                                <template v-if="option.temNm">
-                                                    <span class="text-surface-300">·</span>
-                                                    <span>{{ option.temNm }}</span>
-                                                </template>
-                                            </div>
+                        <InlineEditCell v-model="data.cgprNm" type="autocomplete"
+                            :suggestions="employeeSuggestions"
+                            optionLabel="usrNm"
+                            :placeholder="data.cgprNm || '이름 검색'"
+                            :showSearch="true"
+                            :invalid="isFieldInvalid(data, 'cgpr')"
+                            @complete="searchEmployee"
+                            @item-select="onEmployeeSelect(data, $event.value)"
+                            @search-click="openEmployeeSearch(data)"
+                            @save="saveRow(data)">
+                            <template #option="{ option }">
+                                <div class="py-1.5 pl-2.5 border-l-[3px] border-blue-900">
+                                    <div class="leading-tight">
+                                        <div class="flex items-baseline gap-1.5">
+                                            <span class="font-semibold text-sm">{{ option.usrNm }}</span>
+                                            <span class="text-[11px] text-surface-400">{{ option.eno }}</span>
+                                            <span v-if="option.ptCNm" class="text-xs text-primary/70">{{
+                                                option.ptCNm }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1 text-xs text-surface-400 mt-0.5">
+                                            <i class="pi pi-building text-[10px]" />
+                                            <span>{{ option.bbrNm }}</span>
+                                            <template v-if="option.temNm">
+                                                <span class="text-surface-300">·</span>
+                                                <span>{{ option.temNm }}</span>
+                                            </template>
                                         </div>
                                     </div>
-                                </template>
-                            </AutoComplete>
-                            <Button icon="pi pi-search" text size="small" class="!pe-1"
-                                @click="openEmployeeSearch(data)" v-tooltip.top="'직원조회'" />
-                        </div>
+                                </div>
+                            </template>
+                        </InlineEditCell>
                     </template>
                 </Column>
 

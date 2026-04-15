@@ -20,6 +20,9 @@ import { type Terminal } from '~/composables/useCost';
 import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import InlineEditCell from '~/components/common/InlineEditCell.vue';
+
+import { computed } from 'vue';
 
 interface CodeOption { cdId: string; cdNm: string; }
 
@@ -33,6 +36,11 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:modelValue': [value: Terminal[]];
 }>();
+
+/* ── InlineEditCell용 옵션 변환 (CodeOption → { label, value }) ── */
+const dfrCleSelectOptions = computed(() => props.dfrCleOptions.map(o => ({ label: o.cdNm, value: o.cdId })));
+const tmnSvcSelectOptions = computed(() => props.tmnSvcOptions.map(o => ({ label: o.cdNm, value: o.cdId })));
+const curSelectOptions = computed(() => props.currencyOptions.map(c => ({ label: c, value: c })));
 
 const { employeeSuggestions, employeeDialogVisible, selectedRowIndex, searchEmployee, openEmployeeSearch } = useEmployeeSearch();
 
@@ -108,59 +116,60 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <!-- 단말기명 -->
             <Column header="단말기명" style="min-width: 150px">
                 <template #body="{ data }">
-                    <InputText v-model="data.tmnNm" class="w-full" />
+                    <InlineEditCell v-model="data.tmnNm" type="text" />
                 </template>
             </Column>
 
             <!-- 이용방법 -->
             <Column header="이용방법" style="min-width: 150px">
                 <template #body="{ data }">
-                    <InputText v-model="data.tmnTuzManr" class="w-full" />
+                    <InlineEditCell v-model="data.tmnTuzManr" type="text" />
                 </template>
             </Column>
 
             <!-- 용도 -->
             <Column header="용도" style="min-width: 150px">
                 <template #body="{ data }">
-                    <InputText v-model="data.tmnUsg" class="w-full" />
+                    <InlineEditCell v-model="data.tmnUsg" type="text" />
                 </template>
             </Column>
 
             <!-- 금액 -->
             <Column header="금액" style="min-width: 120px">
                 <template #body="{ data }">
-                    <InputNumber v-model="data.tmlAmt" mode="currency" :currency="data.cur || 'KRW'"
-                        locale="ko-KR" class="w-full" :min="0" />
+                    <InlineEditCell v-model="data.tmlAmt" type="number"
+                        :suffix="data.cur || 'KRW'" />
                 </template>
             </Column>
 
             <!-- 통화 -->
             <Column header="통화" style="width: 100px">
                 <template #body="{ data }">
-                    <Select v-model="data.cur" :options="currencyOptions" class="w-full" />
+                    <InlineEditCell v-model="data.cur" type="select"
+                        :options="curSelectOptions" />
                 </template>
             </Column>
 
             <!-- 지급주기 -->
             <Column header="지급주기" style="min-width: 140px">
                 <template #body="{ data }">
-                    <Select v-model="data.dfrCle" :options="dfrCleOptions" option-label="cdNm"
-                        option-value="cdId" placeholder="지급주기 선택" class="w-full" />
+                    <InlineEditCell v-model="data.dfrCle" type="select"
+                        :options="dfrCleSelectOptions" placeholder="지급주기 선택" />
                 </template>
             </Column>
 
             <!-- 단말기서비스 -->
             <Column header="단말기서비스" style="min-width: 160px">
                 <template #body="{ data }">
-                    <Select v-model="data.tmnSvc" :options="tmnSvcOptions" option-label="cdNm"
-                        option-value="cdId" placeholder="서비스 선택" class="w-full" />
+                    <InlineEditCell v-model="data.tmnSvc" type="select"
+                        :options="tmnSvcSelectOptions" placeholder="서비스 선택" />
                 </template>
             </Column>
 
             <!-- 증감사유 -->
             <Column header="증감사유" style="min-width: 150px">
                 <template #body="{ data }">
-                    <InputText v-model="data.indRsn" class="w-full" />
+                    <InlineEditCell v-model="data.indRsn" type="text" />
                 </template>
             </Column>
 
@@ -201,7 +210,7 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <!-- 비고 -->
             <Column header="비고" style="min-width: 150px">
                 <template #body="{ data }">
-                    <InputText v-model="data.rmk" class="w-full" />
+                    <InlineEditCell v-model="data.rmk" type="text" />
                 </template>
             </Column>
 

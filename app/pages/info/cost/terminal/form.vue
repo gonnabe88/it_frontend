@@ -59,11 +59,22 @@ const abusCOptions = ref<CodeOption[]>([]);
 const tmnSvcOptions = ref<CodeOption[]>([]);
 
 const title = '금융정보단말기 등록';
-definePageMeta({ title: '금융정보단말기 등록' });
+definePageMeta({ title: '금융정보단말기 등록', middleware: ['budget-period'] });
 
-/** 수정 모드 여부 (라우트 쿼리 변경에 반응하도록 computed로 선언) */
-const costId = computed(() => route.query.id ? (route.query.id as string) : null);
-const isEditMode = computed(() => !!costId.value);
+/**
+ * 3가지 진입 모드 지원 (REQ-4)
+ * - edit: ?id={itMngcNo} — 기존 금융정보단말기 수정
+ * - linked: ?costId={parentItMngcNo} — 부모 전산업무비에서 연결 신규 작성
+ * - new: 파라미터 없음 — 독립 신규 작성
+ */
+const editId = computed(() => route.query.id as string | undefined);
+const parentCostId = computed(() => route.query.costId as string | undefined);
+const mode = computed(() => {
+    if (editId.value) return 'edit';
+    if (parentCostId.value) return 'linked';
+    return 'new';
+});
+const isEditMode = computed(() => mode.value === 'edit');
 
 /** 전산업무비 신청 데이터 (단일 행 배열로 DataTable 바인딩) */
 const costs = ref<ItCost[]>([]);
@@ -93,9 +104,9 @@ watchEffect(() => {
 
 /** 수정 모드에서 최신 비용 데이터를 서버에서 재조회 */
 const loadCostData = async () => {
-    if (!isEditMode.value || !costId.value) return;
+    if (!isEditMode.value || !editId.value) return;
     try {
-        const costData = await fetchCostOnce(costId.value);
+        const costData = await fetchCostOnce(editId.value);
         if (costData) {
             if (costData.fstDfrDt) {
                 costData.fstDfrDt = new Date(costData.fstDfrDt as string);
@@ -106,6 +117,48 @@ const loadCostData = async () => {
         }
     } catch (e) {
         console.error('Failed to load cost data', e);
+    }
+};
+
+/**
+ * 연결 신규 모드: 부모 전산업무비에서 초기값 복사
+ * 사업코드, 비목코드, 담당부서/팀/담당자 등 공통 필드를 가져옴
+ */
+const loadParentCostData = async () => {
+    if (!parentCostId.value) return;
+    try {
+        const parentData = await fetchCostOnce(parentCostId.value);
+        if (parentData) {
+            costs.value = [{
+                ioeC: parentData.ioeC ?? '',
+                cttNm: '',
+                pulDtt: '',
+                cttOpp: parentData.cttOpp ?? '',
+                itMngcBg: 0,
+                dfrCle: parentData.dfrCle ?? '',
+                fstDfrDt: '',
+                cur: 'KRW',
+                xcr: 0,
+                xcrBseDt: '',
+                infPrtYn: 'N',
+                indRsn: '',
+                cgpr: parentData.cgpr ?? user.value?.eno ?? '',
+                cgprNm: parentData.cgprNm ?? user.value?.empNm ?? '',
+                biceDpm: parentData.biceDpm ?? '',
+                biceDpmNm: parentData.biceDpmNm ?? '',
+                biceTem: parentData.biceTem ?? '',
+                biceTemNm: parentData.biceTemNm ?? '',
+                abusC: parentData.abusC ?? '',
+                itMngcTp: 'IT_MNGC_TP_002',
+                assetBg: 0,
+                apfSts: '예산 작성',
+                lstYn: 'Y',
+                delYn: 'N',
+                terminals: []
+            }];
+        }
+    } catch (e) {
+        console.error('Failed to load parent cost data', e);
     }
 };
 
@@ -135,10 +188,14 @@ onMounted(async () => {
         console.error('초기 데이터 로드 실패', e);
     }
 
-    if (isEditMode.value && costId.value) {
+    if (mode.value === 'edit') {
+        /* 수정 모드: 기존 데이터 로드 */
         await loadCostData();
+    } else if (mode.value === 'linked') {
+        /* 연결 신규 모드: 부모 전산업무비에서 초기값 복사 */
+        await loadParentCostData();
     } else {
-        /* 신규 등록 모드: 기본값으로 초기화된 단일 행 추가 */
+        /* 독립 신규 모드: 빈 폼으로 시작 */
         costs.value = [{
             ioeC: '금융정보단말기',
             cttNm: '',
@@ -173,7 +230,7 @@ onMounted(async () => {
 onActivated(() => loadCostData());
 
 /** 같은 페이지에서 다른 id로 이동 시 데이터 재조회 */
-watch(costId, (newId) => {
+watch(editId, (newId) => {
     if (newId) {
         loadCostData();
     }
@@ -214,13 +271,21 @@ const executeSave = async () => {
     };
 
     try {
-        if (payload.itMngcNo) {
+        if (mode.value === 'edit' && payload.itMngcNo) {
+            /* 수정 모드: PUT */
             await updateCost(payload.itMngcNo, payload);
         } else {
+            /* 신규 (linked + new): POST */
             await createCost(payload);
+
+            /* linked 모드: 부모 전산업무비의 itMngcTp를 IT_MNGC_TP_002로 업데이트 */
+            if (mode.value === 'linked' && parentCostId.value) {
+                await updateCost(parentCostId.value, { itMngcTp: 'IT_MNGC_TP_002' } as ItCost);
+            }
         }
 
         toast.add({ severity: 'success', summary: '저장 완료', detail: '저장되었습니다.', life: 2000 });
+        /* 저장 완료 후 현재 탭 닫고 목록으로 복귀 */
         await router.push('/info/cost');
         removeTab('/info/cost/terminal/form');
     } catch (e) {
@@ -252,7 +317,7 @@ const cancel = () => {
         <!-- 페이지 헤더: 제목 + 액션 버튼 그룹 -->
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                {{ isEditMode ? '금융정보단말기 수정' : '금융정보단말기 등록' }}
+                {{ mode === 'edit' ? '금융정보단말기 수정' : '금융정보단말기 등록' }}
             </h1>
             <div class="flex gap-2">
                 <Button label="취소" severity="secondary" @click="cancel" />
