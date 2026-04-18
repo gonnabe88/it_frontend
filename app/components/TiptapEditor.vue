@@ -763,7 +763,7 @@ const setTableFullWidth = () => {
 
             for (let i = 0; i < colspan; i++) {
                 // 저장된 너비가 없으면 기본값(100px) 사용
-                const w = (colwidths && colwidths[i]) ? colwidths[i] : 100;
+                const w = (colwidths && colwidths[i]) ? colwidths[i]! : 100;
                 if (colIdx + i < colCount) {
                     currentWidths[colIdx + i] = w;
                 }

@@ -19,7 +19,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import ApprovalTimeline from '~/components/approval/ApprovalTimeline.vue';
@@ -549,18 +549,27 @@ const openApplicationViewer = (apfMngNo: string) => {
  * @param fileName - 다운로드 파일명 (.xlsx 포함)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const downloadExcel = (rows: Record<string, any>[], sheetName: string, fileName: string) => {
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    XLSX.writeFile(wb, fileName);
+const downloadExcel = async (rows: Record<string, any>[], sheetName: string, fileName: string) => {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(sheetName);
+    if (rows.length > 0) {
+        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
+        rows.forEach(row => ws.addRow(row));
+    }
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 /**
  * 전체 탭 엑셀 다운로드
  * 현재 필터링된 통합 목록(filteredAll)을 엑셀로 저장합니다.
  */
-const downloadAllExcel = () => {
+const downloadAllExcel = async () => {
     const rows = filteredAll.value.map(item => ({
         '구분': item._type,
         '사업명/계약명': item.name,
@@ -574,14 +583,14 @@ const downloadAllExcel = () => {
         '종료일': item.endDt,
         '결재현황': item.apfSts
     }));
-    downloadExcel(rows, '전체예산목록', `전체예산목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    await downloadExcel(rows, '전체예산목록', `전체예산목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /**
  * 정보화사업 탭 엑셀 다운로드
  * 현재 필터링된 정보화사업 목록(filteredProjects)을 엑셀로 저장합니다.
  */
-const downloadProjectsExcel = () => {
+const downloadProjectsExcel = async () => {
     const rows = filteredProjects.value.map((p: Project) => ({
         '사업명': p.prjNm,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -596,14 +605,14 @@ const downloadProjectsExcel = () => {
         '상태': p.prjSts,
         '결재현황': p.applicationInfo?.apfSts
     }));
-    downloadExcel(rows, '정보화사업목록', `정보화사업목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    await downloadExcel(rows, '정보화사업목록', `정보화사업목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /**
  * 전산업무비 탭 엑셀 다운로드
  * 현재 필터링된 전산업무비 목록(filteredCosts)을 엑셀로 저장합니다.
  */
-const downloadCostsExcel = () => {
+const downloadCostsExcel = async () => {
     const rows = filteredCosts.value.map((c: ItCost) => ({
         '계약명': c.cttNm,
         '비목코드': c.ioeC,
@@ -616,14 +625,14 @@ const downloadCostsExcel = () => {
         '지급예정월': c.fstDfrDt,
         '결재현황': c.apfSts
     }));
-    downloadExcel(rows, '전산업무비목록', `전산업무비목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    await downloadExcel(rows, '전산업무비목록', `전산업무비목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /**
  * 경상사업 탭 엑셀 다운로드
  * 현재 필터링된 경상사업 목록(filteredOrdinary)을 엑셀로 저장합니다.
  */
-const downloadOrdinaryExcel = () => {
+const downloadOrdinaryExcel = async () => {
     const rows = filteredOrdinary.value.map((p: Project) => ({
         '사업명': p.prjNm,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -637,7 +646,7 @@ const downloadOrdinaryExcel = () => {
         '상태': p.prjSts,
         '결재현황': p.applicationInfo?.apfSts
     }));
-    downloadExcel(rows, '경상사업목록', `경상사업목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    await downloadExcel(rows, '경상사업목록', `경상사업목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /* ── 보고서 다운로드 ── */

@@ -19,7 +19,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onActivated  } from 'vue';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
@@ -356,7 +356,7 @@ const filteredItems = computed(() =>
 /**
  * 현재 필터링된 통합 목록을 엑셀로 저장합니다.
  */
-const downloadExcel = () => {
+const downloadExcel = async () => {
     const rows = filteredItems.value.map(item => ({
         '구분': item._type,
         '사업명/계약명': item.name,
@@ -369,10 +369,19 @@ const downloadExcel = () => {
         '시작일': item.sttDt,
         '종료일': item.endDt
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '결재상신목록');
-    XLSX.writeFile(wb, `결재상신목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('결재상신목록');
+    if (rows.length > 0) {
+        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
+        rows.forEach(row => ws.addRow(row));
+    }
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `결재상신목록_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 /* ── PDF 보고서 다운로드 ── */

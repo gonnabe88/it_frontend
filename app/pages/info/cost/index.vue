@@ -527,7 +527,7 @@ const codeName = (options: CodeOption[], cdId: string | undefined) =>
 
 /** 현재 필터링된 목록을 Excel 파일로 다운로드 (서버 미저장 로컬 행 제외) */
 const downloadExcel = async () => {
-    const XLSX = await import('xlsx');
+    const { default: ExcelJS } = await import('exceljs');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = filteredCosts.value.filter(c => !(c as any)._localId).map(c => ({
         '관리번호': c.itMngcNo ?? '',
@@ -548,10 +548,19 @@ const downloadExcel = async () => {
         '담당팀': c.biceTemNm ?? '',
         '결재현황': c.apfSts ?? '예산 작성',
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '전산업무비');
-    XLSX.writeFile(wb, `전산업무비_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('전산업무비');
+    if (rows.length > 0) {
+        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
+        rows.forEach(row => ws.addRow(row));
+    }
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `전산업무비_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 /* ── 일괄업로드 (Excel) ──────────────────────────────── */
@@ -569,21 +578,30 @@ const handleUpload = async (event: Event) => {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
-        const XLSX = await import('xlsx');
+        const { default: ExcelJS } = await import('exceljs');
         const buffer = await file.arrayBuffer();
-        const wb = XLSX.read(buffer, { type: 'array' });
-        const firstSheetName = wb.SheetNames[0];
-        if (!firstSheetName) {
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(buffer);
+        const ws = wb.worksheets[0];
+        if (!ws) {
             toast.add({ severity: 'error', summary: '업로드', detail: '시트가 없는 파일입니다.', life: 2000 });
             return;
         }
-        const ws = wb.Sheets[firstSheetName];
-        if (!ws) {
-            toast.add({ severity: 'error', summary: '업로드', detail: '시트 데이터를 읽을 수 없습니다.', life: 2000 });
-            return;
-        }
+        const headers: string[] = [];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
+        const rows: Record<string, any>[] = [];
+        ws.eachRow((row, rowIndex) => {
+            if (rowIndex === 1) {
+                row.eachCell(cell => headers.push(String(cell.value ?? '')));
+            } else {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const obj: Record<string, any> = {};
+                row.eachCell({ includeEmpty: true }, (cell, colIndex) => {
+                    obj[headers[colIndex - 1] ?? ''] = cell.value ?? '';
+                });
+                rows.push(obj);
+            }
+        });
 
         if (!rows.length) {
             toast.add({ severity: 'warn', summary: '업로드', detail: '데이터가 없습니다.', life: 2000 });

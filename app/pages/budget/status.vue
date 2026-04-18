@@ -18,7 +18,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import DOMPurify from 'isomorphic-dompurify'
 import StyledDataTable from '~/components/common/StyledDataTable.vue'
 import EmployeeInfoDialog from '~/components/common/EmployeeInfoDialog.vue'
@@ -341,7 +341,7 @@ const openEmployeeInfo = (data: any, field: string) => {
 const isEmployeeField = (field: string) => EMPLOYEE_FIELDS.includes(field as any)
 
 /* ── 엑셀 다운로드 ── */
-const exportExcel = () => {
+const exportExcel = async () => {
     const tabNames = ['정보화사업', '전산업무비', '경상사업']
     const tabName = tabNames[Number(activeTab.value)] || '예산현황'
     const fileName = `예산현황_${tabName}_${bgYy.value}.xlsx`
@@ -372,10 +372,17 @@ const exportExcel = () => {
         })
     )
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, tabName)
-    XLSX.writeFile(wb, fileName)
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet(tabName)
+    ws.addRow(headers)
+    rows.forEach(row => ws.addRow(row))
+    const buf = await wb.xlsx.writeBuffer()
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
 }
 </script>
 

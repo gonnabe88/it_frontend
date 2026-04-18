@@ -22,7 +22,7 @@ import { useAdminApi, type AdminCodeResponse, type AdminCodeRequest } from '~/co
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // 관리자 미들웨어 + 레이아웃 적용
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -201,7 +201,7 @@ const uploadInput = ref<HTMLInputElement | null>(null);
  * 현재 코드 목록을 엑셀 파일로 다운로드
  * 조회·수정에 사용하는 9개 필드만 포함합니다.
  */
-const downloadExcel = () => {
+const downloadExcel = async () => {
     const rows = (codes.value ?? []).map(c => ({
         '코드ID':     c.cdId,
         '코드명':     c.cdNm,
@@ -213,10 +213,19 @@ const downloadExcel = () => {
         '종료일자':   c.endDt ?? '',
         '순서':       c.cdSqn ?? '',
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '공통코드');
-    XLSX.writeFile(wb, `공통코드_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('공통코드');
+    if (rows.length > 0) {
+        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
+        rows.forEach(row => ws.addRow(row));
+    }
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `공통코드_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 /**
@@ -231,9 +240,26 @@ const onUploadFile = async (event: Event) => {
     if (uploadInput.value) uploadInput.value.value = '';
 
     const buffer = await file.arrayBuffer();
-    const wb = XLSX.read(buffer, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]!]!;
-    const rows = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' });
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer);
+    const ws = wb.worksheets[0];
+    if (!ws) {
+        toast.add({ severity: 'error', summary: '업로드', detail: '시트가 없는 파일입니다.', life: 2000 });
+        return;
+    }
+    const headers: string[] = [];
+    const rows: Record<string, string>[] = [];
+    ws.eachRow((row, rowIndex) => {
+        if (rowIndex === 1) {
+            row.eachCell(cell => headers.push(String(cell.value ?? '')));
+        } else {
+            const obj: Record<string, string> = {};
+            row.eachCell({ includeEmpty: true }, (cell, colIndex) => {
+                obj[headers[colIndex - 1] ?? ''] = cell.value !== null && cell.value !== undefined ? String(cell.value) : '';
+            });
+            rows.push(obj);
+        }
+    });
 
     if (rows.length === 0) {
         toast.add({ severity: 'warn', summary: '빈 파일', detail: '업로드할 데이터가 없습니다.', life: 3000 });
