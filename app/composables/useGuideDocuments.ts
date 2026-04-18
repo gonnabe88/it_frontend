@@ -72,6 +72,7 @@ export const useGuideDocuments = () => {
     const createGuideDocument = async (body: GuideDocumentForm): Promise<string> => {
         // $apiFetch 자체를 any로 캐스팅: Nuxt 라우트 타입 추론 시 스택 깊이 초과 오류 방지
         // URL as any로는 오버로드 평가를 막지 못하므로 함수 자체를 캐스팅합니다.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return await ($apiFetch as any)(API_BASE_URL, {
             method: 'POST',
             body
@@ -86,6 +87,7 @@ export const useGuideDocuments = () => {
      */
     const updateGuideDocument = async (docMngNo: string, body: Omit<GuideDocumentForm, 'docMngNo'>): Promise<string> => {
         // $apiFetch 자체를 any로 캐스팅: Nuxt 라우트 타입 스택 깊이 초과 오류 방지
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return await ($apiFetch as any)(`${API_BASE_URL}/${docMngNo}`, {
             method: 'PUT',
             body
@@ -98,6 +100,7 @@ export const useGuideDocuments = () => {
      */
     const deleteGuideDocument = async (docMngNo: string): Promise<void> => {
         // $apiFetch 자체를 any로 캐스팅: Nuxt 라우트 타입 스택 깊이 초과 오류 방지
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return await ($apiFetch as any)(`${API_BASE_URL}/${docMngNo}`, {
             method: 'DELETE'
         });

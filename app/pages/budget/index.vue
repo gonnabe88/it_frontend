@@ -70,11 +70,12 @@ const navigateIfAllowed = (path: string) => {
                 <div key="main" class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full px-4">
 
                     <!-- 1. 정보화사업 카드 (인디고 테마) -->
-                    <div @click="navigateIfAllowed('/info/projects/form')"
-                        :class="[
+                    <div
+:class="[
                             'stagger-1 group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all duration-500 flex flex-col items-center text-center h-[460px]',
                             isWithinPeriod ? 'hover:shadow-xl hover:border-indigo-500 dark:hover:border-indigo-500 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                        ]">
+                        ]"
+                        @click="navigateIfAllowed('/info/projects/form')">
                         <!-- 아이콘/제목 영역 (고정 높이로 하단 뱃지 라인 정렬) -->
                         <div class="flex flex-col items-center h-[240px] w-full pt-4">
                             <div class="p-6 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-500">
@@ -99,11 +100,12 @@ const navigateIfAllowed = (path: string) => {
                     </div>
 
                     <!-- 2. 전산업무비 카드 (에메랄드 테마) -->
-                    <div @click="navigateIfAllowed('/info/cost')"
-                        :class="[
+                    <div
+:class="[
                             'stagger-2 group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all duration-500 flex flex-col items-center text-center h-[460px]',
                             isWithinPeriod ? 'hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                        ]">
+                        ]"
+                        @click="navigateIfAllowed('/info/cost')">
                         <!-- 아이콘/제목 영역 (고정 높이로 하단 뱃지 라인 정렬) -->
                         <div class="flex flex-col items-center h-[240px] w-full pt-4">
                             <div class="p-6 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300">
@@ -136,11 +138,12 @@ const navigateIfAllowed = (path: string) => {
                     </div>
 
                     <!-- 3. 경상사업 카드 (레드 테마) -->
-                    <div @click="navigateIfAllowed('/info/projects/form?ordinary=true')"
-                        :class="[
+                    <div
+:class="[
                             'stagger-3 group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all duration-500 flex flex-col items-center text-center h-[460px]',
                             isWithinPeriod ? 'hover:shadow-xl hover:border-red-500 dark:hover:border-red-500 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                        ]">
+                        ]"
+                        @click="navigateIfAllowed('/info/projects/form?ordinary=true')">
                         <!-- 아이콘/제목 영역 (고정 높이로 하단 뱃지 라인 정렬) -->
                         <div class="flex flex-col items-center h-[240px] w-full pt-4">
                             <div class="p-6 rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform duration-500">
@@ -169,10 +172,11 @@ const navigateIfAllowed = (path: string) => {
         </div>
 
         <!-- REQ-6: 예산 신청 기간 외 안내 다이얼로그 -->
-        <Dialog v-model:visible="showPeriodDialog" modal header="예산 신청 기간 안내"
+        <Dialog
+v-model:visible="showPeriodDialog" modal header="예산 신청 기간 안내"
             :style="{ width: '28rem' }" :closable="true" :draggable="false">
             <div class="flex flex-col items-center gap-4 py-2">
-                <i class="pi pi-calendar-times text-4xl text-orange-500"></i>
+                <i class="pi pi-calendar-times text-4xl text-orange-500"/>
                 <p class="text-center text-zinc-700 dark:text-zinc-300">
                     현재 예산 신청 기간이 아닙니다.
                 </p>
@@ -181,7 +185,7 @@ const navigateIfAllowed = (path: string) => {
                 </p>
             </div>
             <template #footer>
-                <Button label="확인" @click="showPeriodDialog = false" autofocus />
+                <Button label="확인" autofocus @click="showPeriodDialog = false" />
             </template>
         </Dialog>
     </div>

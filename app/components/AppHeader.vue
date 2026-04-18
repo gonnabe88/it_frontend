@@ -331,11 +331,13 @@ const navigateToTab = async (path: string) => {
          isAdmin 값 차이로 MegaMenu model 크기 및 user 정보가 달라 hydration mismatch 발생.
          기능적 문제 없으므로 헤더 전체에서 mismatch 경고를 억제합니다. -->
     <div class="card" data-allow-mismatch>
-        <MegaMenu :model="menuItems" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
+        <MegaMenu
+            :model="menuItems" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
             style="border-radius: 0">
 
             <template #item="{ item }">
-                <a v-if="item.root"
+                <a
+                    v-if="item.root"
                     class="flex items-center cursor-pointer px-14 py-2 overflow-hidden relative font-semibold text-lg hover:bg-indigo-50 dark:hover:bg-indigo-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     :class="[isActiveRoot(typeof item.label === 'string' ? item.label : '') ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'text-zinc-700 dark:text-zinc-200']"
                     style="border-radius: 0"
@@ -347,11 +349,12 @@ const navigateToTab = async (path: string) => {
                     </template>
                     <span v-else>{{ item.label }}</span>
                 </a>
-                <a v-else-if="!item.image" @click="item.command ? item.command({ originalEvent: $event, item }) : null"
-                    class="flex items-center p-4 cursor-pointer mb-2 gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-800/50 rounded-lg transition-colors">
+                <a
+v-else-if="!item.image" class="flex items-center p-4 cursor-pointer mb-2 gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-800/50 rounded-lg transition-colors"
+                    @click="item.command ? item.command({ originalEvent: $event, item }) : null">
                     <span
                         class="inline-flex items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 w-15 h-15">
-                        <i :class="[item.icon, 'text-lg']"></i>
+                        <i :class="[item.icon, 'text-lg']"/>
                     </span>
                     <span class="inline-flex flex-col gap-1">
                         <span class="font-bold text-lg text-zinc-800 dark:text-zinc-100">{{ item.label }}</span>
@@ -360,7 +363,7 @@ const navigateToTab = async (path: string) => {
                     </span>
                 </a>
                 <div v-else class="flex flex-col items-center w-full">
-                    <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" />
+                    <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" >
                     <span class="text-xl font-bold text-zinc-800 dark:text-zinc-100">{{ item.label }}</span>
                     <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ item.subtext }}</span>
                 </div>
@@ -369,16 +372,19 @@ const navigateToTab = async (path: string) => {
                 <div class="flex items-center gap-2">
                     <!-- 통합검색 AutoComplete -->
                     <div class="global-search relative" style="width: 16rem">
-                        <AutoComplete v-model="searchQuery" :suggestions="suggestions" optionLabel="name"
-                            placeholder="통합검색" @complete="searchByName" @item-select="onSearchSelect" fluid
-                            :inputClass="'!py-1.5 !text-sm !pr-8'">
+                        <AutoComplete
+v-model="searchQuery" :suggestions="suggestions" option-label="name"
+                            placeholder="통합검색" fluid :input-class="'!py-1.5 !text-sm !pr-8'" @complete="searchByName"
+                            @item-select="onSearchSelect">
                             <template #option="{ option }">
-                                <div class="py-1.5 pl-2.5 border-l-[3px]"
+                                <div
+class="py-1.5 pl-2.5 border-l-[3px]"
                                     :class="option.type === '정보화사업' ? 'border-blue-900' : 'border-emerald-600'">
                                     <div class="leading-tight">
                                         <div class="flex items-baseline gap-1.5">
                                             <span class="font-semibold text-sm">{{ option.name }}</span>
-                                            <span class="text-[11px] rounded px-1"
+                                            <span
+class="text-[11px] rounded px-1"
                                                 :class="option.type === '정보화사업'
                                                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
                                                     : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'">
@@ -399,37 +405,42 @@ const navigateToTab = async (path: string) => {
                                 </div>
                             </template>
                         </AutoComplete>
-                        <button v-if="searchQuery" @click="searchQuery = ''"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors z-10">
-                            <i class="pi pi-times text-xs"></i>
+                        <button
+v-if="searchQuery" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors z-10"
+                            @click="searchQuery = ''">
+                            <i class="pi pi-times text-xs"/>
                         </button>
                     </div>
-                    <button @click="toggleTheme"
-                        class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
-                        <i :class="['pi text-lg', isDark ? 'pi-sun' : 'pi-moon']"></i>
+                    <button
+class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        @click="toggleTheme">
+                        <i :class="['pi text-lg', isDark ? 'pi-sun' : 'pi-moon']"/>
                     </button>
                     <button
                         class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors relative">
-                        <i class="pi pi-bell text-lg"></i>
+                        <i class="pi pi-bell text-lg"/>
                         <span
-                            class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-zinc-900"></span>
+                            class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-zinc-900"/>
                     </button>
                     <!-- SSR과 클라이언트 간 user 상태 차이로 발생하는 hydration mismatch를 허용합니다.
                          SSR: user=null → fallback 표시 / 클라이언트: localStorage에서 복원된 실 사용자 정보 표시 -->
-                    <div class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700"
+                    <div
+class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700"
                          data-allow-mismatch>
                         <div class="text-right hidden md:block">
                             <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ user?.empNm || '사용자'
                                 }}</div>
                             <div class="text-xs text-zinc-500">{{ user?.eno || '' }}</div>
                         </div>
-                        <Avatar :label="user?.empNm?.charAt(0) || 'U'"
+                        <Avatar
+                            :label="user?.empNm?.charAt(0) || 'U'"
                             class="bg-primary-100 text-primary-600 font-bold border border-primary-200" shape="circle"
                             size="normal" style="width: 2.5rem; height: 2.5rem" />
-                        <button @click="handleLogout"
+                        <button
                             class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
-                            title="로그아웃">
-                            <i class="pi pi-sign-out text-lg"></i>
+                            title="로그아웃"
+                            @click="handleLogout">
+                            <i class="pi pi-sign-out text-lg"/>
                         </button>
                     </div>
                 </div>
@@ -440,47 +451,53 @@ const navigateToTab = async (path: string) => {
         <div
             class="flex items-end bg-white dark:bg-zinc-900/50 border-t border-b border-zinc-100 dark:border-zinc-800 h-[50px]">
             <!-- 좌측 스크롤 버튼 — 호버: 연속 스크롤 / 클릭: 맨 앞으로 -->
-            <button @mouseenter="canScrollLeft && startHoverScroll('left')" @mouseleave="stopHoverScroll"
-                @click="canScrollLeft && scrollToEdge('left')"
-                class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors"
-                :class="canScrollLeft ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'">
-                <i class="pi pi-chevron-left text-xs"></i>
+            <button
+class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors" :class="canScrollLeft ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'"
+                @mouseenter="canScrollLeft && startHoverScroll('left')"
+                @mouseleave="stopHoverScroll"
+                @click="canScrollLeft && scrollToEdge('left')">
+                <i class="pi pi-chevron-left text-xs"/>
             </button>
 
             <!-- 탭 스크롤 영역 -->
-            <div ref="tabContainer" @scroll="updateScrollState"
-                class="flex items-end flex-1 overflow-x-auto scrollbar-hide h-full px-2 gap-1">
-                <div v-for="(tab, index) in tabs" :key="tab.path" draggable="true"
-                    @dragstart="onDragStart($event, index)" @dragover="onDragOver($event, index)"
-                    @drop="onDrop($event, index)" @dragend="onDragEnd"
-                    class="flex items-center px-4 py-2 text-sm rounded-t-lg cursor-pointer transition-all whitespace-nowrap border-t border-x mb-[-1px] relative select-none"
-                    :class="[
+            <div
+ref="tabContainer" class="flex items-end flex-1 overflow-x-auto scrollbar-hide h-full px-2 gap-1"
+                @scroll="updateScrollState">
+                <div
+v-for="(tab, index) in tabs" :key="tab.path" draggable="true"
+                    class="flex items-center px-4 py-2 text-sm rounded-t-lg cursor-pointer transition-all whitespace-nowrap border-t border-x mb-[-1px] relative select-none" :class="[
                         route.path === tab.path
                             ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border-zinc-200 dark:border-zinc-800 border-b-transparent font-bold shadow-[0_-2px_5px_rgba(0,0,0,0.02)]'
                             : 'bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-500 border-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800',
                         dragIndex === index ? 'opacity-40' : '',
                         dropTargetIndex === index && dragIndex !== index ? 'tab-drop-target' : ''
-                    ]" @click="navigateToTab(tab.fullPath)">
+                    ]"
+                    @dragstart="onDragStart($event, index)" @dragover="onDragOver($event, index)"
+                    @drop="onDrop($event, index)"
+                    @dragend="onDragEnd" @click="navigateToTab(tab.fullPath)">
                     <span class="mr-2">{{ tab.title }}</span>
-                    <button v-if="tabs.length > 1" @click.stop="removeTab(tab.path)"
-                        class="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
-                        <i class="pi pi-times text-[10px]"></i>
+                    <button
+v-if="tabs.length > 1" class="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                        @click.stop="removeTab(tab.path)">
+                        <i class="pi pi-times text-[10px]"/>
                     </button>
                 </div>
             </div>
 
             <!-- 우측 스크롤 버튼 — 호버: 연속 스크롤 / 클릭: 맨 뒤로 -->
-            <button @mouseenter="canScrollRight && startHoverScroll('right')" @mouseleave="stopHoverScroll"
-                @click="canScrollRight && scrollToEdge('right')"
-                class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors"
-                :class="canScrollRight ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'">
-                <i class="pi pi-chevron-right text-xs"></i>
+            <button
+class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors" :class="canScrollRight ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'"
+                @mouseenter="canScrollRight && startHoverScroll('right')"
+                @mouseleave="stopHoverScroll"
+                @click="canScrollRight && scrollToEdge('right')">
+                <i class="pi pi-chevron-right text-xs"/>
             </button>
 
             <!-- 모두 닫기 버튼 -->
             <div v-if="tabs.length > 0" class="flex-shrink-0 flex items-center px-2 pb-2">
-                <Button label="모두 닫기" @click="closeAll" size="small" severity="secondary" outlined
-                    class="bg-stone-300 dark:bg-stone-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors !text-xs !py-1 !px-2 !h-7" />
+                <Button
+label="모두 닫기" size="small" severity="secondary" outlined class="bg-stone-300 dark:bg-stone-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors !text-xs !py-1 !px-2 !h-7"
+                    @click="closeAll" />
             </div>
         </div>
     </div>

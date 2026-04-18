@@ -179,6 +179,7 @@ const submitCreate = async () => {
         /* 목록 갱신 후 신규 협의회(타당성검토표 Step 1)로 이동 */
         await refresh();
         navigateTo(`/info/council-request/${asctId}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         alert(`협의회 신청 중 오류가 발생했습니다.\n${e?.data?.message ?? e?.message ?? '알 수 없는 오류'}`);
     } finally {
@@ -248,12 +249,12 @@ const getPrjTpLabel = (prjTp: string | null) => {
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
             <!-- 새로고침 -->
             <Button
+                v-tooltip.top="'새로고침'"
                 icon="pi pi-refresh"
                 severity="secondary"
                 outlined
                 :loading="pending"
                 @click="() => refresh()"
-                v-tooltip.top="'새로고침'"
             />
         </div>
 
@@ -277,10 +278,10 @@ const getPrjTpLabel = (prjTp: string | null) => {
                     <Select
                         v-model="selectedHearingType"
                         :options="hearingTypeOptions"
-                        optionLabel="label"
-                        optionValue="value"
+                        option-label="label"
+                        option-value="value"
                         placeholder="전체"
-                        showClear
+                        show-clear
                         class="min-w-[130px]"
                     />
                 </div>
@@ -291,10 +292,10 @@ const getPrjTpLabel = (prjTp: string | null) => {
                     <Select
                         v-model="selectedStatus"
                         :options="statusOptions"
-                        optionLabel="label"
-                        optionValue="value"
+                        option-label="label"
+                        option-value="value"
                         placeholder="전체"
-                        showClear
+                        show-clear
                         class="min-w-[160px]"
                     />
                 </div>
@@ -317,7 +318,7 @@ const getPrjTpLabel = (prjTp: string | null) => {
 
         <!-- 로딩 스켈레톤 -->
         <div v-else-if="pending" class="space-y-3">
-            <Skeleton v-for="i in 4" :key="i" height="72px" borderRadius="0.75rem" />
+            <Skeleton v-for="i in 4" :key="i" height="72px" border-radius="0.75rem" />
         </div>
 
         <!-- 협의회 목록 (카드 리스트) -->
@@ -364,7 +365,8 @@ const getPrjTpLabel = (prjTp: string | null) => {
                             @click.stop="navigateToCouncil(council)"
                         />
                         <!-- 미신청 건: 뱃지 클릭 → 협의회 신청 Dialog 오픈 -->
-                        <span v-else
+                        <span
+v-else
                             class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-medium border border-amber-200 dark:border-amber-700 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
                             @click.stop="openApplyDialog(council)">
                             <i class="pi pi-plus-circle text-xs" />
@@ -448,8 +450,8 @@ const getPrjTpLabel = (prjTp: string | null) => {
                     <Select
                         v-model="createForm.dbrTp"
                         :options="hearingTypeOptions"
-                        optionLabel="label"
-                        optionValue="value"
+                        option-label="label"
+                        option-value="value"
                         placeholder="심의유형 선택"
                         fluid
                     />

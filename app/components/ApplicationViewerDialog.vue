@@ -130,26 +130,28 @@ watch(localVisible, (newVal) => {
 </script>
 
 <template>
-    <Dialog v-model:visible="localVisible" header="신청서 조회" modal maximizable
+    <Dialog
+v-model:visible="localVisible" header="신청서 조회" modal maximizable
         class="w-[90vw] h-[90vh]" :style="{ maxWidth: '1000px' }">
 
         <div class="w-full h-[80vh] flex items-center justify-center bg-zinc-50 dark:bg-zinc-800">
 
             <!-- 로딩 상태 -->
             <div v-if="loading" class="flex flex-col items-center gap-3 text-zinc-500 dark:text-zinc-400">
-                <i class="pi pi-spin pi-spinner text-4xl"></i>
+                <i class="pi pi-spin pi-spinner text-4xl"/>
                 <span class="text-sm">신청서를 불러오는 중...</span>
             </div>
 
             <!-- 오류 상태 -->
-            <div v-else-if="errorMsg"
+            <div
+v-else-if="errorMsg"
                 class="flex flex-col items-center gap-3 text-red-500 dark:text-red-400">
-                <i class="pi pi-exclamation-triangle text-4xl"></i>
+                <i class="pi pi-exclamation-triangle text-4xl"/>
                 <span class="text-sm">{{ errorMsg }}</span>
             </div>
 
             <!-- PDF iframe -->
-            <iframe v-else-if="pdfUrl" :src="pdfUrl" class="w-full h-full border-none"></iframe>
+            <iframe v-else-if="pdfUrl" :src="pdfUrl" class="w-full h-full border-none"/>
 
             <!-- 초기 빈 상태 -->
             <div v-else class="text-zinc-400 text-sm">

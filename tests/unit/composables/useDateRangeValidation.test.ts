@@ -11,7 +11,7 @@
  * ============================================================================
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ref, computed, watch, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, type Ref } from 'vue';
 
 // ============================================================================
 // useDateRangeValidation 인라인 구현 (Nuxt auto-import 미지원 환경용)
@@ -324,6 +324,7 @@ describe('useDateRangeValidation', () => {
     describe('onStartInput', () => {
         it('10자리 미만 입력 시 검증을 수행하지 않는다', () => {
             const { startError, onStartInput } = useDateRangeValidation(startDate, endDate);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const event = { target: { value: '2026-04' } } as any;
 
             onStartInput(event);
@@ -333,6 +334,7 @@ describe('useDateRangeValidation', () => {
 
         it('10자리 완성 시 형식 검사를 수행한다', () => {
             const { startError, onStartInput } = useDateRangeValidation(startDate, endDate);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const event = { target: { value: '2026-13-01' } } as any; // 잘못된 날짜
 
             onStartInput(event);
@@ -343,6 +345,7 @@ describe('useDateRangeValidation', () => {
         it('빈 값 입력 시 에러를 초기화한다', () => {
             const { startError, onStartInput } = useDateRangeValidation(startDate, endDate);
             startError.value = '기존 에러';
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const event = { target: { value: '' } } as any;
 
             onStartInput(event);

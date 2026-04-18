@@ -172,7 +172,7 @@ const formatDateLabel = (dt: string): string => {
                             @click="toggleSlot(date, time)"
                         >
                             <Checkbox
-                                :modelValue="isSelected(date, time)"
+                                :model-value="isSelected(date, time)"
                                 binary
                                 @change="toggleSlot(date, time)"
                             />

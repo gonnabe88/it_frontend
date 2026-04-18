@@ -52,6 +52,9 @@ import type { OrgUser } from '~/composables/useOrganization';
 import ResourceTableSection from '~/components/projects/ResourceTableSection.vue';
 import type { ResourceItem } from '~/components/projects/ResourceTableSection.vue';
 
+/* ── 공통코드 기반 드롭박스 옵션 ──────────────────────────── */
+import type { CodeOption } from '~/composables/useCodeOptions';
+
 /** ResourceTableSection 컴포넌트 참조 (getCttTpByCdId 호출용) */
 const resourceTableRef = ref<InstanceType<typeof ResourceTableSection> | null>(null);
 
@@ -169,9 +172,6 @@ const { yearOptions } = useProjectOptions();
 
 const currencyOptions = computed(() => Object.keys(exchangeRates.value));
 const statusOptions = PROJECT_STAGES;
-
-/* ── 공통코드 기반 드롭박스 옵션 ──────────────────────────── */
-import type { CodeOption } from '~/composables/useCodeOptions';
 
 const { options: bzDttOptions } = useCodeOptions('BZ_DTT');
 const { options: prjTpOptions } = useCodeOptions('PRJ_TP');
@@ -356,6 +356,7 @@ const fetchTlrDeptInfo = async (eno: string, field: 'svn' | 'it') => {
     try {
         const config = useRuntimeConfig();
         const { $apiFetch } = useNuxtApp();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userData = await $apiFetch<any>(`${config.public.apiBase}/api/users/${eno}`);
         if (!userData) return;
 
@@ -402,6 +403,7 @@ const checkDeptMismatch = async (selectedEno: string, selectedName: string, fiel
     try {
         const config = useRuntimeConfig();
         const { $apiFetch } = useNuxtApp();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const userData = await $apiFetch<any>(`${config.public.apiBase}/api/users/${selectedEno}`);
         if (userData && userData.bbrC && userData.bbrC !== myBbrC.value) {
             confirm.require({
@@ -483,6 +485,7 @@ onActivated(async () => {
             try {
                 const config = useRuntimeConfig();
                 const { $apiFetch } = useNuxtApp();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const userData = await $apiFetch<any>(`${config.public.apiBase}/api/users/${user.value.eno}`);
                 if (userData) {
                     if (userData.bbrC) form.value.svnDpm = userData.bbrC;
@@ -503,6 +506,7 @@ onActivated(async () => {
                 const project = data.value;
 
                 /* API 응답의 items를 UI resourceItems 모델로 변환 */
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const mappedItems = (project.items || []).map((item: any) => {
                     return {
                         category: item.gclDtt || '', // 공통코드 cdId (예: IOE-351-1100-1)
@@ -618,7 +622,7 @@ const autoFormatDateInput = (event: Event) => {
 
         // 추가된 하이픈만큼 커서 위치 보정
         const newLength = formatted.length;
-        let newCursorPos = cursorPosition + (newLength - oldLength);
+        const newCursorPos = cursorPosition + (newLength - oldLength);
 
         // 강제로 커서 위치 이동
         input.setSelectionRange(newCursorPos, newCursorPos);
@@ -694,6 +698,7 @@ const executeSave = async () => {
                 removeTab('/info/projects/form');
             }
         });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error('Save failed', error);
         /* API 응답에서 오류 메시지 추출 (data.message → message → 기본 메시지 순으로 폴백) */
@@ -851,6 +856,7 @@ const onContinueProjectSelect = async (event: { value: Project }) => {
         const detail = await fetchProjectDetailOnce(event.value.prjMngNo);
 
         /* items → resourceItems 변환 */
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mappedItems = (detail.items || []).map((item: any) => {
             return {
                 category: item.gclDtt || '', // 공통코드 cdId
@@ -973,21 +979,24 @@ const cancel = () => {
                 <!-- 수정 모드에서만 상태 변경 드롭다운을 헤더 영역에 노출 -->
                 <div v-if="isEditMode" class="flex items-center gap-2 text-base font-normal">
                     <span class="text-zinc-500 text-sm">| 진행 상태 :</span>
-                    <Select v-model="form.prjSts" :options="statusOptions" placeholder="상태 변경" class="w-48 !text-sm"
+                    <Select
+v-model="form.prjSts" :options="statusOptions" placeholder="상태 변경" class="w-48 !text-sm"
                         size="small" />
                 </div>
             </h1>
 
             <!-- 우측 상단 액션 버튼 그룹 -->
             <div class="flex items-center gap-2">
-                <Button label="취소" severity="secondary" @click="cancel" class="!px-5 !rounded-lg" />
-                <Button label="저장" severity="primary" @click="saveProject"
-                    class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20" />
+                <Button label="취소" severity="secondary" class="!px-5 !rounded-lg" @click="cancel" />
+                <Button
+label="저장" severity="primary" class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20"
+                    @click="saveProject" />
             </div>
         </div>
 
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3 max-w-[1440px] mx-auto w-full"
-            id="main-content">
+        <div
+id="main-content"
+            class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3 max-w-[1440px] mx-auto w-full">
 
             <!-- 사업 개요 섹션 -->
             <div class="space-y-3">
@@ -997,27 +1006,31 @@ const cancel = () => {
                 <div class="flex gap-3">
                     <!-- 사업 연도 선택 (자동 연산된 YYYY, YYYY+1) -->
                     <div class="flex flex-col gap-2">
-                        <Select v-model="form.bgYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
+                        <Select
+v-model="form.bgYy" :options="yearOptions" placeholder="연도 선택" class="w-32"
                             :disabled="isEditMode" />
                     </div>
                     <!-- 사업 구분 선택 (신규/계속) -->
                     <div class="flex flex-col gap-2">
-                        <Select v-model="form.pulDtt" :options="pulDttOptions" optionLabel="cdNm" optionValue="cdId" placeholder="구분 선택" class="w-32" />
+                        <Select v-model="form.pulDtt" :options="pulDttOptions" option-label="cdNm" option-value="cdId" placeholder="구분 선택" class="w-32" />
                     </div>
                     <!-- 사업명: 계속이면 전년도 사업 AutoComplete, 신규이면 일반 입력 -->
                     <div class="flex flex-col gap-2 flex-1">
-                        <AutoComplete v-if="isContinueProject" v-model="continueProjectAC" dropdown
-                            :suggestions="continueSuggestions" optionLabel="prjNm" placeholder="전년도 사업명으로 검색 후 선택..."
+                        <AutoComplete
+v-if="isContinueProject" v-model="continueProjectAC" dropdown
+                            :suggestions="continueSuggestions" option-label="prjNm" placeholder="전년도 사업명으로 검색 후 선택..."
                             fluid :delay="300" :invalid="formErrors.prjNm" @complete="searchContinueProjects"
                             @item-select="onContinueProjectSelect" />
-                        <InputText v-else v-model="form.prjNm" placeholder="사업명을 입력하세요" fluid
+                        <InputText
+v-else v-model="form.prjNm" placeholder="사업명을 입력하세요" fluid
                             :invalid="formErrors.prjNm" />
                     </div>
                 </div>
                 <!-- Rich Text 사업 상세 설명 -->
-                <div class="flex flex-col gap-2"
+                <div
+class="flex flex-col gap-2"
                     :class="formErrors.prjDes ? 'ring-1 ring-red-500 rounded-lg overflow-hidden' : ''">
-                    <RichEditor v-model="form.prjDes" editorStyle="height: 150px" placeholder="사업 상세 내용을 입력하세요." />
+                    <RichEditor v-model="form.prjDes" editor-style="height: 150px" placeholder="사업 상세 내용을 입력하세요." />
                 </div>
                 <!-- 현황 / 필요성 -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1052,9 +1065,10 @@ const cancel = () => {
                             class="text-red-500">*</span></span>
                     <span class="text-sm text-zinc-500">전산 요구사항</span>
                 </div>
-                <div class="flex flex-col gap-2"
+                <div
+class="flex flex-col gap-2"
                     :class="formErrors.prjRng ? 'ring-1 ring-red-500 rounded-lg overflow-hidden' : ''">
-                    <RichEditor v-model="form.prjRng" editorStyle="height: 150px" />
+                    <RichEditor v-model="form.prjRng" editor-style="height: 150px" />
                 </div>
             </div>
 
@@ -1090,9 +1104,11 @@ const cancel = () => {
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">업무 구분<span
                                 class="text-red-500">*</span></label>
                         <div class="flex gap-2">
-                            <Select v-model="selectedBzDtt" :options="bzDttOptions" optionLabel="cdNm" optionValue="cdId"
+                            <Select
+v-model="selectedBzDtt" :options="bzDttOptions" option-label="cdNm" option-value="cdId"
                                 placeholder="업무구분 선택" fluid :invalid="formErrors.bzDtt" />
-                            <InputText v-if="isCustomCode(selectedBzDtt)" v-model="customBzDtt" placeholder="직접 입력"
+                            <InputText
+v-if="isCustomCode(selectedBzDtt)" v-model="customBzDtt" placeholder="직접 입력"
                                 fluid :invalid="formErrors.bzDtt" />
                         </div>
                     </div>
@@ -1101,9 +1117,11 @@ const cancel = () => {
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업 유형<span
                                 class="text-red-500">*</span></label>
                         <div class="flex gap-2">
-                            <Select v-model="selectedPrjTp" :options="prjTpOptions" optionLabel="cdNm" optionValue="cdId"
+                            <Select
+v-model="selectedPrjTp" :options="prjTpOptions" option-label="cdNm" option-value="cdId"
                                 placeholder="사업유형 선택" fluid />
-                            <InputText v-if="isCustomCode(selectedPrjTp)" v-model="customPrjTp" placeholder="직접 입력"
+                            <InputText
+v-if="isCustomCode(selectedPrjTp)" v-model="customPrjTp" placeholder="직접 입력"
                                 fluid />
                         </div>
                     </div>
@@ -1112,9 +1130,11 @@ const cancel = () => {
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">기술 유형<span
                                 class="text-red-500">*</span></label>
                         <div class="flex gap-2">
-                            <Select v-model="selectedTchnTp" :options="tchnTpOptions" optionLabel="cdNm" optionValue="cdId"
+                            <Select
+v-model="selectedTchnTp" :options="tchnTpOptions" option-label="cdNm" option-value="cdId"
                                 placeholder="기술유형 선택" fluid :invalid="formErrors.tchnTp" />
-                            <InputText v-if="isCustomCode(selectedTchnTp)" v-model="customTchnTp" placeholder="직접 입력"
+                            <InputText
+v-if="isCustomCode(selectedTchnTp)" v-model="customTchnTp" placeholder="직접 입력"
                                 fluid :invalid="formErrors.tchnTp" />
                         </div>
                     </div>
@@ -1123,9 +1143,11 @@ const cancel = () => {
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">주요 사용자<span
                                 class="text-red-500">*</span></label>
                         <div class="flex gap-2">
-                            <Select v-model="selectedMnUsr" :options="mnUsrOptions" optionLabel="cdNm" optionValue="cdId"
+                            <Select
+v-model="selectedMnUsr" :options="mnUsrOptions" option-label="cdNm" option-value="cdId"
                                 placeholder="주요사용자 선택" fluid :invalid="formErrors.mnUsr" />
-                            <InputText v-if="isCustomCode(selectedMnUsr)" v-model="customMnUsr" placeholder="직접 입력"
+                            <InputText
+v-if="isCustomCode(selectedMnUsr)" v-model="customMnUsr" placeholder="직접 입력"
                                 fluid :invalid="formErrors.mnUsr" />
                         </div>
                     </div>
@@ -1149,13 +1171,15 @@ const cancel = () => {
                         <div class="flex items-center gap-3">
                             <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">법규상 완료시기</label>
                             <div class="flex items-center gap-1.5">
-                                <Checkbox v-model="lblFsgTlmNA" :binary="true" inputId="lblFsgTlmNA" />
-                                <label for="lblFsgTlmNA"
+                                <Checkbox v-model="lblFsgTlmNA" :binary="true" input-id="lblFsgTlmNA" />
+                                <label
+for="lblFsgTlmNA"
                                     class="text-xs text-zinc-500 dark:text-zinc-400 cursor-pointer select-none">해당사항
                                     없음</label>
                             </div>
                         </div>
-                        <DatePicker v-model="form.lblFsgTlm" showIcon fluid dateFormat="yy-mm-dd"
+                        <DatePicker
+v-model="form.lblFsgTlm" show-icon fluid date-format="yy-mm-dd"
                             :disabled="lblFsgTlmNA" />
                     </div>
                 </div>
@@ -1174,12 +1198,14 @@ const cancel = () => {
                 <div class="flex gap-6 items-end">
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">주관부문</label>
-                        <InputText v-model="form.svnHdq" placeholder="주관부서 담당팀장 선택 시 자동 입력" fluid readonly
+                        <InputText
+v-model="form.svnHdq" placeholder="주관부서 담당팀장 선택 시 자동 입력" fluid readonly
                             class="w-80 bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <div class="flex items-center gap-2 pb-2">
-                        <Checkbox v-model="isItSameAsSvn" inputId="isItSameAsSvn" :binary="true" />
-                        <label for="isItSameAsSvn"
+                        <Checkbox v-model="isItSameAsSvn" input-id="isItSameAsSvn" :binary="true" />
+                        <label
+for="isItSameAsSvn"
                             class="text-xs text-zinc-500 dark:text-zinc-400 cursor-pointer select-none">주관·IT
                             부서 동일</label>
                     </div>
@@ -1190,14 +1216,16 @@ const cancel = () => {
                     <!-- 주관부서: 담당팀장 선택 시 자동 세팅 (readonly) -->
                     <div class="flex flex-col gap-2 w-80">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">주관부서</label>
-                        <InputText :modelValue="form.svnDpmNm || form.svnDpm" placeholder="담당팀장 선택 시 자동 입력" fluid
+                        <InputText
+:model-value="form.svnDpmNm || form.svnDpm" placeholder="담당팀장 선택 시 자동 입력" fluid
                             readonly class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <!-- 주관부서 담당팀장 -->
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">담당팀장</label>
                         <div class="flex gap-1">
-                            <InputText :modelValue="form.svnDpmTlrNm ? `${form.svnDpmTlrNm} (${form.svnDpmTlr})` : ''"
+                            <InputText
+:model-value="form.svnDpmTlrNm ? `${form.svnDpmTlrNm} (${form.svnDpmTlr})` : ''"
                                 placeholder="직원 검색" fluid readonly class="cursor-pointer"
                                 :invalid="formErrors.svnDpmTlr" @click="openEmployeeDialog('svnDpmTlr')" />
                             <Button icon="pi pi-search" severity="secondary" @click="openEmployeeDialog('svnDpmTlr')" />
@@ -1208,10 +1236,11 @@ const cancel = () => {
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">담당자</label>
                         <div class="flex gap-1">
                             <InputText
-                                :modelValue="form.svnDpmCgprNm ? `${form.svnDpmCgprNm} (${form.svnDpmCgpr})` : ''"
+                                :model-value="form.svnDpmCgprNm ? `${form.svnDpmCgprNm} (${form.svnDpmCgpr})` : ''"
                                 placeholder="직원 검색" fluid readonly class="cursor-pointer"
                                 :invalid="formErrors.svnDpmCgpr" @click="openEmployeeDialog('svnDpmCgpr')" />
-                            <Button icon="pi pi-search" severity="secondary"
+                            <Button
+icon="pi pi-search" severity="secondary"
                                 @click="openEmployeeDialog('svnDpmCgpr')" />
                         </div>
                     </div>
@@ -1222,19 +1251,22 @@ const cancel = () => {
                     <!-- IT부서: 담당팀장 선택 시 자동 세팅 (readonly) -->
                     <div class="flex flex-col gap-2 w-80">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">IT부서</label>
-                        <InputText :modelValue="form.itDpmNm || form.itDpm" placeholder="담당팀장 선택 시 자동 입력" fluid readonly
+                        <InputText
+:model-value="form.itDpmNm || form.itDpm" placeholder="담당팀장 선택 시 자동 입력" fluid readonly
                             class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <!-- IT부서 담당팀장 -->
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">담당팀장</label>
                         <div class="flex gap-1">
-                            <InputText :modelValue="form.itDpmTlrNm ? `${form.itDpmTlrNm} (${form.itDpmTlr})` : ''"
+                            <InputText
+:model-value="form.itDpmTlrNm ? `${form.itDpmTlrNm} (${form.itDpmTlr})` : ''"
                                 placeholder="직원 검색" fluid readonly
                                 :class="[isItSameAsSvn ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'cursor-pointer']"
                                 :invalid="formErrors.itDpmTlr && !isItSameAsSvn"
                                 @click="!isItSameAsSvn && openEmployeeDialog('itDpmTlr')" />
-                            <Button icon="pi pi-search" severity="secondary" :disabled="isItSameAsSvn"
+                            <Button
+icon="pi pi-search" severity="secondary" :disabled="isItSameAsSvn"
                                 @click="openEmployeeDialog('itDpmTlr')" />
                         </div>
                     </div>
@@ -1242,12 +1274,14 @@ const cancel = () => {
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">담당자</label>
                         <div class="flex gap-1">
-                            <InputText :modelValue="form.itDpmCgprNm ? `${form.itDpmCgprNm} (${form.itDpmCgpr})` : ''"
+                            <InputText
+:model-value="form.itDpmCgprNm ? `${form.itDpmCgprNm} (${form.itDpmCgpr})` : ''"
                                 placeholder="직원 검색" fluid readonly
                                 :class="[isItSameAsSvn ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'cursor-pointer']"
                                 :invalid="formErrors.itDpmCgpr && !isItSameAsSvn"
                                 @click="!isItSameAsSvn && openEmployeeDialog('itDpmCgpr')" />
-                            <Button icon="pi pi-search" severity="secondary" :disabled="isItSameAsSvn"
+                            <Button
+icon="pi pi-search" severity="secondary" :disabled="isItSameAsSvn"
                                 @click="openEmployeeDialog('itDpmCgpr')" />
                         </div>
                     </div>
@@ -1255,7 +1289,8 @@ const cancel = () => {
             </div>
 
             <!-- 직원 검색 다이얼로그 (6개 필드에서 공유, activeDialogField로 구분) -->
-            <EmployeeSearchDialog v-model:visible="showEmployeeDialog" :header="employeeDialogHeader"
+            <EmployeeSearchDialog
+v-model:visible="showEmployeeDialog" :header="employeeDialogHeader"
                 @select="onEmployeeSelected" />
 
             <Divider />
@@ -1271,21 +1306,25 @@ const cancel = () => {
                 <div class="flex gap-6">
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">예산 (원)</label>
-                        <InputNumber v-model="form.prjBg" mode="currency" currency="KRW" locale="ko-KR"
-                            placeholder="자동 계산됨" fluid readonly inputClass="bg-zinc-100 dark:bg-zinc-800" />
+                        <InputNumber
+v-model="form.prjBg" mode="currency" currency="KRW" locale="ko-KR"
+                            placeholder="자동 계산됨" fluid readonly input-class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">전결권</label>
-                        <InputText v-model="form.edrt" readonly placeholder="자동 지정됨" fluid
+                        <InputText
+v-model="form.edrt" readonly placeholder="자동 지정됨" fluid
                             class="bg-zinc-100 dark:bg-zinc-800" />
                     </div>
                     <!-- 보고상태 (RPR_STS) - 경상사업 비해당 -->
                     <div v-if="!isOrdinary" class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">보고상태</label>
                         <div class="flex gap-2">
-                            <Select v-model="selectedRprSts" :options="rprStsOptions" optionLabel="cdNm" optionValue="cdId"
+                            <Select
+v-model="selectedRprSts" :options="rprStsOptions" option-label="cdNm" option-value="cdId"
                                 placeholder="보고상태 선택" fluid />
-                            <InputText v-if="isCustomCode(selectedRprSts)" v-model="customRprSts" placeholder="직접 입력"
+                            <InputText
+v-if="isCustomCode(selectedRprSts)" v-model="customRprSts" placeholder="직접 입력"
                                 fluid />
                         </div>
                     </div>
@@ -1296,11 +1335,13 @@ const cancel = () => {
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">시작일</label>
                         <div class="relative">
-                            <DatePicker v-model="form.sttDt" showIcon fluid dateFormat="yy-mm-dd"
+                            <DatePicker
+v-model="form.sttDt" show-icon fluid date-format="yy-mm-dd"
                                 :invalid="sttDtInvalid || formErrors.sttDt"
                                 :pt="(sttDtInvalid || formErrors.sttDt) ? { pcInputText: { root: { class: 'text-transparent caret-red-500' } } } : undefined"
                                 @input="handleSttDtInput" @blur="onSttDtBlur" />
-                            <span v-if="sttDtError || formErrors.sttDt"
+                            <span
+v-if="sttDtError || formErrors.sttDt"
                                 class="absolute inset-y-0 left-3 right-10 flex items-center text-red-500 text-xs pointer-events-none truncate">
                                 {{ sttDtError || '시작일을 입력해주세요.' }}
                             </span>
@@ -1309,11 +1350,13 @@ const cancel = () => {
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">종료일</label>
                         <div class="relative">
-                            <DatePicker v-model="form.endDt" :minDate="form.sttDt || undefined" showIcon fluid
-                                dateFormat="yy-mm-dd" :invalid="endDtInvalid || formErrors.endDt"
+                            <DatePicker
+v-model="form.endDt" :min-date="form.sttDt || undefined" show-icon fluid
+                                date-format="yy-mm-dd" :invalid="endDtInvalid || formErrors.endDt"
                                 :pt="(endDtInvalid || formErrors.endDt) ? { pcInputText: { root: { class: 'text-transparent caret-red-500' } } } : undefined"
                                 @input="handleEndDtInput" @blur="onEndDtBlur" />
-                            <span v-if="endDtError || formErrors.endDt"
+                            <span
+v-if="endDtError || formErrors.endDt"
                                 class="absolute inset-y-0 left-3 right-10 flex items-center text-red-500 text-xs pointer-events-none truncate">
                                 {{ endDtError || '종료일을 입력해주세요.' }}
                             </span>
@@ -1323,9 +1366,11 @@ const cancel = () => {
                     <div class="flex flex-col gap-2 flex-1">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업추진 가능성</label>
                         <div class="flex gap-2">
-                            <Select v-model="selectedPrjPulPtt" :options="prjPulPttOptions" optionLabel="cdNm" optionValue="cdId"
+                            <Select
+v-model="selectedPrjPulPtt" :options="prjPulPttOptions" option-label="cdNm" option-value="cdId"
                                 placeholder="추진가능성 선택" fluid />
-                            <InputText v-if="isCustomCode(selectedPrjPulPtt)" v-model="customPrjPulPtt" placeholder="직접 입력"
+                            <InputText
+v-if="isCustomCode(selectedPrjPulPtt)" v-model="customPrjPulPtt" placeholder="직접 입력"
                                 fluid />
                         </div>
                     </div>
@@ -1334,7 +1379,8 @@ const cancel = () => {
         </div>
 
         <!-- 소요자원 상세내용 (공통 컴포넌트) -->
-        <ResourceTableSection ref="resourceTableRef" v-model="form.resourceItems" :currencyOptions="currencyOptions"
+        <ResourceTableSection
+ref="resourceTableRef" v-model="form.resourceItems" :currency-options="currencyOptions"
             :error="formErrors.resourceItems" />
     </div>
 </template>

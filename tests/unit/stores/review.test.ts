@@ -20,7 +20,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia, defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import type {
     ReviewSession,
     ReviewComment,
@@ -43,7 +43,7 @@ vi.stubGlobal('crypto', {
 const generateId = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 const nextVersion = (current: string): string => {
-    const num = parseFloat(current);
+    const num = Number.parseFloat(current);
     return (num + 0.1).toFixed(1);
 };
 
@@ -75,6 +75,7 @@ const useReviewStore = defineStore('review', {
             );
         },
         inlineComments(): ReviewComment[] {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return (this as any).sortedComments.filter((c: ReviewComment) => c.type === 'inline');
         },
         allReviewCompleted(): boolean {
@@ -173,6 +174,7 @@ const useReviewStore = defineStore('review', {
                 reviewer.status = 'completed';
                 reviewer.completedAt = new Date().toISOString();
             }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((this as any).allReviewCompleted) {
                 this.session.status = 'completed';
             }

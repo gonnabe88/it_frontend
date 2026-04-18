@@ -222,13 +222,13 @@ const handleKeydown = (event: KeyboardEvent) => {
           class="hidden"
           accept="image/*,.pdf,.hwp,.hwpx,.xlsx,.xls,.docx,.doc"
           @change="handleFileAdd"
-        />
+        >
         <Button
+          v-tooltip.top="'첨부'"
           icon="pi pi-paperclip"
           text
           rounded
           size="small"
-          v-tooltip.top="'첨부'"
           @click="fileInputRef?.click()"
         />
         <Button

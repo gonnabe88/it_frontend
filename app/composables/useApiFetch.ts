@@ -159,5 +159,6 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return useFetch<T>(url, params as any);
 };

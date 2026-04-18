@@ -25,7 +25,7 @@ import { Node as TiptapNode, Mark, mergeAttributes } from '@tiptap/core';
 import { VueNodeViewRenderer } from '@tiptap/vue-3';
 import Suggestion from '@tiptap/suggestion';
 import Image from '@tiptap/extension-image';
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import { Table, TableCell, TableHeader } from '@tiptap/extension-table';
 import Heading from '@tiptap/extension-heading';
 import type { Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -73,6 +73,7 @@ export const ResizableImage = Image.extend({
     },
     addNodeView() {
         // as any: Vue 컴포넌트 props 타입이 NodeViewProps와 완전히 일치하지 않아 발생하는 TS 오류 억제
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return VueNodeViewRenderer(ResizableImageNodeViewComponent as any);
     }
 }).configure({ inline: false, allowBase64: true });
@@ -191,6 +192,7 @@ export const ExcalidrawExtension = TiptapNode.create({
 
     addNodeView() {
         // as any: Vue 컴포넌트 props 타입이 NodeViewProps와 완전히 일치하지 않아 발생하는 TS 오류 억제
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return VueNodeViewRenderer(ExcalidrawNodeViewComponent as any);
     }
 });
@@ -209,6 +211,7 @@ export const RowResizingPlugin = () => {
         endRow: number;
         startY: number;
         startHeight: number;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cellNodes: { pos: number; node: any }[];
     } | null = null;
 
@@ -216,7 +219,7 @@ export const RowResizingPlugin = () => {
         key: RowResizingPluginKey,
         state: {
             init() { return DecorationSet.empty; },
-            apply(tr, set) {
+            apply(tr, _set) {
                 const decorations: Decoration[] = [];
                 tr.doc.descendants((node, pos) => {
                     if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
@@ -291,6 +294,7 @@ export const RowResizingPlugin = () => {
                     const rect = map.findCell(cellPos - tableContentStart);
 
                     // mouseup 시 트랜잭션을 위한 ProseMirror 노드 정보 수집
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const cellNodes: { pos: number; node: any }[] = [];
                     const _m = map.map, _w = map.width;
                     for (let r = rect.top; r < rect.bottom; r++) {
@@ -684,7 +688,7 @@ export const CustomTableCell = TableCell.extend({
                         if (widths.length) return widths;
                     }
                     // 2순위: DOMPurify가 colwidth를 제거한 경우 style.width에서 복원
-                    const styleWidth = parseInt(element.style.width, 10);
+                    const styleWidth = Number.parseInt(element.style.width, 10);
                     if (styleWidth > 0) return [styleWidth];
                     return null;
                 },
@@ -867,7 +871,7 @@ export const CustomTableHeader = TableHeader.extend({
                         const widths = colwidthAttr.split(',').map(Number).filter((w: number) => w > 0);
                         if (widths.length) return widths;
                     }
-                    const styleWidth = parseInt(element.style.width, 10);
+                    const styleWidth = Number.parseInt(element.style.width, 10);
                     if (styleWidth > 0) return [styleWidth];
                     return null;
                 },
@@ -933,20 +937,24 @@ export function normalizeColwidths(editor: Editor): void {
         try {
             let totalCols = 0;
             let firstRowParsed = false;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             tableNode.forEach((row: any) => {
                 if (!firstRowParsed && row.type.name === 'tableRow') {
                     firstRowParsed = true;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     row.forEach((cell: any) => { totalCols += (cell.attrs.colspan || 1); });
                 }
             });
             if (totalCols === 0) return;
 
-            const referenceColWidths: number[] = new Array(totalCols).fill(0);
+            const referenceColWidths: number[] = Array.from({ length: totalCols }, () => 0);
             let referenceFound = false;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             tableNode.forEach((row: any) => {
                 if (referenceFound || row.type.name !== 'tableRow') return;
                 const widths: number[] = [];
                 let allValid = true;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 row.forEach((cell: any) => {
                     const cw = Array.isArray(cell.attrs.colwidth) && (cell.attrs.colwidth[0] ?? 0) > 0
                         ? cell.attrs.colwidth[0] as number : 0;
@@ -988,9 +996,11 @@ export function normalizeColwidths(editor: Editor): void {
             }
 
             let tablePatched = false;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             tableNode.forEach((row: any, rowOffset: number) => {
                 if (row.type.name !== 'tableRow') return;
                 let colIdx = 0;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 row.forEach((cell: any, cellOffset: number) => {
                     if (cell.type.name !== 'tableCell' && cell.type.name !== 'tableHeader') return;
                     const hasColwidth = Array.isArray(cell.attrs.colwidth)
@@ -1208,6 +1218,7 @@ export const createAttachmentSuggestion = (suggestionState: {
      * '!' 선행 확인: '![' 패턴에서만 Suggestion을 활성화합니다.
      * Design Ref: §2.2 — AttachmentSuggestion char='!['
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     allow: ({ state, range }: any) => {
         const pos = range.from - 1; // '[' 직전 위치 (= '!' 위치)
         if (pos < 0) return false;
@@ -1221,6 +1232,7 @@ export const createAttachmentSuggestion = (suggestionState: {
      * 쿼리 기반 파일 목록 필터링
      * editor.storage.attachment.attachmentList는 TiptapEditor.vue의 watch로 동적 업데이트됩니다.
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     items: ({ query, editor }: any) => {
         const list: AttachmentItem[] = editor.storage?.attachment?.attachmentList ?? [];
         if (!query) return list.slice(0, 8);
@@ -1232,6 +1244,7 @@ export const createAttachmentSuggestion = (suggestionState: {
      * 파일 선택 시 '![query' 전체를 삭제하고 attachment 노드를 삽입합니다.
      * range.from은 '[' 위치이므로 -1 하여 '!' 포함 삭제합니다.
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     command: ({ editor, range, props }: any) => {
         editor
             .chain()
@@ -1250,6 +1263,7 @@ export const createAttachmentSuggestion = (suggestionState: {
 
     /** 팝업 상태를 Vue reactive 객체에 동기화합니다. */
     render: () => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onStart: (p: any) => {
             suggestionState.active = true;
             suggestionState.items = p.items;
@@ -1257,10 +1271,12 @@ export const createAttachmentSuggestion = (suggestionState: {
             suggestionState.selectedIndex = 0;
             suggestionState.command = p.command;
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onUpdate: (p: any) => {
             suggestionState.items = p.items;
             suggestionState.rect = p.clientRect?.() ?? null;
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onKeyDown: ({ event }: any) => {
             if (!suggestionState.active || !suggestionState.items.length) return false;
             if (event.key === 'ArrowDown') {
@@ -1311,6 +1327,7 @@ export const AttachmentExtension = TiptapNode.create({
 
     addOptions() {
         return {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             suggestion: {} as Record<string, any>
         };
     },
@@ -1385,6 +1402,7 @@ export const AttachmentExtension = TiptapNode.create({
     },
 
     addNodeView() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return VueNodeViewRenderer(AttachmentNodeViewComponent as any);
     },
 
@@ -1459,6 +1477,7 @@ export const InlineMathExtension = TiptapNode.create({
     },
 
     addNodeView() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return VueNodeViewRenderer(InlineMathNodeViewComponent as any);
     },
 
@@ -1528,6 +1547,7 @@ export const BlockMathExtension = TiptapNode.create({
     },
 
     addNodeView() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return VueNodeViewRenderer(BlockMathNodeViewComponent as any);
     },
 

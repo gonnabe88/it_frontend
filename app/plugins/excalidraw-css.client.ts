@@ -5,6 +5,5 @@
  * excalidraw는 브라우저 전용이므로 클라이언트 플러그인에서 import합니다.
  * ============================================================================
  */
-import '@excalidraw/excalidraw/index.css';
-
+// @excalidraw/excalidraw v0.17+는 CSS가 JS에 번들링되어 별도 import 불필요
 export default defineNuxtPlugin(() => {});

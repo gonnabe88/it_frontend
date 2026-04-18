@@ -327,6 +327,7 @@ const EMPLOYEE_ENO_FIELDS: Record<string, string> = {
 }
 
 /** 직원 이름 클릭 시 직원 정보 다이얼로그 열기 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openEmployeeInfo = (data: any, field: string) => {
     const enoField = EMPLOYEE_ENO_FIELDS[field]
     if (enoField && data[enoField]) {
@@ -336,6 +337,7 @@ const openEmployeeInfo = (data: any, field: string) => {
 }
 
 /** 직원 이름 필드인지 여부 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isEmployeeField = (field: string) => EMPLOYEE_FIELDS.includes(field as any)
 
 /* ── 엑셀 다운로드 ── */
@@ -344,6 +346,7 @@ const exportExcel = () => {
     const tabName = tabNames[Number(activeTab.value)] || '예산현황'
     const fileName = `예산현황_${tabName}_${bgYy.value}.xlsx`
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data: any[] = []
     let cols: ColumnDef[] = []
 
@@ -363,6 +366,7 @@ const exportExcel = () => {
     // 데이터 행 구성
     const rows = data.map(row =>
         cols.map(c => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const val = (row as any)[c.field]
             return val ?? ''
         })
@@ -382,9 +386,9 @@ const exportExcel = () => {
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">예산 현황</h1>
             <div class="flex items-center gap-2">
                 <!-- 연도 선택 -->
-                <Select v-model="bgYy" :options="yearOptions" optionLabel="label" optionValue="value" class="w-32" />
+                <Select v-model="bgYy" :options="yearOptions" option-label="label" option-value="value" class="w-32" />
                 <!-- 금액 단위 -->
-                <SelectButton v-model="unit" :options="unitOptions" :allowEmpty="false" />
+                <SelectButton v-model="unit" :options="unitOptions" :allow-empty="false" />
                 <!-- 컬럼 설정 -->
                 <Button label="컬럼 설정" icon="pi pi-cog" severity="secondary" outlined @click="showColSettings = true" />
                 <!-- 엑셀 다운로드 -->
@@ -403,20 +407,23 @@ const exportExcel = () => {
             <!-- 정보화사업 탭 -->
             <TabPanel value="0">
                 <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                    <StyledDataTable :value="projects" :loading="projectsPending" scrollable scrollHeight="70vh"
-                        dataKey="prjMngNo" stripedRows>
+                    <StyledDataTable
+                        :value="projects" :loading="projectsPending" scrollable scroll-height="70vh"
+                        data-key="prjMngNo" striped-rows>
                         <!-- 2단 헤더 그룹 -->
                         <ColumnGroup type="header">
                             <Row>
                                 <Column header="사업명" :rowspan="2" frozen style="min-width: 200px" />
                                 <template v-for="(h, idx) in projectHeaderRows.row1" :key="'pr1-' + idx">
-                                    <Column :header="h.header" :colspan="h.colspan" :rowspan="h.rowspan"
+                                    <Column
+                                        :header="h.header" :colspan="h.colspan" :rowspan="h.rowspan"
                                         :style="{ minWidth: h.width ? h.width + 'px' : undefined, textAlign: h.align || 'left' }" />
                                 </template>
                             </Row>
                             <Row v-if="projectHeaderRows.row2.length">
                                 <template v-for="(h, idx) in projectHeaderRows.row2" :key="'pr2-' + idx">
-                                    <Column :header="h.header"
+                                    <Column
+                                        :header="h.header"
                                         :style="{ minWidth: h.width ? h.width + 'px' : undefined, textAlign: h.align || 'left' }" />
                                 </template>
                             </Row>
@@ -424,14 +431,16 @@ const exportExcel = () => {
                         <!-- 고정 컬럼: 사업명 (클릭 시 상세 화면 이동) -->
                         <Column field="prjNm" frozen style="min-width: 200px">
                             <template #body="{ data }">
-                                <NuxtLink :to="`/info/projects/${(data as ProjectStatusItem).prjMngNo}`"
+                                <NuxtLink
+                                    :to="`/info/projects/${(data as ProjectStatusItem).prjMngNo}`"
                                     class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
                                     {{ (data as ProjectStatusItem).prjNm }}
                                 </NuxtLink>
                             </template>
                         </Column>
                         <!-- 동적 컬럼 -->
-                        <Column v-for="col in filteredProjectCols" :key="col.field" :field="col.field"
+                        <Column
+v-for="col in filteredProjectCols" :key="col.field" :field="col.field"
                             :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
                             <template #body="{ data }">
                                 <template v-if="col.isCurrency">
@@ -454,7 +463,8 @@ const exportExcel = () => {
                                     ProjectStatusItem).prjPulPtt + '%' : '-' }}
                                 </template>
                                 <template v-else-if="isEmployeeField(col.field)">
-                                    <a v-if="(data as any)[col.field]"
+                                    <a
+v-if="(data as any)[col.field]"
                                         class="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300"
                                         @click="openEmployeeInfo(data, col.field)">
                                         {{ (data as any)[col.field] }}
@@ -476,20 +486,23 @@ const exportExcel = () => {
             <!-- 전산업무비 탭 -->
             <TabPanel value="1">
                 <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                    <StyledDataTable :value="costs" :loading="costsPending" scrollable scrollHeight="70vh"
-                        dataKey="itMngcNo" stripedRows>
+                    <StyledDataTable
+                        :value="costs" :loading="costsPending" scrollable scroll-height="70vh"
+                        data-key="itMngcNo" striped-rows>
                         <!-- 2단 헤더 그룹 -->
                         <ColumnGroup type="header">
                             <Row>
                                 <Column header="계약명" :rowspan="2" frozen style="min-width: 200px" />
                                 <template v-for="(h, idx) in costHeaderRows.row1" :key="'cr1-' + idx">
-                                    <Column :header="h.header" :colspan="h.colspan" :rowspan="h.rowspan"
+                                    <Column
+                                        :header="h.header" :colspan="h.colspan" :rowspan="h.rowspan"
                                         :style="{ minWidth: h.width ? h.width + 'px' : undefined, textAlign: h.align || 'left' }" />
                                 </template>
                             </Row>
                             <Row v-if="costHeaderRows.row2.length">
                                 <template v-for="(h, idx) in costHeaderRows.row2" :key="'cr2-' + idx">
-                                    <Column :header="h.header"
+                                    <Column
+                                        :header="h.header"
                                         :style="{ minWidth: h.width ? h.width + 'px' : undefined, textAlign: h.align || 'left' }" />
                                 </template>
                             </Row>
@@ -497,13 +510,15 @@ const exportExcel = () => {
                         <!-- 고정 컬럼: 계약명 (클릭 시 상세 화면 이동) -->
                         <Column field="cttNm" frozen style="min-width: 200px">
                             <template #body="{ data }">
-                                <NuxtLink :to="`/info/cost/${(data as CostStatusItem).itMngcNo}`"
+                                <NuxtLink
+                                    :to="`/info/cost/${(data as CostStatusItem).itMngcNo}`"
                                     class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
                                     {{ (data as CostStatusItem).cttNm }}
                                 </NuxtLink>
                             </template>
                         </Column>
-                        <Column v-for="col in filteredCostCols" :key="col.field" :field="col.field"
+                        <Column
+                            v-for="col in filteredCostCols" :key="col.field" :field="col.field"
                             :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
                             <template #body="{ data }">
                                 <template v-if="col.isCurrency">
@@ -524,20 +539,23 @@ const exportExcel = () => {
             <!-- 경상사업 탭 -->
             <TabPanel value="2">
                 <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-                    <StyledDataTable :value="ordinary" :loading="ordinaryPending" scrollable scrollHeight="70vh"
-                        dataKey="prjMngNo" stripedRows>
+                    <StyledDataTable
+                        :value="ordinary" :loading="ordinaryPending" scrollable scroll-height="70vh"
+                        data-key="prjMngNo" striped-rows>
                         <!-- 2단 헤더 그룹 -->
                         <ColumnGroup type="header">
                             <Row>
                                 <Column header="사업명" :rowspan="2" frozen style="min-width: 200px" />
                                 <template v-for="(h, idx) in ordinaryHeaderRows.row1" :key="'or1-' + idx">
-                                    <Column :header="h.header" :colspan="h.colspan" :rowspan="h.rowspan"
+                                    <Column
+                                        :header="h.header" :colspan="h.colspan" :rowspan="h.rowspan"
                                         :style="{ minWidth: h.width ? h.width + 'px' : undefined, textAlign: h.align || 'left' }" />
                                 </template>
                             </Row>
                             <Row v-if="ordinaryHeaderRows.row2.length">
                                 <template v-for="(h, idx) in ordinaryHeaderRows.row2" :key="'or2-' + idx">
-                                    <Column :header="h.header"
+                                    <Column
+                                        :header="h.header"
                                         :style="{ minWidth: h.width ? h.width + 'px' : undefined, textAlign: h.align || 'left' }" />
                                 </template>
                             </Row>
@@ -545,13 +563,15 @@ const exportExcel = () => {
                         <!-- 고정 컬럼: 사업명 (클릭 시 상세 화면 이동) -->
                         <Column field="prjNm" frozen style="min-width: 200px">
                             <template #body="{ data }">
-                                <NuxtLink :to="`/info/projects/${(data as OrdinaryStatusItem).prjMngNo}`"
+                                <NuxtLink
+                                    :to="`/info/projects/${(data as OrdinaryStatusItem).prjMngNo}`"
                                     class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
                                     {{ (data as OrdinaryStatusItem).prjNm }}
                                 </NuxtLink>
                             </template>
                         </Column>
-                        <Column v-for="col in filteredOrdinaryCols" :key="col.field" :field="col.field"
+                        <Column
+                            v-for="col in filteredOrdinaryCols" :key="col.field" :field="col.field"
                             :style="{ minWidth: (col.width || 100) + 'px', textAlign: col.align || 'left' }">
                             <template #body="{ data }">
                                 <template v-if="col.isCurrency">
@@ -577,9 +597,11 @@ const exportExcel = () => {
         <Drawer v-model:visible="showColSettings" header="표시할 컬럼 선택" position="right" :style="{ width: '340px' }">
             <!-- 전체 선택 / 전체 해제 버튼 -->
             <div class="flex gap-2 mb-4">
-                <Button label="전체 선택" severity="secondary" text size="small"
+                <Button
+label="전체 선택" severity="secondary" text size="small"
                     @click="currentVisibleCols = currentColOptions.map(c => c.field)" />
-                <Button label="전체 해제" severity="secondary" text size="small"
+                <Button
+label="전체 해제" severity="secondary" text size="small"
                     @click="currentVisibleCols = []" />
             </div>
 
@@ -587,16 +609,19 @@ const exportExcel = () => {
             <div v-for="group in groupedColOptions" :key="group.name" class="mb-4">
                 <!-- 그룹 헤더 (전체 토글) -->
                 <div class="flex items-center gap-2 mb-2 cursor-pointer" @click="toggleGroup(group)">
-                    <Checkbox :modelValue="isGroupAllChecked(group)" :binary="true"
+                    <Checkbox
+:model-value="isGroupAllChecked(group)" :binary="true"
                         :indeterminate="isGroupPartial(group)" @click.stop="toggleGroup(group)" />
                     <span class="font-semibold text-sm text-zinc-700 dark:text-zinc-300">{{ group.name }}</span>
                     <span class="text-xs text-zinc-400">({{ group.columns.filter(c => currentVisibleCols.includes(c.field)).length }}/{{ group.columns.length }})</span>
                 </div>
                 <!-- 개별 컬럼 -->
-                <div v-for="col in group.columns" :key="col.field"
+                <div
+v-for="col in group.columns" :key="col.field"
                     class="flex items-center gap-2 py-1 pl-6 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded"
                     @click="toggleCol(col.field)">
-                    <Checkbox :modelValue="currentVisibleCols.includes(col.field)" :binary="true"
+                    <Checkbox
+:model-value="currentVisibleCols.includes(col.field)" :binary="true"
                         @click.stop="toggleCol(col.field)" />
                     <span class="text-sm">{{ col.header }}</span>
                 </div>

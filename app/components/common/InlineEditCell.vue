@@ -26,7 +26,9 @@ import { ref, nextTick, watch, computed, onUnmounted } from 'vue';
 interface Props {
     modelValue: string | number | Date | null | undefined
     type?: 'text' | 'number' | 'select' | 'date' | 'autocomplete'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: { label: string; value: any }[]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     suggestions?: any[]
     optionLabel?: string
     disabled?: boolean
@@ -48,13 +50,21 @@ const props = withDefaults(defineProps<Props>(), {
     dateFormat: 'yy-mm',
     view: 'month',
     showSearch: false,
+    options: undefined,
+    suggestions: undefined,
+    suffix: undefined,
+    placeholder: undefined,
 });
 
 const emit = defineEmits<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     'update:modelValue': [value: any]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     'save': [value: any]
     'cancel': []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     'complete': [event: any]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     'item-select': [event: any]
     'search-click': []
 }>();
@@ -63,9 +73,11 @@ const emit = defineEmits<{
 const editing = ref(false);
 
 /** 편집 중인 로컬 값 (원본 복원용) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const localValue = ref<any>(props.modelValue);
 
 /** 편집 시작 전 원본 값 (Esc 복원용) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const originalValue = ref<any>(props.modelValue);
 
 /** 컨테이너 요소 ref (외부 클릭 감지용) */
@@ -164,6 +176,7 @@ const startEdit = () => {
     originalValue.value = props.modelValue;
     localValue.value = props.modelValue;
     nextTick(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const el = inputRef.value as any;
         if (!el) return;
 
@@ -219,6 +232,7 @@ const cancel = () => {
 };
 
 /** Select/AutoComplete 변경 시 즉시 저장 (forceEdit 모드에서는 편집 상태 유지) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const onSelectChange = (event?: any) => {
     if (props.type === 'autocomplete') {
         // 1. 부모의 @item-select 핸들러 호출
@@ -270,7 +284,8 @@ const onSearchClick = () => {
     <div ref="containerRef" class="inline-edit-cell w-full overflow-hidden" @click.stop="startEdit">
 
         <!-- View Mode -->
-        <span v-if="!editing"
+        <span
+v-if="!editing"
             :class="[
                 'inline-block w-full px-2 py-1 rounded cursor-pointer min-h-[2rem] leading-[2rem]',
                 disabled ? 'text-zinc-400 cursor-not-allowed' : 'hover:bg-surface-100 dark:hover:bg-surface-800',
@@ -282,7 +297,8 @@ const onSearchClick = () => {
         <!-- Edit Mode -->
         <div v-else class="flex items-center gap-1 w-full">
             <!-- Edit Mode: text -->
-            <InputText v-if="type === 'text'"
+            <InputText
+v-if="type === 'text'"
                 ref="inputRef"
                 v-model="localValue"
                 class="w-full cursor-text"
@@ -292,7 +308,8 @@ const onSearchClick = () => {
                 @blur="save" />
 
             <!-- Edit Mode: number -->
-            <InputNumber v-else-if="type === 'number'"
+            <InputNumber
+v-else-if="type === 'number'"
                 ref="inputRef"
                 v-model="localValue"
                 class="w-full cursor-text"
@@ -303,12 +320,13 @@ const onSearchClick = () => {
                 @blur="save" />
 
             <!-- Edit Mode: select -->
-            <Select v-else-if="type === 'select'"
+            <Select
+v-else-if="type === 'select'"
                 ref="inputRef"
                 v-model="localValue"
                 :options="options"
-                optionLabel="label"
-                optionValue="value"
+                option-label="label"
+                option-value="value"
                 class="w-full cursor-pointer"
                 :placeholder="placeholder"
                 @change="onSelectChange" />
@@ -317,22 +335,24 @@ const onSearchClick = () => {
                  input+아이콘 버튼(form)은 fluid+w-full로 컬럼 너비 안에 제한됨.
                  달력 드롭다운 패널은 PrimeVue가 자동으로 teleport하여 컬럼 밖에 full-size로 표시됨.
                  @hide: 패널이 닫힐 때(날짜 선택 or 외부 클릭) 저장 처리 -->
-            <DatePicker v-else-if="type === 'date'"
+            <DatePicker
+v-else-if="type === 'date'"
                 ref="inputRef"
                 v-model="localValue"
                 :view="view"
-                :dateFormat="dateFormat"
-                showIcon
+                :date-format="dateFormat"
+                show-icon
                 fluid
                 class="w-full cursor-pointer"
                 @hide="save" />
 
             <!-- Edit Mode: autocomplete -->
-            <AutoComplete v-else-if="type === 'autocomplete'"
+            <AutoComplete
+v-else-if="type === 'autocomplete'"
                 ref="inputRef"
                 v-model="localValue"
                 :suggestions="suggestions"
-                :optionLabel="optionLabel"
+                :option-label="optionLabel"
                 class="w-full min-w-0 cursor-text"
                 :placeholder="placeholder"
                 @complete="emit('complete', $event)"

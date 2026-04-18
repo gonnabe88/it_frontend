@@ -15,7 +15,7 @@ IT 관리비(전산업무비) 항목의 전체 목록을 인라인 편집 가능
 -->
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onActivated, onUnmounted } from 'vue';
-import * as XLSX from 'xlsx';
+
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
 import { useToast } from "primevue/usetoast";
@@ -131,6 +131,7 @@ const REQUIRED_FIELDS: { key: keyof ItCost; label: string }[] = [
 const invalidFieldsMap = reactive(new Map<string, Set<string>>());
 
 /** 행의 고유 키 반환 (서버 저장 전 로컬 행은 _localId 사용) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rowKey = (data: ItCost) => data.itMngcNo || (data as any)._localId || '';
 
 /** 특정 행의 특정 필드가 미입력 상태인지 확인 */
@@ -147,7 +148,7 @@ const validateRow = (data: ItCost): string[] => {
     const missing: string[] = [];
     for (const { key, label } of REQUIRED_FIELDS) {
         const val = data[key];
-        if (val === undefined || val === null || val === '' || (val instanceof Date && isNaN(val.getTime()))) {
+        if (val === undefined || val === null || val === '' || (val instanceof Date && Number.isNaN(val.getTime()))) {
             missing.push(label);
         }
     }
@@ -180,6 +181,7 @@ watch(costsRaw, (list) => {
         }
     });
     /* 로컬 신규 행(_localId)은 유지하면서 서버 데이터 갱신 */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const localRows = costs.value.filter(c => (c as any)._localId);
     costs.value = [...localRows, ...list];
     /* 원본 스냅샷 갱신 + 서버 데이터의 미입력 필드 표시 */
@@ -374,6 +376,7 @@ const saveRow = async (data: ItCost) => {
     if (!key) return;
 
     /* ── 로컬 신규 행 → 필수 필드 모두 입력 시에만 서버에 신규 생성 ── */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if ((data as any)._localId) {
         /* 필수 필드가 비어있으면 아직 저장하지 않고 검증 표시만 갱신 */
         const missing = validateRow(data);
@@ -385,11 +388,13 @@ const saveRow = async (data: ItCost) => {
         savingRows.value.add(key);
         try {
             const payload = { ...data, fstDfrDt: toDateString(data.fstDfrDt) };
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             delete (payload as any)._localId;
             /* createCost는 생성된 itMngcNo(문자열)를 반환 */
             const newItMngcNo = await createCost(payload) as unknown as string;
             invalidFieldsMap.delete(key);
             /* 로컬 행을 서버 행으로 전환 (itMngcNo 부여, _localId 제거) */
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             delete (data as any)._localId;
             data.itMngcNo = newItMngcNo;
             snapshots.set(newItMngcNo, toSnapshot(data));
@@ -486,9 +491,11 @@ const deleteSelectedRows = () => {
             let successCount = 0;
             let failCount = 0;
             for (const row of selectedRows.value) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const localId = (row as any)._localId;
                 if (localId) {
                     /* 로컬 미저장 행: 목록에서 제거 */
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     costs.value = costs.value.filter(c => (c as any)._localId !== localId);
                     invalidFieldsMap.delete(localId);
                     successCount++;
@@ -519,7 +526,9 @@ const codeName = (options: CodeOption[], cdId: string | undefined) =>
     options.find(o => o.cdId === cdId)?.cdNm ?? cdId ?? '';
 
 /** 현재 필터링된 목록을 Excel 파일로 다운로드 (서버 미저장 로컬 행 제외) */
-const downloadExcel = () => {
+const downloadExcel = async () => {
+    const XLSX = await import('xlsx');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = filteredCosts.value.filter(c => !(c as any)._localId).map(c => ({
         '관리번호': c.itMngcNo ?? '',
         '사업코드': codeName(abusCOptions.value, c.abusC),
@@ -560,6 +569,7 @@ const handleUpload = async (event: Event) => {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
+        const XLSX = await import('xlsx');
         const buffer = await file.arrayBuffer();
         const wb = XLSX.read(buffer, { type: 'array' });
         const firstSheetName = wb.SheetNames[0];
@@ -572,6 +582,7 @@ const handleUpload = async (event: Event) => {
             toast.add({ severity: 'error', summary: '업로드', detail: '시트 데이터를 읽을 수 없습니다.', life: 2000 });
             return;
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
 
         if (!rows.length) {
@@ -815,6 +826,7 @@ const finishRowEdit = async (data: ItCost) => {
 
 /** 단일 행 삭제 (확인 다이얼로그 후 처리) */
 const deleteRow = (data: ItCost) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const localId = (data as any)._localId;
     confirm.require({
         message: `"${data.cttNm || '미저장 행'}"을 삭제하시겠습니까?`,
@@ -825,6 +837,7 @@ const deleteRow = (data: ItCost) => {
         accept: async () => {
             if (localId) {
                 /* 로컬 미저장 행: 목록에서 즉시 제거 */
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 costs.value = costs.value.filter(c => (c as any)._localId !== localId);
                 if (editingRowKey.value === localId) editingRowKey.value = null;
             } else if (data.itMngcNo) {
@@ -925,7 +938,7 @@ const applyContinuation = async () => {
         const d = fullSource.fstDfrDt instanceof Date
             ? new Date(fullSource.fstDfrDt)
             : new Date(fullSource.fstDfrDt as string);
-        if (!isNaN(d.getTime())) {
+        if (!Number.isNaN(d.getTime())) {
             d.setFullYear(d.getFullYear() + 1);
             newFstDfrDt = d;
         }
@@ -975,7 +988,8 @@ const applyContinuation = async () => {
 
         <!-- 예산연도 필터 -->
         <div class="flex items-center gap-2">
-            <Select v-model="selectedYear" :options="yearOptions" optionLabel="label" optionValue="value"
+            <Select
+v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
                 class="w-36" />
         </div>
 
@@ -986,7 +1000,8 @@ const applyContinuation = async () => {
             <!-- 상단 바: 페이지크기 + 검색(좌) + 액션 버튼(우) -->
             <div class="flex items-center justify-between mb-3 gap-3">
                 <div class="flex items-center gap-2">
-                    <Select v-model="pageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
+                    <Select
+v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value"
                         class="shrink-0" />
                     <IconField>
                         <InputIcon class="pi pi-search" />
@@ -995,12 +1010,15 @@ const applyContinuation = async () => {
                 </div>
                 <div class="flex items-center gap-2">
                     <Button label="행추가" icon="pi pi-plus" severity="secondary" outlined size="small" @click="addRow" />
-                    <Button label="행삭제" icon="pi pi-trash" severity="danger" outlined size="small"
+                    <Button
+label="행삭제" icon="pi pi-trash" severity="danger" outlined size="small"
                         :disabled="!selectedRows.length" @click="deleteSelectedRows" />
-                    <Button label="일괄업로드" icon="pi pi-upload" severity="secondary" outlined size="small"
+                    <Button
+label="일괄업로드" icon="pi pi-upload" severity="secondary" outlined size="small"
                         @click="triggerUpload" />
-                    <input ref="uploadInputRef" type="file" accept=".xlsx,.xls" class="hidden" @change="handleUpload" />
-                    <Button label="일괄다운로드" icon="pi pi-download" severity="secondary" outlined size="small"
+                    <input ref="uploadInputRef" type="file" accept=".xlsx,.xls" class="hidden" @change="handleUpload" >
+                    <Button
+label="일괄다운로드" icon="pi pi-download" severity="secondary" outlined size="small"
                         @click="downloadExcel" />
                 </div>
             </div>
@@ -1009,17 +1027,19 @@ const applyContinuation = async () => {
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
 
-            <StyledDataTable v-else v-model:selection="selectedRows" :value="filteredCosts" paginator :rows="pageSize"
-                :sortField="currentSortField" :sortOrder="currentSortOrder" removableSort
-                :dataKey="(row: ItCost & { _localId?: string }) => row.itMngcNo || row._localId">
+            <StyledDataTable
+v-else v-model:selection="selectedRows" :value="filteredCosts" paginator :rows="pageSize"
+                :sort-field="currentSortField" :sort-order="currentSortOrder" removable-sort
+                :data-key="(row: ItCost & { _localId?: string }) => row.itMngcNo || row._localId">
                 <!-- 체크박스 선택 컬럼 -->
-                <Column selectionMode="multiple" headerStyle="width: 3rem" />
+                <Column selection-mode="multiple" header-style="width: 3rem" />
 
                 <!-- 신규/계속 (PUL_DTT) — 클릭 편집 (REQ-5) -->
                 <Column field="pulDtt" header="신규/계속" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.pulDtt" type="select" :options="pulDttSelectOptions"
-                            :invalid="isFieldInvalid(data, 'pulDtt')" :forceEdit="isRowEditing(data)" placeholder="선택"
+                        <InlineEditCell
+v-model="data.pulDtt" type="select" :options="pulDttSelectOptions"
+                            :invalid="isFieldInvalid(data, 'pulDtt')" :force-edit="isRowEditing(data)" placeholder="선택"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
@@ -1027,9 +1047,10 @@ const applyContinuation = async () => {
                 <!-- 계약명: 신규/계속이 '계속'이면 전년도 계약 자동완성, 아니면 일반 입력 (REQ-5) -->
                 <Column field="cttNm" header="계약명" sortable style="min-width: 200px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.cttNm" :type="isKesok(data) ? 'autocomplete' : 'text'"
-                            :suggestions="continuationSuggestions" optionLabel="cttNm" placeholder="계약명 입력"
-                            :invalid="isFieldInvalid(data, 'cttNm')" :forceEdit="isRowEditing(data)"
+                        <InlineEditCell
+v-model="data.cttNm" :type="isKesok(data) ? 'autocomplete' : 'text'"
+                            :suggestions="continuationSuggestions" option-label="cttNm" placeholder="계약명 입력"
+                            :invalid="isFieldInvalid(data, 'cttNm')" :force-edit="isRowEditing(data)"
                             @complete="searchContinuation($event, data)"
                             @item-select="onContinuationSelect(data, $event.value)" @save="saveRow(data)">
                             <template #option="{ option }">
@@ -1047,14 +1068,16 @@ const applyContinuation = async () => {
                     <template #body="{ data }">
                         <div class="terminal-checkbox-cell flex justify-center items-center">
                             <!-- 편집 모드: 체크박스 변경 가능, 변경 시 실제 동작 후 조회 모드 복귀 -->
-                            <Checkbox v-if="terminalEditingKey === data.itMngcNo"
-                                :modelValue="data.itMngcTp === 'IT_MNGC_TP_002'" binary
-                                @update:modelValue="onTerminalCheckChange(data)" />
+                            <Checkbox
+v-if="terminalEditingKey === data.itMngcNo"
+                                :model-value="data.itMngcTp === 'IT_MNGC_TP_002'" binary
+                                @update:model-value="onTerminalCheckChange(data)" />
                             <!-- 조회 모드: 클릭 시 편집 모드 진입 -->
-                            <div v-else
+                            <div
+v-else
                                 class="cursor-pointer p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800"
                                 @click.stop="startTerminalEdit(data)">
-                                <Checkbox :modelValue="data.itMngcTp === 'IT_MNGC_TP_002'" binary :disabled="true" />
+                                <Checkbox :model-value="data.itMngcTp === 'IT_MNGC_TP_002'" binary :disabled="true" />
                             </div>
                         </div>
                     </template>
@@ -1063,16 +1086,18 @@ const applyContinuation = async () => {
                 <!-- 계약상대처 — 클릭 편집 (REQ-5) -->
                 <Column field="cttOpp" header="계약상대처" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.cttOpp" type="text" :invalid="isFieldInvalid(data, 'cttOpp')"
-                            :forceEdit="isRowEditing(data)" @save="saveRow(data)" />
+                        <InlineEditCell
+v-model="data.cttOpp" type="text" :invalid="isFieldInvalid(data, 'cttOpp')"
+                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
                 <!-- 사업코드 — 클릭 편집 (REQ-5) -->
                 <Column field="abusC" header="사업코드" sortable style="min-width: 160px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.abusC" type="select" :options="abusCSelectOptions"
-                            :invalid="isFieldInvalid(data, 'abusC')" :forceEdit="isRowEditing(data)" placeholder="선택"
+                        <InlineEditCell
+v-model="data.abusC" type="select" :options="abusCSelectOptions"
+                            :invalid="isFieldInvalid(data, 'abusC')" :force-edit="isRowEditing(data)" placeholder="선택"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
@@ -1081,7 +1106,8 @@ const applyContinuation = async () => {
                 <Column field="ioeC" header="비목코드" sortable style="min-width: 130px">
                     <template #body="{ data }">
                         <!-- 읽기 모드: 클릭하면 편집 모드로 전환 -->
-                        <span v-if="!isRowEditing(data) && ioeEditingKey !== rowKey(data)"
+                        <span
+v-if="!isRowEditing(data) && ioeEditingKey !== rowKey(data)"
                             :class="[
                                 'inline-block w-full px-2 py-1 rounded cursor-pointer min-h-[2rem] leading-[2rem]',
                                 'hover:bg-surface-100 dark:hover:bg-surface-800',
@@ -1095,9 +1121,9 @@ const applyContinuation = async () => {
                         <CascadeSelect
                             :model-value="findIoeCategoryOption(data.ioeC)"
                             :options="ioeCascadeOptions"
-                            optionLabel="label"
-                            optionGroupLabel="label"
-                            optionGroupChildren="items"
+                            option-label="label"
+                            option-group-label="label"
+                            option-group-children="items"
                             placeholder="비목코드 선택"
                             fluid
                             :invalid="isFieldInvalid(data, 'ioeC')"
@@ -1123,32 +1149,37 @@ const applyContinuation = async () => {
                 <!-- 예산: 금융정보단말기는 disabled — 클릭 편집 (REQ-5) -->
                 <Column field="itMngcBg" header="예산" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
+                        <span
+v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
                             class="inline-block w-full px-2 py-1 text-zinc-400 cursor-not-allowed min-h-[2rem] leading-[2rem]">
                             {{ (data.itMngcBg ?? 0).toLocaleString() }} {{ data.cur || 'KRW' }}
                         </span>
-                        <InlineEditCell v-else v-model="data.itMngcBg" type="number" :suffix="data.cur || 'KRW'"
-                            :forceEdit="isRowEditing(data)" @save="saveRow(data)" />
+                        <InlineEditCell
+v-else v-model="data.itMngcBg" type="number" :suffix="data.cur || 'KRW'"
+                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
                 <!-- 통화: 금융정보단말기는 disabled — 클릭 편집 (REQ-5) -->
                 <Column field="cur" header="통화" sortable style="width: 90px">
                     <template #body="{ data }">
-                        <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
+                        <span
+v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
                             class="inline-block w-full px-2 py-1 text-zinc-400 cursor-not-allowed min-h-[2rem] leading-[2rem]">
                             KRW
                         </span>
-                        <InlineEditCell v-else v-model="data.cur" type="select" :options="curSelectOptions"
-                            :forceEdit="isRowEditing(data)" @save="saveRow(data)" />
+                        <InlineEditCell
+v-else v-model="data.cur" type="select" :options="curSelectOptions"
+                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
                 <!-- 지급주기 — 클릭 편집 (REQ-5) -->
                 <Column field="dfrCle" header="지급주기" sortable style="min-width: 120px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.dfrCle" type="select" :options="dfrCleSelectOptions"
-                            :invalid="isFieldInvalid(data, 'dfrCle')" :forceEdit="isRowEditing(data)" placeholder="선택"
+                        <InlineEditCell
+v-model="data.dfrCle" type="select" :options="dfrCleSelectOptions"
+                            :invalid="isFieldInvalid(data, 'dfrCle')" :force-edit="isRowEditing(data)" placeholder="선택"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
@@ -1156,18 +1187,20 @@ const applyContinuation = async () => {
                 <!-- 최초지급일 — 클릭 편집 (REQ-5) -->
                 <Column field="fstDfrDt" header="최초지급일" sortable style="min-width: 80px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.fstDfrDt" type="date" view="month" dateFormat="yy-mm"
+                        <InlineEditCell
+v-model="data.fstDfrDt" type="date" view="month" date-format="yy-mm"
                             placeholder="최초지급일" :invalid="isFieldInvalid(data, 'fstDfrDt')"
-                            :forceEdit="isRowEditing(data)" @save="saveRow(data)" />
+                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
                 <!-- 담당자 (AutoComplete + 직원조회 버튼) — 클릭 편집 (REQ-5) -->
                 <Column field="cgprNm" header="담당자" sortable style="min-width: 80px; width: 140px">
                     <template #body="{ data }">
-                        <InlineEditCell v-model="data.cgprNm" type="autocomplete" :suggestions="employeeSuggestions"
-                            optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'" :showSearch="true"
-                            :invalid="isFieldInvalid(data, 'cgpr')" :forceEdit="isRowEditing(data)"
+                        <InlineEditCell
+v-model="data.cgprNm" type="autocomplete" :suggestions="employeeSuggestions"
+                            option-label="usrNm" :placeholder="data.cgprNm || '이름 검색'" :show-search="true"
+                            :invalid="isFieldInvalid(data, 'cgpr')" :force-edit="isRowEditing(data)"
                             @complete="searchEmployee" @item-select="onEmployeeSelect(data, $event.value)"
                             @search-click="openEmployeeSearch(data)" @save="saveRow(data)">
                             <template #option="{ option }">
@@ -1197,8 +1230,9 @@ const applyContinuation = async () => {
                 <!-- 상세: 금융정보단말기만 상세 화면 이동 버튼 표시 -->
                 <Column header="상세" style="width: 60px; text-align: center">
                     <template #body="{ data }">
-                        <Button v-if="isTerminal(data)" icon="pi pi-external-link" text rounded size="small"
-                            v-tooltip.top="'단말기 상세 수정'"
+                        <Button
+v-if="isTerminal(data)" v-tooltip.top="'단말기 상세 수정'" icon="pi pi-external-link" text rounded
+                            size="small"
                             @click="navigateTo(`/info/cost/terminal/form?id=${data.itMngcNo}`)" />
                     </template>
                 </Column>
@@ -1208,12 +1242,15 @@ const applyContinuation = async () => {
                     <template #body="{ data }">
                         <div class="flex justify-center gap-0.5">
                             <!-- 수정 모드 토글: 편집 중이면 저장(체크), 아니면 수정(연필) -->
-                            <Button v-if="isRowEditing(data)" icon="pi pi-check" text rounded size="small"
-                                severity="success" v-tooltip.top="'저장'" @click="finishRowEdit(data)" />
-                            <Button v-else icon="pi pi-pencil" text rounded size="small" severity="secondary"
-                                v-tooltip.top="'수정'" @click="startRowEdit(data)" />
+                            <Button
+v-if="isRowEditing(data)" v-tooltip.top="'저장'" icon="pi pi-check" text rounded
+                                size="small" severity="success" @click="finishRowEdit(data)" />
+                            <Button
+v-else v-tooltip.top="'수정'" icon="pi pi-pencil" text rounded size="small"
+                                severity="secondary" @click="startRowEdit(data)" />
                             <!-- 삭제 버튼 -->
-                            <Button icon="pi pi-trash" text rounded size="small" severity="danger" v-tooltip.top="'삭제'"
+                            <Button
+v-tooltip.top="'삭제'" icon="pi pi-trash" text rounded size="small" severity="danger"
                                 @click="deleteRow(data)" />
                         </div>
                     </template>
@@ -1222,7 +1259,8 @@ const applyContinuation = async () => {
         </div>
 
         <!-- 계속 계약 전년도 데이터 불러오기 확인 다이얼로그 -->
-        <Dialog v-model:visible="continuationDialogVisible" modal header="전년도 계약 불러오기" :style="{ width: '440px' }"
+        <Dialog
+v-model:visible="continuationDialogVisible" modal header="전년도 계약 불러오기" :style="{ width: '440px' }"
             :closable="false">
             <div class="space-y-4 py-2">
                 <p class="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
@@ -1230,7 +1268,8 @@ const applyContinuation = async () => {
                     최초지급일은 전년도 기준 <strong>+1년</strong>으로 자동 설정되며,
                     나머지 항목은 전년도와 동일하게 채워집니다.
                 </p>
-                <div v-if="continuationPending"
+                <div
+v-if="continuationPending"
                     class="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 space-y-2 text-sm">
                     <div class="flex justify-between gap-2">
                         <span class="text-zinc-500 shrink-0">계약명</span>
@@ -1244,15 +1283,17 @@ const applyContinuation = async () => {
                         <span class="text-zinc-500 shrink-0">전년도 예산연도</span>
                         <span>{{ continuationPending.source.bgYy }}년</span>
                     </div>
-                    <div v-if="continuationPending.source.itMngcTp === 'IT_MNGC_TP_002'"
+                    <div
+v-if="continuationPending.source.itMngcTp === 'IT_MNGC_TP_002'"
                         class="flex items-center gap-2 pt-1 border-t border-zinc-200 dark:border-zinc-700 text-indigo-600 dark:text-indigo-400">
-                        <i class="pi pi-info-circle text-sm"></i>
+                        <i class="pi pi-info-circle text-sm"/>
                         <span>단말기 상세목록도 함께 불러옵니다.</span>
                     </div>
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" outlined
+                <Button
+label="취소" severity="secondary" outlined
                     @click="continuationDialogVisible = false; continuationPending = null" />
                 <Button label="불러오기" icon="pi pi-download" @click="applyContinuation" />
             </template>

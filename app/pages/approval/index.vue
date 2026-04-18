@@ -45,6 +45,7 @@ const { data: approvals, error, refresh } = await fetchApprovals();
 /** 직원 검색 다이얼로그 표시 여부 */
 const showEmployeeSearch = ref(false);
 /** 체크박스로 선택된 결재 항목 목록 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectedApprovals = ref<any[]>([]);
 
 /* ── 결재 처리 다이얼로그 상태 ── */
@@ -65,6 +66,7 @@ const resultMessage = ref('');
  *
  * @param _user - 선택된 직원 정보 (현재 미사용)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const onEmployeeSelect = (_user: any) => {
     // Future implementation: handle selection
 };
@@ -76,6 +78,7 @@ const onEmployeeSelect = (_user: any) => {
  * @param data - 결재 항목 데이터 (approvers 배열 포함)
  * @returns 현재 사용자가 결재 차례이면 true, 아니면 false
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isMyTurn = (data: any) => {
     if (!user.value || !data.approvers) return false;
 
@@ -83,9 +86,11 @@ const isMyTurn = (data: any) => {
     if (data.apfSts === '승인' || data.apfSts === '반려') return false;
 
     // 결재자 목록을 순번(dcdSqn) 오름차순 정렬 (안전한 로직을 위해 필수)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sortedApprovers = [...data.approvers].sort((a: any, b: any) => Number(a.dcdSqn) - Number(b.dcdSqn));
 
     // 결재자 목록에서 아직 처리일자(dcdDt)가 없는 첫 번째 대기자 찾기
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const nextApprover = sortedApprovers.find((a: any) => !a.dcdDt);
 
     if (!nextApprover) return false;
@@ -104,6 +109,7 @@ const isMyTurn = (data: any) => {
  * @param event - PrimeVue DataTable 선택 이벤트
  * @returns 결재 차례인 행만 true 반환
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isRowSelectable = (event: any) => {
     // PrimeVue 버전에 따라 event.data 또는 event 자체가 데이터일 수 있음
     const data = event.data || event;
@@ -148,6 +154,7 @@ watch(selectedApprovals, (newVal) => {
  * @param data - DataTable 행 데이터
  * @returns CSS 클래스 문자열
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rowClass = (data: any) => {
     return !isMyTurn(data) ? 'row-disabled-checkbox' : '';
 };
@@ -159,6 +166,7 @@ const rowClass = (data: any) => {
  * @param item - 결재 처리할 단건 항목
  * @param status - 처리 상태 ('승인' | '반려')
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openIndividualApprovalDialog = (item: any, status: '승인' | '반려') => {
     selectedApprovals.value = [item];
     targetApprovalStatus.value = status;
@@ -204,6 +212,7 @@ const processApproval = async (status: '승인' | '반려') => {
 /* ── 결재 진행 상황 타임라인 (ApprovalTimeline 컴포넌트 연동) ── */
 const showTimelineDialog = ref(false);
 /** 타임라인에 전달할 선택된 결재 항목 데이터 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectedTimelineData = ref<any>(null);
 
 /**
@@ -212,6 +221,7 @@ const selectedTimelineData = ref<any>(null);
  *
  * @param data - 결재 항목 데이터 (rqsEno, rqsDt 등 기안 정보 포함)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openTimeline = (data: any) => {
     selectedTimelineData.value = data;
     showTimelineDialog.value = true;
@@ -227,6 +237,7 @@ const currentApfMngNo = ref('');
  * 신청서 조회 다이얼로그 열기
  * @param data - 결재 항목 데이터 (apfMngNo 포함)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openReport = (data: any) => {
     if (!data.apfMngNo) {
         alert('신청관리번호가 없습니다.');

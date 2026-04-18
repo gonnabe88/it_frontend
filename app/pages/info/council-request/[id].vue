@@ -395,11 +395,11 @@ const submitApproval = async () => {
             <div class="flex items-center gap-3">
                 <!-- 뒤로가기 -->
                 <Button
+                    v-tooltip.top="'목록으로'"
                     icon="pi pi-arrow-left"
                     severity="secondary"
                     text
                     @click="navigateTo('/info/council-request')"
-                    v-tooltip.top="'목록으로'"
                 />
                 <div>
                     <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
@@ -481,7 +481,7 @@ const submitApproval = async () => {
                     accept=".hwp,.hwpx,.pdf"
                     class="hidden"
                     @change="onFileChange"
-                />
+                >
                 <Button
                     :label="form.flMngNo ? '파일 교체' : '파일 선택'"
                     icon="pi pi-upload"
@@ -515,8 +515,6 @@ const submitApproval = async () => {
                 @click="saveComplete"
             />
         </div>
-
-    </div>
 
     <!--
         ── 결재 요청 Dialog ──
@@ -595,4 +593,5 @@ const submitApproval = async () => {
         header="팀장 검색"
         @select="onApproverSelected"
     />
+    </div>
 </template>

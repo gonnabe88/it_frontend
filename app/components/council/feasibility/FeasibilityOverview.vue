@@ -132,7 +132,7 @@ const prjBgValue = computed({
                     placeholder="소요예산 (원 단위)"
                     :min="0"
                     mode="decimal"
-                    :useGrouping="true"
+                    :use-grouping="true"
                     fluid
                 />
             </div>
@@ -180,21 +180,21 @@ const prjBgValue = computed({
             <div class="md:col-span-3 flex items-center gap-6">
                 <div class="flex items-center gap-2">
                     <RadioButton
-                        inputId="lglYes"
+                        input-id="lglYes"
                         value="Y"
-                        :modelValue="modelValue.lglRglYn"
+                        :model-value="modelValue.lglRglYn"
                         :disabled="readonly"
-                        @update:modelValue="onLglRglYnChange"
+                        @update:model-value="onLglRglYnChange"
                     />
                     <label for="lglYes" class="text-sm cursor-pointer">해당</label>
                 </div>
                 <div class="flex items-center gap-2">
                     <RadioButton
-                        inputId="lglNo"
+                        input-id="lglNo"
                         value="N"
-                        :modelValue="modelValue.lglRglYn"
+                        :model-value="modelValue.lglRglYn"
                         :disabled="readonly"
-                        @update:modelValue="onLglRglYnChange"
+                        @update:model-value="onLglRglYnChange"
                     />
                     <label for="lglNo" class="text-sm cursor-pointer">해당없음</label>
                 </div>

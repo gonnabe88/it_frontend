@@ -101,16 +101,17 @@ const lgnTpLabel = (lgnTp: string): string => {
         <StyledDataTable
             :value="historyData?.content ?? []"
             :loading="pending"
-            dataKey="fstEnrDtm"
+            data-key="fstEnrDtm"
             scrollable
-            scrollHeight="calc(100vh - 360px)"
+            scroll-height="calc(100vh - 360px)"
             class="p-datatable-sm"
-            stripedRows>
+            striped-rows>
 
             <!-- 사용자명 클릭 → 직원정보 팝업 -->
             <Column header="사용자" :style="{ width: '130px' }">
                 <template #body="{ data }">
-                    <span class="cursor-pointer text-blue-500 hover:underline"
+                    <span
+class="cursor-pointer text-blue-500 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.usrNm || data.eno }}
                     </span>
@@ -121,7 +122,8 @@ const lgnTpLabel = (lgnTp: string): string => {
 
             <Column field="lgnTp" header="유형" :style="{ width: '120px' }">
                 <template #body="{ data }">
-                    <Tag :value="lgnTpLabel(data.lgnTp)"
+                    <Tag
+:value="lgnTpLabel(data.lgnTp)"
                          :severity="lgnTpSeverity(data.lgnTp)" />
                 </template>
             </Column>
@@ -142,7 +144,8 @@ const lgnTpLabel = (lgnTp: string): string => {
 
             <Column field="ustAgt" header="User-Agent" :style="{ width: '250px' }">
                 <template #body="{ data }">
-                    <span class="text-xs text-zinc-400 truncate block max-w-[240px]"
+                    <span
+class="text-xs text-zinc-400 truncate block max-w-[240px]"
                           :title="data.ustAgt">
                         {{ data.ustAgt }}
                     </span>
@@ -154,11 +157,11 @@ const lgnTpLabel = (lgnTp: string): string => {
         <div class="mt-4 flex justify-center">
             <Paginator
                 :rows="PAGE_SIZE"
-                :totalRecords="historyData?.totalElements ?? 0"
+                :total-records="historyData?.totalElements ?? 0"
                 :first="currentPage * PAGE_SIZE"
-                @page="onPageChange"
                 template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
-                currentPageReportTemplate="{first}–{last} / {totalRecords}건" />
+                current-page-report-template="{first}–{last} / {totalRecords}건"
+                @page="onPageChange" />
         </div>
 
         <!-- 직원정보 팝업 -->

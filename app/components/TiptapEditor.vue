@@ -46,7 +46,7 @@ import Color from '@tiptap/extension-color';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import { TableRow } from '@tiptap/extension-table';
-import { TableMap, CellSelection } from '@tiptap/pm/tables';
+import { TableMap } from '@tiptap/pm/tables';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import CharacterCount from '@tiptap/extension-character-count';
@@ -76,10 +76,10 @@ import {
 } from './extensions/tiptap-extensions';
 import type { AttachmentItem } from './extensions/tiptap-extensions';
 import type { AnyExtension } from '@tiptap/core';
+import TiptapToolbar from './TiptapToolbar.vue';
 
 /** lowlight 인스턴스: 일반적으로 사용하는 언어 번들 포함 */
 const lowlight = createLowlight(common);
-import TiptapToolbar from './TiptapToolbar.vue';
 
 // ── Props ──
 const props = defineProps<{
@@ -125,9 +125,11 @@ const emit = defineEmits<{
 }>();
 
 // TOC 추출 함수
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const extractTOC = (editorInstance: any) => {
     const toc: Array<{ id: string; level: number; text: string }> = [];
     const transaction = editorInstance.state.tr;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editorInstance.state.doc.descendants((node: any, pos: number) => {
         if (node.type.name === 'heading') {
             let id = node.attrs.id;
@@ -235,7 +237,7 @@ const editor = useEditor({
         ...(props.additionalExtensions ?? []),
     ],
     // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환 (브라우저 환경에서만 실행)
-    content: process.client ? injectColwidthsFromColgroup(props.modelValue || '') : (props.modelValue || ''),
+    content: import.meta.client ? injectColwidthsFromColgroup(props.modelValue || '') : (props.modelValue || ''),
     editable: !props.readonly,
     onCreate: ({ editor }) => {
         // 초기 로드 시 한 번 TOC 추출
@@ -359,7 +361,7 @@ watch(() => props.modelValue, (val) => {
     if (editor.value && editor.value.getHTML() !== val) {
         // setContent 전에 <colgroup> 너비를 셀 colwidth 속성으로 변환하여
         // Tiptap의 updateColumns()가 덮어쓰기 전에 너비 정보를 보존합니다.
-        const processed = process.client ? injectColwidthsFromColgroup(val || '') : (val || '');
+        const processed = import.meta.client ? injectColwidthsFromColgroup(val || '') : (val || '');
         editor.value.commands.setContent(processed, { emitUpdate: false });
         // 저장된 테이블 너비 복원
         nextTick(applyTableWidths);
@@ -380,6 +382,7 @@ watch(() => props.readonly, (val) => {
  * Design Ref: §2.2 — AttachmentExtension.addStorage()
  */
 watch(() => props.attachmentList, (list) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const storage = editor.value?.storage as Record<string, any> | undefined;
     if (storage?.attachment) {
         storage.attachment.attachmentList = list ?? [];
@@ -440,7 +443,7 @@ const BORDER_WIDTHS = [
 const borderPaletteVisible = ref(false);
 
 /** 현재 셀의 테두리 스타일 */
-const currentCellBorderStyle = computed<string | null>(() => {
+const _currentCellBorderStyle = computed<string | null>(() => {
     if (!editor.value?.isActive('table')) return null;
     const attrs = editor.value.getAttributes('tableCell');
     const headerAttrs = editor.value.getAttributes('tableHeader');
@@ -469,7 +472,7 @@ const BORDER_DIRECTIONS = [
 ] as const;
 
 /** 현재 셀의 테두리 두께 */
-const currentCellBorderWidth = computed<string | null>(() => {
+const _currentCellBorderWidth = computed<string | null>(() => {
     if (!editor.value?.isActive('table')) return null;
     const attrs = editor.value.getAttributes('tableCell');
     const headerAttrs = editor.value.getAttributes('tableHeader');
@@ -501,7 +504,8 @@ const applyCellBorderColor = (color: string | null) => {
 /**
  * 특정 셀(node)에 지정된 방향(side)의 테두리를 현재 설정값으로 적용합니다.
  */
-const updateCellSideAttributes = (editor: any, pos: number, side: string, isHeader: boolean) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _updateCellSideAttributes = (editor: any, pos: number, side: string, isHeader: boolean) => {
     const sides = [];
     if (side === 'all') sides.push('Top', 'Bottom', 'Left', 'Right');
     else if (side === 'top') sides.push('Top');
@@ -509,8 +513,9 @@ const updateCellSideAttributes = (editor: any, pos: number, side: string, isHead
     else if (side === 'left') sides.push('Left');
     else if (side === 'right') sides.push('Right');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const attrs: any = {};
-    const type = isHeader ? 'tableHeader' : 'tableCell';
+    const _type = isHeader ? 'tableHeader' : 'tableCell';
 
     sides.forEach(s => {
         attrs[`border${s}Style`] = pendingBorderStyle.value;
@@ -536,6 +541,7 @@ const applySideBorder = (side: string) => {
     let modified = false;
 
     // 1. 셀 선택 방식 판별 (전용 CellSelection 인스턴스 또는 유사 객체인 경우)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isCellSelection = typeof (selection as any).forEachCell === 'function';
 
     if (!isCellSelection) {
@@ -561,6 +567,7 @@ const applySideBorder = (side: string) => {
                 }
 
                 if (sides.length > 0) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const attrs: any = {};
                     sides.forEach(s => {
                         attrs[`border${s}Style`] = side === 'clear' ? null : pendingBorderStyle.value;
@@ -574,6 +581,7 @@ const applySideBorder = (side: string) => {
         }
     } else {
         // 2. 복수 셀이 선택된 경우 (CellSelection 계열)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sel = selection as any;
 
         // 테이블 노드와 시작 위치 찾기 ($anchorCell 기준)
@@ -604,6 +612,7 @@ const applySideBorder = (side: string) => {
         const maxCol = Math.max(anchorRect.right, headRect.right) - 1;
 
         // 업데이트할 셀들의 위치와 속성을 수집 (pos -> attrs)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cellUpdates = new Map<number, any>();
 
         /** 인접 셀 위치 찾기 및 업데이트 목록 추가 함수 */
@@ -617,6 +626,7 @@ const applySideBorder = (side: string) => {
             cellUpdates.set(nPos, nAttrs);
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         sel.forEachCell((node: any, pos: number) => {
             if (!map || !map.map) return;
             const pmMap = map.map as number[];
@@ -738,7 +748,7 @@ const setTableFullWidth = () => {
     const colCount = map.width;
 
     // 1. 현재 열들의 너비 수집 및 총합 계산
-    const currentWidths = new Array(colCount).fill(0);
+    const currentWidths = Array.from({ length: colCount }, () => 0);
     const firstRowMap = map.map.slice(0, colCount);
     const seenCells = new Set<number>();
 
@@ -824,16 +834,16 @@ const setCellTextAlign = (align: string) => {
 // ── 셀 높이 (FR-06-5) ──
 
 /** 현재 셀의 min-height 값 (숫자 부분만, px 단위) */
-const currentCellMinHeight = computed<number>(() => {
+const _currentCellMinHeight = computed<number>(() => {
     if (!editor.value?.isActive('table')) return 0;
     const attrs = editor.value.getAttributes('tableCell');
     const headerAttrs = editor.value.getAttributes('tableHeader');
     const raw = attrs.minHeight || headerAttrs.minHeight || '';
-    return raw ? parseInt(raw, 10) : 0;
+    return raw ? Number.parseInt(raw, 10) : 0;
 });
 
 /** 셀 min-height 적용 (0이면 제거) */
-const applyCellMinHeight = (px: number) => {
+const _applyCellMinHeight = (px: number) => {
     const val = px > 0 ? `${px}px` : null;
     editor.value?.chain().focus().setCellAttribute('minHeight', val).run();
 };
@@ -917,7 +927,7 @@ const tableFloatY = ref(0);
 const getTableElement = (): HTMLTableElement | null => {
     if (!editor.value) return null;
     const { from } = editor.value.state.selection;
-    let node = editor.value.view.domAtPos(from).node as Node;
+    const node = editor.value.view.domAtPos(from).node as Node;
     let el = (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement) as HTMLElement | null;
     while (el && el.tagName !== 'TABLE') {
         el = el.parentElement;
@@ -1059,19 +1069,21 @@ defineExpose({ editor });
 
         <!-- 이미지 드래그 오버 시 표시되는 오버레이 -->
         <Transition name="drag-fade">
-            <div v-if="isDragOver"
+            <div
+v-if="isDragOver"
                 class="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-400/10 border-2 border-dashed border-indigo-400 dark:border-indigo-500 rounded-xl z-30 flex items-center justify-center pointer-events-none">
                 <div
                     class="bg-white dark:bg-zinc-800 rounded-xl px-5 py-3 shadow-xl flex items-center gap-2.5 text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
-                    <i class="pi pi-image text-lg"></i>
+                    <i class="pi pi-image text-lg"/>
                     이미지를 여기에 놓으세요
                 </div>
             </div>
         </Transition>
 
         <!-- ── 툴바 (TiptapToolbar.vue로 분리 — Design Ref: §2 Clean Architecture) ── -->
-        <TiptapToolbar v-if="!readonly && editor" :editor="editor" :imageUploadFn="props.imageUploadFn"
-            :fileUploadFn="props.fileUploadFn" :fileDeleteFn="props.fileDeleteFn" :attachmentList="props.attachmentList" />
+        <TiptapToolbar
+v-if="!readonly && editor" :editor="editor" :image-upload-fn="props.imageUploadFn"
+            :file-upload-fn="props.fileUploadFn" :file-delete-fn="props.fileDeleteFn" :attachment-list="props.attachmentList" />
 
         <!-- ── 에디터 본문 (부모 높이 전체 점유) ── -->
         <EditorContent v-if="editor" :editor="editor" class="tiptap-content flex-1 overflow-y-auto custom-scrollbar" />
@@ -1082,7 +1094,8 @@ defineExpose({ editor });
         </div>
 
         <!-- ── 상태 바 ── -->
-        <div v-if="editor"
+        <div
+v-if="editor"
             class="tiptap-statusbar border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 px-4 py-1.5 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
             <span>{{ charCount.toLocaleString() }}자 · {{ wordCount.toLocaleString() }}단어</span>
             <span v-if="readonly" class="text-amber-600 dark:text-amber-400">읽기 전용</span>
@@ -1093,17 +1106,20 @@ defineExpose({ editor });
     <!-- @mousedown.prevent: 버튼 클릭 시 에디터 포커스가 해제되지 않도록 기본 동작 방지 -->
     <Teleport to="body">
         <Transition name="table-float">
-            <div v-if="tableFloatVisible && editor && !props.readonly && !borderPaletteVisible"
+            <div
+v-if="tableFloatVisible && editor && !props.readonly && !borderPaletteVisible"
                 class="tiptap-table-float" :style="{ top: tableFloatY + 'px', left: tableFloatX + 'px' }">
 
                 <!-- 행 조작: 위 추가 / 아래 추가 / 행 삭제 -->
                 <div class="tf-group">
                     <!-- 위에 행 추가: 새 행 셀에 colwidth 없음 → tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addRowBefore().run())"
-                        title="위에 행 추가">
+                    <button
+class="tf-btn"
+                        title="위에 행 추가"
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addRowBefore().run())">
                         <!-- + 기호(위) + 닫힌 행 2개(아래): rect로 4면 막힘 -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="7" y1="1.5" x2="7" y2="5.5" />
                             <line x1="5" y1="3.5" x2="9" y2="3.5" />
@@ -1111,10 +1127,12 @@ defineExpose({ editor });
                         </svg>
                     </button>
                     <!-- 아래 행 추가: 새 행 셀에 colwidth 없음 → tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addRowAfter().run())" title="아래 행 추가">
+                    <button
+class="tf-btn"
+                        title="아래 행 추가" @mousedown.prevent="tableOp(() => editor?.chain().focus().addRowAfter().run())">
                         <!-- 닫힌 행 2개(위) + + 기호(아래): rect로 4면 막힘 -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="1" y="1" width="12" height="5" />
                             <line x1="7" y1="8.5" x2="7" y2="12.5" />
@@ -1122,10 +1140,12 @@ defineExpose({ editor });
                         </svg>
                     </button>
                     <!-- 행 삭제: 기존 셀만 제거, 정규화 불필요 -->
-                    <button class="tf-btn tf-danger" @mousedown.prevent="editor?.chain().focus().deleteRow().run()"
-                        title="행 삭제">
+                    <button
+class="tf-btn tf-danger" title="행 삭제"
+                        @mousedown.prevent="editor?.chain().focus().deleteRow().run()">
                         <!-- 닫힌 행 1개(왼쪽) + 원형 배경의 X(오른쪽 중앙 정렬) -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-linecap="round" stroke-linejoin="round">
                             <rect x="1" y="4.5" width="5" height="5" stroke-width="1.5" />
                             <!-- X 영역 배경 원: rect 우측 영역(x=7~14) 중앙 cx=10.5, rect y 중앙 cy=7 -->
@@ -1142,11 +1162,13 @@ defineExpose({ editor });
                 <!-- 열 조작: 왼쪽 추가 / 오른쪽 추가 / 열 삭제 -->
                 <div class="tf-group">
                     <!-- 왼쪽 열 추가: 새 열 셀에 colwidth 없음 → tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addColumnBefore().run())"
-                        title="왼쪽 열 추가">
+                    <button
+class="tf-btn"
+                        title="왼쪽 열 추가"
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addColumnBefore().run())">
                         <!-- + 기호(왼쪽) + 닫힌 열 2개(오른쪽): rect로 4면 막힘 -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="1.5" y1="7" x2="5.5" y2="7" />
                             <line x1="3.5" y1="5" x2="3.5" y2="9" />
@@ -1154,11 +1176,13 @@ defineExpose({ editor });
                         </svg>
                     </button>
                     <!-- 오른쪽 열 추가: 새 열 셀에 colwidth 없음 → tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addColumnAfter().run())"
-                        title="오른쪽 열 추가">
+                    <button
+class="tf-btn"
+                        title="오른쪽 열 추가"
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().addColumnAfter().run())">
                         <!-- 닫힌 열 2개(왼쪽) + + 기호(오른쪽): rect로 4면 막힘 -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="1" y="1" width="5" height="12" />
                             <line x1="8.5" y1="7" x2="12.5" y2="7" />
@@ -1166,10 +1190,12 @@ defineExpose({ editor });
                         </svg>
                     </button>
                     <!-- 열 삭제: 기존 셀만 제거, 정규화 불필요 -->
-                    <button class="tf-btn tf-danger" @mousedown.prevent="editor?.chain().focus().deleteColumn().run()"
-                        title="열 삭제">
+                    <button
+class="tf-btn tf-danger" title="열 삭제"
+                        @mousedown.prevent="editor?.chain().focus().deleteColumn().run()">
                         <!-- 닫힌 열 1개(위) + 원형 배경의 X(아래 중앙 정렬) -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-linecap="round" stroke-linejoin="round">
                             <rect x="4.5" y="1" width="5" height="5" stroke-width="1.5" />
                             <!-- X 영역 배경 원: rect 하단 영역(y=7~14) 중앙 cy=10.5, rect x 중앙 cx=7 -->
@@ -1186,8 +1212,9 @@ defineExpose({ editor });
                 <!-- 셀 병합·분리 -->
                 <div class="tf-group">
                     <!-- 셀 병합: 병합 후 colwidth 배열 변경 → tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().mergeCells().run())" title="셀 병합">
+                    <button
+class="tf-btn"
+                        title="셀 병합" @mousedown.prevent="tableOp(() => editor?.chain().focus().mergeCells().run())">
                         <!--
                             병합 아이콘: 위 행은 2셀, 아래 행은 병합 셀(강조)
                             ┌──┬──┐
@@ -1196,7 +1223,8 @@ defineExpose({ editor });
                             │ 병합│  ← 병합 셀 (fill 강조)
                             └─────┘
                         -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
                             <!-- 외곽 테두리 -->
                             <rect x="1" y="1" width="12" height="12" rx="1" />
@@ -1205,14 +1233,17 @@ defineExpose({ editor });
                             <!-- 위 행 세로 구분선 -->
                             <line x1="7" y1="1" x2="7" y2="7" />
                             <!-- 병합 셀 강조 (아래 행 채우기) -->
-                            <rect x="1.8" y="7.8" width="10.4" height="4.4" rx="0.5" fill="currentColor" opacity="0.3"
+                            <rect
+x="1.8" y="7.8" width="10.4" height="4.4" rx="0.5" fill="currentColor" opacity="0.3"
                                 stroke="none" />
                         </svg>
                     </button>
                     <!-- 셀 분리: 분리된 새 셀에 colwidth 없음 → tableOp로 정규화 -->
-                    <button class="tf-btn" @mousedown.prevent="tableOp(() => editor?.chain().focus().splitCell().run())"
-                        title="셀 분리">
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                    <button
+class="tf-btn" title="셀 분리"
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().splitCell().run())">
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="1" y="1" width="12" height="12" rx="1" />
                             <line x1="7" y1="1" x2="7" y2="13" />
@@ -1227,9 +1258,10 @@ defineExpose({ editor });
                 <!-- 헤더 행·열 -->
                 <div class="tf-group">
                     <!-- 헤더 행 토글: tableOp로 정규화 (헤더↔일반 셀 변환 시 colwidth 재확인) -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().toggleHeaderRow().run())"
-                        title="헤더 행 토글">
+                    <button
+class="tf-btn"
+                        title="헤더 행 토글"
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().toggleHeaderRow().run())">
                         <!--
                             헤더 행 아이콘: 상단 행 2셀 강조(fill), 세로 구분선이 헤더를 관통
                             ┌──┬──┐
@@ -1238,12 +1270,14 @@ defineExpose({ editor });
                             │  │  │  ← 바디 행
                             └──┴──┘
                         -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" stroke="currentColor" stroke-width="1.3"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" stroke="currentColor" stroke-width="1.3"
                             stroke-linecap="round" stroke-linejoin="round">
                             <!-- 외곽 테두리 -->
                             <rect x="1" y="1" width="12" height="12" rx="1.5" fill="none" />
                             <!-- 헤더 행 배경 강조 (세로 구분선이 위에 그려져 개별 셀처럼 보임) -->
-                            <rect x="1.5" y="1.5" width="11" height="5" fill="currentColor" opacity="0.25"
+                            <rect
+x="1.5" y="1.5" width="11" height="5" fill="currentColor" opacity="0.25"
                                 stroke="none" />
                             <!-- 가로 구분선 (헤더/바디 경계) -->
                             <line x1="1" y1="7" x2="13" y2="7" />
@@ -1252,9 +1286,10 @@ defineExpose({ editor });
                         </svg>
                     </button>
                     <!-- 헤더 열 토글: tableOp로 정규화 -->
-                    <button class="tf-btn"
-                        @mousedown.prevent="tableOp(() => editor?.chain().focus().toggleHeaderColumn().run())"
-                        title="헤더 열 토글">
+                    <button
+class="tf-btn"
+                        title="헤더 열 토글"
+                        @mousedown.prevent="tableOp(() => editor?.chain().focus().toggleHeaderColumn().run())">
                         <!--
                             헤더 열 아이콘: 좌측 열 2셀 강조(fill), 가로 구분선이 헤더를 관통
                             ┌──┬──┐
@@ -1263,12 +1298,14 @@ defineExpose({ editor });
                             │▒▒│  │
                             └──┴──┘
                         -->
-                        <svg width="18" height="18" viewBox="0 0 14 14" stroke="currentColor" stroke-width="1.3"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" stroke="currentColor" stroke-width="1.3"
                             stroke-linecap="round" stroke-linejoin="round">
                             <!-- 외곽 테두리 -->
                             <rect x="1" y="1" width="12" height="12" rx="1.5" fill="none" />
                             <!-- 헤더 열 배경 강조 (가로 구분선이 위에 그려져 개별 셀처럼 보임) -->
-                            <rect x="1.5" y="1.5" width="5" height="11" fill="currentColor" opacity="0.25"
+                            <rect
+x="1.5" y="1.5" width="5" height="11" fill="currentColor" opacity="0.25"
                                 stroke="none" />
                             <!-- 세로 구분선 (헤더/바디 경계) -->
                             <line x1="7" y1="1" x2="7" y2="13" />
@@ -1282,24 +1319,28 @@ defineExpose({ editor });
 
                 <!-- FR-06-3: 셀 배경색 팔레트 (16색) -->
                 <div class="tf-group" style="position: relative;">
-                    <button class="tf-btn tf-color-btn"
-                        @mousedown.prevent="cellBgPaletteVisible = !cellBgPaletteVisible" title="셀 배경색">
-                        <i class="pi pi-palette"></i>
-                        <span class="tf-color-dot"
-                            :style="{ backgroundColor: currentCellBg ?? 'transparent', border: currentCellBg ? 'none' : '1px dashed #aaa' }">
-                        </span>
+                    <button
+class="tf-btn tf-color-btn"
+                        title="셀 배경색" @mousedown.prevent="cellBgPaletteVisible = !cellBgPaletteVisible">
+                        <i class="pi pi-palette"/>
+                        <span
+class="tf-color-dot"
+                            :style="{ backgroundColor: currentCellBg ?? 'transparent', border: currentCellBg ? 'none' : '1px dashed #aaa' }"/>
                     </button>
                     <!-- 팔레트 팝오버 -->
-                    <div v-if="cellBgPaletteVisible" class="tiptap-table-float"
+                    <div
+v-if="cellBgPaletteVisible" class="tiptap-table-float"
                         style="position: absolute; top: calc(100% + 4px); left: 0; width: 130px; padding: 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; z-index: 100;"
                         @mousedown.prevent>
-                        <button v-for="color in TABLE_CELL_PALETTE" :key="color" class="tf-palette-swatch"
+                        <button
+v-for="color in TABLE_CELL_PALETTE" :key="color" class="tf-palette-swatch"
                             :style="{ backgroundColor: color }" :title="color"
                             @mousedown.prevent="applyCellBgColor(color)" />
                         <!-- 배경 없음(지우개) -->
-                        <button class="tf-palette-swatch tf-palette-clear" title="배경 없음"
+                        <button
+class="tf-palette-swatch tf-palette-clear" title="배경 없음"
                             @mousedown.prevent="applyCellBgColor(null)">
-                            <i class="pi pi-times" style="font-size: 9px;"></i>
+                            <i class="pi pi-times" style="font-size: 9px;"/>
                         </button>
                     </div>
                 </div>
@@ -1308,14 +1349,17 @@ defineExpose({ editor });
 
                 <!-- FR-06-2: 테두리 통합 상세 설정 (팝업 지원) -->
                 <div class="tf-group" style="position: relative;">
-                    <button class="tf-btn tf-border-main-btn" :class="{ 'tf-btn-active': borderPaletteVisible }"
+                    <button
+class="tf-btn tf-border-main-btn" :class="{ 'tf-btn-active': borderPaletteVisible }"
                         title="테두리 상세 설정" @mousedown.prevent="borderPaletteVisible = !borderPaletteVisible">
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.3">
                             <rect x="2" y="2" width="10" height="10" rx="1" />
                             <path d="M2 5h10M5 2v10" opacity="0.4" />
                         </svg>
-                        <span class="tf-border-indicator"
+                        <span
+class="tf-border-indicator"
                             :style="{ backgroundColor: (borderPaletteVisible ? pendingBorderColor : currentCellBorderColor) || '#888' }" />
                     </button>
 
@@ -1325,25 +1369,31 @@ defineExpose({ editor });
 
                 <!-- FR-06-6: 테이블 전체 위치 정렬 -->
                 <div class="tf-group">
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'left' }" title="테이블 좌측 정렬"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'left' }" title="테이블 좌측 정렬"
                         @mousedown.prevent="setTableAlign('left')">
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5">
                             <rect x="1" y="2" width="8" height="10" rx="1" />
                             <path d="M10 4h3M10 7h2M10 10h3" opacity="0.4" />
                         </svg>
                     </button>
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'center' }"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'center' }"
                         title="테이블 중앙 정렬" @mousedown.prevent="setTableAlign('center')">
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5">
                             <rect x="3" y="2" width="8" height="10" rx="1" />
                             <path d="M1 4h1M12 4h1M1 7h1.5M11.5 7h1.5M1 10h1M12 10h1" opacity="0.4" />
                         </svg>
                     </button>
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'right' }" title="테이블 우측 정렬"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentTableAlign === 'right' }" title="테이블 우측 정렬"
                         @mousedown.prevent="setTableAlign('right')">
-                        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
+                        <svg
+width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor"
                             stroke-width="1.5">
                             <rect x="5" y="2" width="8" height="10" rx="1" />
                             <path d="M1 4h3M2 7h2M1 10h3" opacity="0.4" />
@@ -1355,21 +1405,25 @@ defineExpose({ editor });
 
                 <!-- FR-01-2: 셀 텍스트 정렬 -->
                 <div class="tf-group">
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'left' }"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'left' }"
                         title="텍스트 좌측 정렬" @mousedown.prevent="setCellTextAlign('left')">
-                        <i class="pi pi-align-left"></i>
+                        <i class="pi pi-align-left"/>
                     </button>
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'center' }"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'center' }"
                         title="텍스트 중앙 정렬" @mousedown.prevent="setCellTextAlign('center')">
-                        <i class="pi pi-align-center"></i>
+                        <i class="pi pi-align-center"/>
                     </button>
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'right' }"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'right' }"
                         title="텍스트 우측 정렬" @mousedown.prevent="setCellTextAlign('right')">
-                        <i class="pi pi-align-right"></i>
+                        <i class="pi pi-align-right"/>
                     </button>
-                    <button class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'justify' }"
+                    <button
+class="tf-btn" :class="{ 'tf-btn-active': currentCellTextAlign === 'justify' }"
                         title="텍스트 양쪽 정렬" @mousedown.prevent="setCellTextAlign('justify')">
-                        <i class="pi pi-align-justify"></i>
+                        <i class="pi pi-align-justify"/>
                     </button>
                 </div>
 
@@ -1378,7 +1432,8 @@ defineExpose({ editor });
                 <!-- FR-06-4: 너비에 맞추기 (균등 배분 및 고정폭 고정) -->
                 <div class="tf-group">
                     <button class="tf-btn" title="에디터 너비에 맞추기 (균등 배분)" @mousedown.prevent="setTableFullWidth">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        <svg
+width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="4 8 1 12 4 16" />
                             <polyline points="20 16 23 12 20 8" />
@@ -1390,9 +1445,10 @@ defineExpose({ editor });
                 <span class="tf-divider" />
 
                 <!-- 표 삭제 -->
-                <button class="tf-btn tf-danger" @mousedown.prevent="editor?.chain().focus().deleteTable().run()"
-                    title="표 삭제">
-                    <i class="pi pi-trash"></i>
+                <button
+class="tf-btn tf-danger" title="표 삭제"
+                    @mousedown.prevent="editor?.chain().focus().deleteTable().run()">
+                    <i class="pi pi-trash"/>
                 </button>
             </div>
         </Transition>
@@ -1402,11 +1458,13 @@ defineExpose({ editor });
     <!-- 에디터 포커스를 유지하기 위해 mousedown.prevent 적용 -->
     <Teleport to="body">
         <Transition name="table-float">
-            <div v-if="attachSuggest.active && attachSuggest.items.length" class="tiptap-attach-suggest" :style="{
+            <div
+v-if="attachSuggest.active && attachSuggest.items.length" class="tiptap-attach-suggest" :style="{
                 top: (attachSuggest.rect?.bottom ?? 0) + 4 + 'px',
                 left: (attachSuggest.rect?.left ?? 0) + 'px',
             }" @mousedown.prevent>
-                <div v-for="(item, idx) in attachSuggest.items" :key="item.flMngNo" class="attach-suggest-item"
+                <div
+v-for="(item, idx) in attachSuggest.items" :key="item.flMngNo" class="attach-suggest-item"
                     :class="{ 'attach-suggest-item--active': idx === attachSuggest.selectedIndex }"
                     @mousedown.prevent="attachSuggest.command?.(item)">
                     <i class="pi pi-paperclip text-indigo-400" style="font-size: 11px;" />
@@ -1417,7 +1475,8 @@ defineExpose({ editor });
     </Teleport>
 
     <!-- ── 테두리 상세 설정 Drawer (FR-06-2 개편) ── -->
-    <Drawer v-model:visible="borderPaletteVisible" header="테두리 상세 설정" position="right" :modal="false"
+    <Drawer
+v-model:visible="borderPaletteVisible" header="테두리 상세 설정" position="right" :modal="false"
         :dismissable="false" class="!w-[340px] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl"
         @mousedown.prevent>
         <div class="flex flex-col gap-8 py-2">
@@ -1428,7 +1487,8 @@ defineExpose({ editor });
                 <div class="drawer-section flex-1">
                     <div class="text-md !mb-3">선 스타일</div>
                     <div class="flex flex-col gap-1.5">
-                        <button v-for="bs in BORDER_STYLES" :key="String(bs.value)"
+                        <button
+v-for="bs in BORDER_STYLES" :key="String(bs.value)"
                             class="tf-btn !h-9 !justify-start !px-3 shadow-none border border-zinc-100 dark:border-zinc-800"
                             :class="{ 'tf-btn-active !border-indigo-500': pendingBorderStyle === bs.value }"
                             :title="bs.title" @mousedown.prevent="applyCellBorderStyle(bs.value)">
@@ -1442,7 +1502,8 @@ defineExpose({ editor });
                 <div class="drawer-section flex-1">
                     <div class="text-md !mb-3">두께</div>
                     <div class="flex flex-col gap-1.5">
-                        <button v-for="bw in BORDER_WIDTHS" :key="bw.value"
+                        <button
+v-for="bw in BORDER_WIDTHS" :key="bw.value"
                             class="tf-btn !h-9 !justify-start !px-3 shadow-none border border-zinc-100 dark:border-zinc-800"
                             :class="{ 'tf-btn-active !border-indigo-500': pendingBorderWidth === bw.value }"
                             @mousedown.prevent="applyCellBorderWidth(bw.value)">
@@ -1456,7 +1517,8 @@ defineExpose({ editor });
             <div class="drawer-section">
                 <div class="text-md !mb-3">선 색상</div>
                 <div class="grid grid-cols-7 gap-1.5">
-                    <button v-for="color in TABLE_CELL_PALETTE" :key="color"
+                    <button
+v-for="color in TABLE_CELL_PALETTE" :key="color"
                         class="tf-palette-swatch !w-full !h-7 rounded-sm transition-all"
                         :style="{ backgroundColor: color }"
                         :class="{ 'ring-2 ring-indigo-500 ring-offset-2 scale-90': pendingBorderColor === color }"
@@ -1464,7 +1526,7 @@ defineExpose({ editor });
                     <button
                         class="tf-palette-swatch tf-palette-clear !w-full !h-7 rounded-sm bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
                         @mousedown.prevent="applyCellBorderColor(null)">
-                        <i class="pi pi-times" style="font-size: 10px;"></i>
+                        <i class="pi pi-times" style="font-size: 10px;"/>
                     </button>
                 </div>
             </div>
@@ -1473,12 +1535,14 @@ defineExpose({ editor });
             <div class="drawer-section">
                 <div class="text-md !mb-3">경계면 선택</div>
                 <div class="grid grid-cols-4 gap-2">
-                    <button v-for="dir in BORDER_DIRECTIONS" :key="dir.value"
+                    <button
+v-for="dir in BORDER_DIRECTIONS" :key="dir.value"
                         class="tf-btn !h-14 !w-full flex-col !justify-center !items-center !gap-1 !pt-1.5 !pb-0.5 !px-0 shadow-sm border border-zinc-100 dark:border-zinc-800"
                         :title="dir.label" @mousedown.prevent="applySideBorder(dir.value)">
                         <svg width="20" height="20" viewBox="0 0 14 14" fill="none" stroke="currentColor">
                             <!-- 배경 그리드 (지우기가 아닐 때만 표시하여 맥락 제공) -->
-                            <path v-if="dir.value !== 'clear'" d="M1 1h12v12H1z M1 7h12 M7 1v12" opacity="0.15"
+                            <path
+v-if="dir.value !== 'clear'" d="M1 1h12v12H1z M1 7h12 M7 1v12" opacity="0.15"
                                 stroke-width="1" />
                             <!-- 실제 방향 아이콘 (강조) -->
                             <path :d="dir.icon" stroke-width="1.8" stroke-linecap="round" />
@@ -1489,7 +1553,8 @@ defineExpose({ editor });
             </div>
 
             <div class="mt-auto pt-6">
-                <Button label="설정 완료" icon="pi pi-check" class="w-full !h-11" severity="secondary"
+                <Button
+label="설정 완료" icon="pi pi-check" class="w-full !h-11" severity="secondary"
                     @click="borderPaletteVisible = false" />
             </div>
 

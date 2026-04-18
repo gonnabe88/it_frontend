@@ -417,18 +417,18 @@ const handleSave = async () => {
             <!-- 사업 목록 테이블 -->
             <StyledDataTable
                 v-else
-                :value="projects"
                 v-model:selection="selectedProjects"
-                dataKey="id"
+                :value="projects"
+                data-key="id"
                 paginator
                 :rows="10"
-                :rowsPerPageOptions="[10, 20, 50]"
+                :rows-per-page-options="[10, 20, 50]"
             >
                 <!-- 다중 선택 체크박스 -->
-                <Column selectionMode="multiple" headerStyle="width: 3rem" />
+                <Column selection-mode="multiple" header-style="width: 3rem" />
 
                 <!-- 구분 (정보화사업/전산업무비) -->
-                <Column field="sourceType" header="구분" sortable headerClass="font-bold" style="width: 7rem">
+                <Column field="sourceType" header="구분" sortable header-class="font-bold" style="width: 7rem">
                     <template #body="slotProps">
                         <Tag
                             :value="slotProps.data.sourceType === 'project' ? '정보화사업' : '전산업무비'"
@@ -438,10 +438,10 @@ const handleSave = async () => {
                 </Column>
 
                 <!-- 사업명 -->
-                <Column field="prjNm" header="사업명" sortable headerClass="font-bold" />
+                <Column field="prjNm" header="사업명" sortable header-class="font-bold" />
 
                 <!-- 사업유형 -->
-                <Column field="prjTp" header="사업유형" sortable headerClass="font-bold" style="width: 8rem">
+                <Column field="prjTp" header="사업유형" sortable header-class="font-bold" style="width: 8rem">
                     <template #body="slotProps">
                         {{ slotProps.data.sourceType === 'project'
                             ? getPrjTpName(slotProps.data.prjTp)
@@ -450,27 +450,27 @@ const handleSave = async () => {
                 </Column>
 
                 <!-- 주관부문 -->
-                <Column field="svnHdq" header="주관부문" sortable headerClass="font-bold" style="width: 10rem" />
+                <Column field="svnHdq" header="주관부문" sortable header-class="font-bold" style="width: 10rem" />
 
                 <!-- 주관부서명 -->
-                <Column field="svnDpmNm" header="주관부서" sortable headerClass="font-bold" style="width: 10rem" />
+                <Column field="svnDpmNm" header="주관부서" sortable header-class="font-bold" style="width: 10rem" />
 
                 <!-- 총예산 -->
-                <Column field="prjBg" :header="`총예산 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="prjBg" :header="`총예산 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.prjBg) }}</span>
                     </template>
                 </Column>
 
                 <!-- 자본예산 -->
-                <Column field="assetBg" :header="`자본예산 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="assetBg" :header="`자본예산 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.assetBg) }}</span>
                     </template>
                 </Column>
 
                 <!-- 일반관리비 -->
-                <Column field="costBg" :header="`일반관리비 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="costBg" :header="`일반관리비 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.costBg) }}</span>
                     </template>
@@ -529,7 +529,7 @@ const handleSave = async () => {
                     </div>
                     <StyledDataTable
                         :value="dept.projects"
-                        dataKey="prjMngNo"
+                        data-key="prjMngNo"
                     >
                         <Column field="prjNm" header="사업명" />
                         <Column field="prjTp" header="사업유형" style="width: 8rem">
@@ -565,7 +565,7 @@ const handleSave = async () => {
                     </div>
                     <StyledDataTable
                         :value="typeGroup.projects"
-                        dataKey="prjMngNo"
+                        data-key="prjMngNo"
                     >
                         <Column field="prjNm" header="사업명" />
                         <Column field="svnHdq" header="주관부문" style="width: 10rem" />

@@ -28,8 +28,9 @@ defineOptions({ inheritAttrs: false });
 <template>
     <!-- kdb-it-table: 비스코프 CSS 타겟팅 기준 래퍼 -->
     <div class="kdb-it-table">
-        <DataTable v-bind="$attrs" showGridlines resizableColumns columnResizeMode="fit"
-            tableStyle="min-width: 50rem" :pt="{
+        <DataTable
+v-bind="$attrs" show-gridlines resizable-columns column-resize-mode="fit"
+            table-style="min-width: 50rem" :pt="{
                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' },
             }">
             <slot />

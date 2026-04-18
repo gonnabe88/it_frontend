@@ -105,6 +105,7 @@ const getCttTp = (cdId: string): string => {
 };
 
 /** 경상사업 여부 (ornYn='Y') */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isOrdinary = computed(() => (project.value as any)?.ornYn === 'Y');
 
 definePageMeta({
@@ -203,6 +204,7 @@ const timelineProgressWidth = computed(() => {
  */
 const totalItemsAmount = computed(() => {
     if (!project.value?.items) return 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return project.value.items.reduce((sum: number, item: any) => {
         const amt = item.gclAmt || 0;
         const currency = item.cur || 'KRW';
@@ -314,9 +316,11 @@ const allTocItems = [
 const tocItems = computed(() => {
     if (!isOrdinary.value) return allTocItems;
     return allTocItems
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .filter(item => !(item as any).ordinaryHidden)
         .map(item => ({
             ...item,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             children: item.children?.filter(c => !(c as any).ordinaryHidden)
         }));
 });
@@ -393,22 +397,26 @@ onUnmounted(() => {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-start gap-4">
                 <!-- 뒤로 가기 버튼 -->
-                <Button icon="pi pi-arrow-left" text rounded aria-label="Back" @click="router.back()"
-                    class="mt-1 w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors" />
+                <Button
+icon="pi pi-arrow-left" text rounded aria-label="Back" class="mt-1 w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+                    @click="router.back()" />
                 <div class="space-y-2">
                     <!-- 사업 유형 태그 + 관리번호 + 기간 -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                        <Tag v-if="isOrdinary" value="경상사업"
+                        <Tag
+v-if="isOrdinary" value="경상사업"
                             class="bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
-                        <Tag :value="getPrjTpName(project.prjTp)"
+                        <Tag
+                            :value="getPrjTpName(project.prjTp)"
                             class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <span class="font-mono text-zinc-400">#{{ project.prjMngNo }}</span>
                         <span class="text-zinc-300 dark:text-zinc-700">|</span>
-                        <div v-if="!isOrdinary"
+                        <div
+                            v-if="!isOrdinary"
                             class="flex items-center gap-1.5 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs font-medium">
-                            <i class="pi pi-calendar text-zinc-400"></i>
+                            <i class="pi pi-calendar text-zinc-400"/>
                             <span>{{ project.sttDt }} ~ {{ project.endDt }}</span>
                         </div>
                         <span v-else class="text-xs font-medium">{{ project.bgYy }}년</span>
@@ -417,7 +425,8 @@ onUnmounted(() => {
                     <div class="flex flex-wrap items-center gap-3">
                         <h1 class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">{{
                             project.prjNm }}</h1>
-                        <Tag :value="project.prjSts" :class="getProjectTagClass(project.prjSts || '')"
+                        <Tag
+                            :value="project.prjSts" :class="getProjectTagClass(project.prjSts || '')"
                             class="text-sm px-3 py-1 font-bold shadow-sm" rounded />
                     </div>
                 </div>
@@ -425,15 +434,18 @@ onUnmounted(() => {
 
             <!-- 액션 버튼: 목록 / 삭제(조건부) / 수정 -->
             <div class="flex gap-2 self-end md:self-center">
-                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
+                <Button
+label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
                     @click="router.back()" />
                 <!-- 결재 중이거나 완료된 경우, 또는 수정 권한이 없는 경우 삭제 버튼 숨김 -->
-                <Button v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)
+                <Button
+v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)
                     && canModify(project.fstEnrUsid, project.svnDpm)" label="삭제"
                     icon="pi pi-trash" severity="danger" outlined class="bg-white dark:bg-zinc-900"
                     @click="handleDelete" />
                 <!-- 수정 권한이 있는 경우에만 수정 버튼 표시 -->
-                <Button v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-pencil"
+                <Button
+v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-pencil"
                     class="shadow-lg shadow-indigo-500/20"
                     @click="navigateTo(`/info/projects/form?id=${project.prjMngNo}${isOrdinary ? '&ordinary=true' : ''}`)" />
             </div>
@@ -446,11 +458,12 @@ onUnmounted(() => {
             <div class="xl:col-span-3 flex flex-col gap-10 w-full">
 
                 <!-- 섹션 1: 사업 진행 현황 타임라인 -->
-                <section id="section-progress"
+                <section
+id="section-progress"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md overflow-visible">
                     <div class="flex items-center justify-between mb-8">
                         <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                            <i class="pi pi-step-forward-alt text-indigo-500"></i>
+                            <i class="pi pi-step-forward-alt text-indigo-500"/>
                             사업 진행 현황
                         </h3>
                         <!-- 현재 단계 뱃지 -->
@@ -463,21 +476,23 @@ onUnmounted(() => {
                     <!-- 타임라인 컨테이너 -->
                     <div class="relative w-full px-2">
                         <!-- 전체 기준선 (회색): 첫 원 중심 ~ 마지막 원 중심 -->
-                        <div class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700"
-                            :style="{ top: '20px', left: `calc(100% / ${PROJECT_STAGES.length * 2})`, right: `calc(100% / ${PROJECT_STAGES.length * 2})` }">
-                        </div>
+                        <div
+class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700"
+                            :style="{ top: '20px', left: `calc(100% / ${PROJECT_STAGES.length * 2})`, right: `calc(100% / ${PROJECT_STAGES.length * 2})` }"/>
                         <!-- 완료 진행선 (인디고): 첫 원 중심 ~ 현재 단계 원 중심 -->
-                        <div class="absolute h-[2px] bg-indigo-500 transition-all duration-700"
-                            :style="{ top: '20px', left: `calc(100% / ${PROJECT_STAGES.length * 2})`, width: timelineProgressWidth }">
-                        </div>
+                        <div
+class="absolute h-[2px] bg-indigo-500 transition-all duration-700"
+                            :style="{ top: '20px', left: `calc(100% / ${PROJECT_STAGES.length * 2})`, width: timelineProgressWidth }"/>
 
                         <div class="flex items-start justify-between w-full">
                             <!-- 각 단계 스텝 -->
-                            <div v-for="(step, index) in PROJECT_STAGES" :key="index"
+                            <div
+v-for="(step, index) in PROJECT_STAGES" :key="index"
                                 class="relative flex flex-col items-center flex-1 group">
 
                                 <!-- 원형 마커: 완료(체크)/현재(진행 텍스트+링)/예정(숫자) -->
-                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
+                                <div
+class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
                                     :class="[
                                         getCurrentStageIndex(project.prjSts) > Number(index)
                                             ? 'border-indigo-200 bg-indigo-50 text-indigo-400 dark:border-indigo-800 dark:bg-indigo-900/10 dark:text-indigo-500'
@@ -487,17 +502,20 @@ onUnmounted(() => {
                                     ]">
 
                                     <!-- 완료 단계: 체크 아이콘 -->
-                                    <i v-if="getCurrentStageIndex(project.prjSts) > Number(index)"
-                                        class="pi pi-check text-lg font-bold"></i>
+                                    <i
+v-if="getCurrentStageIndex(project.prjSts) > Number(index)"
+                                        class="pi pi-check text-lg font-bold"/>
                                     <!-- 현재 단계: '진행' 텍스트 -->
-                                    <span v-else-if="getCurrentStageIndex(project.prjSts) === Number(index)"
+                                    <span
+v-else-if="getCurrentStageIndex(project.prjSts) === Number(index)"
                                         class="text-[10px] font-bold tracking-tighter">진행</span>
                                     <!-- 예정 단계: 순번 숫자 -->
                                     <span v-else>{{ Number(index) + 1 }}</span>
 
                                     <!-- 현재 단계 핑 애니메이션 -->
-                                    <span v-if="getCurrentStageIndex(project.prjSts) === Number(index)"
-                                        class="absolute inset-0 rounded-full animate-ping bg-indigo-500 opacity-20"></span>
+                                    <span
+v-if="getCurrentStageIndex(project.prjSts) === Number(index)"
+                                        class="absolute inset-0 rounded-full animate-ping bg-indigo-500 opacity-20"/>
                                 </div>
 
                                 <!-- 단계 라벨 텍스트 -->
@@ -520,29 +538,31 @@ onUnmounted(() => {
                 </section>
 
                 <!-- 섹션 2: 사업 개요 -->
-                <section id="section-overview"
+                <section
+id="section-overview"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
 
                     <div id="sub-overview-desc" class="scroll-mt-6">
                         <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4">
-                            <i class="pi pi-info-circle text-blue-500"></i>
+                            <i class="pi pi-info-circle text-blue-500"/>
                             사업 개요
                         </h3>
                         <!-- 사업 주요내용 (Rich Text - XSS 방어 적용) -->
                         <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md block mb-2">사업 주요내용</label>
-                        <div class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
-                            v-html="sanitizeHtml(project.prjDes || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"
-                            style="height: 200px; overflow-y: auto;"></div>
+                        <div
+class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
+                            style="height: 200px; overflow-y: auto;"
+                            v-html="sanitizeHtml(project.prjDes || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"/>
                     </div>
                     <!-- 현황 / 필요성 / 기대효과 / 미추진 시 문제점 (2x2 타임라인 스타일) -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <!-- 현황 -->
                         <div id="sub-overview-status" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                    <i class="pi pi-chart-bar text-sm"></i>
+                                    <i class="pi pi-chart-bar text-sm"/>
                                 </div>
                                 <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">현황</label>
                                 <div
@@ -553,11 +573,11 @@ onUnmounted(() => {
                         </div>
                         <!-- 필요성 -->
                         <div id="sub-overview-need" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                    <i class="pi pi-question-circle text-sm"></i>
+                                    <i class="pi pi-question-circle text-sm"/>
                                 </div>
                                 <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">필요성</label>
                                 <div
@@ -568,11 +588,11 @@ onUnmounted(() => {
                         </div>
                         <!-- 기대효과 (경상사업 숨김) -->
                         <div v-if="!isOrdinary" id="sub-overview-expect" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-50 dark:bg-blue-900/20"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-50 dark:bg-blue-900/20"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500">
-                                    <i class="pi pi-star text-sm"></i>
+                                    <i class="pi pi-star text-sm"/>
                                 </div>
                                 <label
                                     class="font-bold text-blue-900 dark:text-blue-100 text-md mb-3 block">기대효과</label>
@@ -584,11 +604,11 @@ onUnmounted(() => {
                         </div>
                         <!-- 미추진 시 문제점 (경상사업 숨김) -->
                         <div v-if="!isOrdinary" id="sub-overview-problem" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-red-50 dark:bg-red-900/20"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-red-50 dark:bg-red-900/20"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500">
-                                    <i class="pi pi-exclamation-triangle text-sm"></i>
+                                    <i class="pi pi-exclamation-triangle text-sm"/>
                                 </div>
                                 <label class="font-bold text-red-900 dark:text-red-100 text-md mb-3 block">미추진 시
                                     문제점</label>
@@ -602,20 +622,21 @@ onUnmounted(() => {
                 </section>
 
                 <!-- 섹션 3 & 4: 사업 범위 및 일정 + 진행 상황 + 추진시기 (경상사업 숨김) -->
-                <section v-if="!isOrdinary" id="section-scope"
+                <section
+v-if="!isOrdinary" id="section-scope"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
 
                     <!-- 사업 범위 및 일정 -->
                     <div id="sub-scope-range" class="scroll-mt-6">
                         <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4">
-                            <i class="pi pi-map text-green-500"></i>
+                            <i class="pi pi-map text-green-500"/>
                             사업 범위 및 일정
                         </h3>
                         <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md block mb-2">사업 범위</label>
-                        <div class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
-                            v-html="sanitizeHtml(project.prjRng || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"
-                            style="height: 200px;">
-                        </div>
+                        <div
+class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
+                            style="height: 200px;"
+                            v-html="sanitizeHtml(project.prjRng || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"/>
                     </div>
 
                     <!-- 진행 상황 (추진 경과 + 향후 계획) -->
@@ -623,11 +644,11 @@ onUnmounted(() => {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <!-- 추진 경과 -->
                             <div id="sub-scope-history" class="relative scroll-mt-6">
-                                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"></div>
+                                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
                                 <div class="relative pl-10">
                                     <div
                                         class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                        <i class="pi pi-history text-sm"></i>
+                                        <i class="pi pi-history text-sm"/>
                                     </div>
                                     <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">추진
                                         경과</label>
@@ -639,12 +660,11 @@ onUnmounted(() => {
                             </div>
                             <!-- 향후 계획 -->
                             <div id="sub-scope-plan" class="relative scroll-mt-6">
-                                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-indigo-50 dark:bg-indigo-900/20">
-                                </div>
+                                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-indigo-50 dark:bg-indigo-900/20"/>
                                 <div class="relative pl-10">
                                     <div
                                         class="absolute left-0 top-0 w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500">
-                                        <i class="pi pi-calendar-plus text-sm"></i>
+                                        <i class="pi pi-calendar-plus text-sm"/>
                                     </div>
                                     <label class="font-bold text-indigo-900 dark:text-indigo-100 text-md mb-3 block">향후
                                         계획</label>
@@ -657,17 +677,17 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div class="border-t border-zinc-100 dark:border-zinc-800"></div>
+                    <div class="border-t border-zinc-100 dark:border-zinc-800"/>
 
                     <!-- 시작일 / 종료일 / 추진가능성 -->
                     <div id="sub-scope-dates" class="grid grid-cols-1 md:grid-cols-3 gap-8 scroll-mt-6">
                         <!-- 시작일 -->
                         <div class="relative">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                    <i class="pi pi-calendar text-sm"></i>
+                                    <i class="pi pi-calendar text-sm"/>
                                 </div>
                                 <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">사업시작
                                     예정일</label>
@@ -679,11 +699,11 @@ onUnmounted(() => {
                         </div>
                         <!-- 종료일 -->
                         <div class="relative">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                    <i class="pi pi-calendar-minus text-sm"></i>
+                                    <i class="pi pi-calendar-minus text-sm"/>
                                 </div>
                                 <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">사업종료
                                     예정일</label>
@@ -695,11 +715,11 @@ onUnmounted(() => {
                         </div>
                         <!-- 추진가능성 -->
                         <div class="relative">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-green-50 dark:bg-green-900/20"></div>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-green-50 dark:bg-green-900/20"/>
                             <div class="relative pl-10">
                                 <div
                                     class="absolute left-0 top-0 w-8 h-8 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-green-500">
-                                    <i class="pi pi-check-circle text-sm"></i>
+                                    <i class="pi pi-check-circle text-sm"/>
                                 </div>
                                 <label
                                     class="font-bold text-green-900 dark:text-green-100 text-md mb-3 block">추진가능성</label>
@@ -713,10 +733,11 @@ onUnmounted(() => {
 
                 </section>
                 <!-- 섹션 5: 사업 구분 (경상사업 숨김) -->
-                <section v-if="!isOrdinary" id="section-category"
+                <section
+v-if="!isOrdinary" id="section-category"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
-                        <i class="pi pi-tags text-purple-500"></i>
+                        <i class="pi pi-tags text-purple-500"/>
                         사업 구분
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
@@ -740,17 +761,19 @@ onUnmounted(() => {
                 </section>
 
                 <!-- 섹션 6: 편성 기준 (경상사업 숨김) -->
-                <section v-if="!isOrdinary" id="section-criteria"
+                <section
+v-if="!isOrdinary" id="section-criteria"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
-                        <i class="pi pi-check-circle text-teal-500"></i>
+                        <i class="pi pi-check-circle text-teal-500"/>
                         편성 기준
                     </h3>
                     <div class="space-y-4">
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">중복 여부</span>
-                            <Tag :severity="project.dplYn === 'Y' ? 'danger' : 'success'"
-                                :value="project.dplYn === 'Y' ? '중복 (Y)' : '미중복 (N)'" rounded></Tag>
+                            <Tag
+                                :severity="project.dplYn === 'Y' ? 'danger' : 'success'"
+                                :value="project.dplYn === 'Y' ? '중복 (Y)' : '미중복 (N)'" rounded/>
                         </div>
                         <div class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl">
                             <span class="text-zinc-500 text-sm font-medium">법규상 완료시기</span>
@@ -760,24 +783,25 @@ onUnmounted(() => {
                     </div>
                 </section>
                 <!-- 섹션 7: 담당 조직 (경상사업 숨김) -->
-                <section v-if="!isOrdinary" id="section-org"
+                <section
+v-if="!isOrdinary" id="section-org"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
-                        <i class="pi pi-users text-cyan-500"></i>
+                        <i class="pi pi-users text-cyan-500"/>
                         담당 조직
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <!-- 주관부서 정보 카드 (Business Owner) -->
-                        <div id="sub-org-business"
+                        <div
+id="sub-org-business"
                             class="scroll-mt-6 flex flex-col gap-4 p-6 bg-gradient-to-br from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-blue-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
                             <div
-                                class="absolute right-0 top-0 w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700">
-                            </div>
+                                class="absolute right-0 top-0 w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"/>
                             <!-- 부서 아이콘 + 이름 -->
                             <div class="flex items-center gap-3 z-10">
                                 <div
                                     class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-50 dark:border-zinc-700 shrink-0">
-                                    <i class="pi pi-briefcase text-lg"></i>
+                                    <i class="pi pi-briefcase text-lg"/>
                                 </div>
                                 <div>
                                     <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">주관부서</div>
@@ -806,16 +830,16 @@ onUnmounted(() => {
                         </div>
 
                         <!-- IT부서 정보 카드 (IT Partner) -->
-                        <div id="sub-org-it"
+                        <div
+id="sub-org-it"
                             class="scroll-mt-6 flex flex-col gap-4 p-6 bg-gradient-to-br from-indigo-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-indigo-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
                             <div
-                                class="absolute right-0 top-0 w-24 h-24 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700">
-                            </div>
+                                class="absolute right-0 top-0 w-24 h-24 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"/>
                             <!-- 부서 아이콘 + 이름 -->
                             <div class="flex items-center gap-3 z-10">
                                 <div
                                     class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-50 dark:border-zinc-700 shrink-0">
-                                    <i class="pi pi-desktop text-lg"></i>
+                                    <i class="pi pi-desktop text-lg"/>
                                 </div>
                                 <div>
                                     <div class="text-xs font-bold text-indigo-500 uppercase tracking-wider">IT 담당부서
@@ -846,20 +870,21 @@ onUnmounted(() => {
                 </section>
 
                 <!-- 섹션 8: 추진시기 및 소요예산 -->
-                <section id="section-budget"
+                <section
+id="section-budget"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
-                        <i class="pi pi-wallet text-yellow-500"></i>
+                        <i class="pi pi-wallet text-yellow-500"/>
                         소요예산
                     </h3>
                     <!-- 총예산 / 전결권 / 보고상태 카드 (경상사업: 보고상태 숨김 → 2열) -->
                     <div class="grid gap-4" :class="isOrdinary ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'">
                         <!-- 총 예산 카드 -->
-                        <div id="sub-budget-total"
+                        <div
+id="sub-budget-total"
                             class="scroll-mt-6 flex flex-col justify-between p-6 bg-yellow-50/[0.6] dark:bg-yellow-900/10 rounded-2xl border border-yellow-100 dark:border-yellow-900/20 text-center relative overflow-hidden">
                             <div
-                                class="absolute -right-4 -top-4 w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full blur-xl">
-                            </div>
+                                class="absolute -right-4 -top-4 w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full blur-xl"/>
                             <div class="z-10">
                                 <div
                                     class="text-sm font-bold text-yellow-600 dark:text-yellow-500 uppercase tracking-wide mb-2">
@@ -882,11 +907,11 @@ onUnmounted(() => {
                             </div>
                         </div>
                         <!-- 전결권 카드 -->
-                        <div id="sub-budget-auth"
+                        <div
+id="sub-budget-auth"
                             class="scroll-mt-6 flex flex-col justify-between p-6 bg-blue-50/[0.6] dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden">
                             <div
-                                class="absolute -right-4 -top-4 w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl">
-                            </div>
+                                class="absolute -right-4 -top-4 w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl"/>
                             <div class="z-10">
                                 <div
                                     class="text-sm font-bold text-blue-600 dark:text-blue-500 uppercase tracking-wide mb-2">
@@ -902,11 +927,11 @@ onUnmounted(() => {
                             </div>
                         </div>
                         <!-- 보고상태 카드 (경상사업 숨김) -->
-                        <div v-if="!isOrdinary" id="sub-budget-report"
+                        <div
+v-if="!isOrdinary" id="sub-budget-report"
                             class="scroll-mt-6 flex flex-col justify-between p-6 bg-green-50/[0.6] dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/20 text-center relative overflow-hidden">
                             <div
-                                class="absolute -right-4 -top-4 w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full blur-xl">
-                            </div>
+                                class="absolute -right-4 -top-4 w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full blur-xl"/>
                             <div class="z-10">
                                 <div
                                     class="text-sm font-bold text-green-600 dark:text-green-500 uppercase tracking-wide mb-2">
@@ -925,40 +950,47 @@ onUnmounted(() => {
                 </section>
 
                 <!-- 섹션 9: 소요자원 상세내용 DataTable -->
-                <section id="section-resource"
+                <section
+id="section-resource"
                     class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md"
                     style="height: 1000px;">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
-                        <i class="pi pi-box text-pink-500"></i>
+                        <i class="pi pi-box text-pink-500"/>
                         소요자원 상세내용
                     </h3>
                     <div class="rounded-xl overflow-hidden">
-                        <StyledDataTable :value="project.items || []" size="small"
-                            stripedRows class="resource-table-modern">
+                        <StyledDataTable
+                            :value="project.items || []" size="small"
+                            striped-rows class="resource-table-modern">
                             <template #empty>
                                 <div class="text-center text-zinc-500 py-12 flex flex-col items-center gap-3">
-                                    <i class="pi pi-inbox text-4xl text-zinc-300"></i>
+                                    <i class="pi pi-inbox text-4xl text-zinc-300"/>
                                     <p>등록된 소요자원이 없습니다.</p>
                                 </div>
                             </template>
                             <!-- 구분: 공통코드 cdNm 표시 + cttTp 기반 색상 Badge -->
-                            <Column field="gclDtt" header="구분" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="gclDtt" header="구분" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <Tag :value="getCodeNm(data.gclDtt)" :severity="getCategorySeverity(data.gclDtt)" rounded
-                                        class="text-xs"></Tag>
+                                    <Tag
+                                        :value="getCodeNm(data.gclDtt)" :severity="getCategorySeverity(data.gclDtt)" rounded
+                                        class="text-xs"/>
                                 </template>
                             </Column>
-                            <Column field="gclNm" header="품목명" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="gclNm" header="품목명" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 style="min-width: 250px">
                                 <template #body="{ data }">
                                     <span class="text-zinc-700 dark:text-zinc-200 font-medium">{{ data.gclNm }}</span>
                                 </template>
                             </Column>
-                            <Column field="gclQtt" header="수량" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="gclQtt" header="수량" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-right" style="width: 80px" />
                             <!-- 단가: 소계 ÷ 수량으로 계산 -->
-                            <Column field="upr" header="단가" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="upr" header="단가" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-right" style="min-width: 120px">
                                 <template #body="{ data }">
                                     <span class="text-zinc-600 dark:text-zinc-400">{{ formatCurrency(data.gclAmt /
@@ -966,7 +998,8 @@ onUnmounted(() => {
                                         || 0, data.cur) }}</span>
                                 </template>
                             </Column>
-                            <Column field="cur" header="통화" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="cur" header="통화" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-right bg-zinc-50/50 dark:bg-zinc-900" style="width: 60px">
                                 <template #body="{ data }">
                                     <span class="text-xs">
@@ -978,7 +1011,8 @@ onUnmounted(() => {
                                 </template>
                             </Column>
                             <!-- 소계 -->
-                            <Column field="amt" header="소계" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="amt" header="소계" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-right bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 140px">
                                 <template #body="{ data }">
                                     <span class="font-medium text-zinc-900 dark:text-zinc-100">{{
@@ -986,14 +1020,17 @@ onUnmounted(() => {
                                             0, data.cur) }}</span>
                                 </template>
                             </Column>
-                            <Column field="bgFdtn" header="산정근거"
-                                headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center" style="min-width: 100px"
+                            <Column
+                                field="bgFdtn" header="산정근거"
+                                header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center" style="min-width: 100px"
                                 class="text-right bg-zinc-50/50 dark:bg-zinc-900" />
                             <!-- 도입시기: 자본예산(IOE_CPIT) -->
-                            <Column header="도입시기" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                header="도입시기" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <span v-if="getCttTp(data.gclDtt) === 'IOE_CPIT'"
+                                    <span
+                                        v-if="getCttTp(data.gclDtt) === 'IOE_CPIT'"
                                         class="text-zinc-600 dark:text-zinc-300">
                                         {{ formatDateToYearMonth(data.itdDt) }}
                                     </span>
@@ -1001,10 +1038,12 @@ onUnmounted(() => {
                                 </template>
                             </Column>
                             <!-- 지급주기: 자본예산 이외 -->
-                            <Column header="지급주기" headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                header="지급주기" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <span v-if="getCttTp(data.gclDtt) !== 'IOE_CPIT' && getCttTp(data.gclDtt)"
+                                    <span
+                                        v-if="getCttTp(data.gclDtt) !== 'IOE_CPIT' && getCttTp(data.gclDtt)"
                                         class="text-zinc-600 dark:text-zinc-300">
                                         {{ data.dfrCle || '-' }}
                                     </span>
@@ -1012,33 +1051,36 @@ onUnmounted(() => {
                                 </template>
                             </Column>
                             <!-- 정보보호 여부 -->
-                            <Column field="infPrtYn" header="정보보호"
-                                headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="infPrtYn" header="정보보호"
+                                header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="width: 80px">
                                 <template #body="{ data }">
-                                    <Tag :value="data.infPrtYn === 'Y' ? 'Y' : 'N'"
+                                    <Tag
+                                        :value="data.infPrtYn === 'Y' ? 'Y' : 'N'"
                                         :severity="data.infPrtYn === 'Y' ? 'success' : 'secondary'" rounded
-                                        class="text-xs">
-                                    </Tag>
+                                        class="text-xs"/>
                                 </template>
                             </Column>
                             <!-- 통합인프라 여부 -->
-                            <Column field="itrInfrYn" header="통합인프라"
-                                headerClass="bg-zinc-50/80 dark:bg-zinc-800 text-center"
+                            <Column
+                                field="itrInfrYn" header="통합인프라"
+                                header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="width: 90px">
                                 <template #body="{ data }">
-                                    <Tag :value="data.itrInfrYn === 'Y' ? 'Y' : 'N'"
+                                    <Tag
+                                        :value="data.itrInfrYn === 'Y' ? 'Y' : 'N'"
                                         :severity="data.itrInfrYn === 'Y' ? 'success' : 'secondary'" rounded
-                                        class="text-xs">
-                                    </Tag>
+                                        class="text-xs"/>
                                 </template>
                             </Column>
                             <!-- Footer: 소요자원 총 합계 -->
                             <ColumnGroup type="footer">
                                 <Row>
-                                    <Column footer="총 합계 (원화 환산)" :colspan="5" footerClass="text-center font-bold" />
-                                    <Column :footer="formatCurrency(totalItemsAmount, 'KRW')"
-                                        footerClass="text-center font-medium text-indigo-600 dark:text-indigo-400" />
+                                    <Column footer="총 합계 (원화 환산)" :colspan="5" footer-class="text-center font-bold" />
+                                    <Column
+                                        :footer="formatCurrency(totalItemsAmount, 'KRW')"
+                                        footer-class="text-center font-medium text-indigo-600 dark:text-indigo-400" />
                                     <Column :colspan="5" />
                                 </Row>
                             </ColumnGroup>
@@ -1054,17 +1096,18 @@ onUnmounted(() => {
                 <div class="sticky top-6 lg:pl-4">
                     <h3
                         class="font-bold text-[14px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-3 flex items-center gap-2">
-                        <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"></i> 바로가기 목차
+                        <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"/> 바로가기 목차
                     </h3>
 
                     <ul class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-3">
                         <li v-for="item in tocItems" :key="item.id" class="flex flex-col mb-1 relative">
                             <!-- 활성화 인디케이터 (왼쪽 보더선) -->
-                            <div v-if="activeSection === item.id || (item.children && item.children.some(c => activeSection === c.id))"
-                                class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full">
-                            </div>
+                            <div
+v-if="activeSection === item.id || (item.children && item.children.some(c => activeSection === c.id))"
+                                class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full"/>
 
-                            <div class="relative flex items-center gap-3 py-1.5 px-4 cursor-pointer transition-colors duration-200 group text-[14px]"
+                            <div
+class="relative flex items-center gap-3 py-1.5 px-4 cursor-pointer transition-colors duration-200 group text-[14px]"
                                 :class="(activeSection === item.id || (item.children && item.children.some(c => activeSection === c.id))) ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'"
                                 @click="scrollTo(item.id)">
                                 <span class="truncate">{{ item.label }}</span>
@@ -1073,7 +1116,8 @@ onUnmounted(() => {
                             <!-- 하위 목차 (children이 있는 경우) -->
                             <ul v-if="item.children" class="flex flex-col gap-0.5 mt-0.5 mb-2 ml-5">
                                 <li v-for="child in item.children" :key="child.id" class="relative">
-                                    <div class="py-1 px-3 rounded-md cursor-pointer transition-colors duration-200 text-[13px] flex items-center"
+                                    <div
+class="py-1 px-3 rounded-md cursor-pointer transition-colors duration-200 text-[13px] flex items-center"
                                         :class="activeSection === child.id ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300'"
                                         @click.stop="scrollTo(child.id)">
                                         <span class="truncate">{{ child.label }}</span>
@@ -1091,11 +1135,11 @@ onUnmounted(() => {
 
     <!-- API 오류 상태 -->
     <div v-else-if="error" class="flex flex-col items-center justify-center py-20 text-red-500 animate-pulse">
-        <i class="pi pi-exclamation-circle text-5xl mb-6"></i>
+        <i class="pi pi-exclamation-circle text-5xl mb-6"/>
         <h2 class="text-2xl font-bold mb-2">데이터를 불러오지 못했습니다</h2>
         <p class="text-zinc-500 mb-6">{{ error.message }}</p>
         <Button label="다시 시도" icon="pi pi-refresh" @click="router.go(0)" />
-        <Button label="목록으로" link @click="router.back()" class="mt-2" />
+        <Button label="목록으로" link class="mt-2" @click="router.back()" />
     </div>
 
     <!-- 데이터 없음 (존재하지 않는 ID) -->
@@ -1103,7 +1147,7 @@ onUnmounted(() => {
         <div class="text-6xl mb-6 grayscale filter">😢</div>
         <h2 class="text-2xl font-bold text-zinc-800 dark:text-zinc-200">찾으시는 사업 정보가 없습니다.</h2>
         <p class="text-zinc-500 mt-2">삭제되었거나 존재하지 않는 프로젝트 ID입니다.</p>
-        <Button label="목록으로 돌아가기" outlined @click="router.back()" class="mt-8" />
+        <Button label="목록으로 돌아가기" outlined class="mt-8" @click="router.back()" />
     </div>
 </template>
 

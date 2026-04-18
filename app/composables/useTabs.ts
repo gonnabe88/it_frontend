@@ -68,6 +68,7 @@ export const useTabs = () => {
      *   addTab(to);
      * });
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addTab = (newRoute: any): boolean => {
         // path 기준으로 중복 탭 여부 확인 (쿼리가 달라도 같은 path면 중복)
         const existingTab = tabs.value.find(t => t.path === newRoute.path);

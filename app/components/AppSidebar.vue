@@ -29,7 +29,7 @@ import IconCrown from '~/components/icons/IconCrown.vue';
 const collapsed = useCookie<boolean>('sidebar-collapsed', { default: () => false });
 
 // RBAC 권한 헬퍼: 관리자 메뉴 표시 여부 판단에 사용
-const { isAdmin } = useAuth();
+const { isAdmin: _isAdmin } = useAuth();
 
 /* ── 결재 상신 배지: 결재 대기 중인 항목 수 ── */
 const { fetchProjects } = useProjects();
@@ -152,7 +152,7 @@ const menuItems = computed(() => {
     ];
 });
 
-const isGroupExpanded = (label: string) => {
+const _isGroupExpanded = (_label: string) => {
     // Simple logic: expand all or track state. For now, expand all.
     // Or add state for expanded groups.
     return true;
@@ -163,6 +163,7 @@ const toggleGroup = (label: string) => {
     expandedGroups.value[label] = !expandedGroups.value[label];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleGroupClick = (item: any) => {
     if (collapsed.value) {
         // 접힌 상태에서는 첫 번째 하위 메뉴로 이동
@@ -206,24 +207,28 @@ watch(menuItems, (items) => {
 <template>
     <aside
         :class="['relative bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 transition-all duration-300 flex flex-col shadow-xl z-20 whitespace-nowrap', collapsed ? 'w-20' : 'w-72']">
-        <div id="sidebar-header"
+        <div
+id="sidebar-header"
             class="h-[76px] flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 px-6 transition-all duration-300">
             <div class="flex items-center gap-3">
-                <img src="~/assets/logo.png" alt="Logo" class="w-8 h-8 object-contain dark:invert" />
+                <img src="~/assets/logo.png" alt="Logo" class="w-8 h-8 object-contain dark:invert" >
                 <Transition name="fade">
-                    <span v-if="!collapsed"
+                    <span
+v-if="!collapsed"
                         class="font-bold text-xl tracking-wider text-primary-600 dark:text-primary-400">정보화
                         Portal</span>
                 </Transition>
             </div>
 
-            <button v-if="!collapsed" @click="toggleSidebar"
-                class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
-                <i class="pi pi-bars"></i>
+            <button
+v-if="!collapsed" class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                @click="toggleSidebar">
+                <i class="pi pi-bars"/>
             </button>
-            <button v-else @click="toggleSidebar"
-                class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-1.5 rounded-full shadow-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white z-50">
-                <i class="pi pi-angle-right text-xs"></i>
+            <button
+v-else class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-1.5 rounded-full shadow-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white z-50"
+                @click="toggleSidebar">
+                <i class="pi pi-angle-right text-xs"/>
             </button>
         </div>
 
@@ -232,12 +237,13 @@ watch(menuItems, (items) => {
                 <template v-for="item in menuItems" :key="item.label">
                     <!-- Single Item -->
                     <li v-if="!item.items">
-                        <NuxtLink :to="item.to"
+                        <NuxtLink
+v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
+                            :to="item.to"
                             class="flex items-center py-3 rounded-lg text-indigo-800 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3"
-                            active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium"
-                            v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }">
+                            active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium">
                             <div class="flex items-center">
-                                <i :class="[item.icon, 'text-xl w-8 text-center']"></i>
+                                <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
                                     <span v-if="!collapsed" class="ml-3 font-medium">{{ item.label }}</span>
                                 </Transition>
@@ -246,25 +252,29 @@ watch(menuItems, (items) => {
                     </li>
                     <!-- Group -->
                     <li v-else class="relative group">
-                        <div @click="handleGroupClick(item)"
+                        <div
+v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
                             class="flex items-center justify-between py-3 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800 cursor-pointer transition-colors duration-300 text-indigo-800 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white px-3"
-                            v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }">
+                            @click="handleGroupClick(item)">
                             <div class="flex items-center">
-                                <i :class="[item.icon, 'text-xl w-8 text-center']"></i>
+                                <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
                                     <span v-if="!collapsed" class="ml-3 font-medium">{{ item.label }}</span>
                                 </Transition>
                             </div>
                             <Transition name="fade">
-                                <i v-if="!collapsed"
-                                    :class="['pi text-sm transition-transform', expandedGroups[item.label] ? 'pi-chevron-down' : 'pi-chevron-right']"></i>
+                                <i
+v-if="!collapsed"
+                                    :class="['pi text-sm transition-transform', expandedGroups[item.label] ? 'pi-chevron-down' : 'pi-chevron-right']"/>
                             </Transition>
                         </div>
                         <Transition name="expand" @enter="onEnter" @after-enter="onAfterEnter" @leave="onLeave">
-                            <ul v-if="!collapsed && expandedGroups[item.label]"
+                            <ul
+                                v-if="!collapsed && expandedGroups[item.label]"
                                 class="ml-6 mt-1 space-y-1 border-l border-zinc-200 dark:border-zinc-700 pl-2 overflow-hidden">
                                 <li v-for="sub in item.items" :key="sub.label">
-                                    <NuxtLink :to="sub.to"
+                                    <NuxtLink
+                                        :to="sub.to"
                                         class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
                                         active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
                                         <span class="flex items-center whitespace-nowrap">
@@ -273,7 +283,8 @@ watch(menuItems, (items) => {
                                             <IconCrown v-if="sub.admin" class="w-4 h-4 ml-1 shrink-0 text-yellow-500" />
                                         </span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
-                                        <span v-if="sub.to === '/budget/approval' && approvalCount > 0"
+                                        <span
+v-if="sub.to === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
                                             {{ approvalCount > 99 ? '99+' : approvalCount }}
                                         </span>

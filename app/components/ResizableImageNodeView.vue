@@ -122,60 +122,69 @@ const setAlign = (align: 'left' | 'center' | 'right') => {
     <NodeViewWrapper as="div" :style="{ display: 'flex', justifyContent: wrapperJustify, margin: '0.5rem 0' }">
 
         <!-- 이미지 + 핸들을 감싸는 컨테이너 (상대 위치 기준) -->
-        <div ref="wrapperRef" class="relative inline-block group/img" :style="imageStyle" :class="{
+        <div
+ref="wrapperRef" class="relative inline-block group/img" :style="imageStyle" :class="{
             'outline outline-2 outline-offset-1 outline-indigo-500 rounded-lg': selected || isResizing
         }">
 
             <!-- 이미지 본체 -->
-            <img :src="node.attrs.src" :alt="node.attrs.alt ?? ''" :title="node.attrs.title ?? ''"
-                class="block w-full rounded-lg shadow-sm" draggable="false" />
+            <img
+                :src="node.attrs.src" :alt="node.attrs.alt ?? ''" :title="node.attrs.title ?? ''"
+                class="block w-full rounded-lg shadow-sm" draggable="false" >
 
             <!-- ─ 선택 시: 상단 정렬 툴팁 ─ -->
-            <div v-if="selected && !isResizing"
+            <div
+v-if="selected && !isResizing"
                 class="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 rounded-lg shadow-lg px-1 py-0.5 z-20 whitespace-nowrap">
 
                 <!-- 왼쪽 정렬 -->
-                <button class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                <button
+class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                     :class="{ 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30': (node.attrs.align ?? 'left') === 'left' }"
                     title="왼쪽 정렬" @mousedown.prevent="setAlign('left')">
-                    <i class="pi pi-align-left text-xs"></i>
+                    <i class="pi pi-align-left text-xs"/>
                 </button>
 
                 <!-- 가운데 정렬 -->
-                <button class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                <button
+class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                     :class="{ 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30': node.attrs.align === 'center' }"
                     title="가운데 정렬" @mousedown.prevent="setAlign('center')">
-                    <i class="pi pi-align-center text-xs"></i>
+                    <i class="pi pi-align-center text-xs"/>
                 </button>
 
                 <!-- 오른쪽 정렬 -->
-                <button class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                <button
+class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                     :class="{ 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30': node.attrs.align === 'right' }"
                     title="오른쪽 정렬" @mousedown.prevent="setAlign('right')">
-                    <i class="pi pi-align-right text-xs"></i>
+                    <i class="pi pi-align-right text-xs"/>
                 </button>
 
                 <!-- 구분선 -->
-                <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-600 mx-0.5"></div>
+                <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-600 mx-0.5"/>
 
                 <!-- 너비 초기화 -->
-                <button class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-xs"
+                <button
+class="p-1 rounded text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-xs"
                     title="크기 초기화" @mousedown.prevent="() => { liveWidth = null; updateAttributes({ width: null }); }">
-                    <i class="pi pi-refresh text-xs"></i>
+                    <i class="pi pi-refresh text-xs"/>
                 </button>
             </div>
 
             <!-- ─ 선택/리사이즈 중: 우측 리사이즈 핸들 ─ -->
-            <div v-if="selected || isResizing"
+            <div
+v-if="selected || isResizing"
                 class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-10 bg-white dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-500 rounded-full cursor-ew-resize shadow-md z-20 flex flex-col items-center justify-center gap-0.5"
                 title="드래그하여 이미지 크기 조정" @mousedown="startResize">
                 <!-- 리사이즈 핸들 내부 그립 라인 -->
-                <div class="w-px h-3 bg-zinc-400 dark:bg-zinc-400 rounded-full"></div>
-                <div class="w-px h-3 bg-zinc-400 dark:bg-zinc-400 rounded-full"></div>
+                <div class="w-px h-3 bg-zinc-400 dark:bg-zinc-400 rounded-full"/>
+                <div class="w-px h-3 bg-zinc-400 dark:bg-zinc-400 rounded-full"/>
             </div>
 
             <!-- ─ 리사이즈 중: 현재 너비 뱃지 ─ -->
-            <div v-if="isResizing"
+            <div
+v-if="isResizing"
                 class="absolute bottom-2 right-2 bg-black/60 text-white text-xs rounded-md px-1.5 py-0.5 pointer-events-none z-20 font-mono">
                 {{ liveWidth }}px
             </div>

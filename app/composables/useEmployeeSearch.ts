@@ -46,24 +46,29 @@ export const useEmployeeSearch = () => {
     const employeeDialogVisible = ref(false);
     const selectedRowIndex = ref<number>(-1);
 
-    /** AutoComplete 검색 이벤트 핸들러 (동일 부서 소속 직원 검색) */
-    const searchEmployee = async (event: { query: string }) => {
-        const keyword = event.query.trim();
-        if (!keyword) { employeeSuggestions.value = []; return; }
-        try {
-            const userBase = `${config.public.apiBase}/api/users/search`;
-            const orgCode = user.value?.bbrC ?? '';
-            const results = await $apiFetch<UserSuggestion[]>(userBase, {
-                query: { keyword, ...(orgCode ? { orgCode } : {}) }
-            });
-            employeeSuggestions.value = (results ?? []).map(u => ({
-                ...u,
-                displayLabel: `${u.usrNm}${u.ptCNm ? `(${u.ptCNm})` : ''}, ${u.temNm || u.bbrNm || ''}`
-            }));
-        } catch (e) {
-            console.error('직원 검색 실패', e);
-            employeeSuggestions.value = [];
-        }
+    let _searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    /** AutoComplete 검색 이벤트 핸들러 (동일 부서 소속 직원 검색, 250ms 디바운스) */
+    const searchEmployee = (event: { query: string }) => {
+        if (_searchTimer) clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(async () => {
+            const keyword = event.query.trim();
+            if (!keyword) { employeeSuggestions.value = []; return; }
+            try {
+                const userBase = `${config.public.apiBase}/api/users/search`;
+                const orgCode = user.value?.bbrC ?? '';
+                const results = await $apiFetch<UserSuggestion[]>(userBase, {
+                    query: { keyword, ...(orgCode ? { orgCode } : {}) }
+                });
+                employeeSuggestions.value = (results ?? []).map(u => ({
+                    ...u,
+                    displayLabel: `${u.usrNm}${u.ptCNm ? `(${u.ptCNm})` : ''}, ${u.temNm || u.bbrNm || ''}`
+                }));
+            } catch (e) {
+                console.error('직원 검색 실패', e);
+                employeeSuggestions.value = [];
+            }
+        }, 250);
     };
 
     /** 직원조회 다이얼로그 열기 */

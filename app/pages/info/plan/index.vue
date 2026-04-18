@@ -92,16 +92,16 @@ const onRowClick = (event: { data: Plan }) => {
                 :value="plans"
                 paginator
                 :rows="10"
-                :rowsPerPageOptions="[10, 20, 50]"
-                dataKey="plnMngNo"
-                selectionMode="single"
-                @rowClick="onRowClick"
+                :rows-per-page-options="[10, 20, 50]"
+                data-key="plnMngNo"
+                selection-mode="single"
+                @row-click="onRowClick"
             >
                 <!-- 대상연도 -->
-                <Column field="plnYy" header="대상연도" sortable headerClass="font-bold" style="width: 8rem" />
+                <Column field="plnYy" header="대상연도" sortable header-class="font-bold" style="width: 8rem" />
 
                 <!-- 계획구분 (신규/조정) -->
-                <Column field="plnTp" header="신규/조정" sortable headerClass="font-bold" style="width: 8rem">
+                <Column field="plnTp" header="신규/조정" sortable header-class="font-bold" style="width: 8rem">
                     <template #body="slotProps">
                         <Tag
                             :value="slotProps.data.plnTp"
@@ -111,7 +111,7 @@ const onRowClick = (event: { data: Plan }) => {
                 </Column>
 
                 <!-- 계획관리번호 -->
-                <Column field="plnMngNo" header="계획관리번호" sortable headerClass="font-bold">
+                <Column field="plnMngNo" header="계획관리번호" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
                             {{ slotProps.data.plnMngNo }}
@@ -120,35 +120,35 @@ const onRowClick = (event: { data: Plan }) => {
                 </Column>
 
                 <!-- 총예산 -->
-                <Column field="ttlBg" :header="`총예산 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="ttlBg" :header="`총예산 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.ttlBg) }}</span>
                     </template>
                 </Column>
 
                 <!-- 자본예산 -->
-                <Column field="cptBg" :header="`자본예산 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="cptBg" :header="`자본예산 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.cptBg) }}</span>
                     </template>
                 </Column>
 
                 <!-- 일반관리비 -->
-                <Column field="mngc" :header="`일반관리비 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="mngc" :header="`일반관리비 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.mngc) }}</span>
                     </template>
                 </Column>
 
                 <!-- 등록일 -->
-                <Column field="fstEnrDtm" header="등록일" sortable headerClass="font-bold" style="width: 10rem">
+                <Column field="fstEnrDtm" header="등록일" sortable header-class="font-bold" style="width: 10rem">
                     <template #body="slotProps">
                         {{ formatDate(slotProps.data.fstEnrDtm) }}
                     </template>
                 </Column>
 
                 <!-- 등록자 -->
-                <Column field="fstEnrUsid" header="등록자" sortable headerClass="font-bold" style="width: 8rem" />
+                <Column field="fstEnrUsid" header="등록자" sortable header-class="font-bold" style="width: 8rem" />
 
                 <!-- 데이터 없음 표시 -->
                 <template #empty>

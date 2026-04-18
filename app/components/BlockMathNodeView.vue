@@ -18,6 +18,7 @@ import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3';
 const props = defineProps(nodeViewProps);
 
 /** mathlive <math-field> DOM 참조 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mathFieldRef = ref<any>(null);
 
 /**
@@ -113,8 +114,9 @@ watch(isEditable, (val) => {
             - display=block 으로 전체 폭 사용
             - 조회 모드: 중앙 정렬 readonly 렌더링
         -->
-        <math-field ref="mathFieldRef" :read-only="!isEditable" @mousedown.stop class="math-field-block"
-            :class="{ 'math-field-readonly': !isEditable }" />
+        <math-field
+ref="mathFieldRef" :read-only="!isEditable" class="math-field-block" :class="{ 'math-field-readonly': !isEditable }"
+            @mousedown.stop />
     </NodeViewWrapper>
 </template>
 

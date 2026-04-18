@@ -25,7 +25,7 @@
  *  - 앱의 모든 페이지 네비게이션 (초기 진입 포함)
  * ============================================================================
  */
-export default defineNuxtRouteMiddleware((to, from) => {
+export default defineNuxtRouteMiddleware((to, _from) => {
     /**
      * SSR 환경 분기
      * localStorage는 브라우저에서만 사용 가능합니다.

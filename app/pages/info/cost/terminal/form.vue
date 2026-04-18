@@ -243,7 +243,7 @@ watch(editId, (newId) => {
 const formatDate = (date: Date | null | string | undefined): string => {
     if (!date) return '';
     const d = new Date(date);
-    if (isNaN(d.getTime())) return '';
+    if (Number.isNaN(d.getTime())) return '';
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().split('T')[0]!;
 };

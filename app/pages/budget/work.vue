@@ -533,13 +533,14 @@ const fmt = (amount: number | null | undefined): string => {
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">예산 작업</h1>
 
             <!-- 예산 단위 선택 -->
-            <SelectButton v-model="budgetUnit" :options="unitOptions" :allowEmpty="false" />
+            <SelectButton v-model="budgetUnit" :options="unitOptions" :allow-empty="false" />
         </div>
 
         <!-- 예산년도 선택 -->
         <div class="flex items-center gap-3">
             <label class="font-semibold text-zinc-700 dark:text-zinc-300">예산년도</label>
-            <Select v-model="selectedYear" :options="yearOptions" optionLabel="label" optionValue="value"
+            <Select
+v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
                 class="w-40" />
         </div>
 
@@ -553,12 +554,13 @@ const fmt = (amount: number | null | undefined): string => {
                 <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
             </div>
 
-            <StyledDataTable :value="targetItems" :loading="targetLoading" stripedRows dataKey="_id">
+            <StyledDataTable :value="targetItems" :loading="targetLoading" striped-rows data-key="_id">
 
                 <!-- 구분 -->
                 <Column field="_type" header="구분" style="width: 5rem">
                     <template #body="{ data }">
-                        <Tag :value="data._type" :class="data._type === '사업'
+                        <Tag
+:value="data._type" :class="data._type === '사업'
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
                             : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
                             class="border-0" rounded />
@@ -568,7 +570,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 사업명/계약명 -->
                 <Column field="name" header="사업명/계약명" style="min-width: 16rem">
                     <template #body="{ data }">
-                        <NuxtLink :to="data._link"
+                        <NuxtLink
+:to="data._link"
                             class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                             {{ data.name }}
                         </NuxtLink>
@@ -608,9 +611,10 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 자본예산 편성률(%) — REQ-2 -->
                 <Column header="자본예산 편성률(%)" style="width: 10rem">
                     <template #body="{ data }">
-                        <InputNumber v-if="data.assetDupRt != null"
+                        <InputNumber
+v-if="data.assetDupRt != null"
                             v-model="data.assetDupRt" :min="0" :max="100" suffix=" %"
-                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
+                            :show-buttons="true" :step="5" class="w-full" input-class="text-right" />
                         <span v-else class="text-right block text-zinc-400">-</span>
                     </template>
                 </Column>
@@ -618,8 +622,9 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 일반관리비 편성률(%) — REQ-2 -->
                 <Column header="일반관리비 편성률(%)" style="width: 10rem">
                     <template #body="{ data }">
-                        <InputNumber v-model="data.costDupRt" :min="0" :max="100" suffix=" %"
-                            :showButtons="true" :step="5" class="w-full" inputClass="text-right" />
+                        <InputNumber
+v-model="data.costDupRt" :min="0" :max="100" suffix=" %"
+                            :show-buttons="true" :step="5" class="w-full" input-class="text-right" />
                     </template>
                 </Column>
 
@@ -636,20 +641,22 @@ const fmt = (amount: number | null | undefined): string => {
 
             <!-- 저장 버튼 -->
             <div class="flex justify-end mt-4">
-                <Button label="저장" severity="primary" icon="pi pi-save" :loading="saving"
+                <Button
+label="저장" severity="primary" icon="pi pi-save" :loading="saving"
                     :disabled="targetItems.length === 0" @click="onSave" />
             </div>
         </div>
 
         <!-- 비목별 편성 결과 테이블 (계층 구조: 자본예산/일반관리비 → 비목그룹 → 세부비목) -->
-        <div v-if="summaryData"
+        <div
+v-if="summaryData"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">비목별 편성 결과</h2>
                 <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
             </div>
 
-            <StyledDataTable :value="summaryRows" dataKey="id" :rowClass="summaryRowClass">
+            <StyledDataTable :value="summaryRows" data-key="id" :row-class="summaryRowClass">
 
                 <!-- 2단 헤더 그룹: 비목(3컬럼) + 요청금액(3컬럼) + 편성금액(3컬럼) + 편성률 -->
                 <ColumnGroup type="header">
@@ -677,13 +684,14 @@ const fmt = (amount: number | null | undefined): string => {
                         <span v-if="data.bigNm" class="font-bold text-blue-900 dark:text-blue-300">{{ data.bigNm
                         }}</span>
                     </template>
-                    <template #footer></template>
+                    <template #footer/>
                 </Column>
 
                 <!-- 중분류 비목 (자본예산 세부비목 · 일반관리비 서브그룹명 · 합계) -->
                 <Column field="midNm">
                     <template #body="{ data }">
-                        <span v-if="data.midNm" :class="{
+                        <span
+v-if="data.midNm" :class="{
                             'font-semibold': data.rowType === 'data' && data.dtlNm,
                             'font-bold': data.rowType === 'total',
                         }">{{ data.midNm }}</span>
@@ -696,17 +704,19 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 세부비목 (일반관리비 데이터 항목 · 소계) -->
                 <Column field="dtlNm">
                     <template #body="{ data }">
-                        <span v-if="data.dtlNm" :class="{
+                        <span
+v-if="data.dtlNm" :class="{
                             'font-bold': data.rowType === 'subtotal',
                         }">{{ data.dtlNm }}</span>
                     </template>
-                    <template #footer></template>
+                    <template #footer/>
                 </Column>
 
                 <!-- 전년 요청금액 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block text-zinc-500">{{ fmt(data.prevRequestAmount) }}</span>
                     </template>
                     <template #footer>
@@ -718,7 +728,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 당해 요청금액 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block">{{ fmt(data.requestAmount) }}</span>
                     </template>
                     <template #footer>
@@ -729,14 +740,16 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 요청금액 증감율 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block" :class="{
                                 'text-red-600': data.requestAmount - data.prevRequestAmount > 0,
                                 'text-blue-600': data.requestAmount - data.prevRequestAmount < 0
                             }">{{ calcChangeRate(data.requestAmount, data.prevRequestAmount) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold" :class="{
+                        <span
+class="text-right block font-bold" :class="{
                             'text-red-600': (summaryData!.totals.requestAmount - (prevSummaryData?.totals.requestAmount || 0)) > 0,
                             'text-blue-600': (summaryData!.totals.requestAmount - (prevSummaryData?.totals.requestAmount || 0)) < 0
                         }">{{ calcChangeRate(summaryData!.totals.requestAmount, prevSummaryData?.totals.requestAmount
@@ -747,7 +760,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 전년 편성금액 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block text-zinc-500">{{ fmt(data.prevDupAmount) }}</span>
                     </template>
                     <template #footer>
@@ -759,7 +773,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 당해 편성금액 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block">{{ fmt(data.dupAmount) }}</span>
                     </template>
                     <template #footer>
@@ -770,14 +785,16 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 편성금액 증감율 -->
                 <Column>
                     <template #body="{ data }">
-                        <span v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block" :class="{
                                 'text-red-600': data.dupAmount - data.prevDupAmount > 0,
                                 'text-blue-600': data.dupAmount - data.prevDupAmount < 0
                             }">{{ calcChangeRate(data.dupAmount, data.prevDupAmount) }}</span>
                     </template>
                     <template #footer>
-                        <span class="text-right block font-bold" :class="{
+                        <span
+class="text-right block font-bold" :class="{
                             'text-red-600': (summaryData!.totals.dupAmount - (prevSummaryData?.totals.dupAmount || 0)) > 0,
                             'text-blue-600': (summaryData!.totals.dupAmount - (prevSummaryData?.totals.dupAmount || 0)) < 0
                         }">{{ calcChangeRate(summaryData!.totals.dupAmount, prevSummaryData?.totals.dupAmount || 0)
@@ -790,7 +807,8 @@ const fmt = (amount: number | null | undefined): string => {
                     <template #body="{ data }">
                         <span v-if="data.rowType === 'data'" class="text-right block">{{ data.dupRt != null ?
                             `${data.dupRt}%` : '-' }}</span>
-                        <span v-else-if="data.rowType === 'subtotal' || data.rowType === 'total'"
+                        <span
+v-else-if="data.rowType === 'subtotal' || data.rowType === 'total'"
                             class="text-right block">-</span>
                     </template>
                     <template #footer>
@@ -801,22 +819,25 @@ const fmt = (amount: number | null | undefined): string => {
         </div>
 
         <!-- 사업별 편성 결과 테이블 (비목별 편성률 동적 컬럼) -->
-        <div v-if="projectSummaryData && projectSummaryData.data.length > 0"
+        <div
+v-if="projectSummaryData && projectSummaryData.data.length > 0"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">사업별 편성 결과</h2>
                 <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
             </div>
 
-            <StyledDataTable :value="projectSummaryData.data" stripedRows dataKey="orcPkVl" scrollable
-                scrollHeight="flex">
+            <StyledDataTable
+:value="projectSummaryData.data" striped-rows data-key="orcPkVl" scrollable
+                scroll-height="flex">
 
                 <!-- 2단 헤더: 고정 컬럼 + 비목별 동적 컬럼 + 합계 -->
                 <ColumnGroup type="header">
                     <Row>
                         <Column header="구분" :rowspan="2" style="width: 5rem" />
                         <Column header="사업명/계약명" :rowspan="2" style="min-width: 14rem" />
-                        <Column v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix" :header="cat.cdNm"
+                        <Column
+v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix" :header="cat.cdNm"
                             :colspan="2" />
                         <Column header="합계" :colspan="2" />
                     </Row>
@@ -835,7 +856,8 @@ const fmt = (amount: number | null | undefined): string => {
                 <!-- 구분 -->
                 <Column>
                     <template #body="{ data }">
-                        <Tag :value="data.orcTb === 'BPROJM' ? '사업' : '비용'" :class="data.orcTb === 'BPROJM'
+                        <Tag
+:value="data.orcTb === 'BPROJM' ? '사업' : '비용'" :class="data.orcTb === 'BPROJM'
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
                             : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
                             class="border-0" rounded />

@@ -114,11 +114,11 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                 </h4>
                 <Button
                     v-if="!readonly && modelValue.length > 1"
+                    v-tooltip.top="'이 성과지표 삭제'"
                     icon="pi pi-trash"
                     severity="danger"
                     text
                     size="small"
-                    v-tooltip.top="'이 성과지표 삭제'"
                     @click="removePerformance(index)"
                 />
             </div>
@@ -193,13 +193,13 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-medium text-zinc-600 dark:text-zinc-400">측정시작일</label>
                     <DatePicker
-                        :modelValue="item.msmSttDt ? new Date(item.msmSttDt) : null"
+                        :model-value="item.msmSttDt ? new Date(item.msmSttDt) : null"
                         :disabled="readonly"
-                        dateFormat="yy-mm-dd"
+                        date-format="yy-mm-dd"
                         placeholder="YYYY-MM-DD"
-                        showIcon
+                        show-icon
                         fluid
-                        @update:modelValue="(v) => updateField(index, 'msmSttDt', v instanceof Date ? v.toISOString().slice(0, 10) : null)"
+                        @update:model-value="(v) => updateField(index, 'msmSttDt', v instanceof Date ? v.toISOString().slice(0, 10) : null)"
                     />
                 </div>
 
@@ -207,13 +207,13 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-medium text-zinc-600 dark:text-zinc-400">측정종료일</label>
                     <DatePicker
-                        :modelValue="item.msmEndDt ? new Date(item.msmEndDt) : null"
+                        :model-value="item.msmEndDt ? new Date(item.msmEndDt) : null"
                         :disabled="readonly"
-                        dateFormat="yy-mm-dd"
+                        date-format="yy-mm-dd"
                         placeholder="YYYY-MM-DD"
-                        showIcon
+                        show-icon
                         fluid
-                        @update:modelValue="(v) => updateField(index, 'msmEndDt', v instanceof Date ? v.toISOString().slice(0, 10) : null)"
+                        @update:model-value="(v) => updateField(index, 'msmEndDt', v instanceof Date ? v.toISOString().slice(0, 10) : null)"
                     />
                 </div>
 

@@ -153,6 +153,7 @@ const handleEditorImageUpload = async (file: File): Promise<string> => {
         pendingImageIds.value.push(result.flMngNo);
         // FileRecord 객체를 전달 → 서버 응답의 previewUrl 필드 우선 사용
         return getPreviewUrl(result);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '이미지 업로드 실패', detail: e?.data?.message || '이미지 업로드 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -172,6 +173,7 @@ const handleEditorFileUpload = async (file: File) => {
         };
         editorAttachments.value.push(newItem);
         return newItem;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '파일 업로드 실패', detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -185,6 +187,7 @@ const handleEditorFileDelete = async (flMngNo: string) => {
         pendingAttachmentIds.value = pendingAttachmentIds.value.filter(id => id !== flMngNo);
         editorAttachments.value = editorAttachments.value.filter(item => item.flMngNo !== flMngNo);
         toast.add({ severity: 'success', summary: '삭제 완료', detail: '파일이 서버에서 삭제되었습니다.', life: 3000 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '삭제 실패', detail: e?.data?.message || '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -220,6 +223,7 @@ const onSave = async () => {
         /* 저장 후 상세 화면으로 이동 + form 탭 닫기 */
         await router.push(`/info/documents/${docMngNo}`);
         removeTab('/info/documents/form');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '저장 실패', detail: e?.data?.message || '저장 중 오류가 발생했습니다.', life: 4000 });
     } finally {
@@ -379,56 +383,64 @@ onUnmounted(() => {
                             <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                                 요청구분 <span class="text-red-500">*</span>
                             </label>
-                            <Textarea v-model="form.reqDtt" placeholder="요청구분을 입력하세요" rows="3"
+                            <Textarea
+v-model="form.reqDtt" placeholder="요청구분을 입력하세요" rows="3"
                                 class="w-full resize-none" />
                         </div>
 
                         <!-- 업무구분 -->
                         <div class="flex flex-col gap-1.5">
                             <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">업무구분</label>
-                            <Textarea v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
+                            <Textarea
+v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
                                 class="w-full resize-none" />
                         </div>
 
                         <!-- 완료기한 -->
                         <div class="flex flex-col gap-1.5">
                             <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">완료기한</label>
-                            <DatePicker v-model="fsgTlmDate" placeholder="YYYY-MM-DD" showIcon fluid
-                                dateFormat="yy-mm-dd" />
+                            <DatePicker
+v-model="fsgTlmDate" placeholder="YYYY-MM-DD" show-icon fluid
+                                date-format="yy-mm-dd" />
                         </div>
 
                         <!-- 첨부파일 영역 -->
                         <div class="md:col-span-2 flex flex-col gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-1">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                                    <i class="pi pi-paperclip text-zinc-400"></i> 첨부파일
+                                    <i class="pi pi-paperclip text-zinc-400"/> 첨부파일
                                 </label>
-                                <Button icon="pi pi-plus" label="파일 추가" size="small" severity="secondary" outlined
+                                <Button
+icon="pi pi-plus" label="파일 추가" size="small" severity="secondary" outlined
                                     @click="attachmentInputRef?.click()" />
                             </div>
 
                             <!-- 숨김 파일 input (다중 선택 허용) -->
-                            <input ref="attachmentInputRef" type="file" multiple class="hidden"
-                                @change="addAttachments" />
+                            <input
+ref="attachmentInputRef" type="file" multiple class="hidden"
+                                @change="addAttachments" >
 
                             <!-- 선택된 파일 없을 때 안내 -->
-                            <div v-if="pendingAttachments.length === 0"
+                            <div
+v-if="pendingAttachments.length === 0"
                                 class="text-xs text-zinc-400 dark:text-zinc-600 italic py-3 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
                                 파일 추가 버튼을 클릭하여 첨부파일을 등록하세요. (저장 시 업로드됩니다)
                             </div>
 
                             <!-- 선택된 첨부파일 목록 -->
                             <ul v-else class="space-y-1.5">
-                                <li v-for="(file, idx) in pendingAttachments" :key="idx"
+                                <li
+v-for="(file, idx) in pendingAttachments" :key="idx"
                                     class="flex items-center gap-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2">
-                                    <i class="pi pi-file text-indigo-400 text-sm flex-shrink-0"></i>
+                                    <i class="pi pi-file text-indigo-400 text-sm flex-shrink-0"/>
                                     <span class="flex-1 truncate text-zinc-700 dark:text-zinc-300" :title="file.name">{{
                                         file.name }}</span>
                                     <span class="text-xs text-zinc-400 flex-shrink-0">{{ formatFileSize(file.size)
                                     }}</span>
-                                    <button class="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0 ml-1"
+                                    <button
+class="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0 ml-1"
                                         title="첨부파일 제거" @click="removeAttachment(idx)">
-                                        <i class="pi pi-times text-xs"></i>
+                                        <i class="pi pi-times text-xs"/>
                                     </button>
                                 </li>
                             </ul>
@@ -444,16 +456,17 @@ onUnmounted(() => {
                     </div>
                     <div class="p-4">
                         <ClientOnly>
-                            <TiptapEditor v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세요..."
-                                :imageUploadFn="handleEditorImageUpload"
-                                :fileUploadFn="handleEditorFileUpload"
-                                :fileDeleteFn="handleEditorFileDelete"
-                                :attachmentList="editorAttachments"
+                            <TiptapEditor
+v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세요..."
+                                :image-upload-fn="handleEditorImageUpload"
+                                :file-upload-fn="handleEditorFileUpload"
+                                :file-delete-fn="handleEditorFileDelete"
+                                :attachment-list="editorAttachments"
                                 @update:toc="handleUpdateToc" />
                             <template #fallback>
                                 <div
                                     class="border border-zinc-200 dark:border-zinc-700 rounded-xl p-8 text-center text-zinc-400">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2 block"></i>
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2 block"/>
                                     에디터 로딩 중...
                                 </div>
                             </template>
@@ -474,7 +487,7 @@ onUnmounted(() => {
                 <div class="sticky top-6 lg:pl-4">
                     <h3
                         class="font-bold text-[14px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-3 flex items-center gap-2">
-                        <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"></i> 바로가기 목차
+                        <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"/> 바로가기 목차
                     </h3>
 
                     <!-- 목차가 비어있을 때 안내 문구 -->
@@ -486,11 +499,12 @@ onUnmounted(() => {
                     <ul v-else class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-3 py-1">
                         <li v-for="item in rawToc" :key="item.id" class="flex flex-col relative py-0.5">
                             <!-- 활성화 인디케이터 (왼쪽 보더선) -->
-                            <div v-if="activeSection === item.id"
-                                class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all">
-                            </div>
+                            <div
+v-if="activeSection === item.id"
+                                class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all"/>
 
-                            <div class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
+                            <div
+class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
                                 :class="[
                                     activeSection === item.id ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200',
                                     item.level === 1 ? 'font-semibold text-[14px] mt-1 pl-4' : '',
@@ -509,12 +523,11 @@ onUnmounted(() => {
 
         </div> <!-- // grid 분할 영역 종료 -->
 
-    </div>
-
     <!-- AI 채팅 플로팅 패널 -->
     <GeminiChat
-        systemInstruction="당신은 IT 프로젝트 요구사항 분석 전문가입니다. 응답은 HTML로 작성해주세요. 사용자가 요구사항 정의서 초안을 작성할 수 있도록 도와주세요. 사용자가 요구사항을 입력하면, 요구사항 정의서의 각 항목에 맞게 내용을 정리하고, 누락된 항목이 있다면 추가할 내용을 제안해주세요. 작성된 요구사항을 함께 보내주면 추가,수정한 부분을 html로 표시해주세요."
-        :documentContent="documentContext"
-        :flMngNos="pendingImageIds"
+        system-instruction="당신은 IT 프로젝트 요구사항 분석 전문가입니다. 응답은 HTML로 작성해주세요. 사용자가 요구사항 정의서 초안을 작성할 수 있도록 도와주세요. 사용자가 요구사항을 입력하면, 요구사항 정의서의 각 항목에 맞게 내용을 정리하고, 누락된 항목이 있다면 추가할 내용을 제안해주세요. 작성된 요구사항을 함께 보내주면 추가,수정한 부분을 html로 표시해주세요."
+        :document-content="documentContext"
+        :fl-mng-nos="pendingImageIds"
         @apply-content="onApplyAiContent" />
+    </div>
 </template>

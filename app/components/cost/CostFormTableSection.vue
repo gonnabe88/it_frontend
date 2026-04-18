@@ -22,7 +22,7 @@ index.vue와 동일한 헤더 스타일(blue-900, showGridlines)을 적용합니
 ================================================================================
 -->
 <script setup lang="ts">
-import { type ItCost } from '~/composables/useCost';
+import type { ItCost } from '~/composables/useCost';
 import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
@@ -99,7 +99,8 @@ const deleteRow = (index: number) => {
         <!-- 사업코드 -->
         <Column header="사업코드" style="min-width: 160px">
             <template #body="{ data }">
-                <InlineEditCell v-model="data.abusC" type="select"
+                <InlineEditCell
+v-model="data.abusC" type="select"
                     :options="abusCSelectOptions" placeholder="사업코드 선택" />
             </template>
         </Column>
@@ -107,7 +108,8 @@ const deleteRow = (index: number) => {
         <!-- 비목코드 -->
         <Column header="비목코드" style="min-width: 180px">
             <template #body="{ data }">
-                <InlineEditCell v-model="data.ioeC" type="select"
+                <InlineEditCell
+v-model="data.ioeC" type="select"
                     :options="ioeCSelectOptions" placeholder="비목코드 선택" />
             </template>
         </Column>
@@ -115,7 +117,8 @@ const deleteRow = (index: number) => {
         <!-- 신규/계속 (PUL_DTT) -->
         <Column header="신규/계속" style="min-width: 140px">
             <template #body="{ data }">
-                <InlineEditCell v-model="data.pulDtt" type="select"
+                <InlineEditCell
+v-model="data.pulDtt" type="select"
                     :options="pulDttSelectOptions" placeholder="신규/계속 선택" />
             </template>
         </Column>
@@ -137,7 +140,8 @@ const deleteRow = (index: number) => {
         <!-- 예산 -->
         <Column header="예산" style="min-width: 120px">
             <template #body="{ data }">
-                <InlineEditCell v-model="data.itMngcBg" type="number"
+                <InlineEditCell
+v-model="data.itMngcBg" type="number"
                     :suffix="data.cur || 'KRW'" :disabled="budgetDisabled" />
             </template>
         </Column>
@@ -146,7 +150,8 @@ const deleteRow = (index: number) => {
         <Column header="통화" style="width: 100px">
             <template #body="{ data }">
                 <InlineEditCell v-if="currencyFixed" :model-value="currencyFixed" type="text" :disabled="true" />
-                <InlineEditCell v-else v-model="data.cur" type="select"
+                <InlineEditCell
+v-else v-model="data.cur" type="select"
                     :options="curSelectOptions" />
             </template>
         </Column>
@@ -154,7 +159,8 @@ const deleteRow = (index: number) => {
         <!-- 지급주기 -->
         <Column header="지급주기" style="min-width: 140px">
             <template #body="{ data }">
-                <InlineEditCell v-model="data.dfrCle" type="select"
+                <InlineEditCell
+v-model="data.dfrCle" type="select"
                     :options="dfrCleSelectOptions" placeholder="지급주기 선택" />
             </template>
         </Column>
@@ -162,8 +168,9 @@ const deleteRow = (index: number) => {
         <!-- 최초지급일 -->
         <Column header="최초지급일" style="min-width: 140px">
             <template #body="{ data }">
-                <InlineEditCell v-model="data.fstDfrDt" type="date"
-                    view="month" dateFormat="yy-mm" placeholder="최초지급일" />
+                <InlineEditCell
+v-model="data.fstDfrDt" type="date"
+                    view="month" date-format="yy-mm" placeholder="최초지급일" />
             </template>
         </Column>
 
@@ -171,8 +178,9 @@ const deleteRow = (index: number) => {
         <Column header="담당자" style="min-width: 150px; width: 170px">
             <template #body="{ data, index }">
                 <div class="cgpr-cell">
-                    <AutoComplete :modelValue="data.cgprNm || ''" :suggestions="employeeSuggestions"
-                        optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'" @complete="searchEmployee"
+                    <AutoComplete
+                        :model-value="data.cgprNm || ''" :suggestions="employeeSuggestions"
+                        option-label="usrNm" :placeholder="data.cgprNm || '이름 검색'" @complete="searchEmployee"
                         @item-select="onEmployeeAutoSelect(data, $event.value)">
                         <template #option="{ option }">
                             <div class="py-1.5 pl-2.5 border-l-[3px] border-blue-900">
@@ -194,8 +202,9 @@ const deleteRow = (index: number) => {
                             </div>
                         </template>
                     </AutoComplete>
-                    <Button icon="pi pi-search" text size="small" class="!pe-1"
-                        @click="openEmployeeSearch(index)" v-tooltip.top="'직원조회'" />
+                    <Button
+v-tooltip.top="'직원조회'" icon="pi pi-search" text size="small"
+                        class="!pe-1" @click="openEmployeeSearch(index)" />
                 </div>
             </template>
         </Column>

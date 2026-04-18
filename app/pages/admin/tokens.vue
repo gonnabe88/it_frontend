@@ -60,16 +60,17 @@ const isExpired = (endDtm: string): boolean => {
         <StyledDataTable
             :value="tokens ?? []"
             :loading="pending"
-            dataKey="tokMasked"
+            data-key="tokMasked"
             scrollable
-            scrollHeight="calc(100vh - 300px)"
+            scroll-height="calc(100vh - 300px)"
             class="p-datatable-sm"
-            stripedRows>
+            striped-rows>
 
             <!-- 사용자명 클릭 → 직원정보 팝업 -->
             <Column header="사용자" :style="{ width: '130px' }">
                 <template #body="{ data }">
-                    <span class="cursor-pointer text-blue-500 hover:underline"
+                    <span
+class="cursor-pointer text-blue-500 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.usrNm || data.eno }}
                     </span>
@@ -94,7 +95,8 @@ const isExpired = (endDtm: string): boolean => {
 
             <Column header="상태" :style="{ width: '90px' }">
                 <template #body="{ data }">
-                    <Tag :value="isExpired(data.endDtm) ? '만료' : '유효'"
+                    <Tag
+:value="isExpired(data.endDtm) ? '만료' : '유효'"
                          :severity="isExpired(data.endDtm) ? 'danger' : 'success'" />
                 </template>
             </Column>

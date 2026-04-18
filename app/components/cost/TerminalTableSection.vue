@@ -16,7 +16,7 @@ terminal/form.vue의 DataTable 2를 컴포넌트로 분리했습니다.
 ================================================================================
 -->
 <script setup lang="ts">
-import { type Terminal } from '~/composables/useCost';
+import type { Terminal } from '~/composables/useCost';
 import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
@@ -137,7 +137,8 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <!-- 금액 -->
             <Column header="금액" style="min-width: 120px">
                 <template #body="{ data }">
-                    <InlineEditCell v-model="data.tmlAmt" type="number"
+                    <InlineEditCell
+v-model="data.tmlAmt" type="number"
                         :suffix="data.cur || 'KRW'" />
                 </template>
             </Column>
@@ -145,7 +146,8 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <!-- 통화 -->
             <Column header="통화" style="width: 100px">
                 <template #body="{ data }">
-                    <InlineEditCell v-model="data.cur" type="select"
+                    <InlineEditCell
+v-model="data.cur" type="select"
                         :options="curSelectOptions" />
                 </template>
             </Column>
@@ -153,7 +155,8 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <!-- 지급주기 -->
             <Column header="지급주기" style="min-width: 140px">
                 <template #body="{ data }">
-                    <InlineEditCell v-model="data.dfrCle" type="select"
+                    <InlineEditCell
+v-model="data.dfrCle" type="select"
                         :options="dfrCleSelectOptions" placeholder="지급주기 선택" />
                 </template>
             </Column>
@@ -161,7 +164,8 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <!-- 단말기서비스 -->
             <Column header="단말기서비스" style="min-width: 160px">
                 <template #body="{ data }">
-                    <InlineEditCell v-model="data.tmnSvc" type="select"
+                    <InlineEditCell
+v-model="data.tmnSvc" type="select"
                         :options="tmnSvcSelectOptions" placeholder="서비스 선택" />
                 </template>
             </Column>
@@ -177,8 +181,9 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
             <Column header="담당자" style="min-width: 150px; width: 170px">
                 <template #body="{ data, index }">
                     <div class="cgpr-cell">
-                        <AutoComplete :modelValue="data.cgprNm || ''" :suggestions="employeeSuggestions"
-                            optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'"
+                        <AutoComplete
+                            :model-value="data.cgprNm || ''" :suggestions="employeeSuggestions"
+                            option-label="usrNm" :placeholder="data.cgprNm || '이름 검색'"
                             @complete="searchEmployee"
                             @item-select="onEmployeeAutoSelect(data, $event.value)">
                             <template #option="{ option }">
@@ -201,8 +206,9 @@ const onDialogEmployeeSelect = (selected: DialogEmployeeResult) => {
                                 </div>
                             </template>
                         </AutoComplete>
-                        <Button icon="pi pi-search" text size="small" class="!pe-1"
-                            @click="openEmployeeSearch(index)" v-tooltip.top="'직원조회'" />
+                        <Button
+v-tooltip.top="'직원조회'" icon="pi pi-search" text size="small"
+                            class="!pe-1" @click="openEmployeeSearch(index)" />
                     </div>
                 </template>
             </Column>

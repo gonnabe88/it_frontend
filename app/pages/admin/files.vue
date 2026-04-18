@@ -58,11 +58,11 @@ const flDttSeverity = (flDtt: string): string => {
         <StyledDataTable
             :value="files ?? []"
             :loading="pending"
-            dataKey="flMngNo"
+            data-key="flMngNo"
             scrollable
-            scrollHeight="calc(100vh - 300px)"
+            scroll-height="calc(100vh - 300px)"
             class="p-datatable-sm"
-            stripedRows>
+            striped-rows>
 
             <Column field="flMngNo" header="파일관리번호" :style="{ width: '130px' }" frozen />
 
@@ -76,8 +76,9 @@ const flDttSeverity = (flDtt: string): string => {
 
             <Column field="flDtt" header="파일구분" :style="{ width: '100px' }">
                 <template #body="{ data }">
-                    <Tag :value="data.flDtt"
-                         :severity="flDttSeverity(data.flDtt)" />
+                    <Tag
+                        :value="data.flDtt"
+                        :severity="flDttSeverity(data.flDtt)" />
                 </template>
             </Column>
 
@@ -86,7 +87,8 @@ const flDttSeverity = (flDtt: string): string => {
             <!-- 최초등록자 클릭 → 직원정보 팝업 -->
             <Column header="등록자" :style="{ width: '120px' }">
                 <template #body="{ data }">
-                    <span v-if="data.fstEnrUsid"
+                    <span
+v-if="data.fstEnrUsid"
                           class="cursor-pointer text-blue-500 hover:underline"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}

@@ -220,10 +220,10 @@ const formatSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: string 
                     </label>
                     <DatePicker
                         v-model="confirmForm.cnrcDt"
-                        dateFormat="yy-mm-dd"
+                        date-format="yy-mm-dd"
                         placeholder="날짜 선택"
                         class="w-full"
-                        :minDate="new Date()"
+                        :min-date="new Date()"
                     />
                 </div>
 

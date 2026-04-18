@@ -228,7 +228,7 @@ const handleDelete = async () => {
                         </div>
                         <StyledDataTable
                             :value="dept.projects"
-                            dataKey="prjMngNo"
+                            data-key="prjMngNo"
                         >
                             <Column field="prjNm" header="사업명" />
                             <Column field="prjTp" header="사업유형" style="width: 8rem">
@@ -268,7 +268,7 @@ const handleDelete = async () => {
                         </div>
                         <StyledDataTable
                             :value="typeGroup.projects"
-                            dataKey="prjMngNo"
+                            data-key="prjMngNo"
                         >
                             <Column field="prjNm" header="사업명" />
                             <Column field="svnHdq" header="주관부문" style="width: 10rem" />

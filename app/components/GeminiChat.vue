@@ -243,6 +243,7 @@ const sendMessage = async () => {
         // 응답 본문이 문자열이거나 객체일 경우 모두 처리
         const content = typeof response === 'string'
             ? response
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             : (response as any)?.content ?? (response as any)?.text ?? JSON.stringify(response);
 
         messages.value.push({
@@ -250,6 +251,7 @@ const sendMessage = async () => {
             content,
             timestamp: new Date()
         });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         // 오류 응답도 메시지로 표시
         messages.value.push({
@@ -296,7 +298,8 @@ onUnmounted(() => {
 
         <!-- ─── 채팅 패널 ─── -->
         <Transition name="chat-panel">
-            <div v-if="isOpen"
+            <div
+v-if="isOpen"
                 class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col overflow-hidden"
                 :style="{ width: panelWidth + 'px', height: panelHeight + 'px' }"
                 :class="{ 'select-none': isResizing }">
@@ -307,12 +310,12 @@ onUnmounted(() => {
                     <div
                         class="absolute top-1.5 left-1.5 w-2 h-2 flex flex-col gap-0.5 opacity-30 group-hover:opacity-80 transition-opacity">
                         <div class="flex gap-0.5">
-                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"></span>
-                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"></span>
+                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"/>
+                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"/>
                         </div>
                         <div class="flex gap-0.5">
-                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"></span>
-                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"></span>
+                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"/>
+                            <span class="w-0.5 h-0.5 rounded-full bg-zinc-400"/>
                         </div>
                     </div>
                 </div>
@@ -321,12 +324,13 @@ onUnmounted(() => {
                 <div
                     class="flex items-center justify-between px-4 py-3 bg-indigo-600 dark:bg-indigo-700 text-white rounded-t-2xl flex-shrink-0">
                     <div class="flex items-center gap-2">
-                        <i class="pi pi-sparkles text-sm"></i>
+                        <i class="pi pi-sparkles text-sm"/>
                         <span class="font-semibold text-sm">AI 요구사항 분석 도우미</span>
                     </div>
-                    <button class="p-1 rounded hover:bg-indigo-500 transition-colors" @click="toggleChat"
-                        aria-label="채팅 닫기">
-                        <i class="pi pi-times text-sm"></i>
+                    <button
+class="p-1 rounded hover:bg-indigo-500 transition-colors" aria-label="채팅 닫기"
+                        @click="toggleChat">
+                        <i class="pi pi-times text-sm"/>
                     </button>
                 </div>
 
@@ -334,9 +338,10 @@ onUnmounted(() => {
                 <div ref="messagesEl" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
 
                     <!-- 빈 상태 안내 -->
-                    <div v-if="messages.length === 0"
+                    <div
+v-if="messages.length === 0"
                         class="h-full flex flex-col items-center justify-center text-center text-zinc-400 dark:text-zinc-600 gap-3">
-                        <i class="pi pi-comments text-4xl text-indigo-200 dark:text-indigo-900"></i>
+                        <i class="pi pi-comments text-4xl text-indigo-200 dark:text-indigo-900"/>
                         <div>
                             <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">무엇이든 물어보세요</p>
                             <p class="text-xs text-zinc-400 dark:text-zinc-600 mt-1">요구사항 작성, 분석, 검토 등 도움을 드립니다.</p>
@@ -362,7 +367,7 @@ onUnmounted(() => {
                         <div v-else class="flex justify-start gap-2">
                             <div
                                 class="flex-shrink-0 w-7 h-7 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mt-0.5">
-                                <i class="pi pi-sparkles text-[11px] text-indigo-600 dark:text-indigo-400"></i>
+                                <i class="pi pi-sparkles text-[11px] text-indigo-600 dark:text-indigo-400"/>
                             </div>
                             <div class="max-w-[90%] flex flex-col gap-1.5">
                                 <!-- 응답 텍스트 버블 -->
@@ -375,12 +380,12 @@ onUnmounted(() => {
                                     <button
                                         class="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                         @click="openPreview(msg.content)">
-                                        <i class="pi pi-eye text-[10px]"></i> 미리보기
+                                        <i class="pi pi-eye text-[10px]"/> 미리보기
                                     </button>
                                     <button
                                         class="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors"
                                         @click="openConfirm(msg.content)">
-                                        <i class="pi pi-check text-[10px]"></i> 반영하기
+                                        <i class="pi pi-check text-[10px]"/> 반영하기
                                     </button>
                                 </div>
                                 <p class="text-left text-[11px] text-zinc-400 ml-1">{{ formatTime(msg.timestamp) }}</p>
@@ -393,16 +398,19 @@ onUnmounted(() => {
                     <div v-if="isLoading" class="flex justify-start gap-2">
                         <div
                             class="flex-shrink-0 w-7 h-7 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mt-0.5">
-                            <i class="pi pi-sparkles text-[11px] text-indigo-600 dark:text-indigo-400"></i>
+                            <i class="pi pi-sparkles text-[11px] text-indigo-600 dark:text-indigo-400"/>
                         </div>
                         <div class="bg-zinc-100 dark:bg-zinc-800 rounded-2xl rounded-tl-sm px-4 py-3">
                             <div class="flex gap-1 items-center h-4">
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
-                                    style="animation-delay: 0ms"></span>
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
-                                    style="animation-delay: 150ms"></span>
-                                <span class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
-                                    style="animation-delay: 300ms"></span>
+                                <span
+class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
+                                    style="animation-delay: 0ms"/>
+                                <span
+class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
+                                    style="animation-delay: 150ms"/>
+                                <span
+class="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
+                                    style="animation-delay: 300ms"/>
                             </div>
                         </div>
                     </div>
@@ -413,10 +421,12 @@ onUnmounted(() => {
                 <div
                     class="flex-shrink-0 px-3 py-3 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                     <div class="flex items-end gap-2">
-                        <Textarea v-model="inputText" placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)" rows="2"
+                        <Textarea
+v-model="inputText" placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)" rows="2"
                             class="flex-1 resize-none text-sm min-h-0" :disabled="isLoading" @keydown="onKeydown" />
-                        <Button icon="pi pi-send" rounded :disabled="!inputText.trim() || isLoading"
-                            :loading="isLoading" class="flex-shrink-0 mb-0.5" @click="sendMessage" aria-label="전송" />
+                        <Button
+icon="pi pi-send" rounded :disabled="!inputText.trim() || isLoading"
+                            :loading="isLoading" class="flex-shrink-0 mb-0.5" aria-label="전송" @click="sendMessage" />
                     </div>
                 </div>
 
@@ -426,22 +436,25 @@ onUnmounted(() => {
         <!-- ─── 플로팅 토글 버튼 ─── -->
         <button
             class="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-            @click="toggleChat" :aria-label="isOpen ? '채팅 닫기' : 'AI 도우미 열기'">
-            <i :class="isOpen ? 'pi pi-times text-xl' : 'pi pi-comments text-xl'"></i>
+            :aria-label="isOpen ? '채팅 닫기' : 'AI 도우미 열기'" @click="toggleChat">
+            <i :class="isOpen ? 'pi pi-times text-xl' : 'pi pi-comments text-xl'"/>
         </button>
 
     </div>
 
     <!-- ─── 미리보기 다이얼로그 ─── -->
-    <Dialog v-model:visible="previewVisible" header="AI 응답 미리보기" modal
+    <Dialog
+v-model:visible="previewVisible" header="AI 응답 미리보기" modal
         :style="{ width: '60vw', maxWidth: '900px' }"
         :pt="{ content: { class: 'overflow-y-auto max-h-[60vh]' } }">
-        <div class="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed"
-            v-html="DOMPurify.sanitize(previewContent)">
-        </div>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div
+class="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed"
+            v-html="DOMPurify.sanitize(previewContent)"/>
         <template #footer>
             <Button label="닫기" severity="secondary" @click="previewVisible = false" />
-            <Button label="반영하기" icon="pi pi-check"
+            <Button
+label="반영하기" icon="pi pi-check"
                 @click="() => { previewVisible = false; openConfirm(previewContent); }" />
         </template>
     </Dialog>
@@ -449,7 +462,7 @@ onUnmounted(() => {
     <!-- ─── 반영 확인 다이얼로그 ─── -->
     <Dialog v-model:visible="confirmVisible" header="내용 반영" modal :style="{ width: '400px' }">
         <div class="flex items-start gap-3 py-2">
-            <i class="pi pi-exclamation-triangle text-2xl text-amber-500 flex-shrink-0 mt-0.5"></i>
+            <i class="pi pi-exclamation-triangle text-2xl text-amber-500 flex-shrink-0 mt-0.5"/>
             <div>
                 <p class="font-medium text-zinc-800 dark:text-zinc-200">기존 내용을 대체합니다.</p>
                 <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">요구사항 정의서 본문이 AI 응답으로 교체됩니다. 계속 하시겠습니까?</p>

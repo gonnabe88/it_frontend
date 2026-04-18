@@ -115,33 +115,37 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
             <!-- 검색 영역 -->
             <div class="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
                 <div class="relative flex-1 max-w-sm">
-                    <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm"></i>
+                    <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm"/>
                     <InputText v-model="searchText" placeholder="문서 제목 검색..." class="pl-9 w-full" />
                 </div>
-                <Button icon="pi pi-refresh" severity="secondary" outlined @click="() => refresh()" :loading="pending"
-                    v-tooltip="'새로고침'" />
+                <Button
+v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :loading="pending"
+                    @click="() => refresh()" />
             </div>
 
             <!-- 오류 표시 -->
             <div v-if="error" class="p-6 text-center">
-                <i class="pi pi-exclamation-circle text-4xl text-red-400 mb-3 block"></i>
+                <i class="pi pi-exclamation-circle text-4xl text-red-400 mb-3 block"/>
                 <p class="text-red-500">데이터를 불러오는 중 오류가 발생했습니다.</p>
                 <p class="text-sm text-zinc-400 mt-1">{{ error.message }}</p>
             </div>
 
             <!-- DataTable -->
-            <StyledDataTable v-else :value="filteredDocuments" :loading="pending" paginator :rows="10"
-                :rowsPerPageOptions="[10, 20, 50]" dataKey="docMngNo" sortField="fstEnrDtm" :sortOrder="-1"
+            <StyledDataTable
+v-else :value="filteredDocuments" :loading="pending" paginator :rows="10"
+                :rows-per-page-options="[10, 20, 50]" data-key="docMngNo" sort-field="fstEnrDtm" :sort-order="-1"
                 >
 
                 <!-- 문서번호 -->
-                <Column field="docMngNo" header="문서번호" sortable style="width: 14%"
-                    :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
+                <Column
+field="docMngNo" header="문서번호" sortable style="width: 14%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }"/>
 
                 <!-- 요구사항명: 상세 페이지 링크 -->
-                <Column field="reqNm" header="요구사항명" sortable headerClass="font-bold">
+                <Column field="reqNm" header="요구사항명" sortable header-class="font-bold">
                     <template #body="{ data }">
-                        <NuxtLink :to="`/info/documents/${data.docMngNo}`"
+                        <NuxtLink
+:to="`/info/documents/${data.docMngNo}`"
                             class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                             {{ data.reqNm }}
                         </NuxtLink>
@@ -149,12 +153,14 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
                 </Column>
 
                 <!-- 요청구분 -->
-                <Column field="reqDtt" header="요청구분" sortable style="width: 12%"
-                    :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
+                <Column
+field="reqDtt" header="요청구분" sortable style="width: 12%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }"/>
 
                 <!-- 업무구분 -->
-                <Column field="bzDtt" header="업무구분" sortable style="width: 12%"
-                    :pt="{ bodyCell: { style: 'text-align: center' } }"></Column>
+                <Column
+field="bzDtt" header="업무구분" sortable style="width: 12%"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }"/>
 
                 <!-- 완료기한 -->
                 <Column field="fsgTlm" header="완료기한" sortable style="width: 10%">
@@ -174,10 +180,12 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
                 </Column>
 
                 <!-- 작성자 -->
-                <Column field="fstEnrUsNm" header="작성자" sortable style="width: 8%"
+                <Column
+field="fstEnrUsNm" header="작성자" sortable style="width: 8%"
                     :pt="{ bodyCell: { style: 'text-align: center' } }">
                     <template #body="{ data }">
-                        <span v-if="data.fstEnrUsNm"
+                        <span
+v-if="data.fstEnrUsNm"
                             class="hover:underline hover:text-indigo-600 cursor-pointer transition-colors"
                             @click="openEmployeeInfo(data.fstEnrUsid)">
                             {{ data.fstEnrUsNm }}
@@ -187,14 +195,17 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
                 </Column>
 
                 <!-- 액션 버튼 -->
-                <Column header="" style="width: 8%"
+                <Column
+header="" style="width: 8%"
                     :pt="{ bodyCell: { style: 'text-align: center' } }">
                     <template #body="{ data }">
                         <div class="flex justify-center gap-1.5">
-                            <Button icon="pi pi-pencil" size="small" text rounded
-                                @click.stop="navigateTo(`/info/documents/${data.docMngNo}`)" v-tooltip="'편집'" />
-                            <Button icon="pi pi-trash" size="small" text rounded severity="danger" :loading="isDeleting"
-                                @click.stop="(e: Event) => onDeleteClick(e, data)" v-tooltip="'삭제'" />
+                            <Button
+v-tooltip="'편집'" icon="pi pi-pencil" size="small" text
+                                rounded @click.stop="navigateTo(`/info/documents/${data.docMngNo}`)" />
+                            <Button
+v-tooltip="'삭제'" icon="pi pi-trash" size="small" text rounded severity="danger"
+                                :loading="isDeleting" @click.stop="(e: Event) => onDeleteClick(e, data)" />
                         </div>
                     </template>
                 </Column>
@@ -202,16 +213,16 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
                 <!-- 빈 상태 -->
                 <template #empty>
                     <div class="py-12 text-center text-zinc-400">
-                        <i class="pi pi-file text-4xl mb-3 block"></i>
+                        <i class="pi pi-file text-4xl mb-3 block"/>
                         <p>등록된 요구사항 정의서가 없습니다.</p>
-                        <Button label="첫 문서 작성하기" icon="pi pi-plus" class="mt-3" size="small"
+                        <Button
+label="첫 문서 작성하기" icon="pi pi-plus" class="mt-3" size="small"
                             @click="navigateTo('/info/documents/form')" />
                     </div>
                 </template>
             </StyledDataTable>
         </div>
-    </div>
-
     <ConfirmPopup />
     <EmployeeInfoDialog v-model:visible="showEmployeeInfo" :eno="selectedEno" />
+    </div>
 </template>

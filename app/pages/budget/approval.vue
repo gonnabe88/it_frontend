@@ -18,14 +18,14 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount, onActivated  } from 'vue';
 import * as XLSX from 'xlsx';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { onActivated } from 'vue';
+
 import { formatBudget as formatBudgetUtil, formatKoreanDate } from '~/utils/common';
 
 definePageMeta({
@@ -88,9 +88,11 @@ interface UnifiedBudgetItem {
 const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
     const projectItems: UnifiedBudgetItem[] = projects.value.map((p: Project) => ({
         _id: p.prjMngNo,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         _type: (p as any).ornYn === 'Y' ? '경상' : '사업',
         _link: `/info/projects/${p.prjMngNo}`,
         name: p.prjNm,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         category: (p as any).pulDtt || '',
         bgYy: String(p.bgYy || ''),
         totalBg: p.prjBg || 0,
@@ -103,6 +105,7 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         managerNm: p.svnDpmCgprNm || '',
         sttDt: p.sttDt || '',
         endDt: p.endDt || '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         lstChgDtm: (p as any).lstChgDtm || ''
     }));
 
@@ -124,6 +127,7 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
         managerNm: c.cgprNm || '',
         sttDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
         endDt: typeof c.fstDfrDt === 'string' ? c.fstDfrDt : '',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         lstChgDtm: (c as any).lstChgDtm || ''
     }));
 
@@ -177,7 +181,7 @@ const requestApproval = () => {
         return;
     }
 
-    if (process.client) {
+    if (import.meta.client) {
         const projectIds = filteredItems.value
             .filter(i => i._type === '사업' || i._type === '경상')
             .map(i => i._id);
@@ -211,7 +215,9 @@ const categorizedCards = computed(() => {
         else costIds.add(item._id);
     }
     return {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         projects: projects.value.filter(p => (p as any).ornYn !== 'Y' && projectIds.has(p.prjMngNo)),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ordinary: projects.value.filter(p => (p as any).ornYn === 'Y' && ordinaryIds.has(p.prjMngNo)),
         costs: costs.value.filter(c => costIds.has(c.itMngcNo || ''))
     };
@@ -427,42 +433,46 @@ onBeforeUnmount(() => {
             <div class="flex items-end gap-3">
                 <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">결재 상신</h1>
                 <h5 class="text-zinc-500 dark:text-zinc-400">
-                    <i class="pi pi-info-circle text-zinc-400 me-1"></i>
+                    <i class="pi pi-info-circle text-zinc-400 me-1"/>
                     <span>조회된 전체 미상신 목록이 일괄 상신됩니다.</span>
                 </h5>
             </div>
             <!-- 우측: 예산 단위 선택 + 결재 상신 버튼 -->
             <div class="flex items-center gap-4">
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-selector" />
-                <Button label="결재 상신" icon="pi pi-send" severity="help" @click="requestApproval"
-                    :disabled="!hasItems" :badge="hasItems ? String(totalCount) : undefined" />
+                <Button
+label="결재 상신" icon="pi pi-send" severity="help" :disabled="!hasItems"
+                    :badge="hasItems ? String(totalCount) : undefined" @click="requestApproval" />
             </div>
         </div>
 
         <!-- 데이터 로딩 중 표시 -->
         <div v-if="isLoading" class="flex items-center justify-center py-12">
-            <ProgressSpinner style="width: 40px; height: 40px" strokeWidth="4" />
+            <ProgressSpinner style="width: 40px; height: 40px" stroke-width="4" />
             <span class="ml-3 text-zinc-500 dark:text-zinc-400">데이터를 불러오는 중...</span>
         </div>
 
         <!-- 예산 현황 요약 카드 -->
-        <BudgetSummaryCards v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
-            :selectedUnit="selectedUnit" />
+        <BudgetSummaryCards
+v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
+            :selected-unit="selectedUnit" />
 
         <!-- 통합 DataTable -->
-        <div v-if="!isLoading"
+        <div
+v-if="!isLoading"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
 
             <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
             <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
                 <!-- 좌측: 페이지당 표시 건수 -->
                 <div class="flex items-center px-3 shrink-0">
-                    <Select v-model="pageSize" :options="pageSizeOptions" optionLabel="label" optionValue="value"
+                    <Select
+v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value"
                         class="shrink-0" />
                 </div>
 
                 <!-- 여백 (flex-1) -->
-                <div class="flex-1"></div>
+                <div class="flex-1"/>
 
                 <!-- 우측: 통합검색 + 액션 버튼 -->
                 <div class="flex items-center gap-2 px-3 py-2 shrink-0">
@@ -470,19 +480,22 @@ onBeforeUnmount(() => {
                         <InputIcon class="pi pi-search" />
                         <InputText v-model="search" placeholder="사업명/계약명, 담당부서, 담당자 검색..." class="w-full" />
                     </IconField>
-                    <BudgetTableActions :reportLoading="reportLoading" :hasFilters="hasFilters" @excel="downloadExcel"
+                    <BudgetTableActions
+:report-loading="reportLoading" :has-filters="hasFilters" @excel="downloadExcel"
                         @pdf="downloadPdf" @filter="visibleDrawer = true" />
                 </div>
             </div>
 
             <!-- 통합 DataTable (StyledDataTable: 파란 헤더, gridlines 자동 적용) -->
-            <StyledDataTable :value="filteredItems" paginator :rows="pageSize" dataKey="_id" sortField="lstChgDtm"
-                :sortOrder="-1">
+            <StyledDataTable
+:value="filteredItems" paginator :rows="pageSize" data-key="_id" sort-field="lstChgDtm"
+                :sort-order="-1">
 
                 <!-- 구분: 사업 / 비용 / 경상 태그 -->
                 <Column field="_type" header="구분" sortable style="width: 100px; text-align: center">
                     <template #body="slotProps">
-                        <Tag :value="slotProps.data._type" :class="slotProps.data._type === '사업'
+                        <Tag
+:value="slotProps.data._type" :class="slotProps.data._type === '사업'
                             ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
                             : slotProps.data._type === '경상'
                                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
@@ -492,12 +505,13 @@ onBeforeUnmount(() => {
                 </Column>
 
                 <!-- 예산연도 -->
-                <Column field="bgYy" header="예산연도" sortable style="width: 90px; text-align: center"></Column>
+                <Column field="bgYy" header="예산연도" sortable style="width: 90px; text-align: center"/>
 
                 <!-- 사업명/계약명: 상세 링크 -->
-                <Column field="name" header="사업명/계약명" sortable headerClass="font-bold" style="min-width: 250px">
+                <Column field="name" header="사업명/계약명" sortable header-class="font-bold" style="min-width: 250px">
                     <template #body="slotProps">
-                        <NuxtLink :to="slotProps.data._link"
+                        <NuxtLink
+:to="slotProps.data._link"
                             class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                             {{ slotProps.data.name }}
                         </NuxtLink>
@@ -507,7 +521,8 @@ onBeforeUnmount(() => {
                 <!-- 신규/계속 -->
                 <Column field="category" header="신규/계속" sortable style="width: 90px; text-align: center">
                     <template #body="slotProps">
-                        <Tag :value="getPulDttName(slotProps.data.category)" :class="getPrjTypeClass(getPulDttName(slotProps.data.category))"
+                        <Tag
+:value="getPulDttName(slotProps.data.category)" :class="getPrjTypeClass(getPulDttName(slotProps.data.category))"
                             class="border-0" rounded />
                     </template>
                 </Column>
@@ -548,21 +563,21 @@ onBeforeUnmount(() => {
                 </Column>
 
                 <!-- 담당부서 -->
-                <Column field="deptNm" header="담당부서" sortable></Column>
+                <Column field="deptNm" header="담당부서" sortable/>
 
                 <!-- 담당자 -->
-                <Column field="managerNm" header="담당자" sortable style="text-align: center"></Column>
+                <Column field="managerNm" header="담당자" sortable style="text-align: center"/>
 
                 <!-- 시작일 -->
-                <Column field="sttDt" header="시작일" sortable style="text-align: center"></Column>
+                <Column field="sttDt" header="시작일" sortable style="text-align: center"/>
 
                 <!-- 종료일 -->
-                <Column field="endDt" header="종료일" sortable style="text-align: center"></Column>
+                <Column field="endDt" header="종료일" sortable style="text-align: center"/>
 
                 <!-- 데이터 없을 때 메시지 -->
                 <template #empty>
                     <div class="flex items-center justify-center py-20 text-zinc-400 dark:text-zinc-500">
-                        <i class="pi pi-inbox text-3xl mr-3"></i>
+                        <i class="pi pi-inbox text-3xl mr-3"/>
                         <span class="text-lg">{{ filters.bgYy || defaultBgYy }}년도 미상신 전산예산 항목이 없습니다.</span>
                     </div>
                 </template>
@@ -577,14 +592,15 @@ onBeforeUnmount(() => {
                 <!-- 예산연도 -->
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">예산연도</label>
-                    <SelectButton v-model="filters.bgYy" :options="bgYyOptions" :allowEmpty="true" />
+                    <SelectButton v-model="filters.bgYy" :options="bgYyOptions" :allow-empty="true" />
                 </div>
 
                 <!-- 구분 필터 -->
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">구분</label>
                     <div class="flex gap-2 flex-wrap">
-                        <Button v-for="opt in typeOptions" :key="opt" :label="opt" size="small" outlined
+                        <Button
+v-for="opt in typeOptions" :key="opt" :label="opt" size="small" outlined
                             :severity="filters.type.includes(opt) ? 'primary' : 'secondary'" @click="filters.type.includes(opt)
                                 ? filters.type.splice(filters.type.indexOf(opt), 1)
                                 : filters.type.push(opt)" />
@@ -595,7 +611,8 @@ onBeforeUnmount(() => {
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">신규/계속</label>
                     <div class="flex gap-2 flex-wrap">
-                        <Button v-for="opt in categoryOptions" :key="opt" :label="getPulDttName(opt)" size="small" outlined
+                        <Button
+v-for="opt in categoryOptions" :key="opt" :label="getPulDttName(opt)" size="small" outlined
                             :severity="filters.category.includes(opt) ? 'primary' : 'secondary'" @click="filters.category.includes(opt)
                                 ? filters.category.splice(filters.category.indexOf(opt), 1)
                                 : filters.category.push(opt)" />
@@ -606,11 +623,13 @@ onBeforeUnmount(() => {
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">총예산 (원)</label>
                     <div class="flex gap-2">
-                        <InputNumber v-model="filters.totalBgMin" placeholder="최소" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <InputNumber
+v-model="filters.totalBgMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="flex-1" />
                         <span class="self-center text-zinc-400">~</span>
-                        <InputNumber v-model="filters.totalBgMax" placeholder="최대" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <InputNumber
+v-model="filters.totalBgMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="flex-1" />
                     </div>
                 </div>
 
@@ -618,11 +637,13 @@ onBeforeUnmount(() => {
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">자본예산 (원)</label>
                     <div class="flex gap-2">
-                        <InputNumber v-model="filters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <InputNumber
+v-model="filters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="flex-1" />
                         <span class="self-center text-zinc-400">~</span>
-                        <InputNumber v-model="filters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <InputNumber
+v-model="filters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="flex-1" />
                     </div>
                 </div>
 
@@ -630,19 +651,22 @@ onBeforeUnmount(() => {
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">일반관리비 (원)</label>
                     <div class="flex gap-2">
-                        <InputNumber v-model="filters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <InputNumber
+v-model="filters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="flex-1" />
                         <span class="self-center text-zinc-400">~</span>
-                        <InputNumber v-model="filters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="flex-1" />
+                        <InputNumber
+v-model="filters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="flex-1" />
                     </div>
                 </div>
 
                 <!-- 담당부서 필터 -->
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">담당부서</label>
-                    <AutoComplete v-model="filters.deptNm" :suggestions="deptSuggestions" multiple fluid
-                        @complete="searchDept($event.query)" placeholder="부서명 검색..." />
+                    <AutoComplete
+v-model="filters.deptNm" :suggestions="deptSuggestions" multiple fluid
+                        placeholder="부서명 검색..." @complete="searchDept($event.query)" />
                 </div>
 
             </div>

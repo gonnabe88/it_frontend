@@ -183,6 +183,7 @@ const handleEditorImageUpload = async (file: File): Promise<string> => {
             pendingImageIds.value.push(result.flMngNo);
         }
         return getPreviewUrl(result);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({
             severity: 'error',
@@ -226,6 +227,7 @@ const handleEditorFileUpload = async (file: File): Promise<{ flMngNo: string; fl
             flNm: result.orcFlNm,
             flSz: 0,
         };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({
             severity: 'error',
@@ -251,6 +253,7 @@ const handleEditorFileDelete = async (flMngNo: string) => {
             // 기존 문서: 목록 재조회
             await refreshAttachments();
         }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '삭제 실패', detail: e?.data?.message || '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -291,6 +294,7 @@ const onSave = async () => {
 
         await refreshDocuments();
         cancelEdit();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({
             severity: 'error',
@@ -321,7 +325,8 @@ const onDelete = () => {
                 activeSection.value = '';
                 cancelEdit();
                 toast.add({ severity: 'success', summary: '삭제 완료', detail: '가이드가 삭제되었습니다.', life: 3000 });
-            } catch (e: any) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
                 toast.add({
                     severity: 'error',
                     summary: '삭제 실패',
@@ -381,7 +386,7 @@ const scrollTo = (id: string) => {
 
 /* ── IntersectionObserver: 스크롤 시 목차 활성화 동기화 ── */
 let observer: IntersectionObserver | null = null;
-let observerElements = new Set<Element>();
+const observerElements = new Set<Element>();
 
 // DOM 렌더링 후 h1~h6 요소를 추적하도록 목차 변경 시마다 갱신
 watch(rawToc, async () => {
@@ -442,7 +447,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div :class="[
+    <div
+:class="[
         'flex flex-col overflow-hidden transition-all duration-300',
         isFullscreen
             ? 'fixed inset-0 z-[100] bg-zinc-50 dark:bg-zinc-950 p-4'
@@ -451,7 +457,8 @@ onUnmounted(() => {
 
         <!-- 페이지 헤더: 제목 + 정보화사업 단계 타임라인 통합 카드 -->
         <!-- 전체 화면에서는 타임라인을 숨겨 에디터 공간을 극대화 (Clean Workspace) -->
-        <div v-if="!isFullscreen"
+        <div
+v-if="!isFullscreen"
             class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md px-5 py-4 flex items-center gap-5 min-h-[80px]">
 
             <!-- 좌: 제목/부제목 -->
@@ -463,28 +470,30 @@ onUnmounted(() => {
             </div>
 
             <!-- 구분선 -->
-            <div class="self-stretch w-px bg-zinc-100 dark:bg-zinc-800 shrink-0"></div>
+            <div class="self-stretch w-px bg-zinc-100 dark:bg-zinc-800 shrink-0"/>
 
             <!-- 우: 정보화사업 단계 타임라인 -->
             <div class="flex-1 min-w-0">
                 <!-- 타임라인 컨테이너 -->
                 <div class="relative w-full px-2">
                     <!-- 전체 기준선 (회색): 첫 원 중심 ~ 마지막 원 중심 -->
-                    <div class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700" :style="{
+                    <div
+class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700" :style="{
                         top: '19px',
                         left: `calc(100% / ${PROJECT_STAGES.length * 2})`,
                         right: `calc(100% / ${PROJECT_STAGES.length * 2})`
-                    }">
-                    </div>
+                    }"/>
 
                     <div class="flex items-start justify-between w-full">
                         <!-- 각 단계 스텝 -->
-                        <div v-for="(step, index) in PROJECT_STAGES" :key="index"
+                        <div
+v-for="(step, index) in PROJECT_STAGES" :key="index"
                             class="relative flex flex-col items-center flex-1 group cursor-pointer"
                             @click="selectStage(step)">
 
                             <!-- 원형 마커: 선택됨(인디고 채움) / 비선택(회색) -->
-                            <div class="w-[38px] h-[38px] rounded-full flex items-center justify-center font-bold border-2 transition-all duration-300 relative z-10 mb-2 shrink-0"
+                            <div
+class="w-[38px] h-[38px] rounded-full flex items-center justify-center font-bold border-2 transition-all duration-300 relative z-10 mb-2 shrink-0"
                                 :class="[
                                     selectedStage === step
                                         ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 scale-110 ring-4 ring-indigo-50 dark:ring-indigo-900/20'
@@ -492,7 +501,7 @@ onUnmounted(() => {
                                 ]">
 
                                 <!-- 선택된 단계: v 체크 아이콘 -->
-                                <i v-if="selectedStage === step" class="pi pi-check text-sm"></i>
+                                <i v-if="selectedStage === step" class="pi pi-check text-sm"/>
                                 <!-- 비선택 단계: 순번 표시 (leading-none으로 폰트 하단 여백 제거) -->
                                 <span v-else class="text-xs leading-none">{{ Number(index) + 1 }}</span>
                             </div>
@@ -529,13 +538,15 @@ onUnmounted(() => {
                         <div class="flex-1 min-w-0">
                             <h2
                                 class="font-bold text-base text-zinc-900 dark:text-zinc-100 flex items-center gap-2 truncate">
-                                <i class="pi pi-book text-indigo-500"></i>
+                                <i class="pi pi-book text-indigo-500"/>
                                 {{ selectedStage }}
-                                <span v-if="isEditing"
+                                <span
+v-if="isEditing"
                                     class="inline-flex items-center text-[10px] font-medium px-2 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800 ml-1">
                                     편집 중
                                 </span>
-                                <span v-else-if="!currentGuide"
+                                <span
+v-else-if="!currentGuide"
                                     class="inline-flex items-center text-[10px] font-medium px-2 py-0.5 bg-zinc-50 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500 rounded-full border border-zinc-200 dark:border-zinc-700 ml-1">
                                     미작성
                                 </span>
@@ -556,10 +567,12 @@ onUnmounted(() => {
                             </div>
                             <!-- 조회 모드 섹션 -->
                             <div v-else class="flex gap-2">
-                                <Button :label="isFullscreen ? '일반 화면' : '전체 화면'"
+                                <Button
+:label="isFullscreen ? '일반 화면' : '전체 화면'"
                                     :icon="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-expand'" severity="secondary"
                                     outlined size="small" @click="toggleFullscreen" />
-                                <Button :label="currentGuide ? '편집' : '가이드 작성'"
+                                <Button
+:label="currentGuide ? '편집' : '가이드 작성'"
                                     :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'" size="small"
                                     @click="startEdit" />
                             </div>
@@ -571,22 +584,24 @@ onUnmounted(() => {
                         class="p-4 guide-doc flex-1 flex flex-col min-h-0 overflow-hidden bg-zinc-50/10 dark:bg-zinc-800/5">
                         <ClientOnly>
                             <!-- 편집 모드 -->
-                            <TiptapEditor v-if="isEditing" v-model="editContent" class="h-full min-h-0"
-                                :imageUploadFn="handleEditorImageUpload"
-                                :fileUploadFn="handleEditorFileUpload"
-                                :fileDeleteFn="handleEditorFileDelete"
-                                :attachmentList="attachmentListData"
+                            <TiptapEditor
+v-if="isEditing" v-model="editContent" class="h-full min-h-0"
+                                :image-upload-fn="handleEditorImageUpload"
+                                :file-upload-fn="handleEditorFileUpload"
+                                :file-delete-fn="handleEditorFileDelete"
+                                :attachment-list="attachmentListData"
                                 @update:toc="handleUpdateToc" />
                             <!-- 조회 모드 -->
-                            <TiptapEditor v-else-if="currentGuide" :modelValue="currentGuide.docCone || ''"
+                            <TiptapEditor
+v-else-if="currentGuide" :model-value="currentGuide.docCone || ''"
                                 class="h-full min-h-0" :readonly="true"
-                                :attachmentList="attachmentListData"
+                                :attachment-list="attachmentListData"
                                 @update:toc="handleUpdateToc" />
                             <!-- 가이드 없음 -->
                             <div v-else class="flex-1 flex flex-col items-center justify-center py-20 text-center">
                                 <div
                                     class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
-                                    <i class="pi pi-file-edit text-2xl text-zinc-400"></i>
+                                    <i class="pi pi-file-edit text-2xl text-zinc-400"/>
                                 </div>
                                 <h3 class="text-base font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                                     아직 가이드가 없습니다
@@ -600,7 +615,7 @@ onUnmounted(() => {
                             <template #fallback>
                                 <div
                                     class="tiptap-editor-container relative border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-zinc-900 flex-1 flex flex-col min-h-0">
-                                    <i class="pi pi-spin pi-spinner text-2xl mb-2 block"></i>
+                                    <i class="pi pi-spin pi-spinner text-2xl mb-2 block"/>
                                     에디터 로딩 중...
                                 </div>
                             </template>
@@ -619,7 +634,7 @@ onUnmounted(() => {
                     class="h-[72px] border-b border-zinc-100 dark:border-zinc-800/50 flex items-center px-5 shrink-0 bg-white/20">
                     <h3
                         class="font-bold text-[13px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                        <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"></i> 바로가기 목차
+                        <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"/> 바로가기 목차
                     </h3>
                 </div>
 
@@ -635,11 +650,12 @@ onUnmounted(() => {
                         <li v-for="item in rawToc" :key="item.id" class="flex flex-col relative py-0.5">
 
                             <!-- 활성화 인디케이터 (왼쪽 보더선) -->
-                            <div v-if="activeSection === item.id"
-                                class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all">
-                            </div>
+                            <div
+v-if="activeSection === item.id"
+                                class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all"/>
 
-                            <div class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
+                            <div
+class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
                                 :class="[
                                     activeSection === item.id
                                         ? 'text-indigo-600 dark:text-indigo-400 font-bold'

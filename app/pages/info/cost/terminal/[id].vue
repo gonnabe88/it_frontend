@@ -70,7 +70,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 <!-- 마스터 정보 -->
                 <section class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                        <i class="pi pi-info-circle text-blue-500"></i> 기본 계약 정보
+                        <i class="pi pi-info-circle text-blue-500"/> 기본 계약 정보
                     </h2>
                     <div class="grid grid-cols-2 gap-y-6 gap-x-12">
                         <div class="space-y-1">
@@ -95,9 +95,9 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 <!-- 단말기 상세 목록 -->
                 <section class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                        <i class="pi pi-list text-indigo-500"></i> 단말기 상세 내역 ({{ cost.terminals?.length || 0 }}대)
+                        <i class="pi pi-list text-indigo-500"/> 단말기 상세 내역 ({{ cost.terminals?.length || 0 }}대)
                     </h2>
-                    <StyledDataTable :value="cost.terminals" class="p-datatable-sm" responsiveLayout="scroll">
+                    <StyledDataTable :value="cost.terminals" class="p-datatable-sm" responsive-layout="scroll">
                         <Column field="tmnNm" header="단말기명" />
                         <Column field="tmnTuzManr" header="이동방법" />
                         <Column field="tmnUsg" header="용도" />

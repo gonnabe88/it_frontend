@@ -116,6 +116,7 @@ export const useOrganization = () => {
     const buildOrgTree = (orgs: Organization[]) => {
         // 부서코드를 키로 사용하는 Map으로 빠른 부모 조회 지원
         const map = new Map();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const roots: any[] = [];
 
         // 1단계: 모든 부서를 Map에 등록 (트리 노드 초기화)

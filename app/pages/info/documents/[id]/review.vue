@@ -62,6 +62,7 @@ const popover = ref({
   type: 'inline' as 'inline' | 'general',
   markId: undefined as string | undefined,
   quotedText: undefined as string | undefined,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   existingComment: null as any,
 });
 

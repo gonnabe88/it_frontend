@@ -110,11 +110,11 @@ const updateContent = (index: number, content: string) => {
                         class="flex flex-col items-center gap-1"
                     >
                         <RadioButton
-                            :inputId="`${item.ckgItmC}-${score}`"
+                            :input-id="`${item.ckgItmC}-${score}`"
                             :value="score"
-                            :modelValue="item.ckgRcrd"
+                            :model-value="item.ckgRcrd"
                             :disabled="readonly"
-                            @update:modelValue="updateScore(index, score)"
+                            @update:model-value="updateScore(index, score)"
                         />
                         <label
                             :for="`${item.ckgItmC}-${score}`"

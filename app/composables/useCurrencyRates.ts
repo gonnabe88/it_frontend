@@ -38,6 +38,7 @@ export const useCurrencyRates = () => {
      * useApiFetch를 사용하여 환율 정보를 호출합니다.
      * key: 'currency-rates'를 통해 앱 전체에서 결과를 캐시하여 중복 호출을 방지합니다.
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, pending, error, refresh } = useApiFetch<any[]>(apiBaseUrl, {
         key: 'currency-rates',
     });

@@ -44,6 +44,7 @@ export interface Project {
     bgYy: number;     // 사업연도 (YYYY)
     svnHdq: string;    // 주관부문 (상위 조직 단위)
     svnDpmCgprNm: string; // 주관부서 담당자명 (사용자명 조회 결과)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     applicationInfo?: any; // 결재 타임라인 및 신청 상태 정보
 }
 
@@ -178,6 +179,7 @@ export const useProjects = () => {
      * @example
      * await createProject({ prjNm: '신규 ERP 시스템 구축', ... });
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createProject = async (payload: any) => {
         return await $apiFetch(API_BASE_URL, {
             method: 'POST',
@@ -195,6 +197,7 @@ export const useProjects = () => {
      * @example
      * await updateProject('PRJ-2026-001', { prjSts: '진행중', endDt: '2026-12-31' });
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateProject = async (id: string | number, payload: any) => {
         return await $apiFetch(`${API_BASE_URL}/${id}`, {
             method: 'PUT',

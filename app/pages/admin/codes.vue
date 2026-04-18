@@ -285,6 +285,7 @@ const saveNewRow = async () => {
         newRowVisible.value = false;
         await refresh();
         toast.add({ severity: 'success', summary: '추가 완료', detail: `코드 [${newRow.cdId}]가 추가되었습니다.`, life: 3000 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '추가 실패', detail: e?.data?.message ?? '코드 추가 중 오류가 발생했습니다.', life: 5000 });
     }
@@ -307,7 +308,7 @@ const saveNewRow = async () => {
                     accept=".xlsx,.xls"
                     class="hidden"
                     @change="onUploadFile"
-                />
+                >
                 <!-- 조회 버튼 (활성 필터 건수 배지) -->
                 <div class="relative inline-flex">
                     <Button
@@ -325,20 +326,20 @@ const saveNewRow = async () => {
                     />
                 </div>
                 <Button
+                    v-tooltip.bottom="'현재 코드 목록을 엑셀로 다운로드'"
                     label="일괄 다운로드"
                     icon="pi pi-download"
                     severity="secondary"
                     outlined
                     @click="downloadExcel"
-                    v-tooltip.bottom="'현재 코드 목록을 엑셀로 다운로드'"
                 />
                 <Button
+                    v-tooltip.bottom="'엑셀 파일로 코드 일괄 등록/수정'"
                     label="일괄 업로드"
                     icon="pi pi-upload"
                     severity="secondary"
                     outlined
                     @click="uploadInput?.click()"
-                    v-tooltip.bottom="'엑셀 파일로 코드 일괄 등록/수정'"
                 />
                 <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
             </div>
@@ -367,27 +368,29 @@ const saveNewRow = async () => {
 
         <!-- 공통코드 DataTable -->
         <StyledDataTable
+            v-model:editing-rows="editingRows"
             :value="filteredCodes"
             :loading="pending"
-            editMode="row"
-            v-model:editingRows="editingRows"
-            @row-edit-save="onRowEditSave"
-            dataKey="cdId"
+            edit-mode="row"
+            data-key="cdId"
             scrollable
-            scrollHeight="calc(100vh - 300px)"
+            scroll-height="calc(100vh - 300px)"
             paginator
             :rows="50"
-            :rowsPerPageOptions="[50, 100, 200]"
+            :rows-per-page-options="[50, 100, 200]"
             class="p-datatable-sm"
-            stripedRows>
+            striped-rows
+            @row-edit-save="onRowEditSave">
 
-            <Column field="cdId" header="코드ID" :style="{ width: '120px' }" frozen
+            <Column
+field="cdId" header="코드ID" :style="{ width: '120px' }" frozen
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.cdId">{{ data.cdId }}</span>
                 </template>
             </Column>
-            <Column field="cdNm" header="코드명" :style="{ width: '150px' }"
+            <Column
+field="cdNm" header="코드명" :style="{ width: '150px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.cdNm">{{ data.cdNm }}</span>
@@ -396,7 +399,8 @@ const saveNewRow = async () => {
                     <InputText v-model="data[field]" class="w-full" />
                 </template>
             </Column>
-            <Column field="cdva" header="코드값" :style="{ width: '150px' }"
+            <Column
+field="cdva" header="코드값" :style="{ width: '150px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.cdva">{{ data.cdva }}</span>
@@ -405,7 +409,8 @@ const saveNewRow = async () => {
                     <InputText v-model="data[field]" class="w-full" />
                 </template>
             </Column>
-            <Column field="cdDes" header="코드설명" :style="{ width: '200px' }"
+            <Column
+field="cdDes" header="코드설명" :style="{ width: '200px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.cdDes">{{ data.cdDes }}</span>
@@ -414,7 +419,8 @@ const saveNewRow = async () => {
                     <InputText v-model="data[field]" class="w-full" />
                 </template>
             </Column>
-            <Column field="cttTp" header="코드값구분" :style="{ width: '120px' }"
+            <Column
+field="cttTp" header="코드값구분" :style="{ width: '120px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.cttTp">{{ data.cttTp }}</span>
@@ -423,7 +429,8 @@ const saveNewRow = async () => {
                     <InputText v-model="data[field]" class="w-full" />
                 </template>
             </Column>
-            <Column field="cttTpDes" header="구분설명" :style="{ width: '180px' }"
+            <Column
+field="cttTpDes" header="구분설명" :style="{ width: '180px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.cttTpDes">{{ data.cttTpDes }}</span>
@@ -432,22 +439,24 @@ const saveNewRow = async () => {
                     <InputText v-model="data[field]" class="w-full" />
                 </template>
             </Column>
-            <Column field="sttDt" header="시작일자" :style="{ width: '130px' }"
+            <Column
+field="sttDt" header="시작일자" :style="{ width: '130px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.sttDt">{{ data.sttDt }}</span>
                 </template>
                 <template #editor="{ data, field }">
-                    <DatePicker v-model="data[field]" dateFormat="yy-mm-dd" class="w-full" />
+                    <DatePicker v-model="data[field]" date-format="yy-mm-dd" class="w-full" />
                 </template>
             </Column>
-            <Column field="endDt" header="종료일자" :style="{ width: '130px' }"
+            <Column
+field="endDt" header="종료일자" :style="{ width: '130px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="data.endDt">{{ data.endDt }}</span>
                 </template>
                 <template #editor="{ data, field }">
-                    <DatePicker v-model="data[field]" dateFormat="yy-mm-dd" class="w-full" />
+                    <DatePicker v-model="data[field]" date-format="yy-mm-dd" class="w-full" />
                 </template>
             </Column>
             <Column field="cdSqn" header="순서" :style="{ width: '80px' }">
@@ -457,10 +466,12 @@ const saveNewRow = async () => {
             </Column>
 
             <!-- 최초생성자 — 이름 클릭 시 직원정보 팝업 -->
-            <Column header="최초생성자" :style="{ width: '120px' }"
+            <Column
+header="최초생성자" :style="{ width: '120px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span v-if="data.fstEnrUsid"
+                    <span
+v-if="data.fstEnrUsid"
                           class="block truncate cursor-pointer text-blue-500 hover:underline"
                           :title="data.fstEnrUsNm || data.fstEnrUsid"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
@@ -468,7 +479,8 @@ const saveNewRow = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="fstEnrDtm" header="최초생성시간" :style="{ width: '160px' }"
+            <Column
+field="fstEnrDtm" header="최초생성시간" :style="{ width: '160px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="formatDateTime(data.fstEnrDtm)">
@@ -478,10 +490,12 @@ const saveNewRow = async () => {
             </Column>
 
             <!-- 마지막수정자 — 이름 클릭 시 직원정보 팝업 -->
-            <Column header="마지막수정자" :style="{ width: '120px' }"
+            <Column
+header="마지막수정자" :style="{ width: '120px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
-                    <span v-if="data.lstChgUsid"
+                    <span
+v-if="data.lstChgUsid"
                           class="block truncate cursor-pointer text-blue-500 hover:underline"
                           :title="data.lstChgUsNm || data.lstChgUsid"
                           @click="showEmployeeDialog(data.lstChgUsid)">
@@ -489,7 +503,8 @@ const saveNewRow = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="lstChgDtm" header="마지막수정시간" :style="{ width: '160px' }"
+            <Column
+field="lstChgDtm" header="마지막수정시간" :style="{ width: '160px' }"
                     :pt="{ bodyCell: { class: 'overflow-hidden' } }">
                 <template #body="{ data }">
                     <span class="block truncate" :title="formatDateTime(data.lstChgDtm)">
@@ -499,14 +514,15 @@ const saveNewRow = async () => {
             </Column>
 
             <!-- 편집 버튼 -->
-            <Column rowEditor :style="{ width: '80px' }" bodyStyle="text-align:center" frozen alignFrozen="right" />
+            <Column row-editor :style="{ width: '80px' }" body-style="text-align:center" frozen align-frozen="right" />
 
             <!-- 삭제 버튼 -->
-            <Column :style="{ width: '60px' }" bodyStyle="text-align:center" frozen alignFrozen="right">
+            <Column :style="{ width: '60px' }" body-style="text-align:center" frozen align-frozen="right">
                 <template #body="{ data }">
-                    <Button icon="pi pi-trash" severity="danger" text rounded
-                            @click="onDeleteConfirm(data.cdId)"
-                            v-tooltip.top="'삭제'" />
+                    <Button
+v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
+                            rounded
+                            @click="onDeleteConfirm(data.cdId)" />
                 </template>
             </Column>
         </StyledDataTable>
@@ -579,11 +595,11 @@ const saveNewRow = async () => {
                     <AutoComplete
                         v-model="searchFilters.cttTp"
                         :suggestions="filteredCttTp"
-                        @complete="searchCttTp"
                         multiple
                         dropdown
                         placeholder="구분 선택 (다중)"
                         fluid
+                        @complete="searchCttTp"
                     />
                 </div>
 
@@ -593,11 +609,11 @@ const saveNewRow = async () => {
                     <AutoComplete
                         v-model="searchFilters.cttTpDes"
                         :suggestions="filteredCttTpDes"
-                        @complete="searchCttTpDes"
                         multiple
                         dropdown
                         placeholder="구분설명 선택 (다중)"
                         fluid
+                        @complete="searchCttTpDes"
                     />
                 </div>
 
@@ -608,16 +624,16 @@ const saveNewRow = async () => {
                     <DatePicker
                         v-model="searchFilters.baseDate"
                         placeholder="기준일자 선택"
-                        showIcon
-                        dateFormat="yy-mm-dd"
+                        show-icon
+                        date-format="yy-mm-dd"
                         fluid
                     />
                 </div>
 
                 <!-- 액션 버튼 -->
                 <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetFilters" class="flex-1" />
-                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
+                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" class="flex-1" @click="resetFilters" />
+                    <Button label="조회" icon="pi pi-search" class="flex-1" @click="visibleDrawer = false" />
                 </div>
             </div>
         </Drawer>

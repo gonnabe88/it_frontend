@@ -36,7 +36,9 @@ import nanumGothicExtraBold from '@/assets/fonts/NanumGothic-ExtraBold.ttf?url';
  * composable이 여러 번 호출되어도 폰트를 중복 로드하지 않도록 합니다.
  * HMR(Hot Module Replacement) 시에는 모듈이 재실행되어 캐시가 초기화됩니다.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedVfs: any = null;   // pdfmake VFS(Virtual File System): 폰트 파일 base64 저장소
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedFonts: any = null; // pdfmake 폰트 설정 객체 (fontName → 파일 매핑)
 
 /**
@@ -49,7 +51,7 @@ const initDefaults = () => {
 
     // pdfmake/vfs_fonts에서 Roboto VFS를 가져옴 (패키지 버전별 구조 차이 대응)
     // 0.2.x: pdfFonts.pdfMake.vfs / pdfFonts.vfs, 0.3.x: pdfFonts 자체가 폰트 파일 객체
-    // @ts-ignore
+    // @ts-expect-error pdfmake/vfs_fonts 패키지 버전별 구조 차이로 인한 타입 오류 억제
     const defaultVfs = (pdfFonts?.pdfMake?.vfs) || (pdfFonts?.vfs) || pdfFonts;
 
     cachedVfs = { ...defaultVfs };
@@ -230,6 +232,7 @@ export const usePdfReport = () => {
             };
 
             // pdfmake 문서 정의 객체 초기화
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const docDefinition: any = {
                 content: [], // 실제 내용 배열 (이후 push로 추가)
                 defaultStyle: {
@@ -294,6 +297,7 @@ export const usePdfReport = () => {
              * @param val - 변환할 값
              * @returns 문자열 또는 빈 문자열
              */
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cellVal = (val: any) => val ? String(val) : '';
 
             /**
@@ -408,13 +412,15 @@ export const usePdfReport = () => {
                     ]
                 },
                 layout: {
-                    hLineWidth: (i:number) => 1,
-                    vLineWidth: (i:number) => 1,
+                    hLineWidth: (_i:number) => 1,
+                    vLineWidth: (_i:number) => 1,
                     hLineColor: colors.border,
                     vLineColor: colors.border,
                     // 이름 행(index 1)의 세로 패딩을 늘려 가운데 정렬 효과
-                    paddingTop:    (i:number, node:any) => i === 1 ? 12 : 4,
-                    paddingBottom: (i:number, node:any) => i === 1 ? 12 : 4
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    paddingTop:    (_i:number, _node:any) => _i === 1 ? 12 : 4,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    paddingBottom: (_i:number, _node:any) => _i === 1 ? 12 : 4
                 }
             });
 
@@ -444,25 +450,25 @@ export const usePdfReport = () => {
             // ====================================================================
 
             const tableLayout = {
-                hLineWidth:  (i: number) => 1,
-                vLineWidth:  (i: number) => 1,
-                hLineColor:  (i: number) => colors.border,
-                vLineColor:  (i: number) => colors.border,
-                paddingTop:    (i: number) => 8,
-                paddingBottom: (i: number) => 8,
-                paddingLeft:   (i: number) => 6,
-                paddingRight:  (i: number) => 6
+                hLineWidth:  (_i: number) => 1,
+                vLineWidth:  (_i: number) => 1,
+                hLineColor:  (_i: number) => colors.border,
+                vLineColor:  (_i: number) => colors.border,
+                paddingTop:    (_i: number) => 8,
+                paddingBottom: (_i: number) => 8,
+                paddingLeft:   (_i: number) => 6,
+                paddingRight:  (_i: number) => 6
             };
 
             const tableLayoutCost = {
-                hLineWidth:  (i: number) => 1,
-                vLineWidth:  (i: number) => 1,
-                hLineColor:  (i: number) => colors.borderCost,
-                vLineColor:  (i: number) => colors.borderCost,
-                paddingTop:    (i: number) => 8,
-                paddingBottom: (i: number) => 8,
-                paddingLeft:   (i: number) => 6,
-                paddingRight:  (i: number) => 6
+                hLineWidth:  (_i: number) => 1,
+                vLineWidth:  (_i: number) => 1,
+                hLineColor:  (_i: number) => colors.borderCost,
+                vLineColor:  (_i: number) => colors.borderCost,
+                paddingTop:    (_i: number) => 8,
+                paddingBottom: (_i: number) => 8,
+                paddingLeft:   (_i: number) => 6,
+                paddingRight:  (_i: number) => 6
             };
 
             // ====================================================================
@@ -470,7 +476,9 @@ export const usePdfReport = () => {
             // ====================================================================
 
             /** 정보화사업(일반) / 경상사업 분리 */
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const regularProjects  = projects.filter(p => (p as any).ornYn !== 'Y');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ordinaryProjects = projects.filter(p => (p as any).ornYn === 'Y');
 
             /** 정보화사업(일반) 합계 */
@@ -584,6 +592,7 @@ export const usePdfReport = () => {
 
             // 사업/계약별 예산 목록 테이블 (정보화사업 → 경상사업 → 전산업무비 구분)
             let rowNum = 0;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const allItemRows: any[][] = [];
 
             // 정보화사업 섹션
@@ -665,17 +674,18 @@ export const usePdfReport = () => {
             if (projects.length > 0) {
                 /** 경상사업 테이블 레이아웃 (앰버 색상) */
                 const tableLayoutOrd = {
-                    hLineWidth:  (i: number) => 1,
-                    vLineWidth:  (i: number) => 1,
-                    hLineColor:  (i: number) => colors.borderOrd,
-                    vLineColor:  (i: number) => colors.borderOrd,
-                    paddingTop:    (i: number) => 8,
-                    paddingBottom: (i: number) => 8,
-                    paddingLeft:   (i: number) => 6,
-                    paddingRight:  (i: number) => 6
+                    hLineWidth:  (_i: number) => 1,
+                    vLineWidth:  (_i: number) => 1,
+                    hLineColor:  (_i: number) => colors.borderOrd,
+                    vLineColor:  (_i: number) => colors.borderOrd,
+                    paddingTop:    (_i: number) => 8,
+                    paddingBottom: (_i: number) => 8,
+                    paddingLeft:   (_i: number) => 6,
+                    paddingRight:  (_i: number) => 6
                 };
 
                 projects.forEach((project, index) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const isOrdinary = (project as any).ornYn === 'Y';
 
                     // 총괄표 이후이므로 항상 페이지 나누기
@@ -934,9 +944,9 @@ export const usePdfReport = () => {
 
             // pdfmake 싱글턴에 VFS/폰트 동기화
             /* pdfmake 0.3.x API: addVirtualFileSystem / addFonts */
-            // @ts-ignore
+            // @ts-expect-error pdfmake 0.3.x 전용 API로 @types/pdfmake에 미정의
             pdfMake.addVirtualFileSystem(currentVfs);
-            // @ts-ignore
+            // @ts-expect-error pdfmake 0.3.x 전용 API로 @types/pdfmake에 미정의
             pdfMake.addFonts(currentFonts);
 
             console.log('Generating PDF with fonts:', Object.keys(currentFonts));
@@ -948,6 +958,7 @@ export const usePdfReport = () => {
              * 0.3.x에서 getBlob()은 Promise를 반환합니다.
              * @types/pdfmake는 콜백 시그니처만 정의하므로 타입 단언 필요
              */
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const blob = await (pdfGenerator as any).getBlob();
             const url = URL.createObjectURL(blob as Blob);
             console.log('✓ Blob URL created:', url);
