@@ -327,7 +327,10 @@ const navigateToTab = async (path: string) => {
 </script>
 
 <template>
-    <div class="card">
+    <!-- data-allow-mismatch: SSR(user=null)과 클라이언트(localStorage 복원 user) 간
+         isAdmin 값 차이로 MegaMenu model 크기 및 user 정보가 달라 hydration mismatch 발생.
+         기능적 문제 없으므로 헤더 전체에서 mismatch 경고를 억제합니다. -->
+    <div class="card" data-allow-mismatch>
         <MegaMenu :model="menuItems" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
             style="border-radius: 0">
 
@@ -411,7 +414,10 @@ const navigateToTab = async (path: string) => {
                         <span
                             class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-zinc-900"></span>
                     </button>
-                    <div class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700">
+                    <!-- SSR과 클라이언트 간 user 상태 차이로 발생하는 hydration mismatch를 허용합니다.
+                         SSR: user=null → fallback 표시 / 클라이언트: localStorage에서 복원된 실 사용자 정보 표시 -->
+                    <div class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700"
+                         data-allow-mismatch>
                         <div class="text-right hidden md:block">
                             <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ user?.empNm || '사용자'
                                 }}</div>

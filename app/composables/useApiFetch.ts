@@ -80,6 +80,8 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
         ...options,
         // 클라이언트 사이드에서만 실행 (SSR 비활성화)
         server: false,
+        // hydration 완료 후 fetch 시작 — server:false와 조합해 hydration mismatch 방지
+        lazy: true,
         // tokenRefreshSignal 변경 시 자동 재요청하도록 watch 설정
         watch: [tokenRefreshSignal, ...callerWatch],
         /**
