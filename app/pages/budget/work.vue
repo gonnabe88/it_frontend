@@ -90,14 +90,14 @@ const loadDupCodes = async () => {
         const { $apiFetch } = useNuxtApp()
         // DUP-AMT: 기준액 코드 조회
         const amtCodes = await $apiFetch<Array<{ cdId: string; cdva: string }>>(
-            `${config.public.apiBase}/api/codes`, { params: { cttTp: 'DUP_AMT' } }
+            `${config.public.apiBase}/api/ccodem/type/DUP_AMT`
         )
         const amt300 = amtCodes?.find(c => c.cdId === 'DUP-AMT-300')
         if (amt300?.cdva) capThreshold.value = Number(amt300.cdva)
 
         // DUP-IOE: 비목별 비율 코드 조회
         const ioeCodes = await $apiFetch<Array<{ cdId: string; cdva: string }>>(
-            `${config.public.apiBase}/api/codes`, { params: { cttTp: 'DUP_IOE' } }
+            `${config.public.apiBase}/api/ccodem/type/DUP_IOE`
         )
         const ioe351 = ioeCodes?.find(c => c.cdId === 'DUP-IOE-351')
         if (ioe351?.cdva) defaultAssetDupRt.value = Number(ioe351.cdva)
@@ -488,6 +488,14 @@ const onSave = async () => {
                 }))
             }
         })
+        /*
+         * 응답 body에 포함된 최신 summary를 즉시 반영하여 [비목별 편성 결과] 테이블을 갱신합니다.
+         * 동시에 [사업별 편성 결과]는 별도 엔드포인트이므로 refresh 호출로 재조회합니다.
+         * refreshSummary도 함께 호출하여 서버 상태와 100% 동기화를 보장합니다.
+         */
+        if (result.summary) {
+            summaryData.value = result.summary
+        }
         await Promise.all([refreshSummary(), refreshProjectSummary()])
         toast.add({
             severity: 'success',

@@ -153,6 +153,11 @@ onActivated(async () => {
  * 기본값으로 초기화된 빈 전산업무비 항목을 목록에 추가합니다.
  * 담당자·담당부서·담당팀은 현재 로그인 사용자 정보로 자동입력됩니다.
  */
+/** 기본 예산연도: 1~9월은 올해, 10~12월은 내년 */
+const defaultBgYear = new Date().getMonth() < 9
+    ? new Date().getFullYear()
+    : new Date().getFullYear() + 1;
+
 const addCostRow = () => {
     costs.value.push({
         ioeC: '',
@@ -179,7 +184,8 @@ const addCostRow = () => {
         assetBg: 0,
         apfSts: '예산 작성',
         lstYn: 'Y',
-        delYn: 'N'
+        delYn: 'N',
+        bgYy: String(defaultBgYear),
     });
 };
 

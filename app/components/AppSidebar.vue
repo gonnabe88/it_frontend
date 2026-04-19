@@ -17,8 +17,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { useProjects } from '~/composables/useProjects';
-import { useCost } from '~/composables/useCost';
+import { usePendingApprovalCount } from '~/composables/usePendingApprovalCount';
 import IconCrown from '~/components/icons/IconCrown.vue';
 
 /**
@@ -32,22 +31,16 @@ const collapsed = useCookie<boolean>('sidebar-collapsed', { default: () => false
 const { isAdmin: _isAdmin } = useAuth();
 
 /* ── 결재 상신 배지: 결재 대기 중인 항목 수 ── */
-const { fetchProjects } = useProjects();
-const { fetchCosts } = useCost();
-
-// apfSts=none: 아직 결재 상신하지 않은 항목(미상신)만 조회
-const { data: pendingProjectsData } = fetchProjects({ apfSts: 'none' });
-const { data: pendingCostsData } = fetchCosts({ apfSts: 'none' });
+// 사이드바는 건수만 필요하므로 건수 전용 API(/api/applications/pending-count)를 사용합니다.
+// 이를 통해 /budget/approval 페이지의 목록 조회 API와 URL이 겹치지 않아
+// 새로고침 시 중복 요청으로 인한 네트워크 오류 토스트가 발생하지 않습니다.
+const { data: pendingCountData } = usePendingApprovalCount();
 
 /**
  * 결재 상신 가능한 항목 수 (정보화사업 + 전산업무비)
  * 사이드바의 [결재 상신] 메뉴 옆 배지에 표시됩니다.
  */
-const approvalCount = computed(() => {
-    const projects = pendingProjectsData.value?.length ?? 0;
-    const costs = pendingCostsData.value?.length ?? 0;
-    return projects + costs;
-});
+const approvalCount = computed(() => pendingCountData.value?.totalCount ?? 0);
 
 const toggleSidebar = () => {
     // useCookie가 자동으로 쿠키에 저장합니다.

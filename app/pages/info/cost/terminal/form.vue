@@ -58,6 +58,11 @@ const abusCOptions = ref<CodeOption[]>([]);
 /** 단말기서비스 옵션 (TMN_SVC) */
 const tmnSvcOptions = ref<CodeOption[]>([]);
 
+/** 기본 예산연도: 1~9월은 올해, 10~12월은 내년 */
+const defaultBgYear = new Date().getMonth() < 9
+    ? new Date().getFullYear()
+    : new Date().getFullYear() + 1;
+
 const title = '금융정보단말기 등록';
 definePageMeta({ title: '금융정보단말기 등록', middleware: ['budget-period'] });
 
@@ -69,6 +74,10 @@ definePageMeta({ title: '금융정보단말기 등록', middleware: ['budget-per
  */
 const editId = computed(() => route.query.id as string | undefined);
 const parentCostId = computed(() => route.query.costId as string | undefined);
+/** index.vue에서 전달된 예산연도 (없으면 defaultBgYear 사용) */
+const queryBgYy = computed(() =>
+    route.query.bgYy ? String(route.query.bgYy) : String(defaultBgYear)
+);
 const mode = computed(() => {
     if (editId.value) return 'edit';
     if (parentCostId.value) return 'linked';
@@ -131,12 +140,12 @@ const loadParentCostData = async () => {
         if (parentData) {
             costs.value = [{
                 ioeC: parentData.ioeC ?? '',
-                cttNm: '',
-                pulDtt: '',
+                cttNm: parentData.cttNm ?? '',
+                pulDtt: parentData.pulDtt ?? '',
                 cttOpp: parentData.cttOpp ?? '',
                 itMngcBg: 0,
                 dfrCle: parentData.dfrCle ?? '',
-                fstDfrDt: '',
+                fstDfrDt: parentData.fstDfrDt ? new Date(parentData.fstDfrDt as string) : '',
                 cur: 'KRW',
                 xcr: 0,
                 xcrBseDt: '',
@@ -154,7 +163,8 @@ const loadParentCostData = async () => {
                 apfSts: '예산 작성',
                 lstYn: 'Y',
                 delYn: 'N',
-                terminals: []
+                terminals: [],
+                bgYy: queryBgYy.value,
             }];
         }
     } catch (e) {
@@ -221,18 +231,63 @@ onMounted(async () => {
             apfSts: '예산 작성',
             lstYn: 'Y',
             delYn: 'N',
-            terminals: []
+            terminals: [],
+            bgYy: queryBgYy.value,
         }];
     }
 });
 
-/** KeepAlive 재활성화 시 최신 데이터 재조회 (수정 모드에서만) */
-onActivated(() => loadCostData());
+/**
+ * KeepAlive 재활성화 시 현재 모드에 맞게 데이터 재로드
+ * - edit: 최신 수정 데이터 재조회
+ * - linked: 부모 전산업무비 초기값 복사 (이전 edit 데이터 잔존 방지)
+ * - new: 빈 폼으로 초기화
+ */
+onActivated(async () => {
+    costs.value = [];
+    if (mode.value === 'edit') {
+        await loadCostData();
+    } else if (mode.value === 'linked') {
+        await loadParentCostData();
+    } else {
+        costs.value = [{
+            ioeC: '금융정보단말기',
+            cttNm: '',
+            pulDtt: '',
+            cttOpp: '',
+            itMngcBg: 0,
+            dfrCle: '',
+            fstDfrDt: '',
+            cur: 'KRW',
+            xcr: 0,
+            xcrBseDt: '',
+            infPrtYn: 'N',
+            indRsn: '',
+            cgpr: user.value?.eno ?? '',
+            cgprNm: user.value?.empNm ?? '',
+            biceDpm: currentUserDetail.value?.bbrC ?? user.value?.bbrC ?? '',
+            biceDpmNm: currentUserDetail.value?.bbrNm ?? '',
+            biceTem: currentUserDetail.value?.temC ?? user.value?.temC ?? '',
+            biceTemNm: currentUserDetail.value?.temNm ?? '',
+            abusC: '',
+            itMngcTp: 'IT_MNGC_TP_002',
+            assetBg: 0,
+            apfSts: '예산 작성',
+            lstYn: 'Y',
+            delYn: 'N',
+            terminals: [],
+            bgYy: queryBgYy.value,
+        }];
+    }
+});
 
-/** 같은 페이지에서 다른 id로 이동 시 데이터 재조회 */
-watch(editId, (newId) => {
-    if (newId) {
-        loadCostData();
+/** 같은 페이지에서 query 파라미터 변경 시 데이터 재로드 */
+watch([editId, parentCostId], async ([newEditId, newCostId]) => {
+    costs.value = [];
+    if (newEditId) {
+        await loadCostData();
+    } else if (newCostId) {
+        await loadParentCostData();
     }
 });
 

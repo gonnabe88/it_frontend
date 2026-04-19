@@ -26,6 +26,13 @@ import { useToast } from 'primevue/usetoast';
 let isRefreshing = false;
 
 /**
+ * 네트워크 오류 Toast 마지막 표시 시각 (모듈 레벨)
+ * 여러 API가 동시에 네트워크 오류를 만났을 때 1초 내 Toast 중복 표시를 방지합니다.
+ * 예: fetchProjects + fetchCosts 동시 실패 시 Toast 2개 → 1개로 통합
+ */
+let networkErrorLastShown = 0;
+
+/**
  * 토큰 갱신 성공 시 증가하는 신호 (모듈 레벨 - 모든 useApiFetch 인스턴스 공유)
  * useFetch의 watch 옵션에 연결되어 있어, 이 값이 변경되면
  * 현재 페이지에서 활성화된 모든 useApiFetch 인스턴스가 자동으로 재요청을 실행합니다.
@@ -100,8 +107,22 @@ export const useApiFetch = <T>(url: string | (() => string), options: UseFetchOp
         /**
          * 네트워크 오류 핸들러 (서버 연결 자체가 불가능한 경우)
          * - fetch가 네트워크 레벨에서 실패(DNS 오류, 연결 거부 등)할 때 호출됩니다.
+         *
+         * [AbortError 무시]
+         *  keepalive 페이지에서 onActivated가 refresh()를 호출하면 진행 중이던
+         *  최초 fetch가 abort 되어 AbortError가 발생합니다. 이는 실제 네트워크 오류가
+         *  아니므로 Toast를 표시하지 않습니다.
          */
-        onRequestError: () => {
+        onRequestError: (ctx?: { error?: unknown }) => {
+            // 요청 취소(abort)는 네트워크 오류가 아니므로 Toast 억제
+            const err = ctx?.error as { name?: string; message?: string } | undefined;
+            if (err && (err.name === 'AbortError' || err.message?.includes('aborted'))) {
+                return;
+            }
+            /* 1초 내 동일 오류가 여러 요청에서 동시에 발생해도 Toast 1개만 표시 */
+            const now = Date.now();
+            if (now - networkErrorLastShown < 1000) return;
+            networkErrorLastShown = now;
             toast.add({
                 severity: 'error',
                 summary: '네트워크 오류',

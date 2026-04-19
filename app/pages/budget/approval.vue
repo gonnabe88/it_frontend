@@ -39,6 +39,8 @@ const { getCodeName: getPulDttName } = useCodeOptions('PUL_DTT');
 const { fetchProjects, fetchProjectsBulk } = useProjects();
 /* apfSts=none: 결재 신청이 없는 항목(미상신)만 조회 */
 /* await 제거: keepalive + server:false 환경에서 Suspense 블로킹 방지 */
+/* AppSidebar는 /api/applications/pending-count 전용 API를 사용하므로
+   이 화면의 목록 조회 API(/api/projects?apfSts=none)와 URL이 겹치지 않습니다. */
 const { data: projectsData, pending: projectsPending, refresh: refreshProjects } = fetchProjects({ apfSts: 'none' });
 /** 정보화사업 목록 */
 const projects = computed(() => projectsData.value || []);
@@ -52,8 +54,22 @@ const costs = computed(() => costsData.value || []);
 /** 데이터 로딩 중 여부 */
 const isLoading = computed(() => projectsPending.value || costsPending.value);
 
-/** keepalive 페이지 재방문 시 데이터 갱신 (상신 후 돌아왔을 때 최신 상태 반영) */
+/**
+ * keepalive 페이지 재방문 시 데이터 갱신 (상신 후 돌아왔을 때 최신 상태 반영)
+ *
+ * [첫 활성화는 스킵]
+ *  keepalive 래퍼의 특성상 최초 마운트 시점에도 onActivated가 함께 호출됩니다.
+ *  이 경우 useApiFetch의 초기 fetch가 진행 중인데 refresh()가 호출되면
+ *  초기 fetch가 abort 되어 불필요한 네트워크 오류가 발생할 수 있습니다.
+ *  따라서 첫 활성화는 건너뛰고, 다른 페이지에서 돌아온 경우(두 번째 이후)에만
+ *  데이터를 갱신합니다.
+ */
+let isFirstActivation = true;
 onActivated(() => {
+    if (isFirstActivation) {
+        isFirstActivation = false;
+        return;
+    }
     refreshProjects();
     refreshCosts();
 });

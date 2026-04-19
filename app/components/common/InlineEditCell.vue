@@ -104,6 +104,10 @@ const handleClickOutside = (event: MouseEvent) => {
     // DOM 계층 기반의 closest() 검사가 신뢰할 수 없으므로 @hide 이벤트로 처리
     if (props.type === 'date') return;
 
+    // InputNumber는 v-model을 blur 시점에만 커밋하므로 mousedown에서 읽으면 이전 값이 남아있음.
+    // @blur의 nextTick(save)에서 정확한 값으로 저장하도록 여기서는 건너뜀.
+    if (props.type === 'number') return;
+
     const target = event.target as HTMLElement;
     if (!target) return;
 
@@ -307,7 +311,9 @@ v-if="type === 'text'"
                 @keydown.esc="cancel"
                 @blur="save" />
 
-            <!-- Edit Mode: number -->
+            <!-- Edit Mode: number
+                 @blur: PrimeVue InputNumber는 blur 이벤트 emit 후 updateModel을 동기 호출하므로
+                 nextTick 이후에 save()를 실행해야 localValue가 최신 값으로 반영됨. -->
             <InputNumber
 v-else-if="type === 'number'"
                 ref="inputRef"
@@ -317,7 +323,7 @@ v-else-if="type === 'number'"
                 :suffix="suffix ? ` ${suffix}` : undefined"
                 @keydown.enter="save"
                 @keydown.esc="cancel"
-                @blur="save" />
+                @blur="() => nextTick(save)" />
 
             <!-- Edit Mode: select -->
             <Select

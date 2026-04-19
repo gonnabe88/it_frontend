@@ -23,6 +23,7 @@ index.vue와 동일한 헤더 스타일(blue-900, showGridlines)을 적용합니
 -->
 <script setup lang="ts">
 import type { ItCost } from '~/composables/useCost';
+import { getApprovalTagClass } from '~/utils/common';
 import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
@@ -206,6 +207,16 @@ v-model="data.fstDfrDt" type="date"
 v-tooltip.top="'직원조회'" icon="pi pi-search" text size="small"
                         class="!pe-1" @click="openEmployeeSearch(index)" />
                 </div>
+            </template>
+        </Column>
+
+        <!-- 결재현황 -->
+        <Column header="결재현황" style="width: 100px; text-align: center">
+            <template #body="{ data }">
+                <Tag
+                    :value="data.apfSts || '예산 작성'"
+                    :class="getApprovalTagClass(data.apfSts || '예산 작성')"
+                    rounded />
             </template>
         </Column>
 
