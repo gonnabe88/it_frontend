@@ -21,7 +21,7 @@ Enter 키로 저장, Esc 키로 취소되는 인라인 편집 컴포넌트입니
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, nextTick, watch, computed, onUnmounted } from 'vue';
+import { ref, nextTick, watch, computed, onMounted, onUnmounted } from 'vue';
 
 interface Props {
     modelValue: string | number | Date | null | undefined
@@ -72,8 +72,12 @@ const emit = defineEmits<{
     'search-click': []
 }>();
 
-/** 편집 모드 여부 */
-const editing = ref(false);
+/**
+ * 편집 모드 여부
+ * - forceEdit=true로 마운트되면 처음부터 편집 폼이 렌더링되도록 초기값을 동기화
+ *   (watch는 값 변경 시에만 발화하므로, 초기 상태는 여기서 직접 지정)
+ */
+const editing = ref(props.forceEdit === true);
 
 /** 편집 중인 로컬 값 (원본 복원용) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,9 +96,12 @@ const inputRef = ref<HTMLElement | null>(null);
 /** blur 이벤트가 select option 클릭에 의한 것인지 판단용 플래그 */
 const ignoreBlur = ref(false);
 
-/** props.modelValue 변경 시 localValue 동기화 */
+/** props.modelValue 변경 시 localValue 동기화
+ *  - 일반 모드: 편집 중이 아닐 때만 동기화 (편집 중에는 사용자 입력 보존)
+ *  - forceEdit 모드: 항상 동기화. 편집 중이더라도 부모에서 modelValue를 강제로 초기화한 경우
+ *    (예: 담당자 미선택 시 cgprNm을 ''로 초기화) 입력 UI에 즉시 반영되어야 함. */
 watch(() => props.modelValue, (val) => {
-    if (!editing.value) {
+    if (!editing.value || props.forceEdit) {
         localValue.value = val;
     }
 });
@@ -119,9 +126,14 @@ const handleClickOutside = (event: MouseEvent) => {
 
     // 2. forceEdit 모드: 행 전체 편집 중이므로 값만 emit하고 편집 상태 유지
     //    (셀 간 이동 시 현재 값 보존, 편집 종료는 저장 버튼으로 제어)
+    //    단, 값이 실제로 변경되지 않은 경우에는 save 이벤트를 emit하지 않는다 —
+    //    forceEdit 모드에서는 모든 행의 모든 InlineEditCell이 document click을 수신하므로
+    //    무조건 save를 emit하면 한 셀 클릭만으로 전체 행이 modified로 잘못 마킹된다.
     if (props.forceEdit) {
-        emit('update:modelValue', localValue.value);
-        emit('save', localValue.value);
+        if (localValue.value !== originalValue.value) {
+            emit('update:modelValue', localValue.value);
+            emit('save', localValue.value);
+        }
         return;
     }
 
@@ -143,6 +155,16 @@ watch(editing, (isEditing) => {
         document.addEventListener('mousedown', handleClickOutside);
     } else {
         document.removeEventListener('mousedown', handleClickOutside);
+    }
+});
+
+/**
+ * 마운트 시점에 이미 편집 모드라면 클릭-외부 감지 리스너도 함께 등록
+ * (forceEdit=true로 초기 렌더되는 케이스. watch(editing)은 값 변경 시에만 발화하므로 초기 상태는 여기서 처리)
+ */
+onMounted(() => {
+    if (editing.value) {
+        document.addEventListener('mousedown', handleClickOutside);
     }
 });
 
@@ -214,16 +236,23 @@ const startEdit = () => {
     });
 };
 
-/** 저장 후 View 모드로 복귀 (forceEdit 모드에서는 편집 상태 유지) */
+/** 저장 후 View 모드로 복귀 (forceEdit 모드에서는 편집 상태 유지)
+ *  forceEdit 모드에서는 값이 실제로 변경된 경우에만 save emit (모든 행이 dirty로 마킹되는 문제 방지).
+ *  일반 모드에서는 기존 동작 유지 — 편집 종료 후 항상 save emit. */
 const save = () => {
     if (ignoreBlur.value) {
         ignoreBlur.value = false;
         return;
     }
-    // forceEdit 모드: 편집 상태를 유지하고 값만 emit (행 전체 편집 종료는 외부에서 제어)
-    if (!props.forceEdit) {
-        editing.value = false;
+    if (props.forceEdit) {
+        // 편집 상태를 유지하고, 값이 바뀐 경우에만 emit
+        if (localValue.value !== originalValue.value) {
+            emit('update:modelValue', localValue.value);
+            emit('save', localValue.value);
+        }
+        return;
     }
+    editing.value = false;
     emit('update:modelValue', localValue.value);
     emit('save', localValue.value);
 };
@@ -288,84 +317,52 @@ const onSearchClick = () => {
 </script>
 
 <template>
-    <div ref="containerRef" class="inline-edit-cell w-full overflow-hidden" @click.stop="startEdit">
+    <div
+        ref="containerRef"
+        :class="['inline-edit-cell w-full overflow-hidden', invalid && editing ? 'is-invalid' : '']"
+        @click.stop="startEdit">
 
         <!-- View Mode -->
-        <span
-v-if="!editing"
-            :class="[
-                'inline-block w-full px-2 py-1 rounded min-h-[2rem] leading-[2rem]',
-                readonly ? 'cursor-default' : (disabled ? 'text-zinc-400 cursor-not-allowed' : 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800'),
-                invalid ? 'ring-1 ring-red-500' : ''
-            ]">
+        <span v-if="!editing" :class="[
+            'inline-block w-full px-2 py-1 rounded min-h-[2rem] leading-[2rem]',
+            readonly ? 'cursor-default' : (disabled ? 'text-zinc-400 cursor-not-allowed' : 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800'),
+            invalid ? 'text-red-500' : ''
+        ]">
             {{ displayValue }}
         </span>
 
-        <!-- Edit Mode -->
+        <!-- Edit Mode: invalid 표시는 PrimeVue 입력 컴포넌트의 :invalid prop으로 처리합니다.
+             외곽 div에 ring을 걸면 셀의 overflow:hidden에 의해 좌/우/상/하 변이 잘리고 모서리만
+             남는 시각 이상 현상이 발생하므로, 입력 요소 자체에만 invalid 스타일을 적용합니다. -->
         <div v-else class="flex items-center gap-1 w-full">
             <!-- Edit Mode: text -->
-            <InputText
-v-if="type === 'text'"
-                ref="inputRef"
-                v-model="localValue"
-                class="w-full cursor-text"
-                :placeholder="placeholder"
-                @keydown.enter="save"
-                @keydown.esc="cancel"
+            <InputText v-if="type === 'text'" ref="inputRef" v-model="localValue" :invalid="invalid"
+                class="w-full cursor-text" :placeholder="placeholder" @keydown.enter="save" @keydown.esc="cancel"
                 @blur="save" />
 
             <!-- Edit Mode: number
                  @blur: PrimeVue InputNumber는 blur 이벤트 emit 후 updateModel을 동기 호출하므로
                  nextTick 이후에 save()를 실행해야 localValue가 최신 값으로 반영됨. -->
-            <InputNumber
-v-else-if="type === 'number'"
-                ref="inputRef"
-                v-model="localValue"
-                class="w-full cursor-text"
-                :placeholder="placeholder"
-                :suffix="suffix ? ` ${suffix}` : undefined"
-                @keydown.enter="save"
-                @keydown.esc="cancel"
-                @blur="() => nextTick(save)" />
+            <InputNumber v-else-if="type === 'number'" ref="inputRef" v-model="localValue" :invalid="invalid"
+                class="w-full cursor-text" :placeholder="placeholder" :suffix="suffix ? ` ${suffix}` : undefined"
+                @keydown.enter="save" @keydown.esc="cancel" @blur="() => nextTick(save)" />
 
             <!-- Edit Mode: select -->
-            <Select
-v-else-if="type === 'select'"
-                ref="inputRef"
-                v-model="localValue"
-                :options="options"
-                option-label="label"
-                option-value="value"
-                class="w-full cursor-pointer"
-                :placeholder="placeholder"
-                @change="onSelectChange" />
+            <Select v-else-if="type === 'select'" ref="inputRef" v-model="localValue" :invalid="invalid"
+                :options="options" option-label="label" option-value="value" class="w-full cursor-pointer"
+                :placeholder="placeholder" @change="onSelectChange" />
 
             <!-- Edit Mode: date
                  input+아이콘 버튼(form)은 fluid+w-full로 컬럼 너비 안에 제한됨.
                  달력 드롭다운 패널은 PrimeVue가 자동으로 teleport하여 컬럼 밖에 full-size로 표시됨.
                  @hide: 패널이 닫힐 때(날짜 선택 or 외부 클릭) 저장 처리 -->
-            <DatePicker
-v-else-if="type === 'date'"
-                ref="inputRef"
-                v-model="localValue"
-                :view="view"
-                :date-format="dateFormat"
-                show-icon
-                fluid
-                class="w-full cursor-pointer"
-                @hide="save" />
+            <DatePicker v-else-if="type === 'date'" ref="inputRef" v-model="localValue" :invalid="invalid" :view="view"
+                :date-format="dateFormat" show-icon fluid class="w-full cursor-pointer" @hide="save" />
 
             <!-- Edit Mode: autocomplete -->
-            <AutoComplete
-v-else-if="type === 'autocomplete'"
-                ref="inputRef"
-                v-model="localValue"
-                :suggestions="suggestions"
-                :option-label="optionLabel"
-                class="w-full min-w-0 cursor-text"
-                :placeholder="placeholder"
-                @complete="emit('complete', $event)"
-                @item-select="onSelectChange">
+            <AutoComplete v-else-if="type === 'autocomplete'" ref="inputRef" v-model="localValue" :invalid="invalid"
+                :suggestions="suggestions" :option-label="optionLabel" class="w-full min-w-0 cursor-text"
+                :placeholder="placeholder" @complete="emit('complete', $event)" @item-select="onSelectChange">
                 <template #option="{ option }">
                     <slot name="option" :option="option">{{ optionLabel ? option[optionLabel] : option }}</slot>
                 </template>
@@ -426,5 +423,17 @@ v-else-if="type === 'autocomplete'"
 :deep(.p-autocomplete-input) {
     min-width: 0 !important;
     width: 100% !important;
+}
+
+/* invalid 상태 강조: 테두리 대신 내부 텍스트만 붉은색으로 표시.
+   - 편집 모드(.is-invalid) 하위의 모든 입력 컴포넌트 내부 텍스트 색상을 red-500으로 변경
+   - PrimeVue 내부 구조를 건드리지 않기 위해 color만 상속/강제 지정 */
+.inline-edit-cell.is-invalid,
+.inline-edit-cell.is-invalid input,
+.inline-edit-cell.is-invalid textarea,
+.inline-edit-cell.is-invalid .p-inputtext,
+.inline-edit-cell.is-invalid .p-select-label,
+.inline-edit-cell.is-invalid .p-autocomplete-input {
+    color: rgb(239 68 68) !important; /* red-500 */
 }
 </style>

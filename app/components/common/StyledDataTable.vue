@@ -15,6 +15,20 @@
   - :value, paginator, dataKey 등 DataTable의 모든 속성은 그대로 전달됩니다.
   - showGridlines, resizableColumns, pt(헤더 스타일)은 고정 적용됩니다.
 
+[공통 기능 표준 — 모든 StyledDataTable에 자동 적용]
+  1) 화면 채움 레이아웃: scrollable + scroll-height="flex"와 함께 사용할 때
+     남은 화면 영역을 자동으로 채우는 flex 체인이 적용됩니다.
+     (부모 컨테이너는 flex-1 min-h-0 flex flex-col 체인을 유지해야 합니다)
+  2) Paginator: 하단에 고정되며 좌/우/하단 보더는 제거하고 상단 보더만 남겨
+     카드 테두리와 자연스럽게 이어지도록 합니다.
+  3) 삭제 표시 행 규약: row-class 함수가 'row-deleted'를 반환하는 행은
+     회색 배경 + 취소선 + 포인터 차단 스타일이 자동 적용됩니다.
+     첫 번째 셀(선택 체크박스)과 마지막 셀(액션 버튼)은 조작 가능합니다.
+
+     예시:
+       const rowClass = (data) => data._status === 'deleted' ? 'row-deleted' : '';
+       <StyledDataTable :row-class="rowClass" ...>
+
 [CSS 방식]
   Vue <style scoped>의 :deep()은 data-v-xxxx 스코프 속성에 의존하는데,
   컴포넌트 루트가 PrimeVue 내부 요소로 구성될 때 매칭이 누락될 수 있습니다.
@@ -73,5 +87,92 @@ v-bind="$attrs" show-gridlines resizable-columns column-resize-mode="fit"
     height: 50vh;
     vertical-align: middle;
     text-align: center;
+}
+
+/* ============================================================================
+   [공통 표준] 화면 채움 레이아웃
+   ----------------------------------------------------------------------------
+   DataTable을 scrollable + scroll-height="flex"로 사용하고 부모가
+   (flex-1 min-h-0 flex flex-col) 체인을 제공하면, 테이블이 남은 영역을 채우고
+   본문만 스크롤되며 paginator는 하단에 고정됩니다.
+   ============================================================================ */
+.kdb-it-table {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.kdb-it-table .p-datatable {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.kdb-it-table .p-datatable-table-container {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* Paginator: 하단 고정 + 좌/우/하단 보더 제거 (상단 보더만 유지) */
+.kdb-it-table .p-datatable-paginator-bottom,
+.kdb-it-table .p-paginator-bottom {
+    flex-shrink: 0;
+    margin-top: auto;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+}
+
+/* ============================================================================
+   [공통 표준] 삭제 표시 행(row-deleted)
+   ----------------------------------------------------------------------------
+   row-class 함수가 'row-deleted'를 반환하는 행에 자동 적용되는 스타일입니다.
+   - 회색 배경 + 취소선 + opacity + pointer-events 차단
+   - 첫 번째 셀(선택 체크박스)과 마지막 셀(삭제/복구 버튼)은 조작 가능 유지
+   - input/AutoComplete/Select 내부 텍스트는 상속되지 않으므로 개별 타겟팅
+   ============================================================================ */
+.kdb-it-table .p-datatable-tbody>tr.row-deleted {
+    background-color: rgb(244 244 245) !important; /* zinc-100 */
+}
+
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td {
+    color: rgb(161 161 170) !important; /* zinc-400 */
+    text-decoration: line-through;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td input,
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td textarea,
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td .p-inputtext,
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td .p-select-label,
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td .p-autocomplete-input,
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td .inline-edit-cell>span {
+    text-decoration: line-through !important;
+    color: rgb(161 161 170) !important;
+}
+
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td:first-child,
+.kdb-it-table .p-datatable-tbody>tr.row-deleted>td:last-child {
+    pointer-events: auto;
+    opacity: 1;
+    text-decoration: none;
+    color: inherit !important;
+}
+
+/* 다크 모드 */
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted {
+    background-color: rgb(39 39 42) !important; /* zinc-800 */
+}
+
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted>td,
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted>td input,
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted>td .p-inputtext,
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted>td .p-select-label,
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted>td .p-autocomplete-input,
+.dark .kdb-it-table .p-datatable-tbody>tr.row-deleted>td .inline-edit-cell>span {
+    color: rgb(113 113 122) !important; /* zinc-500 */
 }
 </style>

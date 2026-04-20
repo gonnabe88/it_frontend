@@ -19,7 +19,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onActivated  } from 'vue';
-import ExcelJS from 'exceljs';
+import { exportRowsToExcel } from '~/utils/excel';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
@@ -385,19 +385,7 @@ const downloadExcel = async () => {
         '시작일': item.sttDt,
         '종료일': item.endDt
     }));
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('결재상신목록');
-    if (rows.length > 0) {
-        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
-        rows.forEach(row => ws.addRow(row));
-    }
-    const buf = await wb.xlsx.writeBuffer();
-    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `결재상신목록_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await exportRowsToExcel(rows, '결재상신목록', `결재상신목록_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /* ── PDF 보고서 다운로드 ── */

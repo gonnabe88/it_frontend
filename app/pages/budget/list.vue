@@ -19,7 +19,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import ExcelJS from 'exceljs';
+import { exportRowsToExcel } from '~/utils/excel';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import ApprovalTimeline from '~/components/approval/ApprovalTimeline.vue';
@@ -542,7 +542,7 @@ const openApplicationViewer = (apfMngNo: string) => {
 };
 
 /**
- * 워크시트 데이터를 XLSX 파일로 다운로드
+ * 워크시트 데이터를 XLSX 파일로 다운로드 (공통 유틸 래퍼)
  *
  * @param rows - 행 데이터 배열 (첫 번째 행을 헤더로 사용)
  * @param sheetName - 시트명
@@ -550,19 +550,7 @@ const openApplicationViewer = (apfMngNo: string) => {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const downloadExcel = async (rows: Record<string, any>[], sheetName: string, fileName: string) => {
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet(sheetName);
-    if (rows.length > 0) {
-        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
-        rows.forEach(row => ws.addRow(row));
-    }
-    const buf = await wb.xlsx.writeBuffer();
-    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
+    await exportRowsToExcel(rows, sheetName, fileName);
 };
 
 /**

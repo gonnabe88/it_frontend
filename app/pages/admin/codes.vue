@@ -23,6 +23,7 @@ import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import ExcelJS from 'exceljs';
+import { exportRowsToExcel } from '~/utils/excel';
 
 // 관리자 미들웨어 + 레이아웃 적용
 definePageMeta({ middleware: 'admin', layout: 'admin' });
@@ -213,19 +214,7 @@ const downloadExcel = async () => {
         '종료일자':   c.endDt ?? '',
         '순서':       c.cdSqn ?? '',
     }));
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('공통코드');
-    if (rows.length > 0) {
-        ws.columns = Object.keys(rows[0]!).map(k => ({ header: k, key: k }));
-        rows.forEach(row => ws.addRow(row));
-    }
-    const buf = await wb.xlsx.writeBuffer();
-    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `공통코드_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await exportRowsToExcel(rows, '공통코드', `공통코드_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /**

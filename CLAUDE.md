@@ -204,6 +204,45 @@ import StyledDataTable from '~/components/common/StyledDataTable.vue';
 | 헤더 배경색 | `blue-900` | CSS로 자동 적용 |
 | 행 hover | `bg-zinc-50` | `pt.bodyRow`로 자동 적용 |
 
+#### 공통 표준 기능 (자동 적용)
+
+모든 `StyledDataTable`에는 다음 공통 기능이 자동 적용됩니다.
+
+**1. 화면 채움 레이아웃 + 하단 Paginator 고정**
+- `scrollable` + `scroll-height="flex"`와 함께 사용하면 테이블이 남은 화면 영역을 채우고 본문만 스크롤됩니다.
+- Paginator는 하단에 고정되며 좌/우/하단 보더가 제거되어 카드 테두리와 자연스럽게 이어집니다.
+- 부모 컨테이너는 `flex-1 min-h-0 flex flex-col` 체인을 제공해야 합니다.
+
+```html
+<div class="flex-1 min-h-0 flex flex-col"> <!-- 부모 flex 체인 -->
+    <StyledDataTable scrollable scroll-height="flex" ... paginator :rows="20">
+        ...
+    </StyledDataTable>
+</div>
+```
+
+**2. 삭제 표시 행 (row-deleted) 규약**
+- `row-class` 함수가 `'row-deleted'`를 반환하는 행에 회색 배경 + 취소선 + pointer-events 차단이 자동 적용됩니다.
+- 첫 번째 셀(선택 체크박스)과 마지막 셀(삭제/복구 버튼)은 조작 가능 상태로 유지됩니다.
+- `input`/`AutoComplete`/`Select` 내부 텍스트까지 취소선이 적용됩니다.
+
+```ts
+// 페이지에서 rowClass 정의
+const rowClass = (data: RowType): string | undefined => {
+    return data._status === 'deleted' ? 'row-deleted' : undefined;
+};
+```
+
+```html
+<StyledDataTable :row-class="rowClass" ...>
+    ...
+</StyledDataTable>
+```
+
+**3. (옵션) 엑셀 스타일 셀 선택**
+- 페이지에서 `useTableCellSelection` composable과 `.cell-select-host` 래퍼 div를 사용하면 셀 드래그 선택/복사가 추가됩니다.
+- 이는 opt-in 기능이므로 필요한 페이지에서만 사용합니다.
+
 #### 내부 구조 및 CSS 동작 원리
 
 ```

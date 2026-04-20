@@ -19,6 +19,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import ExcelJS from 'exceljs'
+import { applyHeaderStyle, downloadWorkbook } from '~/utils/excel'
 import DOMPurify from 'isomorphic-dompurify'
 import StyledDataTable from '~/components/common/StyledDataTable.vue'
 import EmployeeInfoDialog from '~/components/common/EmployeeInfoDialog.vue'
@@ -376,13 +377,9 @@ const exportExcel = async () => {
     const ws = wb.addWorksheet(tabName)
     ws.addRow(headers)
     rows.forEach(row => ws.addRow(row))
-    const buf = await wb.xlsx.writeBuffer()
-    const url = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileName
-    a.click()
-    URL.revokeObjectURL(url)
+    /* 공통 헤더 스타일 적용 후 다운로드 */
+    applyHeaderStyle(ws)
+    await downloadWorkbook(wb, fileName)
 }
 </script>
 
