@@ -18,13 +18,13 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import * as XLSX from 'xlsx';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import { formatBudget as formatBudgetUtil, formatKoreanDate } from '~/utils/common';
 
 definePageMeta({
     title: '전산예산 결재 상신'
@@ -128,8 +128,6 @@ const getPrjTypeClass = (type: string) =>
 /** 텍스트 검색어 */
 const search = ref('');
 
-/* filteredItems는 조회 필터 Drawer 섹션에서 정의됩니다. */
-
 /* ── 페이지 크기 ── */
 const pageSizeOptions = [
     { label: '10건', value: 10 },
@@ -222,39 +220,32 @@ const requestApproval = () => {
 };
 
 /**
- * BudgetSummaryCards에 전달할 정보화사업 목록 (경상사업 제외)
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
+ * 현재 조회 필터가 적용된 항목 ID 셋 (카드 통계에 사용)
+ * 선택된 항목이 있으면 선택된 것만, 없으면 필터링된 목록 기준으로 표시합니다.
  */
-const cardProjects = computed(() =>
-    hasSelection.value
-        ? projects.value.filter(p =>
-            (p as any).ornYn !== 'Y' &&
-            selectedItems.value.some(i => i._type === '사업' && i._id === p.prjMngNo))
-        : projects.value.filter(p => (p as any).ornYn !== 'Y')
+const cardSourceItems = computed(() =>
+    hasSelection.value ? selectedItems.value : filteredItems.value
 );
 
 /**
- * BudgetSummaryCards에 전달할 경상사업 목록
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
+ * BudgetSummaryCards에 전달할 정보화사업/경상사업/전산업무비 목록
+ * cardSourceItems를 한 번만 순회하여 유형별 ID 셋을 구성합니다.
  */
-const cardOrdinary = computed(() =>
-    hasSelection.value
-        ? projects.value.filter(p =>
-            (p as any).ornYn === 'Y' &&
-            selectedItems.value.some(i => i._type === '경상' && i._id === p.prjMngNo))
-        : projects.value.filter(p => (p as any).ornYn === 'Y')
-);
-
-/**
- * BudgetSummaryCards에 전달할 전산업무비 목록
- * 선택된 항목이 있으면 선택된 것만, 없으면 전체를 표시합니다.
- */
-const cardCosts = computed(() =>
-    hasSelection.value
-        ? costs.value.filter(c =>
-            selectedItems.value.some(i => i._type === '비용' && i._id === c.itMngcNo))
-        : costs.value
-);
+const categorizedCards = computed(() => {
+    const projectIds = new Set<string>();
+    const ordinaryIds = new Set<string>();
+    const costIds = new Set<string>();
+    for (const item of cardSourceItems.value) {
+        if (item._type === '사업') projectIds.add(item._id);
+        else if (item._type === '경상') ordinaryIds.add(item._id);
+        else costIds.add(item._id);
+    }
+    return {
+        projects: projects.value.filter(p => (p as any).ornYn !== 'Y' && projectIds.has(p.prjMngNo)),
+        ordinary: projects.value.filter(p => (p as any).ornYn === 'Y' && ordinaryIds.has(p.prjMngNo)),
+        costs: costs.value.filter(c => costIds.has(c.itMngcNo || ''))
+    };
+});
 
 /* ── 조회 필터 Drawer ── */
 /** Drawer 표시 여부 */
@@ -312,7 +303,7 @@ const filters = ref<ApprovalFilters>({
 const hasFilters = computed(() => {
     const f = filters.value;
     return f.type.length > 0 ||
-        !!f.bgYy ||
+        f.bgYy !== defaultBgYy ||
         f.category.length > 0 ||
         f.totalBgMin !== null || f.totalBgMax !== null ||
         f.assetBgMin !== null || f.assetBgMax !== null ||
@@ -411,6 +402,8 @@ const downloadExcel = () => {
 /* ── PDF 보고서 다운로드 ── */
 /** PDF 생성 로딩 상태 */
 const reportLoading = ref(false);
+/** 마지막으로 생성된 PDF Blob URL (메모리 해제용) */
+const lastPdfUrl = ref<string | null>(null);
 const { user } = useAuth();
 const { generateReport } = usePdfReport();
 
@@ -423,27 +416,23 @@ const downloadPdf = async () => {
         const projectIds = filteredItems.value.filter(i => i._type === '사업' || i._type === '경상').map(i => i._id);
         const costIds = filteredItems.value.filter(i => i._type === '비용').map(i => i._id);
 
-        const projectDetails: ProjectDetail[] = projectIds.length
-            ? await fetchProjectsBulk(projectIds)
-            : [];
-        const costDetails: ItCost[] = costIds.length
-            ? await fetchCostsBulk(costIds)
-            : [];
-
-        // 결재선: 기안자는 로그인 사용자, 팀장/부서장은 미지정
-        const today = new Date().toLocaleDateString('ko-KR', {
-            year: 'numeric', month: '2-digit', day: '2-digit'
-        }).replace(/\. /g, '.').replace(/\.$/, '');
+        const [projectDetails, costDetails]: [ProjectDetail[], ItCost[]] = await Promise.all([
+            projectIds.length ? fetchProjectsBulk(projectIds) : Promise.resolve([]),
+            costIds.length ? fetchCostsBulk(costIds) : Promise.resolve([])
+        ]);
 
         const approvalLine = {
-            drafter: { name: user.value?.empNm || '', rank: '', date: today, id: user.value?.eno || '' },
+            drafter: { name: user.value?.empNm || '', rank: '', date: formatKoreanDate(), id: user.value?.eno || '' },
             teamLead: { name: '', rank: '', date: '', id: '' },
             deptHead: { name: '', rank: '', date: '', id: '' }
         };
 
-        const pdfUrl = await generateReport(projectDetails, approvalLine, costDetails);
-        if (pdfUrl) {
-            window.open(pdfUrl, '_blank');
+        const url = await generateReport(projectDetails, approvalLine, costDetails);
+        if (url) {
+            /* 이전 Blob URL 메모리 해제 */
+            if (lastPdfUrl.value) URL.revokeObjectURL(lastPdfUrl.value);
+            lastPdfUrl.value = url;
+            window.open(url, '_blank');
         }
     } catch (e) {
         console.error('PDF 생성 실패:', e);
@@ -452,6 +441,10 @@ const downloadPdf = async () => {
         reportLoading.value = false;
     }
 };
+
+onBeforeUnmount(() => {
+    if (lastPdfUrl.value) URL.revokeObjectURL(lastPdfUrl.value);
+});
 
 </script>
 
@@ -491,7 +484,7 @@ const downloadPdf = async () => {
         </div>
 
         <!-- 예산 현황 요약 카드 -->
-        <BudgetSummaryCards :projects="cardProjects" :costs="cardCosts" :ordinary="cardOrdinary"
+        <BudgetSummaryCards :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
             :selectedUnit="selectedUnit" />
 
         <!-- 통합 DataTable -->

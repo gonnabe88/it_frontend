@@ -86,9 +86,6 @@ const updateContent = (index: number, content: string) => {
                 <p class="font-semibold text-sm text-zinc-700 dark:text-zinc-300">
                     {{ item.ckgItmNm }}
                 </p>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-                    {{ item.ckgItmC }}
-                </p>
             </div>
 
             <!-- 점검 내용 입력 (중앙) -->

@@ -247,23 +247,7 @@ export const formatFileSize = (bytes: number | null | undefined): string => {
 // 협의회 상태 유틸리티
 // ============================================================================
 
-/** 협의회 진행상태 코드 → 한글 레이블 매핑 */
-const COUNCIL_STATUS_LABEL_MAP: Record<string, string> = {
-    DRAFT:           '작성 중',
-    SUBMITTED:       '작성 완료',
-    APPROVAL_PENDING:'결재 대기',
-    APPROVED:        '결재 완료',
-    PREPARING:       '개최 준비',
-    SCHEDULED:       '일정 확정',
-    IN_PROGRESS:     '협의회 진행 중',
-    EVALUATING:      '평가의견 작성 중',
-    RESULT_WRITING:  '결과서 작성 중',
-    RESULT_REVIEW:   '결과서 검토 중',
-    FINAL_APPROVAL:  '결과보고 결재 중',
-    COMPLETED:       '완료',
-};
-
-/** 협의회 진행상태 코드 → kdb-tag-* CSS 클래스 매핑 */
+/** 협의회 진행상태 코드 → kdb-tag-* CSS 클래스 매핑 (UI 전용, CCODEM 미사용) */
 const COUNCIL_STATUS_TAG_MAP: Record<string, string> = {
     DRAFT:           'kdb-tag-gray',
     SUBMITTED:       'kdb-tag-yellow',
@@ -280,27 +264,11 @@ const COUNCIL_STATUS_TAG_MAP: Record<string, string> = {
 };
 
 /**
- * 협의회 진행상태 코드를 화면 표출용 한글 레이블로 변환
- *
- * @param status - 협의회 상태 코드 (CouncilStatus)
- * @returns 한글 상태 레이블 (예: '작성 중', '결재 완료')
- *
- * @example
- * getCouncilStatusLabel('DRAFT')     // → '작성 중'
- * getCouncilStatusLabel('COMPLETED') // → '완료'
- */
-export const getCouncilStatusLabel = (status: string): string =>
-    COUNCIL_STATUS_LABEL_MAP[status] ?? status;
-
-/**
  * 협의회 진행상태 코드에 따른 PrimeVue Tag 커스텀 CSS 클래스를 반환
+ * (레이블 변환은 useCouncilCodes().getStatusLabel() 사용)
  *
  * @param status - 협의회 상태 코드 (CouncilStatus)
  * @returns kdb-tag-* 커스텀 CSS 클래스명
- *
- * @example
- * getCouncilTagClass('COMPLETED')  // → 'kdb-tag-green'
- * getCouncilTagClass('DRAFT')      // → 'kdb-tag-gray'
  */
 export const getCouncilTagClass = (status: string): string =>
     COUNCIL_STATUS_TAG_MAP[status] ?? 'kdb-tag-gray';

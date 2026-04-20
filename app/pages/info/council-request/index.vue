@@ -1,6 +1,6 @@
 <!--
 ================================================================================
-[pages/info/council/index.vue] 정보화실무협의회 사업목록
+[pages/info/council-request/index.vue] 정보화실무협의회 사업목록
 ================================================================================
 소관부서 담당자/IT관리자/평가위원별로 맞춤 협의회 목록을 표출하는 진입점 페이지입니다.
 
@@ -16,11 +16,11 @@
 
 [라우팅 규칙 (협의회 상태 기준)]
   - DRAFT/SUBMITTED/APPROVAL_PENDING/APPROVED:
-      → /info/council/{asctId}  (타당성검토표 Step 1)
+      → /info/council-request/{asctId}  (타당성검토표 Step 1)
   - PREPARING/SCHEDULED/IN_PROGRESS:
-      → /info/council/prepare/{asctId}  (개최준비 Step 2)
+      → /info/council-request/prepare/{asctId}  (개최준비 Step 2)
   - EVALUATING/RESULT_WRITING/RESULT_REVIEW/FINAL_APPROVAL/COMPLETED:
-      → /info/council/result/{asctId}  (개최 Step 3)
+      → /info/council-request/result/{asctId}  (개최 Step 3)
 
 [Design Ref: §4.1 index.vue — 사업목록 + 진행상태]
 ================================================================================
@@ -28,7 +28,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useCouncil } from '~/composables/useCouncil';
-import { getCouncilStatusLabel, getHearingTypeLabel } from '~/utils/common';
 
 const title = '정보화실무협의회';
 definePageMeta({ title });
@@ -36,6 +35,9 @@ definePageMeta({ title });
 /* ── 데이터 로드 ── */
 const { fetchCouncilList, createCouncil } = useCouncil();
 const { data: councilsData, pending, error, refresh } = await fetchCouncilList();
+
+/** CCODEM 기반 코드 변환 */
+const { getStatusLabel, getHearingTypeLabel, hearingTypeOptions } = useCouncilCodes();
 
 /** 협의회 목록 (null 안전 처리) */
 const councils = computed(() => councilsData.value ?? []);
@@ -53,18 +55,11 @@ const selectedStatus = ref<string | null>(null);
 /** 심의유형 필터 */
 const selectedHearingType = ref<string | null>(null);
 
-/** 목록에서 추출한 유니크 상태 옵션 (신청 전 null 제외) */
+/** 목록에서 추출한 유니크 상태 옵션 (신청 전 null 제외, CCODEM 기반 레이블) */
 const statusOptions = computed(() => {
     const statuses = [...new Set(councils.value.map(c => c.asctSts))].filter((s): s is NonNullable<typeof s> => s !== null);
-    return statuses.map(s => ({ label: getCouncilStatusLabel(s), value: s }));
+    return statuses.map(s => ({ label: getStatusLabel(s), value: s }));
 });
-
-/** 심의유형 옵션 */
-const hearingTypeOptions = [
-    { label: '정보시스템', value: 'INFO_SYS' },
-    { label: '정보보호',   value: 'INFO_SEC' },
-    { label: '기타',       value: 'ETC' },
-];
 
 /**
  * 사업명 + 진행상태 + 심의유형 필터링된 협의회 목록
@@ -107,6 +102,7 @@ const navigateToProject = (item: typeof filteredCouncils.value[0]) => {
  * 협의회 상태 뱃지 클릭 → 진행상태에 따라 협의회 단계별 페이지로 이동
  *
  * - Step 1 (타당성검토표): DRAFT, SUBMITTED, APPROVAL_PENDING, APPROVED
+ *   APPROVED 상태에서 IT관리자는 [id].vue 내 분기 버튼으로 생략/진행 결정
  * - Step 2 (개최준비):     PREPARING, SCHEDULED, IN_PROGRESS
  * - Step 3 (개최):         EVALUATING, RESULT_WRITING, RESULT_REVIEW, FINAL_APPROVAL, COMPLETED
  *
@@ -115,15 +111,17 @@ const navigateToProject = (item: typeof filteredCouncils.value[0]) => {
 const navigateToCouncil = (item: typeof filteredCouncils.value[0]) => {
     if (!item.asctId || !item.asctSts) return;
 
+    // Step 1: 타당성검토표 (APPROVED 포함 — IT관리자는 [id].vue 내 버튼으로 생략/진행 결정)
     const step1Statuses: string[] = ['DRAFT', 'SUBMITTED', 'APPROVAL_PENDING', 'APPROVED'];
+    // Step 2: 개최준비
     const step2Statuses: string[] = ['PREPARING', 'SCHEDULED', 'IN_PROGRESS'];
 
     if (step1Statuses.includes(item.asctSts)) {
-        navigateTo(`/info/council/${item.asctId}`);
+        navigateTo(`/info/council-request/${item.asctId}`);
     } else if (step2Statuses.includes(item.asctSts)) {
-        navigateTo(`/info/council/prepare/${item.asctId}`);
+        navigateTo(`/info/council-request/prepare/${item.asctId}`);
     } else {
-        navigateTo(`/info/council/result/${item.asctId}`);
+        navigateTo(`/info/council-request/result/${item.asctId}`);
     }
 };
 
@@ -178,7 +176,9 @@ const submitCreate = async () => {
         showCreateDialog.value = false;
         /* 목록 갱신 후 신규 협의회(타당성검토표 Step 1)로 이동 */
         await refresh();
-        navigateTo(`/info/council/${asctId}`);
+        navigateTo(`/info/council-request/${asctId}`);
+    } catch (e: any) {
+        alert(`협의회 신청 중 오류가 발생했습니다.\n${e?.data?.message ?? e?.message ?? '알 수 없는 오류'}`);
     } finally {
         createPending.value = false;
     }
@@ -244,23 +244,15 @@ const getPrjTpLabel = (prjTp: string | null) => {
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-2">
-                <!-- 새로고침 -->
-                <Button
-                    icon="pi pi-refresh"
-                    severity="secondary"
-                    outlined
-                    :loading="pending"
-                    @click="() => refresh()"
-                    v-tooltip.top="'새로고침'"
-                />
-                <!-- 협의회 신청 (일반사용자에게만 노출, 권한 체크는 서버 측) -->
-                <Button
-                    label="협의회 신청"
-                    icon="pi pi-plus"
-                    @click="showCreateDialog = true"
-                />
-            </div>
+            <!-- 새로고침 -->
+            <Button
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                :loading="pending"
+                @click="() => refresh()"
+                v-tooltip.top="'새로고침'"
+            />
         </div>
 
         <!-- 필터 영역 -->
@@ -441,35 +433,10 @@ const getPrjTpLabel = (prjTp: string | null) => {
             header="협의회 신청"
             :modal="true"
             :closable="true"
-            class="w-full max-w-md"
+            class="w-full max-w-sm"
             @hide="closeCreateDialog"
         >
             <div class="flex flex-col gap-5 pt-2">
-                <!-- 프로젝트관리번호 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold text-sm">
-                        프로젝트관리번호
-                        <span class="text-red-500">*</span>
-                    </label>
-                    <InputText
-                        v-model="createForm.prjMngNo"
-                        placeholder="예: PRJ-2026-0001"
-                        fluid
-                    />
-                </div>
-
-                <!-- 프로젝트순번 -->
-                <div class="flex flex-col gap-2">
-                    <label class="font-semibold text-sm">프로젝트순번</label>
-                    <InputNumber
-                        v-model="createForm.prjSno"
-                        :min="1"
-                        :max="99"
-                        showButtons
-                        fluid
-                    />
-                </div>
-
                 <!-- 심의유형 -->
                 <div class="flex flex-col gap-2">
                     <label class="font-semibold text-sm">
@@ -485,6 +452,12 @@ const getPrjTpLabel = (prjTp: string | null) => {
                         fluid
                     />
                 </div>
+
+                <!-- 안내 문구 -->
+                <div class="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+                    <i class="pi pi-info-circle mt-0.5 flex-shrink-0" />
+                    <span>타당성검토표를 작성하시겠습니까?</span>
+                </div>
             </div>
 
             <!-- Dialog 버튼 -->
@@ -496,10 +469,10 @@ const getPrjTpLabel = (prjTp: string | null) => {
                     @click="closeCreateDialog"
                 />
                 <Button
-                    label="신청"
+                    label="확인"
                     icon="pi pi-check"
                     :loading="createPending"
-                    :disabled="!createForm.prjMngNo || !createForm.dbrTp"
+                    :disabled="!createForm.dbrTp"
                     @click="submitCreate"
                 />
             </template>

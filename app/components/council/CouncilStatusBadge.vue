@@ -26,7 +26,7 @@ index.vue 사업목록 카드와 각 상세 페이지 헤더에서 공통으로 
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { getCouncilStatusLabel, getCouncilTagClass } from '~/utils/common';
+import { getCouncilTagClass } from '~/utils/common';
 import type { CouncilStatus } from '~/types/council';
 
 interface Props {
@@ -40,8 +40,11 @@ const props = withDefaults(defineProps<Props>(), {
     size: 'md',
 });
 
-/** 상태 코드 → 한글 레이블 */
-const label = computed(() => getCouncilStatusLabel(props.status));
+/** CCODEM 기반 코드 변환 */
+const { getStatusLabel } = useCouncilCodes();
+
+/** 상태 코드 → 한글 레이블 (CCODEM 조회) */
+const label = computed(() => getStatusLabel(props.status));
 
 /** 상태 코드 → CSS 클래스 */
 const tagClass = computed(() => getCouncilTagClass(props.status));

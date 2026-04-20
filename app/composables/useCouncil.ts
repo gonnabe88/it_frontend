@@ -164,17 +164,19 @@ export const useCouncil = () => {
     // =========================================================================
 
     /**
-     * 기본 평가위원 목록 조회 (심의유형별 당연위원)
+     * 기본 평가위원 후보 조회 (심의유형별 당연위원 플랫 목록)
      *
-     * IT관리자가 심의유형을 선택하면 해당 유형의 당연위원을 자동으로 불러옵니다.
+     * 백엔드가 CommitteeMember[] (플랫 배열, vlrTp='MAND') 형태로 반환합니다.
+     * CommitteeSelector에서 mandatoryList에 직접 할당하여 사용합니다.
      *
      * @param asctId 협의회ID
      * @param dbrTp  심의유형 (INFO_SYS / INFO_SEC / ETC)
      */
     const fetchDefaultCommittee = (asctId: string, dbrTp: string) => {
-        return useApiFetch<CommitteeList>(`${BASE}/${asctId}/committee/default`, {
-            query: { dbrTp },
-        });
+        return useApiFetch<import('~/types/council').CommitteeMember[]>(
+            `${BASE}/${asctId}/committee/default`,
+            { query: { dbrTp } }
+        );
     };
 
     /**
@@ -378,6 +380,24 @@ export const useCouncil = () => {
         });
     };
 
+    // =========================================================================
+    // 협의회 생략 (IT관리자 전용)
+    // =========================================================================
+
+    /**
+     * 협의회 생략 처리 (IT관리자 전용)
+     *
+     * APPROVED 상태 협의회를 SKIPPED로 전이하고, 연결된 사업의 PRJ_STS를 '요건 상세화'로 변경합니다.
+     * 정보화실무협의회 개최가 불필요하다고 판단된 사업에 적용합니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const skipCouncil = async (asctId: string): Promise<void> => {
+        await $apiFetch(`${BASE}/${asctId}/skip`, {
+            method: 'PATCH',
+        });
+    };
+
     return {
         fetchCouncilList,
         fetchCouncil,
@@ -398,5 +418,6 @@ export const useCouncil = () => {
         fetchResult,
         saveResult,
         confirmResult,
+        skipCouncil,
     };
 };

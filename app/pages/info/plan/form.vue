@@ -30,6 +30,7 @@ definePageMeta({ title });
 const { fetchProjectsBulk } = useProjects();
 const { createPlan } = usePlan();
 const router = useRouter();
+const { removeTab } = useTabs();
 const config = useRuntimeConfig();
 const { $apiFetch } = useNuxtApp();
 
@@ -212,7 +213,8 @@ const handleSave = async () => {
             prjMngNos: selectedProjects.value.map(p => p.prjMngNo),
         });
         alert('계획이 등록되었습니다.');
-        router.push('/info/plan');
+        await router.push('/info/plan');
+        removeTab('/info/plan/form');
     } catch (e) {
         console.error('계획 저장 실패:', e);
         alert('계획 저장 중 오류가 발생했습니다.');

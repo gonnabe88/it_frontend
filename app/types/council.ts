@@ -23,12 +23,13 @@
  * ============================================================================
  */
 
-/** 협의회 진행상태 (12단계 + 초기값) */
+/** 협의회 진행상태 (12단계 + 생략 + 초기값) */
 export type CouncilStatus =
   | 'DRAFT'           // 작성 중
   | 'SUBMITTED'       // 작성 완료
   | 'APPROVAL_PENDING' // 결재 대기
   | 'APPROVED'        // 결재 완료 (팀장 승인)
+  | 'SKIPPED'         // 협의회 생략 (IT관리자 판단)
   | 'PREPARING'       // 개최 준비 (평가위원 선정 완료)
   | 'SCHEDULED'       // 일정 확정
   | 'IN_PROGRESS'     // 협의회 진행 중
@@ -38,8 +39,8 @@ export type CouncilStatus =
   | 'FINAL_APPROVAL'  // 결과보고 결재 중
   | 'COMPLETED';      // 완료
 
-/** 심의유형 */
-export type HearingType = 'INFO_SYS' | 'INFO_SEC' | 'ETC';
+/** 심의유형 (CCODEM DBR_TP 기준 5개) */
+export type HearingType = 'MID_PLAN' | 'IT_PLAN' | 'INFO_SYS' | 'INFO_SEC' | 'ETC';
 
 /** 위원유형 */
 export type CommitteeType = 'MAND' | 'CALL' | 'SECR';
@@ -107,6 +108,22 @@ export interface CouncilDetail {
   cnrcDt: string | null;
   cnrcTm: string | null;
   cnrcPlc: string | null;
+  /** 사업명 (BPROJM.PRJ_NM) */
+  prjNm: string | null;
+  /** 전결권자 (BPROJM.EDRT) */
+  edrt: string | null;
+  /** 사업기간 시작일 (BPROJM.STT_DT) */
+  sttDt: string | null;
+  /** 사업기간 종료일 (BPROJM.END_DT) */
+  endDt: string | null;
+  /** 필요성 (BPROJM.NCS) */
+  ncs: string | null;
+  /** 소요예산 (BPROJM.PRJ_BG) */
+  prjBg: number | null;
+  /** 사업내용 (BPROJM.PRJ_DES) */
+  prjDes: string | null;
+  /** 기대효과 (BPROJM.XPT_EFF) */
+  xptEff: string | null;
 }
 
 /**
@@ -189,6 +206,10 @@ export interface ScheduleSlot {
 export interface MemberScheduleStatus {
   eno: string;
   usrNm: string | null;
+  /** 부서명 */
+  bbrNm: string | null;
+  /** 직책명 */
+  ptCNm: string | null;
   vlrTp: CommitteeType;
   responded: boolean;
   slots: ScheduleSlot[];
@@ -202,6 +223,12 @@ export interface ScheduleStatusResponse {
   respondedCount: number;
   pendingCount: number;
   memberStatuses: MemberScheduleStatus[];
+  /**
+   * 일정 확정 가능 여부 (필수 응답자 기준)
+   * INFO_SYS: 예산팀장(12004) + IT기획팀장(18001) 응답 완료 시 true
+   * 기타 타입: 전원 응답 완료 시 true
+   */
+  allRequiredResponded: boolean;
 }
 
 /**

@@ -30,7 +30,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onActivated } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConfirm } from "primevue/useconfirm";
 import { useCost, type ItCost } from '~/composables/useCost';
@@ -40,6 +40,7 @@ import CostFormTableSection from '~/components/cost/CostFormTableSection.vue';
 const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
+const { removeTab } = useTabs();
 const { fetchCostOnce, createCost, updateCost, fetchCostsBulk } = useCost();
 const { user } = useAuth();
 
@@ -78,7 +79,7 @@ const currentUserDetail = ref<{ bbrC: string; bbrNm: string; temC: string; temNm
  * - ids가 있으면 복수 조회(Bulk) 후 rows에 추가
  * - 둘 다 없으면 빈 행 1개 추가 (신규 등록)
  */
-onMounted(async () => {
+onActivated(async () => {
     /* 공통코드 + 현재 사용자 상세정보 병렬 로드 */
     try {
         const userEno = user.value?.eno ?? '';
@@ -101,6 +102,9 @@ onMounted(async () => {
     } catch (e) {
         console.error('초기 데이터 로드 실패', e);
     }
+
+    /* 재활성화 시 이전 데이터 초기화 (KeepAlive로 이전 데이터 잔존 방지) */
+    costs.value = [];
 
     const id = route.query.id as string;
     const ids = route.query.ids as string;
@@ -224,8 +228,9 @@ const saveCosts = async () => {
             header: '완료',
             icon: 'pi pi-check',
             acceptLabel: '확인',
-            accept: () => {
-                router.push('/info/cost');
+            accept: async () => {
+                await router.push('/info/cost');
+                removeTab('/info/cost/form');
             }
         });
     } catch (e) {

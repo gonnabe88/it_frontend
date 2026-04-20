@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-06T17:22:46.344Z",
+  "lastUpdated": "2026-04-11T17:39:52.865Z",
   "activeFeatures": [
     "it_frontend",
     "unit",
@@ -28,12 +28,13 @@
     "qna",
     "prepare",
     "evaluation",
-    "result"
+    "result",
+    "council-request"
   ],
   "primaryFeature": "it_frontend",
   "features": {
     "it_frontend": {
-      "phase": "archived",
+      "phase": "do",
       "matchRate": 100,
       "iterationCount": 0,
       "startedAt": "2026-03-07T16:21:56.632Z",
@@ -47,7 +48,12 @@
         "iterationEfficiency": null
       },
       "phaseTimestamps": {},
-      "automationLevel": 2
+      "automationLevel": 2,
+      "phaseNumber": 3,
+      "lastFile": "c:\\it\\it_frontend\\app\\components\\common\\EmployeeSearchDialog.vue",
+      "timestamps": {
+        "lastUpdated": "2026-04-11T16:49:44.520Z"
+      }
     },
     "unit": {
       "phase": "do",
@@ -118,9 +124,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-07T16:23:36.885Z",
-        "lastUpdated": "2026-04-05T06:28:48.266Z"
+        "lastUpdated": "2026-04-11T17:39:52.865Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\composables\\useCouncil.ts",
+      "lastFile": "c:\\it\\it_frontend\\app\\composables\\useCouncilCodes.ts",
       "stateMachine": {
         "currentState": "do",
         "previousState": null,
@@ -415,9 +421,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T12:07:05.762Z",
-        "lastUpdated": "2026-04-06T17:13:02.403Z"
+        "lastUpdated": "2026-04-09T18:29:17.298Z"
       },
-      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\budget\\project\\repository\\ProjectRepositoryImpl.java"
+      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\repository\\CouncilRepository.java"
     },
     "dto": {
       "phase": "do",
@@ -428,9 +434,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T13:12:11.700Z",
-        "lastUpdated": "2026-04-05T13:45:24.839Z"
+        "lastUpdated": "2026-04-09T19:08:50.518Z"
       },
-      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\common\\system\\dto\\AuthDto.java"
+      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\dto\\CouncilDto.java"
     },
     "service": {
       "phase": "do",
@@ -441,9 +447,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-02T13:12:52.941Z",
-        "lastUpdated": "2026-04-06T17:12:56.715Z"
+        "lastUpdated": "2026-04-09T19:09:03.309Z"
       },
-      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\budget\\project\\service\\ProjectService.java"
+      "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\service\\CouncilService.java"
     },
     "controller": {
       "phase": "do",
@@ -467,9 +473,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T09:29:15.902Z",
-        "lastUpdated": "2026-04-05T10:30:14.485Z"
+        "lastUpdated": "2026-04-10T21:15:21.674Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\index.vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\CouncilStatusBadge.vue"
     },
     "feasibility": {
       "phase": "do",
@@ -480,9 +486,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T09:50:24.463Z",
-        "lastUpdated": "2026-04-04T15:22:11.334Z"
+        "lastUpdated": "2026-04-09T19:13:53.957Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\feasibility\\FeasibilityForm.vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\feasibility\\FeasibilityPerformance.vue"
     },
     "committee": {
       "phase": "do",
@@ -493,9 +499,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T19:25:09.552Z",
-        "lastUpdated": "2026-04-04T19:32:48.442Z"
+        "lastUpdated": "2026-04-10T21:17:30.286Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\committee\\CommitteeList.vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\committee\\CommitteeSelector.vue"
     },
     "schedule": {
       "phase": "do",
@@ -545,9 +551,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T19:28:15.665Z",
-        "lastUpdated": "2026-04-04T19:28:15.665Z"
+        "lastUpdated": "2026-04-09T18:51:04.745Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\prepare\\[id].vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\prepare\\[id].vue"
     },
     "evaluation": {
       "phase": "do",
@@ -571,9 +577,22 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-04T19:54:26.992Z",
-        "lastUpdated": "2026-04-04T19:56:16.160Z"
+        "lastUpdated": "2026-04-09T18:51:14.183Z"
       },
-      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\result\\[id].vue"
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\result\\[id].vue"
+    },
+    "council-request": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-09T15:49:46.516Z",
+        "lastUpdated": "2026-04-10T21:16:09.711Z"
+      },
+      "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\[id].vue"
     }
   },
   "pipeline": {
@@ -584,7 +603,7 @@
   "session": {
     "startedAt": "2026-03-07T15:52:46.492Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-06T17:22:46.344Z"
+    "lastActivity": "2026-04-11T17:39:52.865Z"
   },
   "history": [
     {
@@ -3296,6 +3315,420 @@
     {
       "timestamp": "2026-04-06T17:22:46.344Z",
       "feature": "projects",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-06T17:51:11.201Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-06T17:52:28.158Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T15:49:46.516Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T15:53:30.506Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:01:30.994Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:03:32.395Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:32:39.021Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:32:46.515Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:32:58.758Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:39:34.375Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:40:15.497Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:40:24.758Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T16:41:16.982Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:08:10.964Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:08:18.224Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:29:06.544Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:29:17.298Z",
+      "feature": "repository",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:29:25.955Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:41:23.838Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:46:35.653Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:49:40.409Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:49:58.565Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:20.674Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:34.035Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:47.757Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:50:54.638Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:51:04.745Z",
+      "feature": "prepare",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:51:14.183Z",
+      "feature": "result",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:55:30.902Z",
+      "feature": "dto",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:55:52.633Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:56:05.921Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T18:59:56.528Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:01:14.253Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:01:22.822Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:01:32.921Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:08:50.518Z",
+      "feature": "dto",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:09:03.309Z",
+      "feature": "service",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:09:24.795Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:09:41.050Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:11:20.489Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:13:53.957Z",
+      "feature": "feasibility",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:16:29.395Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:16:47.017Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T19:17:01.406Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:13:38.948Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:13:56.255Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:14:53.693Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:15:21.674Z",
+      "feature": "council",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:15:31.785Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:15:43.300Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:15:59.181Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:16:09.711Z",
+      "feature": "council-request",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:16:22.964Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:16:56.888Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:17:03.588Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:17:13.367Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:17:19.137Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:17:24.619Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-10T21:17:30.286Z",
+      "feature": "committee",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T16:49:04.307Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T16:49:44.520Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:03:21.249Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:03:28.129Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:03:39.180Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:18:18.301Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:21:10.183Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:21:49.526Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:21:52.048Z",
+      "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-11T17:39:52.865Z",
+      "feature": "composables",
       "phase": "do",
       "action": "updated"
     }

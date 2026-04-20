@@ -35,6 +35,7 @@ const route = useRoute();
 const router = useRouter();
 const confirm = useConfirm();
 const toast = useToast();
+const { removeTab } = useTabs();
 const { fetchCostOnce, createCost, updateCost } = useCost();
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 const { user } = useAuth();
@@ -220,7 +221,8 @@ const executeSave = async () => {
         }
 
         toast.add({ severity: 'success', summary: '저장 완료', detail: '저장되었습니다.', life: 2000 });
-        setTimeout(() => router.push('/info/cost'), 500);
+        await router.push('/info/cost');
+        removeTab('/info/cost/terminal/form');
     } catch (e) {
         console.error('Save failed', e);
         toast.add({ severity: 'error', summary: '오류', detail: '저장 중 오류가 발생했습니다.', life: 3000 });

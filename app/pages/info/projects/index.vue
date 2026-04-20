@@ -25,7 +25,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onActivated } from 'vue';
 import { useProjects } from '~/composables/useProjects';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 
@@ -36,7 +36,10 @@ definePageMeta({
 
 /* ── 데이터 로드 (정보화사업 + 경상사업 전체 조회) ── */
 const { fetchProjects } = useProjects();
-const { data: projectsData, error } = await fetchProjects({});
+const { data: projectsData, error, refresh: refreshProjects } = await fetchProjects({});
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshProjects());
 
 /* ── 공통코드 코드명 변환 ── */
 const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');

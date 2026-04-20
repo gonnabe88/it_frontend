@@ -42,12 +42,12 @@ const {
     refresh: refreshStatus,
 } = fetchScheduleStatus(props.asctId);
 
-/** 전원 응답 완료 여부 */
-const allResponded = computed(() => {
-    if (!statusData.value) return false;
-    return statusData.value.respondedCount >= statusData.value.totalCount &&
-        statusData.value.totalCount > 0;
-});
+/**
+ * 일정 확정 가능 여부
+ * 백엔드에서 심의유형별로 계산된 allRequiredResponded 필드를 사용합니다.
+ * INFO_SYS: 예산팀장 + IT기획팀장 응답 완료 / 기타: 전원 응답 완료
+ */
+const allResponded = computed(() => statusData.value?.allRequiredResponded ?? false);
 
 // ── 일정 확정 다이얼로그 ─────────────────────────────────────────────
 const confirmDialogVisible = ref(false);
@@ -102,13 +102,9 @@ const typeLabel = (type: string): string => {
     return map[type] ?? type;
 };
 
-// ── 가능 일정 슬롯을 날짜+시간 형태로 병합 표출 ────────────────────
-const formatSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: string }>) => {
-    /* psbYn='Y'인 슬롯만 필터링하여 "MM/dd HH:mm" 형태로 조합 */
-    return slots
-        .filter((s) => s.psbYn === 'Y')
-        .map((s) => `${s.dsdDt.slice(5)} ${s.dsdTm}`)
-        .join(', ') || '—';
+// ── 가능 일정 슬롯 목록 반환 (psbYn='Y'인 것만) ────────────────────
+const availableSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: string }>) => {
+    return slots.filter((s) => s.psbYn === 'Y');
 };
 </script>
 
@@ -153,7 +149,12 @@ const formatSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: string 
 
         <!-- 미응답 안내 -->
         <Message v-if="!allResponded && !loadingStatus" severity="warn" :closable="false">
-            <span class="text-sm">전원 응답 완료 후 일정 확정이 가능합니다. 미응답 위원: {{ statusData?.pendingCount }}명</span>
+            <span class="text-sm">
+                필수 위원 응답 완료 후 일정 확정이 가능합니다.
+                <template v-if="statusData && statusData.pendingCount > 0">
+                    미응답 위원: {{ statusData.pendingCount }}명
+                </template>
+            </span>
         </Message>
 
         <!-- 위원별 응답 현황 테이블 -->
@@ -164,37 +165,70 @@ const formatSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: string 
         <div v-else-if="statusData && statusData.memberStatuses.length > 0" class="overflow-x-auto">
             <table class="w-full text-sm border-collapse">
                 <thead>
-                    <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                        <th class="text-left px-3 py-2 font-medium">위원유형</th>
-                        <th class="text-left px-3 py-2 font-medium">성명</th>
-                        <th class="text-left px-3 py-2 font-medium">응답상태</th>
-                        <th class="text-left px-3 py-2 font-medium">가능 일정</th>
+                    <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wide">
+                        <th class="text-left px-3 py-2.5 font-medium w-16">구분</th>
+                        <th class="text-left px-3 py-2.5 font-medium">위원</th>
+                        <th class="text-center px-3 py-2.5 font-medium w-24">응답여부</th>
+                        <th class="text-left px-3 py-2.5 font-medium">선택 일정 (가능 날짜·시간대)</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-700">
                     <tr
                         v-for="member in statusData.memberStatuses"
                         :key="member.eno"
-                        class="border-t border-zinc-100 dark:border-zinc-700"
-                        :class="!member.responded ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''"
+                        :class="!member.responded
+                            ? 'bg-amber-50/50 dark:bg-amber-900/10'
+                            : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30'"
                     >
-                        <td class="px-3 py-2">
+                        <!-- 위원 구분 (당연/소집/간사) -->
+                        <td class="px-3 py-3">
                             <Tag
                                 :value="typeLabel(member.vlrTp)"
                                 :severity="member.vlrTp === 'MAND' ? 'info' : member.vlrTp === 'CALL' ? 'success' : 'warn'"
                                 class="text-xs"
                             />
                         </td>
-                        <td class="px-3 py-2 font-medium">{{ member.usrNm ?? member.eno }}</td>
-                        <td class="px-3 py-2">
+
+                        <!-- 위원 정보: 성명 + 부서 + 직책 -->
+                        <td class="px-3 py-3">
+                            <div class="font-semibold text-zinc-800 dark:text-zinc-200">
+                                {{ member.usrNm ?? member.eno }}
+                            </div>
+                            <div class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                                <span v-if="member.bbrNm">{{ member.bbrNm }}</span>
+                                <span v-if="member.bbrNm && member.ptCNm" class="mx-1">·</span>
+                                <span v-if="member.ptCNm">{{ member.ptCNm }}</span>
+                            </div>
+                        </td>
+
+                        <!-- 응답 여부 -->
+                        <td class="px-3 py-3 text-center">
                             <Tag
-                                :value="member.responded ? '응답 완료' : '미응답'"
+                                :value="member.responded ? '완료' : '미응답'"
                                 :severity="member.responded ? 'success' : 'warn'"
                                 class="text-xs"
                             />
                         </td>
-                        <td class="px-3 py-2 text-zinc-500">
-                            {{ member.responded ? formatSlots(member.slots) : '—' }}
+
+                        <!-- 선택 일정: psbYn='Y'인 슬롯을 뱃지로 표출 -->
+                        <td class="px-3 py-3">
+                            <template v-if="member.responded && availableSlots(member.slots).length > 0">
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        v-for="slot in availableSlots(member.slots)"
+                                        :key="`${slot.dsdDt}-${slot.dsdTm}`"
+                                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs
+                                               bg-emerald-50 text-emerald-700 border border-emerald-200
+                                               dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+                                    >
+                                        {{ slot.dsdDt.slice(5) }} {{ slot.dsdTm }}
+                                    </span>
+                                </div>
+                            </template>
+                            <span v-else-if="member.responded" class="text-xs text-zinc-400">
+                                가능 일정 없음
+                            </span>
+                            <span v-else class="text-xs text-zinc-300 dark:text-zinc-600">—</span>
                         </td>
                     </tr>
                 </tbody>

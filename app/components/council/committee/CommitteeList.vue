@@ -26,16 +26,13 @@ const { fetchCommittee } = useCouncil();
 // ── 데이터 조회 ──────────────────────────────────────────────────────
 const { data: committeeData, pending } = fetchCommittee(props.asctId);
 
-// ── 위원유형 레이블 ─────────────────────────────────────────────────
-const typeLabel = (type: CommitteeType): string => {
-    const map: Record<CommitteeType, string> = {
-        MAND: '당연위원',
-        CALL: '소집위원',
-        SECR: '간사',
-    };
-    return map[type];
-};
+// ── CCODEM 기반 위원유형 레이블 ──────────────────────────────────────
+const { getMemberTypeLabel } = useCouncilCodes();
 
+/** 위원유형 코드 → 한글명 (CCODEM VLR_TP) */
+const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
+
+/** 위원유형 코드 → PrimeVue Tag severity (UI 전용) */
 const typeSeverity = (type: CommitteeType) => {
     const map: Record<CommitteeType, string> = {
         MAND: 'info',

@@ -16,7 +16,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onActivated } from 'vue';
 import { usePlan, type PlanSnapshot } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 
@@ -32,7 +32,10 @@ const { fetchPlan, deletePlan } = usePlan();
 const plnMngNo = route.params.id as string;
 
 /* 계획 상세 데이터 조회 */
-const { data: planData, error, pending } = await fetchPlan(plnMngNo);
+const { data: planData, error, pending, refresh: refreshPlan } = await fetchPlan(plnMngNo);
+
+/** KeepAlive 재활성화 시 최신 데이터 재조회 */
+onActivated(() => refreshPlan());
 
 /* ── 공통코드 코드명 변환 ── */
 const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
