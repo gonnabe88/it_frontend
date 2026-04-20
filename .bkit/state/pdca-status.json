@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-11T17:39:52.865Z",
+  "lastUpdated": "2026-04-20T19:06:37.120Z",
   "activeFeatures": [
     "it_frontend",
     "unit",
@@ -50,9 +50,9 @@
       "phaseTimestamps": {},
       "automationLevel": 2,
       "phaseNumber": 3,
-      "lastFile": "c:\\it\\it_frontend\\app\\components\\common\\EmployeeSearchDialog.vue",
+      "lastFile": "c:\\it\\it_frontend\\nuxt.config.ts",
       "timestamps": {
-        "lastUpdated": "2026-04-11T16:49:44.520Z"
+        "lastUpdated": "2026-04-20T19:06:37.120Z"
       }
     },
     "unit": {
@@ -603,7 +603,7 @@
   "session": {
     "startedAt": "2026-03-07T15:52:46.492Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-11T17:39:52.865Z"
+    "lastActivity": "2026-04-20T19:06:37.120Z"
   },
   "history": [
     {
@@ -3729,6 +3729,24 @@
     {
       "timestamp": "2026-04-11T17:39:52.865Z",
       "feature": "composables",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T19:05:28.086Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T19:05:37.882Z",
+      "feature": "it_frontend",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-20T19:06:37.120Z",
+      "feature": "it_frontend",
       "phase": "do",
       "action": "updated"
     }
