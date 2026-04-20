@@ -21,6 +21,7 @@ import type { DataTableRowEditSaveEvent } from 'primevue/datatable';
 import { useAdminApi, type AdminRoleResponse, type AdminRoleRequest } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -104,6 +105,7 @@ const saveNewRow = async () => {
         newRowVisible.value = false;
         await refresh();
         toast.add({ severity: 'success', summary: '추가 완료', detail: `역할이 추가되었습니다.`, life: 3000 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '추가 실패', detail: e?.data?.message ?? '역할 추가 중 오류가 발생했습니다.', life: 5000 });
     }
@@ -112,9 +114,6 @@ const saveNewRow = async () => {
 
 <template>
     <div>
-        <Toast />
-        <ConfirmDialog />
-
         <!-- 페이지 헤더 -->
         <div class="flex items-center justify-between mb-6">
             <div>
@@ -125,23 +124,24 @@ const saveNewRow = async () => {
         </div>
 
         <!-- 역할 DataTable -->
-        <DataTable
+        <StyledDataTable
+            v-model:editing-rows="editingRows"
             :value="roles ?? []"
             :loading="pending"
-            editMode="row"
-            v-model:editingRows="editingRows"
-            @row-edit-save="onRowEditSave"
-            dataKey="athId"
+            edit-mode="row"
+            data-key="athId"
             scrollable
-            scrollHeight="calc(100vh - 300px)"
+            scroll-height="calc(100vh - 300px)"
             class="p-datatable-sm"
-            stripedRows>
+            striped-rows
+            @row-edit-save="onRowEditSave">
 
             <Column field="athId" header="자격등급ID" :style="{ width: '140px' }" frozen />
 
             <Column header="사용자" :style="{ width: '130px' }">
                 <template #body="{ data }">
-                    <span class="cursor-pointer text-blue-500 hover:underline"
+                    <span
+class="cursor-pointer text-blue-500 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.usrNm || data.eno }}
                     </span>
@@ -152,20 +152,23 @@ const saveNewRow = async () => {
 
             <Column field="useYn" header="사용여부" :style="{ width: '90px' }">
                 <template #body="{ data }">
-                    <Tag :value="data.useYn === 'Y' ? '사용' : '미사용'"
+                    <Tag
+:value="data.useYn === 'Y' ? '사용' : '미사용'"
                          :severity="data.useYn === 'Y' ? 'success' : 'secondary'" />
                 </template>
                 <template #editor="{ data, field }">
-                    <Select v-model="data[field]"
+                    <Select
+v-model="data[field]"
                             :options="[{ label: '사용', value: 'Y' }, { label: '미사용', value: 'N' }]"
-                            optionLabel="label" optionValue="value" class="w-full" />
+                            option-label="label" option-value="value" class="w-full" />
                 </template>
             </Column>
 
             <!-- 최초생성자 -->
             <Column header="최초생성자" :style="{ width: '120px' }">
                 <template #body="{ data }">
-                    <span v-if="data.fstEnrUsid"
+                    <span
+v-if="data.fstEnrUsid"
                           class="cursor-pointer text-blue-500 hover:underline"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
@@ -181,7 +184,8 @@ const saveNewRow = async () => {
             <!-- 마지막수정자 -->
             <Column header="마지막수정자" :style="{ width: '120px' }">
                 <template #body="{ data }">
-                    <span v-if="data.lstChgUsid"
+                    <span
+v-if="data.lstChgUsid"
                           class="cursor-pointer text-blue-500 hover:underline"
                           @click="showEmployeeDialog(data.lstChgUsid)">
                         {{ data.lstChgUsNm || data.lstChgUsid }}
@@ -195,15 +199,16 @@ const saveNewRow = async () => {
             </Column>
 
             <!-- 편집/삭제 버튼 -->
-            <Column rowEditor :style="{ width: '80px' }" bodyStyle="text-align:center" frozen alignFrozen="right" />
-            <Column :style="{ width: '60px' }" bodyStyle="text-align:center" frozen alignFrozen="right">
+            <Column row-editor :style="{ width: '80px' }" body-style="text-align:center" frozen align-frozen="right" />
+            <Column :style="{ width: '60px' }" body-style="text-align:center" frozen align-frozen="right">
                 <template #body="{ data }">
-                    <Button icon="pi pi-trash" severity="danger" text rounded
-                            @click="onDeleteConfirm(data.athId, data.eno, data.usrNm)"
-                            v-tooltip.top="'삭제'" />
+                    <Button
+v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
+                            rounded
+                            @click="onDeleteConfirm(data.athId, data.eno, data.usrNm)" />
                 </template>
             </Column>
-        </DataTable>
+        </StyledDataTable>
 
         <!-- 신규 행 추가 다이얼로그 -->
         <Dialog v-model:visible="newRowVisible" header="역할 추가" :style="{ width: '400px' }" modal>
@@ -218,9 +223,10 @@ const saveNewRow = async () => {
                 </div>
                 <div class="flex flex-col gap-1">
                     <label class="text-sm font-medium">사용여부</label>
-                    <Select v-model="newRow.useYn"
+                    <Select
+v-model="newRow.useYn"
                             :options="[{ label: '사용', value: 'Y' }, { label: '미사용', value: 'N' }]"
-                            optionLabel="label" optionValue="value" class="w-full" />
+                            option-label="label" option-value="value" class="w-full" />
                 </div>
             </div>
             <template #footer>

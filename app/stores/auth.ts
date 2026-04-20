@@ -99,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
             setAuth(response);
 
             // 클라이언트 환경에서만 localStorage에 저장 (SSR 환경 분기)
-            if (process.client) {
+            if (import.meta.client) {
                 saveToStorage();
             }
         } catch (error) {
@@ -184,7 +184,7 @@ export const useAuthStore = defineStore('auth', () => {
      * - JSON.parse 실패(데이터 손상) 시 clearAuth()로 초기화합니다.
      */
     const restoreSession = (): void => {
-        if (process.client) {
+        if (import.meta.client) {
             const storedUser = localStorage.getItem('user');
 
             if (storedUser) {
@@ -238,7 +238,7 @@ export const useAuthStore = defineStore('auth', () => {
     const clearAuth = () => {
         user.value = null;
 
-        if (process.client) {
+        if (import.meta.client) {
             // localStorage에서 user 정보 제거
             localStorage.removeItem('user');
         }

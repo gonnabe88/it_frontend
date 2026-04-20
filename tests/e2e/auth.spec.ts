@@ -16,8 +16,8 @@ test.describe('인증 플로우', () => {
         await page.goto('/login');
 
         // 사원번호와 비밀번호 입력
-        await page.getByLabel('행번').fill('E001');
-        await page.getByLabel('ESSO 비밀번호').fill('password123');
+        await page.getByLabel('행번').fill('K140024');
+        await page.getByLabel('ESSO 비밀번호').fill('kdb1234!');
 
         // 로그인 버튼 클릭 및 응답 대기 (timeout 10초)
         const loginResponse = page.waitForResponse(res => res.url().includes('/api/auth/login') && res.status() === 200);

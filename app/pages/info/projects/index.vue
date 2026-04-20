@@ -28,6 +28,7 @@
 import { ref, computed, onActivated } from 'vue';
 import { useProjects } from '~/composables/useProjects';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 const title = '사업 목록';
 definePageMeta({
@@ -68,10 +69,11 @@ const requestApproval = () => {
         alert('결재할 프로젝트를 선택해주세요.');
         return;
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = selectedProjects.value.map((p: any) => p.prjMngNo);
 
     /* 쿼리 파라미터 대신 sessionStorage 사용 (URL 길이 제한 우회) */
-    if (process.client) {
+    if (import.meta.client) {
         sessionStorage.setItem('selectedProjectIds', JSON.stringify(ids));
     }
 
@@ -174,6 +176,7 @@ const resetFilters = () => {
 const filteredProjects = computed(() => {
     return projects.value.filter(project => {
         /* 구분 필터 (정보화/경상) */
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (searchFilters.value.category && (project as any).ornYn !== searchFilters.value.category) return false;
 
         /* 사업명 필터 */
@@ -244,11 +247,13 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                 <!-- 상세 검색 Drawer 열기 -->
                 <Button label="조회" icon="pi pi-search" severity="secondary" outlined @click="visibleDrawer = true" />
                 <!-- 신규 사업 등록: 기본=정보화사업, 드롭다운=경상사업 -->
-                <SplitButton label="사업등록" icon="pi pi-plus" :model="registerMenuItems"
+                <SplitButton
+label="사업등록" icon="pi pi-plus" :model="registerMenuItems"
                     @click="navigateTo('/info/projects/form')" />
                 <!-- 선택된 항목이 있을 때만 활성화 -->
-                <Button label="결재신청" icon="pi pi-check-square" severity="help" @click="requestApproval"
-                    :disabled="selectedProjects.length === 0" />
+                <Button
+label="결재신청" icon="pi pi-check-square" severity="help" :disabled="selectedProjects.length === 0"
+                    @click="requestApproval" />
             </div>
         </div>
 
@@ -257,39 +262,39 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
             <div v-if="error" class="p-4 text-red-500">
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
-            <DataTable v-else :value="filteredProjects" paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]"
-                v-model:selection="selectedProjects" sortField="prjMngNo" :sortOrder="-1" dataKey="prjMngNo"
-                tableStyle="min-width: 50rem" :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' }
-                }">
+            <StyledDataTable
+v-else v-model:selection="selectedProjects" :value="filteredProjects" paginator :rows="10"
+                :rows-per-page-options="[10, 20, 50]" sort-field="prjMngNo" :sort-order="-1" data-key="prjMngNo">
                 <!-- 다중 선택 체크박스 -->
-                <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+                <Column selection-mode="multiple" header-style="width: 3rem"/>
 
                 <!-- 구분: 정보화사업/경상사업 태그 -->
-                <Column field="ornYn" header="구분" sortable headerStyle="width: 7rem">
+                <Column field="ornYn" header="구분" sortable header-style="width: 7rem">
                     <template #body="slotProps">
-                        <Tag :value="slotProps.data.ornYn === 'Y' ? '경상' : '정보화'"
+                        <Tag
+:value="slotProps.data.ornYn === 'Y' ? '경상' : '정보화'"
                             :class="slotProps.data.ornYn === 'Y' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'"
                             class="border-0" rounded />
                     </template>
                 </Column>
 
                 <!-- 사업명: 신규/계속 태그 + 상세 페이지 링크 -->
-                <Column field="prjNm" header="사업명" sortable headerClass="font-bold">
+                <Column field="prjNm" header="사업명" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <div class="flex items-center gap-2">
-                            <Tag :value="getPrjTpName(slotProps.data.prjTp)" :class="getPrjTypeClass(slotProps.data.prjTp)"
+                            <Tag
+:value="getPrjTpName(slotProps.data.prjTp)" :class="getPrjTypeClass(slotProps.data.prjTp)"
                                 class="border-0" rounded />
-                            <NuxtLink :to="`/info/projects/${slotProps.data.prjMngNo}`"
+                            <NuxtLink
+:to="`/info/projects/${slotProps.data.prjMngNo}`"
                                 class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
                                 {{ slotProps.data.prjNm }}
                             </NuxtLink>
                         </div>
                     </template>
                 </Column>
-                <Column field="svnDpmNm" header="주관부서" sortable></Column>
-                <Column field="itDpmNm" header="IT부서" sortable></Column>
+                <Column field="svnDpmNm" header="주관부서" sortable/>
+                <Column field="itDpmNm" header="IT부서" sortable/>
 
                 <!-- 총 예산: 선택된 단위로 변환 -->
                 <Column field="prjBg" :header="`총 예산 (${selectedUnit})`" sortable>
@@ -311,13 +316,14 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                         <span>{{ formatBudget(slotProps.data.costBg) }} {{ selectedUnit }}</span>
                     </template>
                 </Column>
-                <Column field="sttDt" header="시작일" sortable></Column>
-                <Column field="endDt" header="종료일" sortable></Column>
+                <Column field="sttDt" header="시작일" sortable/>
+                <Column field="endDt" header="종료일" sortable/>
 
                 <!-- 결재현황 태그 -->
                 <Column field="applicationInfo.apfSts" header="결재현황" sortable>
                     <template #body="slotProps">
-                        <Tag :value="slotProps.data.applicationInfo?.apfSts"
+                        <Tag
+:value="slotProps.data.applicationInfo?.apfSts"
                             :class="getApprovalTagClass(slotProps.data.applicationInfo?.apfSts)" class="border-0"
                             rounded />
                     </template>
@@ -326,7 +332,8 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                 <!-- 사업현황 태그 -->
                 <Column field="prjSts" header="사업현황" sortable>
                     <template #body="slotProps">
-                        <Tag :value="slotProps.data.prjSts" :class="getProjectTagClass(slotProps.data.prjSts)"
+                        <Tag
+:value="slotProps.data.prjSts" :class="getProjectTagClass(slotProps.data.prjSts)"
                             class="border-0" rounded />
                     </template>
                 </Column>
@@ -337,7 +344,7 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                         <Button icon="pi pi-search" text rounded aria-label="Search" />
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
 
         <!-- 상세 조회 Drawer (오른쪽 슬라이드) -->
@@ -353,43 +360,49 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                 <!-- 구분 (정보화/경상) 필터 -->
                 <div class="flex flex-col gap-2">
                     <label class="font-semibold">구분</label>
-                    <SelectButton v-model="searchFilters.category" :options="categoryOptions" optionLabel="label"
-                        optionValue="value" />
+                    <SelectButton
+v-model="searchFilters.category" :options="categoryOptions" option-label="label"
+                        option-value="value" />
                 </div>
 
                 <!-- 주관부문 및 본부 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
                     <label for="major_hdq" class="font-semibold">주관부문 및 본부</label>
-                    <AutoComplete id="major_hdq" v-model="searchFilters.major_hdq" :suggestions="filteredMajorHdqs"
-                        @complete="searchMajorHdq" multiple dropdown placeholder="주관부문 및 본부 선택 (다중)" fluid />
+                    <AutoComplete
+id="major_hdq" v-model="searchFilters.major_hdq" :suggestions="filteredMajorHdqs"
+                        multiple dropdown placeholder="주관부문 및 본부 선택 (다중)" fluid @complete="searchMajorHdq" />
                 </div>
 
                 <!-- 주관부서 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
                     <label for="major_dept" class="font-semibold">주관부서</label>
-                    <AutoComplete id="major_dept" v-model="searchFilters.major_department"
-                        :suggestions="filteredMajorDepartments" @complete="searchMajorDept" multiple dropdown
-                        placeholder="주관부서 선택 (다중)" fluid />
+                    <AutoComplete
+id="major_dept" v-model="searchFilters.major_department"
+                        :suggestions="filteredMajorDepartments" multiple dropdown placeholder="주관부서 선택 (다중)"
+                        fluid @complete="searchMajorDept" />
                 </div>
 
                 <!-- IT부서 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
                     <label for="it_dept" class="font-semibold">IT부서</label>
-                    <AutoComplete id="it_dept" v-model="searchFilters.it_department"
-                        :suggestions="filteredItDepartments" @complete="searchItDept" multiple dropdown
-                        placeholder="IT부서 선택 (다중)" fluid />
+                    <AutoComplete
+id="it_dept" v-model="searchFilters.it_department"
+                        :suggestions="filteredItDepartments" multiple dropdown placeholder="IT부서 선택 (다중)"
+                        fluid @complete="searchItDept" />
                 </div>
 
                 <!-- 예산 범위: 최소/최대 -->
                 <div class="flex flex-col gap-2">
                     <label class="font-semibold">예산 (원)</label>
                     <div class="flex items-center gap-2">
-                        <InputNumber v-model="searchFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                        <InputNumber
+v-model="searchFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="w-full" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <InputNumber v-model="searchFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
-                            locale="ko-KR" :minFractionDigits="0" class="w-full" />
+                        <InputNumber
+v-model="searchFilters.budgetMax" placeholder="최대" mode="currency" currency="KRW"
+                            locale="ko-KR" :min-fraction-digits="0" class="w-full" />
                     </div>
                 </div>
 
@@ -397,25 +410,29 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                 <div class="flex flex-col gap-2">
                     <label class="font-semibold">사업 기간</label>
                     <div class="flex flex-col gap-2">
-                        <DatePicker v-model="searchFilters.startDate" placeholder="시작일" showIcon fluid
-                            dateFormat="yy-mm-dd" />
-                        <DatePicker v-model="searchFilters.endDate" placeholder="종료일" showIcon fluid
-                            dateFormat="yy-mm-dd" />
+                        <DatePicker
+v-model="searchFilters.startDate" placeholder="시작일" show-icon fluid
+                            date-format="yy-mm-dd" />
+                        <DatePicker
+v-model="searchFilters.endDate" placeholder="종료일" show-icon fluid
+                            date-format="yy-mm-dd" />
                     </div>
                 </div>
 
                 <!-- 진행 상태 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
                     <label for="status" class="font-semibold">진행 상태</label>
-                    <AutoComplete id="status" v-model="searchFilters.status" :suggestions="filteredStatuses"
-                        @complete="searchStatus" multiple dropdown placeholder="상태 선택 (다중)" fluid />
+                    <AutoComplete
+id="status" v-model="searchFilters.status" :suggestions="filteredStatuses"
+                        multiple dropdown placeholder="상태 선택 (다중)" fluid @complete="searchStatus" />
                 </div>
 
                 <!-- Drawer 액션 버튼: 초기화 + 조회(Drawer 닫기) -->
                 <div class="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <Button label="초기화" icon="pi pi-refresh" severity="secondary" @click="resetFilters"
-                        class="flex-1" />
-                    <Button label="조회" icon="pi pi-search" @click="visibleDrawer = false" class="flex-1" />
+                    <Button
+label="초기화" icon="pi pi-refresh" severity="secondary" class="flex-1"
+                        @click="resetFilters" />
+                    <Button label="조회" icon="pi pi-search" class="flex-1" @click="visibleDrawer = false" />
                 </div>
             </div>
         </Drawer>

@@ -139,31 +139,34 @@ const onDelete = () => {
                 - SVG를 <img>로 로드하면 스크립트 실행이 차단되므로 XSS 위험이 없습니다.
             -->
             <div v-if="displaySvgUrl" class="excalidraw-preview p-3 overflow-auto">
-                <img :src="displaySvgUrl" class="max-w-full block h-auto" alt="Excalidraw 다이어그램" />
+                <img :src="displaySvgUrl" class="max-w-full block h-auto" alt="Excalidraw 다이어그램" >
             </div>
 
             <!-- SVG 없을 때 placeholder -->
             <div v-else class="flex items-center justify-center h-48 text-zinc-400 dark:text-zinc-600">
                 <div class="text-center">
-                    <i class="pi pi-image text-5xl mb-3 block"></i>
+                    <i class="pi pi-image text-5xl mb-3 block"/>
                     <span class="text-sm">다이어그램 미리보기 없음</span>
                 </div>
             </div>
 
             <!-- hover 오버레이: 편집 / 삭제 버튼 (에디터가 편집 가능 상태일 때만 표시) -->
-            <div v-if="props.editor.isEditable"
+            <div
+v-if="props.editor.isEditable"
                 class="absolute inset-0 bg-black/0 group-hover:bg-black/10 dark:group-hover:bg-black/20 transition-colors duration-200 flex items-start justify-end p-3 opacity-0 group-hover:opacity-100">
                 <div class="flex gap-2 shadow-lg">
                     <!-- 편집 버튼 -->
-                    <button @click.stop="onEdit"
-                        class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center gap-1.5">
-                        <i class="pi pi-pencil text-xs"></i>
+                    <button
+class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors flex items-center gap-1.5"
+                        @click.stop="onEdit">
+                        <i class="pi pi-pencil text-xs"/>
                         편집
                     </button>
                     <!-- 삭제 버튼 -->
-                    <button @click.stop="onDelete"
-                        class="px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1.5">
-                        <i class="pi pi-trash text-xs"></i>
+                    <button
+class="px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 active:bg-red-700 transition-colors flex items-center gap-1.5"
+                        @click.stop="onDelete">
+                        <i class="pi pi-trash text-xs"/>
                         삭제
                     </button>
                 </div>

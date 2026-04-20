@@ -1,4 +1,24 @@
-// Design Ref: §3 Data Model — 사전협의 도메인 타입 정의
+/**
+ * ============================================================================
+ * [types/review.ts] 사전협의(문서 검토) TypeScript 타입 정의
+ * ============================================================================
+ * 사전협의 도메인에서 공유하는 타입을 정의합니다.
+ *
+ * [포함 타입]
+ *  - ReviewerTeam       : 검토자 팀 유형 (4개 팀)
+ *  - ReviewSessionStatus: 세션 진행 상태 (4단계)
+ *  - ReviewVersion      : 검토 문서 버전 (불변 스냅샷)
+ *  - Reviewer           : 검토자 정보
+ *  - CommentAttachment  : 코멘트 첨부파일
+ *  - ReviewComment      : 코멘트 (인라인/전반)
+ *  - ReviewSession      : 사전협의 세션 전체 상태
+ *
+ * [사용 파일]
+ *  - stores/review.ts         : Pinia 리뷰 스토어
+ *  - composables/useReview.ts : 리뷰 composable
+ *  - components/review/*      : 리뷰 관련 컴포넌트
+ * ============================================================================
+ */
 
 /** 검토자 팀 유형 */
 export type ReviewerTeam = '개발/운영팀' | '계약팀' | '기획팀' | 'PMO팀';

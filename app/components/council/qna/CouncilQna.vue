@@ -98,7 +98,8 @@ const handleSaveReply = async (qtnId: string) => {
         </div>
 
         <!-- 질의 없음 -->
-        <div v-else-if="!qnaList || qnaList.length === 0"
+        <div
+v-else-if="!qnaList || qnaList.length === 0"
             class="text-sm text-zinc-400 py-8 text-center border border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
             등록된 사전 질의가 없습니다.
         </div>
@@ -182,7 +183,7 @@ const handleSaveReply = async (qtnId: string) => {
                             rows="4"
                             placeholder="답변 내용을 입력하세요..."
                             class="w-full text-sm"
-                            autoResize
+                            auto-resize
                         />
                         <div class="flex justify-end gap-2">
                             <Button

@@ -15,6 +15,7 @@
 import { ref, computed, onActivated } from 'vue';
 import { usePlan, type Plan } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 /* 페이지 탭 제목 설정 */
 const title = '정보기술부문 계획';
@@ -86,26 +87,21 @@ const onRowClick = (event: { data: Plan }) => {
             </div>
 
             <!-- 계획 목록 테이블 -->
-            <DataTable
+            <StyledDataTable
                 v-else
                 :value="plans"
                 paginator
                 :rows="10"
-                :rowsPerPageOptions="[10, 20, 50]"
-                dataKey="plnMngNo"
-                tableStyle="min-width: 50rem"
-                selectionMode="single"
-                @rowClick="onRowClick"
-                :pt="{
-                    headerRow: { class: 'bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300' },
-                    bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer' }
-                }"
+                :rows-per-page-options="[10, 20, 50]"
+                data-key="plnMngNo"
+                selection-mode="single"
+                @row-click="onRowClick"
             >
                 <!-- 대상연도 -->
-                <Column field="plnYy" header="대상연도" sortable headerClass="font-bold" style="width: 8rem" />
+                <Column field="plnYy" header="대상연도" sortable header-class="font-bold" style="width: 8rem" />
 
                 <!-- 계획구분 (신규/조정) -->
-                <Column field="plnTp" header="신규/조정" sortable headerClass="font-bold" style="width: 8rem">
+                <Column field="plnTp" header="신규/조정" sortable header-class="font-bold" style="width: 8rem">
                     <template #body="slotProps">
                         <Tag
                             :value="slotProps.data.plnTp"
@@ -115,7 +111,7 @@ const onRowClick = (event: { data: Plan }) => {
                 </Column>
 
                 <!-- 계획관리번호 -->
-                <Column field="plnMngNo" header="계획관리번호" sortable headerClass="font-bold">
+                <Column field="plnMngNo" header="계획관리번호" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
                             {{ slotProps.data.plnMngNo }}
@@ -124,35 +120,35 @@ const onRowClick = (event: { data: Plan }) => {
                 </Column>
 
                 <!-- 총예산 -->
-                <Column field="ttlBg" :header="`총예산 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="ttlBg" :header="`총예산 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.ttlBg) }}</span>
                     </template>
                 </Column>
 
                 <!-- 자본예산 -->
-                <Column field="cptBg" :header="`자본예산 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="cptBg" :header="`자본예산 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.cptBg) }}</span>
                     </template>
                 </Column>
 
                 <!-- 일반관리비 -->
-                <Column field="mngc" :header="`일반관리비 (${selectedUnit})`" sortable headerClass="font-bold">
+                <Column field="mngc" :header="`일반관리비 (${selectedUnit})`" sortable header-class="font-bold">
                     <template #body="slotProps">
                         <span class="tabular-nums">{{ formatBudget(slotProps.data.mngc) }}</span>
                     </template>
                 </Column>
 
                 <!-- 등록일 -->
-                <Column field="fstEnrDtm" header="등록일" sortable headerClass="font-bold" style="width: 10rem">
+                <Column field="fstEnrDtm" header="등록일" sortable header-class="font-bold" style="width: 10rem">
                     <template #body="slotProps">
                         {{ formatDate(slotProps.data.fstEnrDtm) }}
                     </template>
                 </Column>
 
                 <!-- 등록자 -->
-                <Column field="fstEnrUsid" header="등록자" sortable headerClass="font-bold" style="width: 8rem" />
+                <Column field="fstEnrUsid" header="등록자" sortable header-class="font-bold" style="width: 8rem" />
 
                 <!-- 데이터 없음 표시 -->
                 <template #empty>
@@ -160,7 +156,7 @@ const onRowClick = (event: { data: Plan }) => {
                         등록된 계획이 없습니다.
                     </div>
                 </template>
-            </DataTable>
+            </StyledDataTable>
         </div>
     </div>
 </template>

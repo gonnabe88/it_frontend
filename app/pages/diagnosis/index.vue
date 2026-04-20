@@ -320,7 +320,7 @@ const restart = () => {
                 </div>
                 <!-- 진행률 바 (현재 단계 비율로 너비 조절) -->
                 <div class="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
-                    <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" :style="{ width: `${(currentStep / totalSteps) * 100}%` }"></div>
+                    <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" :style="{ width: `${(currentStep / totalSteps) * 100}%` }"/>
                 </div>
             </div>
 
@@ -333,7 +333,7 @@ const restart = () => {
                     <!-- 체크박스 타입: 복수 선택 -->
                     <div v-if="currentQuestion.type === 'checkbox'" class="flex flex-col gap-3">
                         <div v-for="option in currentQuestion.options" :key="option" class="flex items-center">
-                            <Checkbox v-model="answers[currentQuestion.model]" :inputId="option" :name="currentQuestion.title" :value="option" />
+                            <Checkbox v-model="answers[currentQuestion.model]" :input-id="option" :name="currentQuestion.title" :value="option" />
                             <label :for="option" class="ml-3 cursor-pointer text-zinc-700 dark:text-zinc-300">{{ option }}</label>
                         </div>
                     </div>
@@ -341,7 +341,7 @@ const restart = () => {
                     <!-- 라디오 타입: 단일 선택 -->
                     <div v-if="currentQuestion.type === 'radio'" class="flex flex-col gap-3">
                         <div v-for="option in currentQuestion.options" :key="option" class="flex items-center">
-                            <RadioButton v-model="answers[currentQuestion.model]" :inputId="option" :name="currentQuestion.title" :value="option" />
+                            <RadioButton v-model="answers[currentQuestion.model]" :input-id="option" :name="currentQuestion.title" :value="option" />
                             <label :for="option" class="ml-3 cursor-pointer text-zinc-700 dark:text-zinc-300">{{ option }}</label>
                         </div>
                     </div>
@@ -350,11 +350,11 @@ const restart = () => {
                     <div v-if="currentQuestion.type === 'custom_integration'" class="space-y-4">
                         <div class="flex items-center gap-4">
                             <div class="flex items-center">
-                                <RadioButton v-model="answers.integration.required" inputId="int_yes" name="integration" value="예" />
+                                <RadioButton v-model="answers.integration.required" input-id="int_yes" name="integration" value="예" />
                                 <label for="int_yes" class="ml-3 cursor-pointer text-zinc-700 dark:text-zinc-300">예</label>
                             </div>
                             <div class="flex items-center">
-                                <RadioButton v-model="answers.integration.required" inputId="int_no" name="integration" value="아니오" />
+                                <RadioButton v-model="answers.integration.required" input-id="int_no" name="integration" value="아니오" />
                                 <label for="int_no" class="ml-3 cursor-pointer text-zinc-700 dark:text-zinc-300">아니오</label>
                             </div>
                         </div>
@@ -368,8 +368,8 @@ const restart = () => {
 
             <!-- 네비게이션 버튼 (이전 / 다음 or 결과 보기) -->
             <div class="flex justify-between mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                <Button label="이전" icon="pi pi-arrow-left" @click="prevStep" :disabled="currentStep === 1" severity="secondary" text />
-                <Button :label="currentStep === totalSteps ? '결과 보기' : '다음'" icon="pi pi-arrow-right" iconPos="right" @click="nextStep" />
+                <Button label="이전" icon="pi pi-arrow-left" :disabled="currentStep === 1" severity="secondary" text @click="prevStep" />
+                <Button :label="currentStep === totalSteps ? '결과 보기' : '다음'" icon="pi pi-arrow-right" icon-pos="right" @click="nextStep" />
             </div>
         </div>
 
@@ -377,7 +377,7 @@ const restart = () => {
         <div v-else class="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8 text-center animate-fade-in">
             <!-- 완료 아이콘 -->
             <div class="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i class="pi pi-check-circle text-4xl text-indigo-600 dark:text-indigo-400"></i>
+                <i class="pi pi-check-circle text-4xl text-indigo-600 dark:text-indigo-400"/>
             </div>
             <h2 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">사전 진단 결과</h2>
             <p class="text-zinc-600 dark:text-zinc-400 mb-10">입력하신 정보를 바탕으로 분석된 결과입니다.</p>

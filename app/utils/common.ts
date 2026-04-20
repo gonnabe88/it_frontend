@@ -7,7 +7,8 @@
  * 컴포넌트, composable, 스토어 등 어디서든 import하여 사용할 수 있습니다.
  *
  * [포함 함수]
- *  - formatBudget      : 예산 금액을 단위(천원/백만원/억원)에 따라 변환 및 포맷
+ *  - formatBudget       : 예산 금액을 단위(천원/백만원/억원)에 따라 변환 및 포맷
+ *  - formatKoreanDate   : 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 변환
  *  - getApprovalTagClass: 결재 상태별 PrimeVue Tag CSS 클래스 반환
  *  - getProjectTagClass : 사업현황 상태별 PrimeVue Tag CSS 클래스 반환
  *
@@ -286,4 +287,51 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
         case 'ETC':      return '기타';
         default:         return '-';
     }
+};
+
+/**
+ * ISO 날짜/시간 문자열을 'YYYY-MM-DD HH:mm' 형식으로 변환
+ * @param dtm - ISO 형식 날짜 문자열 (예: '2026-01-15T09:30:00')
+ * @returns 포맷된 날짜 문자열 또는 '-'
+ */
+export const formatDateTime = (dtm?: string | null): string =>
+    dtm?.substring(0, 16).replace('T', ' ') || '-';
+
+/**
+ * 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 반환
+ *
+ * @param date - 변환할 Date 객체 (기본값: 현재 날짜)
+ * @returns 한국어 날짜 문자열 (예: '2026년 04월 10일')
+ *
+ * @example
+ * formatKoreanDate()                        // → '2026년 04월 10일'
+ * formatKoreanDate(new Date('2026-01-15'))   // → '2026년 01월 15일'
+ */
+export const formatKoreanDate = (date: Date = new Date()): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}년 ${m}월 ${d}일`;
+};
+
+/**
+ * 파일 크기를 사람이 읽기 쉬운 단위로 변환
+ *
+ * @param bytes - 변환할 바이트 수
+ * @returns 단위가 포함된 문자열 (예: '1.5 MB', '512 KB', '0 B')
+ *
+ * @example
+ * formatFileSize(0)           // → '0 B'
+ * formatFileSize(1024)        // → '1.0 KB'
+ * formatFileSize(1572864)     // → '1.5 MB'
+ */
+export const formatFileSize = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    const index = Math.min(i, units.length - 1);
+    const value = bytes / Math.pow(1024, index);
+    return index === 0
+        ? `${bytes} B`
+        : `${value.toFixed(1)} ${units[index]}`;
 };

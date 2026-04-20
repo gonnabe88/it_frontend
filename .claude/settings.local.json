@@ -17,7 +17,14 @@
       "Bash(npx tsc:*)",
       "Bash(find /c/it/it_frontend/node_modules/@primeuix/themes -name *.js -path */select*)",
       "Bash(find /c/it/it_frontend/node_modules/@primeuix -name *.mjs -path *aura*select*)",
-      "Bash(head -3 find /c/it/it_frontend/node_modules -name *.mjs -path *aura*)"
+      "Bash(head -3 find /c/it/it_frontend/node_modules -name *.mjs -path *aura*)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Read(//c/Users/gonna/.claude/projects/C--it-it-frontend/539b2fd7-c12a-422d-8225-f19fd639bb08/tool-results//**)",
+      "Bash(gunzip -c webfetch-1776569935351-2spjz9.bin)",
+      "Bash(tar -t)",
+      "Read(//c/tmp/**)",
+      "Bash(gunzip -c /c/Users/gonna/.claude/projects/C--it-it-frontend/539b2fd7-c12a-422d-8225-f19fd639bb08/tool-results/webfetch-1776569935351-2spjz9.bin)",
+      "Bash(tar -x)"
     ]
   },
   "language": "korean"

@@ -7,7 +7,7 @@
  *
  * [제공 기능]
  *  - tabs     : 현재 열려있는 탭 목록 (Nuxt useState로 전역 공유)
- *  - addTab   : 새 탭 추가 (중복 방지, 최대 10개 제한)
+ *  - addTab   : 새 탭 추가 (중복 방지)
  *  - removeTab: 탭 닫기 (현재 탭 닫기 시 인접 탭으로 자동 이동)
  *  - closeAll : 현재 탭을 제외한 모든 탭 닫기
  *
@@ -59,7 +59,7 @@ export const useTabs = () => {
      *  3. 경로의 마지막 세그먼트 (예: /info/projects → 'projects')
      *
      * @param newRoute - 추가할 라우트 정보 (path, fullPath, meta 포함)
-     * @returns 탭이 정상 추가(또는 이미 존재)되면 true, 최대 개수 초과로 차단되면 false
+     * @returns 항상 true (탭 추가 성공 또는 이미 존재)
      *
      * @example
      * // router.afterEach 훅에서 호출
@@ -68,13 +68,11 @@ export const useTabs = () => {
      *   addTab(to);
      * });
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addTab = (newRoute: any): boolean => {
         // path 기준으로 중복 탭 여부 확인 (쿼리가 달라도 같은 path면 중복)
         const existingTab = tabs.value.find(t => t.path === newRoute.path);
         if (existingTab) return true;
-
-        // 탭 최대 10개 제한: 초과 시 추가 차단 후 false 반환
-        if (tabs.value.length >= 10) return false;
 
         // 탭 제목 결정 로직 (우선순위: meta.title > 홈('/') > 경로 마지막 세그먼트)
         let title = '새 탭';
@@ -118,7 +116,7 @@ export const useTabs = () => {
             if (route.path === path) {
                 if (tabs.value.length > 0) {
                     // 삭제된 탭의 이전 위치 또는 첫 번째 탭으로 이동
-                    const nextTab = tabs.value[Math.max(0, index - 1)];
+                    const nextTab = tabs.value[Math.max(0, index - 1)]!;
                     router.push(nextTab.fullPath);
                 } else {
                     // 탭이 모두 닫힌 경우 홈으로 이동

@@ -230,7 +230,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <!-- 탭1: 평가위원 선정 -->
                     <Tab value="0">
                         <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
-                            <i class="pi pi-users text-xs"></i>
+                            <i class="pi pi-users text-xs"/>
                             평가위원 선정
                         </div>
                     </Tab>
@@ -238,7 +238,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <!-- 탭2: 일정 취합 -->
                     <Tab value="1">
                         <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
-                            <i class="pi pi-calendar text-xs"></i>
+                            <i class="pi pi-calendar text-xs"/>
                             일정 취합
                         </div>
                     </Tab>
@@ -249,7 +249,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                             class="flex items-center gap-1.5 py-1 px-1 text-sm"
                             :class="!noticeTabEnabled ? 'opacity-40' : ''"
                         >
-                            <i class="pi pi-bell text-xs"></i>
+                            <i class="pi pi-bell text-xs"/>
                             일정공지
                         </div>
                     </Tab>
@@ -257,7 +257,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <!-- 탭4: 사전질의응답 -->
                     <Tab value="3">
                         <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
-                            <i class="pi pi-comments text-xs"></i>
+                            <i class="pi pi-comments text-xs"/>
                             사전질의응답
                         </div>
                     </Tab>
@@ -269,8 +269,8 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <TabPanel value="0">
                         <div class="p-5">
                             <CommitteeSelector
-                                :asctId="asctId"
-                                :dbrTp="dbrTp"
+                                :asct-id="asctId"
+                                :dbr-tp="dbrTp"
                                 :readonly="committeeReadonly"
                                 @saved="onCommitteeSaved"
                             />
@@ -281,7 +281,7 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <TabPanel value="1">
                         <div class="p-5">
                             <ScheduleStatus
-                                :asctId="asctId"
+                                :asct-id="asctId"
                                 :readonly="committeeReadonly === false ? false : councilStatus === 'SCHEDULED'"
                                 @confirmed="onScheduleConfirmed"
                             />
@@ -293,9 +293,9 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                         <div class="p-5">
                             <CouncilNotice
                                 v-if="noticeTabEnabled"
-                                :asctId="asctId"
-                                :councilDetail="councilDetail"
-                                :feasibility="feasibilityData"
+                                :asct-id="asctId"
+                                :council-detail="councilDetail ?? null"
+                                :feasibility="feasibilityData ?? null"
                             />
                             <div v-else class="text-sm text-zinc-400 py-8 text-center">
                                 일정 확정 후 표출됩니다.
@@ -307,8 +307,8 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
                     <TabPanel value="3">
                         <div class="p-5">
                             <CouncilQna
-                                :asctId="asctId"
-                                :canReply="canReplyQna"
+                                :asct-id="asctId"
+                                :can-reply="canReplyQna"
                             />
                         </div>
                     </TabPanel>
@@ -322,14 +322,15 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
         <!-- 타당성검토표 확인 (접힌 상태로 표출) -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                <span class="w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400
+                <span
+class="w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400
                              text-xs font-bold flex items-center justify-center">i</span>
                 <h2 class="font-semibold text-sm text-zinc-700 dark:text-zinc-300">타당성검토표 (참고용)</h2>
             </div>
             <div class="p-5">
                 <CouncilFeasibilityForm
                     v-if="feasibilityData"
-                    :modelValue="feasibilityData"
+                    :model-value="feasibilityData"
                     :readonly="true"
                 />
                 <Skeleton v-else height="8rem" class="w-full" />

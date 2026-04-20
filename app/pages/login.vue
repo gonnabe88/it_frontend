@@ -20,7 +20,7 @@ import logo from '@/assets/logo.png';
 
 /* 로그인 페이지 메타 설정 */
 definePageMeta({
-    layout: false, // 기본 레이아웃 비활성화 (전체 화면 로그인 UI)
+    layout: 'login', // 빈 패스스루 레이아웃 사용 (layout:false 대신 — KeepAlive fragment 버그 방지)
     middleware: []  // 전역 인증 미들웨어 제외 (로그인 페이지는 인증 불필요)
 });
 
@@ -57,6 +57,7 @@ const handleLogin = async () => {
 
         // 로그인 성공 → 홈(/)으로 이동 (index.vue에서 /info로 리다이렉트)
         router.push('/');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error('Login error:', error);
         // 서버 에러 메시지 우선, 없으면 기본 메시지 표시
@@ -91,7 +92,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
                 <!-- 로고 및 시스템명 -->
                 <div class="text-center mb-8">
                     <div class="inline-flex items-center justify-center w-20 h-20 rounded mb-4">
-                        <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" />
+                        <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" >
                     </div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">IT 정보화 포탈</h1>
                     <p class="text-gray-600 dark:text-gray-400">정보화 사업·예산·인력</p>
@@ -105,7 +106,8 @@ const handleKeyPress = (event: KeyboardEvent) => {
                         <label for="eno" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             행번
                         </label>
-                        <InputText id="eno" v-model="eno" placeholder="사원번호를 입력하세요" class="w-full" :disabled="loading"
+                        <InputText
+id="eno" v-model="eno" placeholder="사원번호를 입력하세요" class="w-full" :disabled="loading"
                             @keypress="handleKeyPress" />
                     </div>
 
@@ -114,16 +116,18 @@ const handleKeyPress = (event: KeyboardEvent) => {
                         <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             ESSO 비밀번호
                         </label>
-                        <Password inputId="password" v-model="password" placeholder="비밀번호를 입력하세요" :feedback="false"
-                            toggleMask class="w-full" :inputClass="'w-full'" :disabled="loading"
+                        <Password
+v-model="password" input-id="password" placeholder="비밀번호를 입력하세요" :feedback="false"
+                            toggle-mask class="w-full" :input-class="'w-full'" :disabled="loading"
                             @keypress="handleKeyPress" />
                     </div>
 
                     <!-- 에러 메시지 (로그인 실패 시 표시) -->
-                    <div v-if="errorMessage"
+                    <div
+v-if="errorMessage"
                         class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                         <p class="text-sm text-red-600 dark:text-red-400 flex items-center gap-2">
-                            <i class="pi pi-exclamation-circle"></i>
+                            <i class="pi pi-exclamation-circle"/>
                             {{ errorMessage }}
                         </p>
                     </div>

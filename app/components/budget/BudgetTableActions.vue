@@ -39,13 +39,16 @@ defineEmits<{
 <template>
   <div class="flex items-center gap-2">
     <!-- 상세 조회 (필터 Drawer 열기) -->
-    <Button label="조회" icon="pi pi-search" severity="secondary" outlined :badge="hasFilters ? '●' : undefined"
-      :badgeSeverity="hasFilters ? 'danger' : undefined" class="shrink-0" @click="$emit('filter')" />
+    <Button
+label="조회" icon="pi pi-search" severity="secondary" outlined :badge="hasFilters ? '●' : undefined"
+      :badge-severity="hasFilters ? 'danger' : undefined" class="shrink-0" @click="$emit('filter')" />
     <!-- 엑셀 다운로드 -->
-    <Button icon="pi pi-file-excel" severity="success" outlined title="엑셀 다운로드" class="shrink-0"
+    <Button
+icon="pi pi-file-excel" severity="success" outlined title="엑셀 다운로드" class="shrink-0"
       @click="$emit('excel')" />
     <!-- PDF 보고서 다운로드 -->
-    <Button icon="pi pi-file-pdf" severity="danger" outlined title="보고서 다운로드" class="shrink-0" :loading="reportLoading"
+    <Button
+icon="pi pi-file-pdf" severity="danger" outlined title="보고서 다운로드" class="shrink-0" :loading="reportLoading"
       @click="$emit('pdf')" />
   </div>
 </template>

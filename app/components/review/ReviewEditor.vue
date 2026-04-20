@@ -23,10 +23,8 @@ const emit = defineEmits<{
   (e: 'request-inline-comment', payload: { markId: string; quotedText: string; position: { x: number; y: number } }): void;
   /** 전반 코멘트 요청 (선택 없이 우클릭) */
   (e: 'request-general-comment', payload: { position: { x: number; y: number } }): void;
-  /** 코멘트 마크 클릭 */
-  (e: 'comment-mark-click', commentId: string): void;
-  /** 에디터 내용 변경 */
-  (e: 'update', content: string): void;
+  /** 코멘트 마크 클릭 또는 에디터 내용 변경 */
+  (e: 'comment-mark-click' | 'update', value: string): void;
 }>();
 
 const props = defineProps<{
@@ -69,6 +67,7 @@ const CommentMark = Mark.create({
 const additionalExtensions: AnyExtension[] = [CommentMark];
 
 /* ── TiptapEditor 참조 ── */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const tiptapEditorRef = ref<any>(null);
 
 /** 내부 에디터 인스턴스 접근 헬퍼 */

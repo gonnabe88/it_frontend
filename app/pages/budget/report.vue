@@ -38,9 +38,9 @@ import { type ProjectDetail, useProjects } from '~/composables/useProjects';
 import { type ItCost, useCost } from '~/composables/useCost';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import { usePdfReport } from '~/composables/usePdfReport';
-import { formatKoreanDate } from '~/utils/common';
 import { useApprovals, type CreateApplicationRequest, type OrcItem } from '~/composables/useApprovals';
 import { useAuth } from '~/composables/useAuth';
+import { useTabs } from '~/composables/useTabs';
 import type { OrgUser } from '~/composables/useOrganization';
 
 /**
@@ -56,6 +56,7 @@ const { fetchCostsBulk } = useCost();
 const { generateReport } = usePdfReport();
 const { createApplication } = useApprovals();
 const { user } = useAuth();
+const { removeTab } = useTabs();
 
 /** sessionStorage에서 로드한 정보화사업 관리번호 목록 */
 const projectIds = ref<string[]>([]);
@@ -69,6 +70,10 @@ const costs = ref<ItCost[]>([]);
 
 /** 데이터 로딩 중 상태 (spinner 표시용) */
 const loading = ref(true);
+/** 상신 완료 다이얼로그 표시 여부 */
+const showSubmitComplete = ref(false);
+/** 상신 완료 메시지 */
+const submitCompleteMessage = ref('');
 /** 생성된 PDF Blob URL (iframe src에 사용, 이전 URL은 revoke) */
 const pdfUrl = ref<string | null>(null);
 
@@ -84,7 +89,7 @@ const approvalLine = ref({
     drafter: {
         name: user.value?.empNm || '',
         rank: '',
-        date: formatKoreanDate(),
+        date: '',
         id: user.value?.eno || ''
     },
     /** 팀장 결재자 (직원 검색으로 설정) */
@@ -183,7 +188,7 @@ onActivated(async () => {
     let pIds: string[] = [];
     let cIds: string[] = [];
 
-    if (process.client) {
+    if (import.meta.client) {
         /* 정보화사업 ID 복원 */
         const storedProjectIds = sessionStorage.getItem('selectedBudgetProjectIds');
         if (storedProjectIds) {
@@ -257,10 +262,14 @@ const submitApproval = async () => {
         return;
     }
 
-    /* 결재 저장 시 결재 날짜를 빈 값으로 초기화 (처리 시점에 채워짐) */
+    /* 상신 시점의 날짜·시각을 기안자에 기록, 기안자==팀장이면 팀장도 자동승인 시각 기록 */
+    const now = new Date().toISOString();
+    const isTeamLeadSameAsDrafter = approvalLine.value.drafter.id === approvalLine.value.teamLead.id;
+
     const savedApprovalLine = {
         ...approvalLine.value,
-        teamLead: { ...approvalLine.value.teamLead, date: '' },
+        drafter: { ...approvalLine.value.drafter, date: now },
+        teamLead: { ...approvalLine.value.teamLead, date: isTeamLeadSameAsDrafter ? now : '' },
         deptHead: { ...approvalLine.value.deptHead, date: '' }
     };
 
@@ -308,8 +317,8 @@ const submitApproval = async () => {
             approverEnos
         });
 
-        alert(`${totalCount.value}건의 결재 상신이 완료되었습니다.`);
-        navigateTo('/budget/list');
+        submitCompleteMessage.value = `${totalCount.value}건의 결재 상신이 완료되었습니다.`;
+        showSubmitComplete.value = true;
     } catch (e) {
         console.error('Approval failed', e);
         alert('결재 상신 중 오류가 발생했습니다.');
@@ -323,33 +332,37 @@ const submitApproval = async () => {
 
         <!-- 툴바: 목록으로 버튼 + 선택 요약 + 결재자 지정 + 상신 버튼 -->
         <div class="flex justify-end gap-2 mb-4 shrink-0">
-            <Button label="목록으로" icon="pi pi-arrow-left" severity="secondary" outlined
+            <Button
+label="목록으로" icon="pi pi-arrow-left" severity="secondary" outlined
                 @click="navigateTo('/budget/list')" />
 
             <!-- 선택 항목 요약 안내 -->
-            <div v-if="!loading"
+            <div
+v-if="!loading"
                 class="flex items-center gap-2 px-3 py-1 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
-                <i class="pi pi-list text-indigo-500"></i>
+                <i class="pi pi-list text-indigo-500"/>
                 <span v-if="projects.length > 0">정보화사업 {{ projects.length }}건</span>
                 <span v-if="projects.length > 0 && costs.length > 0" class="text-gray-300">+</span>
                 <span v-if="costs.length > 0">전산업무비 {{ costs.length }}건</span>
             </div>
 
-            <div class="flex-1"></div>
+            <div class="flex-1"/>
 
             <!-- 결재자 지정 인라인 컨트롤 -->
             <div
                 class="flex gap-2 mr-4 items-center bg-white dark:bg-gray-800 px-3 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700">
                 <span class="text-sm font-bold text-gray-700 dark:text-gray-200 mr-2">결재자 지정</span>
                 <!-- 팀장 선택 버튼 (미선택 시 파란색 강조) -->
-                <Button :label="approvalLine.teamLead.name ? `${approvalLine.teamLead.name} (팀장)` : '팀장 선택'"
-                    size="small" severity="secondary" text @click="openEmployeeSearch('teamLead')"
-                    :class="!approvalLine.teamLead.name ? 'text-blue-600' : ''" />
+                <Button
+:label="approvalLine.teamLead.name ? `${approvalLine.teamLead.name} (팀장)` : '팀장 선택'"
+                    size="small" severity="secondary" text :class="!approvalLine.teamLead.name ? 'text-blue-600' : ''"
+                    @click="openEmployeeSearch('teamLead')" />
                 <span class="text-gray-300 dark:text-gray-600">|</span>
                 <!-- 부서장 선택 버튼 (미선택 시 파란색 강조) -->
-                <Button :label="approvalLine.deptHead.name ? `${approvalLine.deptHead.name} (부서장)` : '부서장 선택'"
-                    size="small" severity="secondary" text @click="openEmployeeSearch('deptHead')"
-                    :class="!approvalLine.deptHead.name ? 'text-blue-600' : ''" />
+                <Button
+:label="approvalLine.deptHead.name ? `${approvalLine.deptHead.name} (부서장)` : '부서장 선택'"
+                    size="small" severity="secondary" text :class="!approvalLine.deptHead.name ? 'text-blue-600' : ''"
+                    @click="openEmployeeSearch('deptHead')" />
             </div>
 
             <!-- 결재 상신 버튼 -->
@@ -367,18 +380,31 @@ const submitApproval = async () => {
             </div>
 
             <!-- PDF iframe 뷰어 -->
-            <iframe v-else-if="pdfUrl" :src="pdfUrl" class="w-full h-full border-none"></iframe>
+            <iframe v-else-if="pdfUrl" :src="pdfUrl" class="w-full h-full border-none"/>
 
             <!-- PDF 생성 실패 상태 -->
             <div v-else class="flex flex-col items-center text-gray-500 dark:text-gray-400">
-                <i class="pi pi-exclamation-circle text-2xl mb-2"></i>
+                <i class="pi pi-exclamation-circle text-2xl mb-2"/>
                 <p>PDF를 생성할 수 없습니다.</p>
             </div>
 
         </div>
 
         <!-- 직원 검색 다이얼로그 (결재권자 검색) -->
-        <EmployeeSearchDialog v-model:visible="showEmployeeSearch" @select="onEmployeeSelect" header="결재권자 검색" />
+        <EmployeeSearchDialog v-model:visible="showEmployeeSearch" header="결재권자 검색" @select="onEmployeeSelect" />
+
+        <!-- 상신 완료 다이얼로그 -->
+        <Dialog
+v-model:visible="showSubmitComplete" header="상신 완료" modal :closable="false"
+            :style="{ width: '400px' }">
+            <div class="flex items-center gap-3">
+                <i class="pi pi-check-circle text-green-500 text-2xl"/>
+                <span>{{ submitCompleteMessage }}</span>
+            </div>
+            <template #footer>
+                <Button label="확인" icon="pi pi-check" @click="showSubmitComplete = false; removeTab('/budget/report')" />
+            </template>
+        </Dialog>
     </div>
 </template>
 

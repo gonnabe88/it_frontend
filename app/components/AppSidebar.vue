@@ -1,48 +1,50 @@
+<!--
+================================================================================
+[components/AppSidebar.vue] 좌측 사이드바 네비게이션 컴포넌트
+================================================================================
+애플리케이션 좌측에 고정된 사이드바 네비게이션을 렌더링합니다.
+현재 URL 경로(context)에 따라 다른 메뉴 구조를 표시합니다.
+
+[컨텍스트별 메뉴 구성]
+  - info  (기본)  : 정보화사업, 전산업무비, 예산관리, 가이드 등
+  - audit         : IT자체감사 관련 메뉴
+  - admin         : 시스템관리자 전용 메뉴 (공통코드, 사용자, 조직 등)
+
+[기능]
+  - 축소/확장 토글: 아이콘만 표시 ↔ 아이콘+레이블 표시 전환
+  - 결재 상신 배지: 미상신 항목 수 표시 (정보화사업 + 전산업무비)
+  - 축소 상태 영구 저장: useCookie로 저장하여 새로고침 후에도 유지 (SSR 안전)
+================================================================================
+-->
 <script setup lang="ts">
-import { useProjects } from '~/composables/useProjects';
-import { useCost } from '~/composables/useCost';
+import { usePendingApprovalCount } from '~/composables/usePendingApprovalCount';
+import IconCrown from '~/components/icons/IconCrown.vue';
 
 /**
  * 사이드바 축소 상태
- * - SSR 하이드레이션 불일치 방지를 위해 기본값은 false로 초기화합니다.
- * - onMounted에서 localStorage에 저장된 값을 읽어 복원합니다.
- * - 상태 변경 시 localStorage에 자동 저장합니다.
+ * - useCookie를 사용하여 SSR/CSR 모두에서 동일한 초기값을 보장합니다.
+ * - 쿠키는 서버에서도 읽을 수 있어 하이드레이션 불일치가 발생하지 않습니다.
  */
-const collapsed = ref(false);
+const collapsed = useCookie<boolean>('sidebar-collapsed', { default: () => false });
 
 // RBAC 권한 헬퍼: 관리자 메뉴 표시 여부 판단에 사용
-const { isAdmin } = useAuth();
+const { isAdmin: _isAdmin } = useAuth();
 
 /* ── 결재 상신 배지: 결재 대기 중인 항목 수 ── */
-const { fetchProjects } = useProjects();
-const { fetchCosts } = useCost();
-
-// apfSts=none: 아직 결재 상신하지 않은 항목(미상신)만 조회
-const { data: pendingProjectsData } = fetchProjects({ apfSts: 'none' });
-const { data: pendingCostsData } = fetchCosts({ apfSts: 'none' });
+// 사이드바는 건수만 필요하므로 건수 전용 API(/api/applications/pending-count)를 사용합니다.
+// 이를 통해 /budget/approval 페이지의 목록 조회 API와 URL이 겹치지 않아
+// 새로고침 시 중복 요청으로 인한 네트워크 오류 토스트가 발생하지 않습니다.
+const { data: pendingCountData } = usePendingApprovalCount();
 
 /**
  * 결재 상신 가능한 항목 수 (정보화사업 + 전산업무비)
  * 사이드바의 [결재 상신] 메뉴 옆 배지에 표시됩니다.
  */
-const approvalCount = computed(() => {
-    const projects = pendingProjectsData.value?.length ?? 0;
-    const costs = pendingCostsData.value?.length ?? 0;
-    return projects + costs;
-});
-
-onMounted(() => {
-    // 브라우저 새로고침 후 이전 축소 상태 복원
-    const saved = localStorage.getItem('sidebar-collapsed');
-    if (saved !== null) {
-        collapsed.value = saved === 'true';
-    }
-});
+const approvalCount = computed(() => pendingCountData.value?.totalCount ?? 0);
 
 const toggleSidebar = () => {
+    // useCookie가 자동으로 쿠키에 저장합니다.
     collapsed.value = !collapsed.value;
-    // 변경된 상태를 localStorage에 영구 저장
-    localStorage.setItem('sidebar-collapsed', String(collapsed.value));
 };
 
 const route = useRoute();
@@ -110,7 +112,8 @@ const menuItems = computed(() => {
                 { label: '예산 작성', to: '/budget' },
                 { label: '결재 상신', to: '/budget/approval' },
                 { label: '예산 목록', to: '/budget/list' },
-                { label: '예산 작업', to: '/budget/work' }
+                { label: '예산 작업', to: '/budget/work', admin: true },
+                { label: '예산 현황', to: '/budget/status', admin: true }
             ]
         },
         {
@@ -122,9 +125,9 @@ const menuItems = computed(() => {
         {
             label: '정보화사업', icon: 'pi pi-briefcase', items: [
                 { label: '사업 목록', to: '/info/projects' },
-                { label: '사전 협의', to: '/info/consultation' },
+                { label: '사전 협의', to: '/info/documents' },
                 { label: '정보화실무협의회 신청', to: '/info/council-request' },
-                { label: '세부 요구사항 작성', to: '/info/requirements' },
+                { label: '세부 요구사항 작성', to: '/info/documents' },
                 { label: '소요예산 산정 신청', to: '/info/estimation' },
                 { label: '과업심의위원회 신청', to: '/info/deliberation' },
                 { label: '입찰/계약 의뢰', to: '/info/contract' },
@@ -142,7 +145,7 @@ const menuItems = computed(() => {
     ];
 });
 
-const isGroupExpanded = (label: string) => {
+const _isGroupExpanded = (_label: string) => {
     // Simple logic: expand all or track state. For now, expand all.
     // Or add state for expanded groups.
     return true;
@@ -153,6 +156,7 @@ const toggleGroup = (label: string) => {
     expandedGroups.value[label] = !expandedGroups.value[label];
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleGroupClick = (item: any) => {
     if (collapsed.value) {
         // 접힌 상태에서는 첫 번째 하위 메뉴로 이동
@@ -196,24 +200,28 @@ watch(menuItems, (items) => {
 <template>
     <aside
         :class="['relative bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 border-r border-zinc-200 dark:border-zinc-800 transition-all duration-300 flex flex-col shadow-xl z-20 whitespace-nowrap', collapsed ? 'w-20' : 'w-72']">
-        <div id="sidebar-header"
+        <div
+id="sidebar-header"
             class="h-[76px] flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 shrink-0 px-6 transition-all duration-300">
             <div class="flex items-center gap-3">
-                <img src="~/assets/logo.png" alt="Logo" class="w-8 h-8 object-contain dark:invert" />
+                <img src="~/assets/logo.png" alt="Logo" class="w-8 h-8 object-contain dark:invert" >
                 <Transition name="fade">
-                    <span v-if="!collapsed"
+                    <span
+v-if="!collapsed"
                         class="font-bold text-xl tracking-wider text-primary-600 dark:text-primary-400">정보화
                         Portal</span>
                 </Transition>
             </div>
 
-            <button v-if="!collapsed" @click="toggleSidebar"
-                class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white">
-                <i class="pi pi-bars"></i>
+            <button
+v-if="!collapsed" class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                @click="toggleSidebar">
+                <i class="pi pi-bars"/>
             </button>
-            <button v-else @click="toggleSidebar"
-                class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-1.5 rounded-full shadow-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white z-50">
-                <i class="pi pi-angle-right text-xs"></i>
+            <button
+v-else class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 p-1.5 rounded-full shadow-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white z-50"
+                @click="toggleSidebar">
+                <i class="pi pi-angle-right text-xs"/>
             </button>
         </div>
 
@@ -222,12 +230,13 @@ watch(menuItems, (items) => {
                 <template v-for="item in menuItems" :key="item.label">
                     <!-- Single Item -->
                     <li v-if="!item.items">
-                        <NuxtLink :to="item.to"
+                        <NuxtLink
+v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
+                            :to="item.to"
                             class="flex items-center py-3 rounded-lg text-indigo-800 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3"
-                            active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium"
-                            v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }">
+                            active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium">
                             <div class="flex items-center">
-                                <i :class="[item.icon, 'text-xl w-8 text-center']"></i>
+                                <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
                                     <span v-if="!collapsed" class="ml-3 font-medium">{{ item.label }}</span>
                                 </Transition>
@@ -236,30 +245,39 @@ watch(menuItems, (items) => {
                     </li>
                     <!-- Group -->
                     <li v-else class="relative group">
-                        <div @click="handleGroupClick(item)"
+                        <div
+v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
                             class="flex items-center justify-between py-3 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800 cursor-pointer transition-colors duration-300 text-indigo-800 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white px-3"
-                            v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }">
+                            @click="handleGroupClick(item)">
                             <div class="flex items-center">
-                                <i :class="[item.icon, 'text-xl w-8 text-center']"></i>
+                                <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
                                     <span v-if="!collapsed" class="ml-3 font-medium">{{ item.label }}</span>
                                 </Transition>
                             </div>
                             <Transition name="fade">
-                                <i v-if="!collapsed"
-                                    :class="['pi text-sm transition-transform', expandedGroups[item.label] ? 'pi-chevron-down' : 'pi-chevron-right']"></i>
+                                <i
+v-if="!collapsed"
+                                    :class="['pi text-sm transition-transform', expandedGroups[item.label] ? 'pi-chevron-down' : 'pi-chevron-right']"/>
                             </Transition>
                         </div>
                         <Transition name="expand" @enter="onEnter" @after-enter="onAfterEnter" @leave="onLeave">
-                            <ul v-if="!collapsed && expandedGroups[item.label]"
+                            <ul
+                                v-if="!collapsed && expandedGroups[item.label]"
                                 class="ml-6 mt-1 space-y-1 border-l border-zinc-200 dark:border-zinc-700 pl-2 overflow-hidden">
                                 <li v-for="sub in item.items" :key="sub.label">
-                                    <NuxtLink :to="sub.to"
+                                    <NuxtLink
+                                        :to="sub.to"
                                         class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
                                         active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
-                                        <span>{{ sub.label }}</span>
+                                        <span class="flex items-center whitespace-nowrap">
+                                            {{ sub.label }}
+                                            <!-- 관리자 전용 메뉴: 왕관 아이콘 -->
+                                            <IconCrown v-if="sub.admin" class="w-4 h-4 ml-1 shrink-0 text-yellow-500" />
+                                        </span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
-                                        <span v-if="sub.to === '/budget/approval' && approvalCount > 0"
+                                        <span
+v-if="sub.to === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
                                             {{ approvalCount > 99 ? '99+' : approvalCount }}
                                         </span>

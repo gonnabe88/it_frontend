@@ -272,7 +272,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                     <span class="text-xs text-zinc-400">(심의유형에 따라 자동 배정)</span>
                 </div>
 
-                <div v-if="mandatoryList.length === 0"
+                <div
+v-if="mandatoryList.length === 0"
                     class="text-sm text-zinc-400 py-3 text-center border border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
                     당연위원이 없습니다.
                 </div>
@@ -288,7 +289,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="m in mandatoryList" :key="m.eno"
+                            <tr
+v-for="m in mandatoryList" :key="m.eno"
                                 class="border-t border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                                 <td class="px-3 py-2 text-zinc-500">{{ m.eno }}</td>
                                 <td class="px-3 py-2 font-medium">{{ m.usrNm }}</td>
@@ -318,7 +320,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                     />
                 </div>
 
-                <div v-if="callList.length === 0"
+                <div
+v-if="callList.length === 0"
                     class="text-sm text-zinc-400 py-3 text-center border border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
                     소집위원을 추가해 주세요.
                 </div>
@@ -331,18 +334,20 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                                 <th class="text-left px-3 py-2 font-medium">성명</th>
                                 <th class="text-left px-3 py-2 font-medium">부서</th>
                                 <th class="text-left px-3 py-2 font-medium">직위</th>
-                                <th v-if="!readonly" class="px-3 py-2 font-medium w-16"></th>
+                                <th v-if="!readonly" class="px-3 py-2 font-medium w-16"/>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="m in callList" :key="m.eno"
+                            <tr
+v-for="m in callList" :key="m.eno"
                                 class="border-t border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                                 <td class="px-3 py-2 text-zinc-500">{{ m.eno }}</td>
                                 <td class="px-3 py-2 font-medium">{{ m.usrNm }}</td>
                                 <td class="px-3 py-2 text-zinc-500">{{ m.bbrNm }}</td>
                                 <td class="px-3 py-2 text-zinc-500">{{ m.ptCNm }}</td>
                                 <td v-if="!readonly" class="px-3 py-2 text-center">
-                                    <Button icon="pi pi-trash" severity="danger" text rounded size="small"
+                                    <Button
+icon="pi pi-trash" severity="danger" text rounded size="small"
                                         @click="removeMember('CALL', m.eno)" />
                                 </td>
                             </tr>
@@ -368,7 +373,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                     />
                 </div>
 
-                <div v-if="secretaryList.length === 0"
+                <div
+v-if="secretaryList.length === 0"
                     class="text-sm text-zinc-400 py-3 text-center border border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
                     간사를 추가해 주세요.
                 </div>
@@ -381,18 +387,20 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                                 <th class="text-left px-3 py-2 font-medium">성명</th>
                                 <th class="text-left px-3 py-2 font-medium">부서</th>
                                 <th class="text-left px-3 py-2 font-medium">직위</th>
-                                <th v-if="!readonly" class="px-3 py-2 font-medium w-16"></th>
+                                <th v-if="!readonly" class="px-3 py-2 font-medium w-16"/>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="m in secretaryList" :key="m.eno"
+                            <tr
+v-for="m in secretaryList" :key="m.eno"
                                 class="border-t border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                                 <td class="px-3 py-2 text-zinc-500">{{ m.eno }}</td>
                                 <td class="px-3 py-2 font-medium">{{ m.usrNm }}</td>
                                 <td class="px-3 py-2 text-zinc-500">{{ m.bbrNm }}</td>
                                 <td class="px-3 py-2 text-zinc-500">{{ m.ptCNm }}</td>
                                 <td v-if="!readonly" class="px-3 py-2 text-center">
-                                    <Button icon="pi pi-trash" severity="danger" text rounded size="small"
+                                    <Button
+icon="pi pi-trash" severity="danger" text rounded size="small"
                                         @click="removeMember('SECR', m.eno)" />
                                 </td>
                             </tr>

@@ -77,6 +77,7 @@ export interface PlanCreateRequest {
     plnYy: string;          // 대상년도 (YYYY)
     plnTp: string;          // 계획구분 (신규/조정)
     prjMngNos: string[];    // 대상 프로젝트관리번호 목록
+    itMngcNos: string[];    // 대상 전산업무비관리번호 목록
 }
 
 /**

@@ -14,6 +14,7 @@
 export interface CodeOption {
     cdId: string;
     cdNm: string;
+    cdSqn?: number | null;
 }
 
 /**
@@ -25,8 +26,10 @@ export const useCodeOptions = (typeCode: string) => {
     const url = `${config.public.apiBase}/api/ccodem/type/${typeCode}`;
     const { data } = useApiFetch<CodeOption[]>(url);
 
-    /** 코드 옵션 목록 */
-    const options = computed(() => data.value || []);
+    /** 코드 옵션 목록 (cdSqn 오름차순 정렬) */
+    const options = computed(() =>
+        [...(data.value || [])].sort((a, b) => (a.cdSqn ?? Infinity) - (b.cdSqn ?? Infinity))
+    );
 
     /**
      * 코드ID → 코드명 변환

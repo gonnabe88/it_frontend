@@ -103,6 +103,7 @@ const handleEditorImageUpload = async (file: File): Promise<string> => {
         const result = await uploadFile(file, '이미지', docMngNo, '요구사항정의서');
         // FileRecord 객체를 전달 → 서버 응답의 previewUrl 필드 우선 사용
         return getPreviewUrl(result);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '이미지 업로드 실패', detail: e?.data?.message || '이미지 업로드 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -122,6 +123,7 @@ const handleEditorFileUpload = async (file: File) => {
             flNm: result.orcFlNm,
             flSz: 0, // 서버 응답에 파일 크기가 없는 경우 처리 (필요 시 API 스펙 확인)
         };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '파일 업로드 실패', detail: e?.data?.message || '파일 업로드 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -137,6 +139,7 @@ const handleEditorFileDelete = async (flMngNo: string) => {
         await deleteFile(flMngNo);
         toast.add({ severity: 'success', summary: '삭제 완료', detail: '파일이 서버에서 삭제되었습니다.', life: 3000 });
         await refreshFiles();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '삭제 실패', detail: e?.data?.message || '파일 삭제 중 오류가 발생했습니다.', life: 4000 });
         throw e;
@@ -168,7 +171,7 @@ const fsgTlmDate = ref<Date | null>(null);
 const parseDateStr = (str: string): Date | null => {
     if (!str) return null;
     const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
+    return Number.isNaN(d.getTime()) ? null : d;
 };
 
 /** Date → YYYY-MM-DD 변환 */
@@ -249,6 +252,7 @@ const onSave = async () => {
         // 문서 및 파일 목록 새로고침
         await refresh();
         await refreshFiles();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '저장 실패', detail: e?.data?.message || '저장 중 오류가 발생했습니다.', life: 4000 });
     } finally {
@@ -408,25 +412,28 @@ onUnmounted(() => {
 
         <!-- 로딩 중 -->
         <div v-if="loadPending" class="flex items-center justify-center py-20">
-            <i class="pi pi-spin pi-spinner text-4xl text-indigo-500"></i>
+            <i class="pi pi-spin pi-spinner text-4xl text-indigo-500"/>
         </div>
 
         <!-- 오류 -->
-        <div v-else-if="error"
+        <div
+v-else-if="error"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
-            <i class="pi pi-exclamation-circle text-5xl text-red-400 mb-4 block"></i>
+            <i class="pi pi-exclamation-circle text-5xl text-red-400 mb-4 block"/>
             <p class="text-red-500 font-medium">문서를 불러오는 중 오류가 발생했습니다.</p>
             <p class="text-sm text-zinc-400 mt-1">{{ error.message }}</p>
             <Button label="목록으로" icon="pi pi-arrow-left" class="mt-4" @click="navigateTo('/info/documents')" />
         </div>
 
         <!-- 문서 없음 -->
-        <div v-else-if="!doc"
+        <div
+v-else-if="!doc"
             class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">
-            <i class="pi pi-file text-5xl text-zinc-300 dark:text-zinc-600 mb-4 block"></i>
+            <i class="pi pi-file text-5xl text-zinc-300 dark:text-zinc-600 mb-4 block"/>
             <p class="text-zinc-600 dark:text-zinc-400 font-medium">문서를 찾을 수 없습니다.</p>
             <p class="text-xs text-zinc-400 mt-1 font-mono">{{ docMngNo }}</p>
-            <Button label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
+            <Button
+label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
                 @click="navigateTo('/info/documents')" />
         </div>
 
@@ -436,7 +443,8 @@ onUnmounted(() => {
             <!-- 페이지 헤더 -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <Button icon="pi pi-arrow-left" severity="secondary" text rounded
+                    <Button
+icon="pi pi-arrow-left" severity="secondary" text rounded
                         @click="navigateTo('/info/documents')" />
                     <div>
                         <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
@@ -449,13 +457,16 @@ onUnmounted(() => {
                 <div class="flex gap-2">
                     <!-- 읽기 모드 액션 -->
                     <template v-if="!isEditing">
-                        <Button label="사전협의" icon="pi pi-comments" severity="info" outlined
+                        <Button
+label="사전협의" icon="pi pi-comments" severity="info" outlined
                             @click="navigateTo(`/info/documents/${docMngNo}/review`)" />
-                        <Button label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
+                        <Button
+label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
                         <Button label="편집" icon="pi pi-pencil" @click="startEdit" />
-                        <Button label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
+                        <Button
+label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
                             @click="onDelete" />
                     </template>
                     <!-- 편집 모드 액션 -->
@@ -495,7 +506,8 @@ onUnmounted(() => {
                                 </div>
                                 <div>
                                     <dt class="text-xs text-zinc-400 mb-1">완료기한</dt>
-                                    <dd class="font-medium"
+                                    <dd
+class="font-medium"
                                         :class="doc.fsgTlm && doc.fsgTlm < new Date().toISOString().slice(0, 10) ? 'text-red-500' : 'text-zinc-800 dark:text-zinc-200'">
                                         {{ formatDate(doc.fsgTlm) }}
                                     </dd>
@@ -503,7 +515,8 @@ onUnmounted(() => {
                                 <div>
                                     <dt class="text-xs text-zinc-400 mb-1">상태</dt>
                                     <dd>
-                                        <Tag :value="doc.delYn === 'Y' ? '삭제됨' : '활성'"
+                                        <Tag
+                                            :value="doc.delYn === 'Y' ? '삭제됨' : '활성'"
                                             :severity="doc.delYn === 'Y' ? 'danger' : 'success'" class="border-0"
                                             rounded />
                                     </dd>
@@ -533,7 +546,7 @@ onUnmounted(() => {
                             <!-- 첨부파일 목록 (읽기 모드) -->
                             <div class="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                                 <dt class="text-xs text-zinc-400 mb-2 flex items-center gap-1.5">
-                                    <i class="pi pi-paperclip"></i> 첨부파일
+                                    <i class="pi pi-paperclip"/> 첨부파일
                                     <span
                                         class="bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full px-1.5 py-0.5 text-xs">
                                         {{ attachedFiles.length }}
@@ -541,22 +554,26 @@ onUnmounted(() => {
                                 </dt>
                                 <dd>
                                     <!-- 첨부파일 없음 -->
-                                    <p v-if="attachedFiles.length === 0"
+                                    <p
+v-if="attachedFiles.length === 0"
                                         class="text-sm text-zinc-400 dark:text-zinc-600 italic">
                                         첨부파일이 없습니다.
                                     </p>
                                     <!-- 첨부파일 목록 -->
                                     <ul v-else class="space-y-1.5">
-                                        <li v-for="file in attachedFiles" :key="file.flMngNo"
+                                        <li
+                                            v-for="file in attachedFiles" :key="file.flMngNo"
                                             class="flex items-center gap-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2">
-                                            <i class="pi pi-file text-indigo-400 text-sm flex-shrink-0"></i>
-                                            <span class="flex-1 truncate text-zinc-700 dark:text-zinc-300"
+                                            <i class="pi pi-file text-indigo-400 text-sm flex-shrink-0"/>
+                                            <span
+                                                class="flex-1 truncate text-zinc-700 dark:text-zinc-300"
                                                 :title="file.orcFlNm">{{ file.orcFlNm }}</span>
                                             <!-- 파일 다운로드 링크 -->
-                                            <a :href="getDownloadUrl(file.flMngNo)"
+                                            <a
+                                                :href="getDownloadUrl(file.flMngNo)"
                                                 class="flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 flex-shrink-0 transition-colors"
                                                 :title="`${file.orcFlNm} 다운로드`">
-                                                <i class="pi pi-download text-xs"></i>
+                                                <i class="pi pi-download text-xs"/>
                                                 다운로드
                                             </a>
                                         </li>
@@ -573,7 +590,8 @@ onUnmounted(() => {
                                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                                         요구사항명 <span class="text-red-500">*</span>
                                     </label>
-                                    <InputText v-model="form.reqNm" placeholder="요구사항명을 입력하세요" class="w-full"
+                                    <InputText
+v-model="form.reqNm" placeholder="요구사항명을 입력하세요" class="w-full"
                                         maxlength="200" />
                                 </div>
                                 <!-- 요청구분 -->
@@ -581,20 +599,23 @@ onUnmounted(() => {
                                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                                         요청구분 <span class="text-red-500">*</span>
                                     </label>
-                                    <Textarea v-model="form.reqDtt" placeholder="요청구분을 입력하세요" rows="3"
+                                    <Textarea
+v-model="form.reqDtt" placeholder="요청구분을 입력하세요" rows="3"
                                         class="w-full resize-none" />
                                 </div>
                                 <!-- 업무구분 -->
                                 <div class="flex flex-col gap-1.5">
                                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">업무구분</label>
-                                    <Textarea v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
+                                    <Textarea
+v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
                                         class="w-full resize-none" />
                                 </div>
                                 <!-- 완료기한 -->
                                 <div class="flex flex-col gap-1.5">
                                     <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">완료기한</label>
-                                    <DatePicker v-model="fsgTlmDate" placeholder="YYYY-MM-DD" showIcon fluid
-                                        dateFormat="yy-mm-dd" />
+                                    <DatePicker
+v-model="fsgTlmDate" placeholder="YYYY-MM-DD" show-icon fluid
+                                        date-format="yy-mm-dd" />
                                 </div>
 
                                 <!-- 첨부파일 관리 영역 (편집 모드) -->
@@ -603,28 +624,33 @@ onUnmounted(() => {
                                     <div class="flex items-center justify-between">
                                         <label
                                             class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                                            <i class="pi pi-paperclip text-zinc-400"></i> 첨부파일
+                                            <i class="pi pi-paperclip text-zinc-400"/> 첨부파일
                                         </label>
-                                        <Button icon="pi pi-plus" label="파일 추가" size="small" severity="secondary"
+                                        <Button
+icon="pi pi-plus" label="파일 추가" size="small" severity="secondary"
                                             outlined @click="editAttachmentInputRef?.click()" />
                                     </div>
 
                                     <!-- 숨김 파일 input -->
-                                    <input ref="editAttachmentInputRef" type="file" multiple class="hidden"
-                                        @change="addNewAttachments" />
+                                    <input
+ref="editAttachmentInputRef" type="file" multiple class="hidden"
+                                        @change="addNewAttachments" >
 
                                     <!-- 기존 첨부파일 목록 -->
                                     <template v-if="attachedFiles.length > 0">
                                         <p class="text-xs text-zinc-400 font-medium">기존 파일</p>
                                         <ul class="space-y-1.5">
-                                            <li v-for="file in attachedFiles" :key="file.flMngNo"
+                                            <li
+v-for="file in attachedFiles" :key="file.flMngNo"
                                                 class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 transition-colors"
                                                 :class="deletedFileIds.includes(file.flMngNo)
                                                     ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 opacity-60'
                                                     : 'bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700'">
-                                                <i class="pi pi-file text-indigo-400 text-sm flex-shrink-0"
-                                                    :class="{ 'text-red-400': deletedFileIds.includes(file.flMngNo) }"></i>
-                                                <span class="flex-1 truncate text-zinc-700 dark:text-zinc-300"
+                                                <i
+class="pi pi-file text-indigo-400 text-sm flex-shrink-0"
+                                                    :class="{ 'text-red-400': deletedFileIds.includes(file.flMngNo) }"/>
+                                                <span
+class="flex-1 truncate text-zinc-700 dark:text-zinc-300"
                                                     :class="{ 'line-through text-zinc-400': deletedFileIds.includes(file.flMngNo) }"
                                                     :title="file.orcFlNm">{{ file.orcFlNm }}</span>
 
@@ -634,21 +660,22 @@ onUnmounted(() => {
                                                     <button
                                                         class="text-zinc-400 hover:text-indigo-500 transition-colors flex-shrink-0"
                                                         title="삭제 취소" @click="unmarkFileForDeletion(file.flMngNo)">
-                                                        <i class="pi pi-undo text-xs"></i>
+                                                        <i class="pi pi-undo text-xs"/>
                                                     </button>
                                                 </template>
 
                                                 <!-- 삭제 마킹 전: 다운로드 + 삭제 버튼 -->
                                                 <template v-else>
-                                                    <a :href="getDownloadUrl(file.flMngNo)"
+                                                    <a
+                                                        :href="getDownloadUrl(file.flMngNo)"
                                                         class="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 flex-shrink-0 transition-colors"
                                                         :title="`${file.orcFlNm} 다운로드`">
-                                                        <i class="pi pi-download text-xs"></i>
+                                                        <i class="pi pi-download text-xs"/>
                                                     </a>
                                                     <button
                                                         class="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0"
                                                         title="파일 삭제" @click="markFileForDeletion(file.flMngNo)">
-                                                        <i class="pi pi-times text-xs"></i>
+                                                        <i class="pi pi-times text-xs"/>
                                                     </button>
                                                 </template>
                                             </li>
@@ -659,24 +686,27 @@ onUnmounted(() => {
                                     <template v-if="newAttachments.length > 0">
                                         <p class="text-xs text-zinc-400 font-medium mt-1">새 파일 (저장 시 업로드)</p>
                                         <ul class="space-y-1.5">
-                                            <li v-for="(file, idx) in newAttachments" :key="idx"
+                                            <li
+v-for="(file, idx) in newAttachments" :key="idx"
                                                 class="flex items-center gap-2 text-sm bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2">
-                                                <i class="pi pi-file-plus text-indigo-400 text-sm flex-shrink-0"></i>
-                                                <span class="flex-1 truncate text-zinc-700 dark:text-zinc-300"
+                                                <i class="pi pi-file-plus text-indigo-400 text-sm flex-shrink-0"/>
+                                                <span
+class="flex-1 truncate text-zinc-700 dark:text-zinc-300"
                                                     :title="file.name">{{ file.name }}</span>
                                                 <span class="text-xs text-zinc-400 flex-shrink-0">{{
                                                     formatFileSize(file.size) }}</span>
                                                 <button
                                                     class="text-zinc-300 hover:text-red-500 transition-colors flex-shrink-0 ml-1"
                                                     title="추가 취소" @click="removeNewAttachment(idx)">
-                                                    <i class="pi pi-times text-xs"></i>
+                                                    <i class="pi pi-times text-xs"/>
                                                 </button>
                                             </li>
                                         </ul>
                                     </template>
 
                                     <!-- 기존 파일도 없고 새 파일도 없는 경우 안내 -->
-                                    <div v-if="attachedFiles.length === 0 && newAttachments.length === 0"
+                                    <div
+v-if="attachedFiles.length === 0 && newAttachments.length === 0"
                                         class="text-xs text-zinc-400 dark:text-zinc-600 italic py-3 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
                                         파일 추가 버튼을 클릭하여 첨부파일을 등록하세요.
                                     </div>
@@ -696,16 +726,18 @@ onUnmounted(() => {
                         <div class="p-4">
                             <ClientOnly>
                                 <!-- 편집 모드: 첨부파일 및 이미지 API 업로드 활성화 -->
-                                <TiptapEditor v-if="isEditing" v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세요..."
-                                    :imageUploadFn="handleEditorImageUpload" :fileUploadFn="handleEditorFileUpload"
-                                    :fileDeleteFn="handleEditorFileDelete" :attachmentList="attachmentListForEditor"
+                                <TiptapEditor
+v-if="isEditing" v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세요..."
+                                    :image-upload-fn="handleEditorImageUpload" :file-upload-fn="handleEditorFileUpload"
+                                    :file-delete-fn="handleEditorFileDelete" :attachment-list="attachmentListForEditor"
                                     @update:toc="handleUpdateToc" />
                                 <!-- 읽기 모드 -->
-                                <TiptapEditor v-else :modelValue="doc.reqCone || ''" :readonly="true"
-                                    :attachmentList="attachmentListForEditor" @update:toc="handleUpdateToc" />
+                                <TiptapEditor
+v-else :model-value="doc.reqCone || ''" :readonly="true"
+                                    :attachment-list="attachmentListForEditor" @update:toc="handleUpdateToc" />
                                 <template #fallback>
                                     <div class="p-8 text-center text-zinc-400">
-                                        <i class="pi pi-spin pi-spinner text-2xl mb-2 block"></i>
+                                        <i class="pi pi-spin pi-spinner text-2xl mb-2 block"/>
                                         에디터 로딩 중...
                                     </div>
                                 </template>
@@ -727,25 +759,28 @@ onUnmounted(() => {
                     <div class="sticky top-6 lg:pl-4">
                         <h3
                             class="font-bold text-[14px] text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 px-3 flex items-center gap-2">
-                            <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"></i> 바로가기 목차
+                            <i class="pi pi-align-left text-sm text-zinc-300 dark:text-zinc-600"/> 바로가기 목차
                         </h3>
 
                         <!-- 목차가 비어있을 때 안내 문구 -->
-                        <div v-if="rawToc.length === 0"
+                        <div
+v-if="rawToc.length === 0"
                             class="text-xs text-zinc-400 dark:text-zinc-600 italic px-3 ml-3">
                             본문에 제목이 없으면 이곳에 목차가 정렬되지 않습니다.
                         </div>
 
                         <!-- 추출된 목차 목록 (평면 다단계 들여쓰기) -->
-                        <ul v-else
+                        <ul
+v-else
                             class="flex flex-col relative border-l border-zinc-200 dark:border-zinc-800 ml-3 py-1">
                             <li v-for="item in rawToc" :key="item.id" class="flex flex-col relative py-0.5">
                                 <!-- 활성화 인디케이터 (왼쪽 보더선) -->
-                                <div v-if="activeSection === item.id"
-                                    class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all">
-                                </div>
+                                <div
+v-if="activeSection === item.id"
+                                    class="absolute -left-[1px] top-1.5 bottom-1.5 w-[2px] bg-indigo-500 rounded-full transition-all"/>
 
-                                <div class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
+                                <div
+class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors duration-200 group"
                                     :class="[
                                         activeSection === item.id ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200',
                                         item.level === 1 ? 'font-semibold text-[14px] mt-1 pl-4' : '',
@@ -765,14 +800,12 @@ onUnmounted(() => {
             </div> <!-- // grid 레이아웃 종료 -->
 
         </template>
-    </div>
-
     <ConfirmPopup />
-    <Toast />
 
     <!-- AI 채팅 플로팅 패널 -->
     <GeminiChat
-        systemInstruction="당신은 IT 프로젝트 요구사항 분석 전문가입니다. 응답은 HTML로 작성해주세요. 사용자가 요구사항 정의서 초안을 작성할 수 있도록 도와주세요. 사용자가 요구사항을 입력하면, 요구사항 정의서의 각 항목에 맞게 내용을 정리하고, 누락된 항목이 있다면 추가할 내용을 제안해주세요. 작성된 요구사항을 함께 보내주면 추가,수정한 부분을 html로 표시해주세요."
-        :documentContent="documentContext" :flMngNos="attachedFiles.map(f => f.flMngNo)"
+        system-instruction="당신은 IT 프로젝트 요구사항 분석 전문가입니다. 응답은 HTML로 작성해주세요. 사용자가 요구사항 정의서 초안을 작성할 수 있도록 도와주세요. 사용자가 요구사항을 입력하면, 요구사항 정의서의 각 항목에 맞게 내용을 정리하고, 누락된 항목이 있다면 추가할 내용을 제안해주세요. 작성된 요구사항을 함께 보내주면 추가,수정한 부분을 html로 표시해주세요."
+        :document-content="documentContext" :fl-mng-nos="attachedFiles.map(f => f.flMngNo)"
         @apply-content="onApplyAiContent" />
+    </div>
 </template>

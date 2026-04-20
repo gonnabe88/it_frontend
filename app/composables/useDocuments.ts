@@ -24,6 +24,7 @@ export interface RequirementDocument {
     delYn: string;       // 삭제여부 (Y/N)
     fstEnrDtm: string;   // 최초등록일시
     fstEnrUsid: string;  // 최초등록사용자ID
+    fstEnrUsNm: string;  // 최초등록사용자명
     lstChgDtm: string;   // 최종변경일시
     lstChgUsid: string;  // 최종변경사용자ID
 }
