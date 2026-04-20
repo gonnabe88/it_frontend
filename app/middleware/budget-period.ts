@@ -10,7 +10,6 @@
  * [적용 대상 페이지]
  *  - /info/projects/form (정보화사업 신규/수정)
  *  - /info/cost/form (전산업무비 신규/수정)
- *  - /info/cost/terminal/form (금융정보단말기 신규/수정)
  *
  * [사용 방법]
  *  definePageMeta({ middleware: ['budget-period'] })

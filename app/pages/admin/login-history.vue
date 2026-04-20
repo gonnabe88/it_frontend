@@ -47,8 +47,8 @@ const loadPage = async (page: number) => {
     }
 };
 
-// 초기 데이터 로드
-await loadPage(0);
+// 초기 데이터 로드 (onMounted: SSR/프리렌더링 시 백엔드 미접근)
+onMounted(() => loadPage(0));
 
 // 페이지 변경 핸들러
 const onPageChange = async (event: { page: number }) => {

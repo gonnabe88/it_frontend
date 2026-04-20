@@ -32,6 +32,8 @@ interface Props {
     suggestions?: any[]
     optionLabel?: string
     disabled?: boolean
+    /** 읽기 전용: 클릭해도 편집 모드로 진입하지 않음 (hover 효과 없음) */
+    readonly?: boolean
     suffix?: string
     invalid?: boolean
     placeholder?: string
@@ -45,6 +47,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     type: 'text',
     disabled: false,
+    readonly: false,
     invalid: false,
     optionLabel: 'label',
     dateFormat: 'yy-mm',
@@ -175,7 +178,7 @@ const displayValue = computed(() => {
 
 /** 편집 모드 시작 */
 const startEdit = () => {
-    if (props.disabled) return;
+    if (props.disabled || props.readonly) return;
     editing.value = true;
     originalValue.value = props.modelValue;
     localValue.value = props.modelValue;
@@ -291,8 +294,8 @@ const onSearchClick = () => {
         <span
 v-if="!editing"
             :class="[
-                'inline-block w-full px-2 py-1 rounded cursor-pointer min-h-[2rem] leading-[2rem]',
-                disabled ? 'text-zinc-400 cursor-not-allowed' : 'hover:bg-surface-100 dark:hover:bg-surface-800',
+                'inline-block w-full px-2 py-1 rounded min-h-[2rem] leading-[2rem]',
+                readonly ? 'cursor-default' : (disabled ? 'text-zinc-400 cursor-not-allowed' : 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800'),
                 invalid ? 'ring-1 ring-red-500' : ''
             ]">
             {{ displayValue }}

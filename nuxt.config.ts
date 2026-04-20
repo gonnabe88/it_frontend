@@ -91,6 +91,33 @@ export default defineNuxtConfig({
   ],
 
 
+  /* ── Nitro 프리렌더링: 백엔드 의존/미구현 라우트 제외 ── */
+  nitro: {
+    prerender: {
+      ignore: [
+        // 미구현 메뉴 라우트 (AppSidebar에 링크되어 크롤러가 접근)
+        '/info/estimation',
+        '/info/deliberation',
+        '/info/contract',
+        '/info/payment',
+        '/info/evaluation',
+        '/info/council/working',
+        '/info/council/promotion',
+        '/info/council/committee',
+        '/audit/daily',
+        '/audit/monthly',
+        '/audit/quarterly',
+        '/audit/biannual',
+        '/audit/annual',
+        '/audit/manage/daily',
+        '/audit/manage/monthly',
+        '/audit/manage/quarterly',
+        '/audit/manage/biannual',
+        '/audit/manage/annual',
+      ]
+    }
+  },
+
   /* ── Pinia 스토어 자동 인식 디렉토리 ── */
   pinia: {
     storesDirs: ['./app/stores/**']

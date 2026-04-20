@@ -24,6 +24,7 @@ import { useConfirm } from "primevue/useconfirm";
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import InlineEditCell from '~/components/common/InlineEditCell.vue';
+import TerminalFormDialog from '~/components/cost/TerminalFormDialog.vue';
 
 
 const title = '전산업무비 목록';
@@ -468,6 +469,8 @@ const addRow = () => {
         .filter(f => !newRow[f.key])
         .map(f => f.key as string);
     invalidFieldsMap.set(localId, new Set(emptyFields));
+    /* 신규 행은 즉시 편집 모드로 진입 */
+    editingRowKey.value = localId;
     toast.add({ severity: 'info', summary: '행추가', detail: '필수 항목을 입력하면 자동 저장됩니다.', life: 2000 });
 };
 
@@ -782,8 +785,8 @@ const onIoeCSelect = (data: ItCost, selected: IoeCategoryOption) => {
 
 /**
  * 금융정보단말기 체크박스 클릭 시 네비게이션
- * - 미체크 → 체크: terminal/form?costId={itMngcNo} 로 연결 신규 작성
- * - 체크 → 클릭: terminal/form?id={itMngcNo} 로 수정 이동
+ * - 미체크 → 체크: 단말기 상세목록 다이얼로그 (연결 신규 작성)
+ * - 체크 → 클릭: 단말기 상세목록 다이얼로그 (수정)
  * - 미저장 행(itMngcNo 없음)은 무시
  */
 /** 단말기 체크박스 편집 중인 행의 키 (itMngcNo) */
@@ -874,18 +877,32 @@ const deleteRow = (data: ItCost) => {
     });
 };
 
+/* ── 단말기 상세목록 다이얼로그 상태 ──────────────────────── */
+const terminalDialogVisible = ref(false);
+const terminalDialogItMngcNo = ref<string | undefined>(undefined);
+const terminalDialogParentCostId = ref<string | undefined>(undefined);
+const terminalDialogBgYy = ref<string | undefined>(undefined);
+
+/** 단말기 상세목록 다이얼로그 열기 */
+const openTerminalDialog = (itMngcNo?: string, parentCostId?: string, bgYy?: string) => {
+    terminalDialogItMngcNo.value = itMngcNo;
+    terminalDialogParentCostId.value = parentCostId;
+    terminalDialogBgYy.value = bgYy;
+    terminalDialogVisible.value = true;
+};
+
 const onTerminalCheckClick = (data: ItCost) => {
     if (!data.itMngcNo) {
         toast.add({ severity: 'warn', summary: '알림', detail: '행을 먼저 저장해주세요.', life: 2000 });
         return;
     }
     if (isTerminal(data)) {
-        /* 이미 금융정보단말기 → 상세 수정 화면 이동 */
-        navigateTo(`/info/cost/terminal/form?id=${data.itMngcNo}`);
+        /* 이미 금융정보단말기 → 단말기 상세목록 다이얼로그 수정 */
+        openTerminalDialog(data.itMngcNo);
     } else {
-        /* 일반 → 금융정보단말기 전환: 연결 신규 작성 화면 이동 (선택된 예산연도 전달) */
-        const bgYy = selectedYear.value ?? defaultBgYear;
-        navigateTo(`/info/cost/terminal/form?costId=${data.itMngcNo}&bgYy=${bgYy}`);
+        /* 일반 → 금융정보단말기 전환: 연결 신규 작성 다이얼로그 */
+        const bgYy = String(selectedYear.value ?? defaultBgYear);
+        openTerminalDialog(undefined, data.itMngcNo, bgYy);
     }
 };
 
@@ -1049,22 +1066,24 @@ const applyContinuation = async () => {
                 <!-- 체크박스 선택 컬럼 -->
                 <Column selection-mode="multiple" header-style="width: 3rem" />
 
-                <!-- 신규/계속 (PUL_DTT) — 클릭 편집 (REQ-5) -->
+                <!-- 신규/계속 (PUL_DTT) — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="pulDtt" header="신규/계속" sortable style="width: 100px; min-width: 100px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.pulDtt" type="select" :options="pulDttSelectOptions"
-                            :invalid="isFieldInvalid(data, 'pulDtt')" :force-edit="isRowEditing(data)" placeholder="선택"
+                            :invalid="isFieldInvalid(data, 'pulDtt')" :force-edit="isRowEditing(data)"
+                            :readonly="!isRowEditing(data)" placeholder="선택"
                             class="text-center"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 계약명: 신규/계속이 '계속'이면 전년도 계약 자동완성, 아니면 일반 입력 (REQ-5) -->
+                <!-- 계약명: 신규/계속이 '계속'이면 전년도 계약 자동완성, 아니면 일반 입력 -->
                 <Column field="cttNm" header="계약명" sortable style="min-width: 200px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.cttNm" :type="isKesok(data) ? 'autocomplete' : 'text'"
                             :suggestions="continuationSuggestions" option-label="cttNm" placeholder="계약명 입력"
                             :invalid="isFieldInvalid(data, 'cttNm')" :force-edit="isRowEditing(data)"
+                            :readonly="!isRowEditing(data)"
                             @complete="searchContinuation($event, data)"
                             @item-select="onContinuationSelect(data, $event.value)" @save="saveRow(data)">
                             <template #option="{ option }">
@@ -1077,50 +1096,54 @@ const applyContinuation = async () => {
                     </template>
                 </Column>
 
-                <!-- 금융정보단말기 체크박스 (REQ-4) — 클릭 시 편집 모드, 값 변경/외부 클릭 시 조회 모드로 복귀 -->
+                <!-- 금융정보단말기 체크박스 — 수정 모드에서만 편집 가능 -->
                 <Column field="itMngcTp" header="단말기" sortable style="width: 70px; text-align: center">
                     <template #body="{ data }">
                         <div class="terminal-checkbox-cell flex justify-center items-center">
-                            <!-- 편집 모드: 체크박스 변경 가능, 변경 시 실제 동작 후 조회 모드 복귀 -->
-                            <Checkbox v-if="terminalEditingKey === data.itMngcNo"
+                            <!-- 수정 모드 + 편집 중: 체크박스 변경 가능 -->
+                            <Checkbox v-if="isRowEditing(data) && terminalEditingKey === data.itMngcNo"
                                 :model-value="data.itMngcTp === 'IT_MNGC_TP_002'" binary
                                 @update:model-value="onTerminalCheckChange(data)" />
-                            <!-- 조회 모드: 클릭 시 편집 모드 진입 -->
-                            <div v-else
+                            <!-- 수정 모드: 클릭 시 편집 모드 진입 -->
+                            <div v-else-if="isRowEditing(data)"
                                 class="cursor-pointer p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800"
                                 @click.stop="startTerminalEdit(data)">
+                                <Checkbox :model-value="data.itMngcTp === 'IT_MNGC_TP_002'" binary :disabled="true" />
+                            </div>
+                            <!-- 조회 모드: 읽기 전용 체크박스 -->
+                            <div v-else class="p-1">
                                 <Checkbox :model-value="data.itMngcTp === 'IT_MNGC_TP_002'" binary :disabled="true" />
                             </div>
                         </div>
                     </template>
                 </Column>
 
-                <!-- 계약상대처 — 클릭 편집 (REQ-5) -->
+                <!-- 계약상대처 — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="cttOpp" header="계약상대처" sortable style="min-width: 120px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.cttOpp" type="text" :invalid="isFieldInvalid(data, 'cttOpp')"
-                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
+                            :force-edit="isRowEditing(data)" :readonly="!isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 사업코드 — 클릭 편집 (REQ-5) -->
+                <!-- 사업코드 — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="abusC" header="사업코드" sortable style="min-width: 160px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.abusC" type="select" :options="abusCSelectOptions"
-                            :invalid="isFieldInvalid(data, 'abusC')" :force-edit="isRowEditing(data)" placeholder="선택"
+                            :invalid="isFieldInvalid(data, 'abusC')" :force-edit="isRowEditing(data)"
+                            :readonly="!isRowEditing(data)" placeholder="선택"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 비목코드 — 읽기모드(span)/편집모드(CascadeSelect) 전환 -->
+                <!-- 비목코드 — 수정 모드에서만 CascadeSelect 편집 가능 -->
                 <Column field="ioeC" header="비목코드" sortable style="min-width: 130px">
                     <template #body="{ data }">
-                        <!-- 읽기 모드: 클릭하면 편집 모드로 전환 -->
+                        <!-- 조회 모드: 읽기 전용 텍스트 -->
                         <span v-if="!isRowEditing(data) && ioeEditingKey !== rowKey(data)" :class="[
-                            'inline-block w-full px-2 py-1 rounded cursor-pointer min-h-[2rem] leading-[2rem]',
-                            'hover:bg-surface-100 dark:hover:bg-surface-800',
+                            'inline-block w-full px-2 py-1 rounded cursor-default min-h-[2rem] leading-[2rem]',
                             isFieldInvalid(data, 'ioeC') ? 'ring-1 ring-red-500' : ''
-                        ]" @click.stop="startIoeEdit(data)">
+                        ]">
                             {{ data.ioeC ? getIoeDisplayLabel(data.ioeC) : '-' }}
                         </span>
                         <!-- 편집 모드: CascadeSelect (ioe-cascade-cell로 외부 클릭 감지 대상 식별) -->
@@ -1148,7 +1171,7 @@ const applyContinuation = async () => {
                     </template>
                 </Column>
 
-                <!-- 예산: 금융정보단말기는 disabled — 클릭 편집 (REQ-5) -->
+                <!-- 예산: 금융정보단말기는 disabled — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="itMngcBg" header="예산" sortable style="min-width: 120px">
                     <template #body="{ data }">
                         <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
@@ -1156,12 +1179,12 @@ const applyContinuation = async () => {
                             {{ (data.itMngcBg ?? 0).toLocaleString() }} {{ data.cur || 'KRW' }}
                         </span>
                         <InlineEditCell v-else v-model="data.itMngcBg" type="number" :suffix="data.cur || 'KRW'"
-                            :force-edit="isRowEditing(data)" class="text-right"
+                            :force-edit="isRowEditing(data)" :readonly="!isRowEditing(data)" class="text-right"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 통화: 금융정보단말기는 disabled — 클릭 편집 (REQ-5) -->
+                <!-- 통화: 금융정보단말기는 disabled — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="cur" header="통화" sortable style="width: 90px">
                     <template #body="{ data }">
                         <span v-if="isTerminal(data)" v-tooltip.top="TERMINAL_TOOLTIP"
@@ -1169,35 +1192,37 @@ const applyContinuation = async () => {
                             KRW
                         </span>
                         <InlineEditCell v-else v-model="data.cur" type="select" :options="curSelectOptions"
-                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
+                            :force-edit="isRowEditing(data)" :readonly="!isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 지급주기 — 클릭 편집 (REQ-5) -->
+                <!-- 지급주기 — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="dfrCle" header="지급주기" sortable style="width: 100px; min-width: 100px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.dfrCle" type="select" :options="dfrCleSelectOptions"
-                            :invalid="isFieldInvalid(data, 'dfrCle')" :force-edit="isRowEditing(data)" placeholder="선택"
+                            :invalid="isFieldInvalid(data, 'dfrCle')" :force-edit="isRowEditing(data)"
+                            :readonly="!isRowEditing(data)" placeholder="선택"
                             class="text-center"
                             @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 최초지급일 — 클릭 편집 (REQ-5) -->
+                <!-- 최초지급일 — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="fstDfrDt" header="최초지급일" sortable style="min-width: 80px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.fstDfrDt" type="date" view="month" date-format="yy-mm"
                             placeholder="최초지급일" :invalid="isFieldInvalid(data, 'fstDfrDt')"
-                            :force-edit="isRowEditing(data)" @save="saveRow(data)" />
+                            :force-edit="isRowEditing(data)" :readonly="!isRowEditing(data)" @save="saveRow(data)" />
                     </template>
                 </Column>
 
-                <!-- 담당자 (AutoComplete + 직원조회 버튼) — 클릭 편집 (REQ-5) -->
+                <!-- 담당자 (AutoComplete + 직원조회 버튼) — 수정 버튼 클릭 후 편집 가능 -->
                 <Column field="cgprNm" header="담당자" sortable style="min-width: 80px; width: 140px">
                     <template #body="{ data }">
                         <InlineEditCell v-model="data.cgprNm" type="autocomplete" :suggestions="employeeSuggestions"
                             option-label="usrNm" :placeholder="data.cgprNm || '이름 검색'" :show-search="true"
                             :invalid="isFieldInvalid(data, 'cgpr')" :force-edit="isRowEditing(data)"
+                            :readonly="!isRowEditing(data)"
                             @complete="searchEmployee" @item-select="onEmployeeSelect(data, $event.value)"
                             @search-click="openEmployeeSearch(data)" @save="saveRow(data)">
                             <template #option="{ option }">
@@ -1232,12 +1257,11 @@ const applyContinuation = async () => {
                     </template>
                 </Column>
 
-                <!-- 상세: 금융정보단말기만 상세 화면 이동 버튼 표시 -->
+                <!-- 상세: 금융정보단말기만 단말기 상세목록 다이얼로그 버튼 표시 -->
                 <Column header="상세" style="width: 60px; text-align: center">
                     <template #body="{ data }">
-                        <Button v-if="isTerminal(data)" v-tooltip.top="'단말기 상세 수정'" icon="pi pi-external-link" text
-                            rounded size="small" @click="navigateTo(`/info/cost/terminal/form?id=${data.itMngcNo}`)" />
-
+                        <Button v-if="isTerminal(data)" v-tooltip.top="'단말기 상세목록'" icon="pi pi-list" text
+                            rounded size="small" @click="openTerminalDialog(data.itMngcNo)" />
                     </template>
                 </Column>
 
@@ -1298,6 +1322,15 @@ const applyContinuation = async () => {
 
         <!-- 직원조회 다이얼로그 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" @select="onDialogEmployeeSelect" />
+
+        <!-- 단말기 상세목록 다이얼로그 -->
+        <TerminalFormDialog
+            v-model:visible="terminalDialogVisible"
+            :it-mngc-no="terminalDialogItMngcNo"
+            :parent-cost-id="terminalDialogParentCostId"
+            :bg-yy="terminalDialogBgYy"
+            @saved="refreshCostsRaw"
+        />
     </div>
 </template>
 

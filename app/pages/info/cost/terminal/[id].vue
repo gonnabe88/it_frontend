@@ -3,6 +3,7 @@ import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useCost } from '~/composables/useCost';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TerminalFormDialog from '~/components/cost/TerminalFormDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -12,6 +13,8 @@ const { fetchCost, deleteCost } = useCost();
 
 const id = route.params.id as string;
 definePageMeta({ title: '금융정보단말기 상세' });
+
+const terminalDialogVisible = ref(false);
 
 const { data: cost, error, refresh: refreshCost } = await fetchCost(id);
 
@@ -60,7 +63,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
             <div class="flex gap-2">
                 <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.back()" />
                 <Button label="삭제" icon="pi pi-trash" severity="danger" outlined @click="handleDelete" />
-                <Button label="수정" icon="pi pi-pencil" @click="navigateTo(`/info/cost/terminal/form?id=${cost.itMngcNo}`)" />
+                <Button label="수정" icon="pi pi-pencil" @click="terminalDialogVisible = true" />
             </div>
         </div>
 
@@ -135,4 +138,12 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
             </div>
         </div>
     </div>
+
+    <!-- 단말기 상세목록 수정 다이얼로그 -->
+    <TerminalFormDialog
+        v-if="cost"
+        v-model:visible="terminalDialogVisible"
+        :it-mngc-no="cost.itMngcNo"
+        @saved="refreshCost"
+    />
 </template>

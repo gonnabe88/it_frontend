@@ -20,7 +20,7 @@ import logo from '@/assets/logo.png';
 
 /* 로그인 페이지 메타 설정 */
 definePageMeta({
-    layout: false, // 기본 레이아웃 비활성화 (전체 화면 로그인 UI)
+    layout: 'login', // 빈 패스스루 레이아웃 사용 (layout:false 대신 — KeepAlive fragment 버그 방지)
     middleware: []  // 전역 인증 미들웨어 제외 (로그인 페이지는 인증 불필요)
 });
 
