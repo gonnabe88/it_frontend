@@ -290,14 +290,6 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
 };
 
 /**
- * ISO 날짜/시간 문자열을 'YYYY-MM-DD HH:mm' 형식으로 변환
- * @param dtm - ISO 형식 날짜 문자열 (예: '2026-01-15T09:30:00')
- * @returns 포맷된 날짜 문자열 또는 '-'
- */
-export const formatDateTime = (dtm?: string | null): string =>
-    dtm?.substring(0, 16).replace('T', ' ') || '-';
-
-/**
  * 날짜를 한국어 형식(YYYY년 MM월 DD일)으로 반환
  *
  * @param date - 변환할 Date 객체 (기본값: 현재 날짜)
@@ -314,24 +306,3 @@ export const formatKoreanDate = (date: Date = new Date()): string => {
     return `${y}년 ${m}월 ${d}일`;
 };
 
-/**
- * 파일 크기를 사람이 읽기 쉬운 단위로 변환
- *
- * @param bytes - 변환할 바이트 수
- * @returns 단위가 포함된 문자열 (예: '1.5 MB', '512 KB', '0 B')
- *
- * @example
- * formatFileSize(0)           // → '0 B'
- * formatFileSize(1024)        // → '1.0 KB'
- * formatFileSize(1572864)     // → '1.5 MB'
- */
-export const formatFileSize = (bytes: number): string => {
-    if (!bytes || bytes <= 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    const index = Math.min(i, units.length - 1);
-    const value = bytes / Math.pow(1024, index);
-    return index === 0
-        ? `${bytes} B`
-        : `${value.toFixed(1)} ${units[index]}`;
-};

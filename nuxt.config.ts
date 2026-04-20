@@ -71,7 +71,7 @@ export default defineNuxtConfig({
     optimizeDeps: {
       // CJS 의존성을 가진 패키지들을 Vite가 ESM으로 사전 번들링합니다.
       // exclude 시 내부 CJS 모듈이 브라우저에 그대로 전달되어 명명 내보내기 오류가 발생합니다.
-      include: ['react', 'react-dom', 'react/jsx-runtime', '@excalidraw/excalidraw', 'quill'],
+      include: ['react', 'react-dom', 'react/jsx-runtime', 'quill'],
       // mathlive는 브라우저 전용(customElements 등) — 사전 번들링 제외
       exclude: ['mathlive'],
     },
