@@ -36,6 +36,8 @@ const emit = defineEmits<{
 }>();
 
 const { fetchCommittee, saveCommittee } = useCouncil();
+const { $apiFetch } = useNuxtApp();
+const config = useRuntimeConfig();
 const toast = useToast();
 const { getMemberTypeLabel } = useCouncilCodes();
 
@@ -50,6 +52,12 @@ const secretaryList = ref<CommitteeMember[]>([]);
 /** 저장 중 여부 */
 const saving = ref(false);
 
+/** 기본 위원 배정 중 여부 */
+const loadingDefaults = ref(false);
+
+/** 위원 조회 오류 여부 (API 실패 시 오류 안내 표출) */
+const fetchError = ref(false);
+
 // 직원검색 다이얼로그 상태
 const orgSearchVisible = ref(false);
 /** 현재 추가 중인 위원유형 */
@@ -61,16 +69,22 @@ const addingType = ref<CommitteeType | null>(null);
 const {
     data: committeeData,
     pending: loadingCommittee,
+    error: committeeError,
     refresh: refreshCommittee,
 } = fetchCommittee(props.asctId);
 
 /**
- * committeeData 변경 시 로컬 상태에 반영합니다.
+ * committeeData 또는 오류 상태 변경 시 로컬 상태에 반영합니다.
  * 서버 응답(CommitteeList)을 각 유형별 ref에 분산합니다.
  */
 watch(
-    committeeData,
-    (val) => {
+    [committeeData, committeeError],
+    ([val, err]) => {
+        if (err) {
+            fetchError.value = true;
+            return;
+        }
+        fetchError.value = false;
         if (!val) return;
         mandatoryList.value = val.mandatory ? [...val.mandatory] : [];
         callList.value = val.call ? [...val.call] : [];
@@ -172,6 +186,45 @@ const handleSave = async () => {
     }
 };
 
+// ── 기본 위원 자동 배정 ───────────────────────────────────────────────
+
+/**
+ * 심의유형에 따른 당연위원 후보를 서버에서 불러와 mandatoryList에 자동 배정합니다.
+ * 저장된 위원이 없을 때(빈 상태) IT관리자가 클릭하여 시작점으로 사용합니다.
+ *
+ * ※ useFetch(useApiFetch)는 setup 컨텍스트에서만 호출 가능하므로
+ *   이벤트 핸들러 내부에서는 $apiFetch를 사용합니다.
+ */
+const loadDefaultCommittee = async () => {
+    if (!props.dbrTp) {
+        toast.add({ severity: 'warn', summary: '심의유형 없음', detail: '협의회 심의유형 정보가 없습니다.', life: 3000 });
+        return;
+    }
+    loadingDefaults.value = true;
+    try {
+        const url = `${config.public.apiBase}/api/council/${props.asctId}/committee/default`;
+        const result = await $apiFetch<CommitteeMember[]>(url, {
+            query: { dbrTp: props.dbrTp },
+            credentials: 'include',
+        });
+        mandatoryList.value = result ? [...result] : [];
+        if (!result || result.length === 0) {
+            toast.add({ severity: 'info', summary: '안내', detail: '심의유형에 해당하는 당연위원이 없습니다.', life: 3000 });
+        }
+    } catch {
+        toast.add({ severity: 'error', summary: '오류', detail: '기본 위원 조회 중 오류가 발생했습니다.', life: 3000 });
+    } finally {
+        loadingDefaults.value = false;
+    }
+};
+
+/** 위원 목록이 모두 비어 있는지 여부 */
+const isEmpty = computed(
+    () => mandatoryList.value.length === 0
+        && callList.value.length === 0
+        && secretaryList.value.length === 0
+);
+
 // ── 위원유형 한글 레이블 (CCODEM VLR_TP) ────────────────────────────
 const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
 </script>
@@ -185,7 +238,32 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
             <Skeleton height="6rem" class="w-full" />
         </div>
 
+        <!-- 조회 오류 -->
+        <div v-else-if="fetchError" class="text-sm text-red-500 dark:text-red-400 py-6 text-center">
+            위원 정보를 불러오는 중 오류가 발생했습니다.
+            <Button label="다시 시도" icon="pi pi-refresh" size="small" severity="secondary" class="ml-2" @click="refreshCommittee" />
+        </div>
+
         <template v-else>
+
+            <!--
+                빈 상태 안내: 아직 위원이 한 명도 없을 때 기본 위원 자동 배정 버튼 표출
+                '기본 위원 배정' 클릭 → 심의유형(dbrTp)별 당연위원 후보를 서버에서 불러옵니다.
+            -->
+            <div v-if="isEmpty && !readonly"
+                class="flex flex-col items-center gap-3 py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl mb-4">
+                <i class="pi pi-users text-3xl text-zinc-300 dark:text-zinc-600" />
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">등록된 평가위원이 없습니다.</p>
+                <Button
+                    label="기본 위원 자동 배정"
+                    icon="pi pi-magic-wand"
+                    severity="secondary"
+                    outlined
+                    :loading="loadingDefaults"
+                    @click="loadDefaultCommittee"
+                />
+                <p class="text-xs text-zinc-400 dark:text-zinc-500">심의유형({{ dbrTp }})에 따른 당연위원을 자동으로 불러옵니다.</p>
+            </div>
 
             <!-- ── 당연위원 섹션 ── -->
             <div>
@@ -335,8 +413,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
 
         </template>
 
-        <!-- ── 직원검색 다이얼로그 (EmployeeSearchDialog 재사용) ── -->
-        <EmployeeSearchDialog
+        <!-- ── 직원검색 다이얼로그 ── -->
+        <CommonEmployeeSearchDialog
             v-model:visible="orgSearchVisible"
             :header="`${addingType ? typeLabel(addingType as CommitteeType) : ''} 추가 — 직원 검색`"
             @select="onOrgUserSelected"

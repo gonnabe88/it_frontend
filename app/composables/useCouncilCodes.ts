@@ -38,18 +38,21 @@ export const useCouncilCodes = () => {
     const { data: statusData } = useApiFetch<CodeItem[]>(`${BASE}/ASCT_STS`, {
         key: 'ccodem_ASCT_STS_v2',
         suppressNotFound: true,
+        suppressNetworkError: true,
     });
 
     /** 심의유형 (DBR_TP) */
     const { data: hearingData } = useApiFetch<CodeItem[]>(`${BASE}/DBR_TP`, {
         key: 'ccodem_DBR_TP_v2',
         suppressNotFound: true,
+        suppressNetworkError: true,
     });
 
     /** 평가자유형 (VLR_TP) */
     const { data: memberTypeData } = useApiFetch<CodeItem[]>(`${BASE}/VLR_TP`, {
         key: 'ccodem_VLR_TP_v2',
         suppressNotFound: true,
+        suppressNetworkError: true,
     });
 
     // ── 코드값 → 한글명 맵 ────────────────────────────────────────────

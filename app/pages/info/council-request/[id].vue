@@ -38,9 +38,10 @@ const route = useRoute();
 const asctId = route.params.id as string;
 
 /* ── Composables ── */
-const { fetchCouncil, fetchFeasibility, saveFeasibility, requestApproval } = useCouncil();
+const { fetchCouncil, fetchFeasibility, saveFeasibility, requestApproval, skipCouncil } = useCouncil();
 const { uploadFile, getDownloadUrl } = useFiles();
 const toast = useToast();
+const { isAdmin } = useAuth();
 
 // ============================================================================
 // 데이터 로드
@@ -138,8 +139,20 @@ const initForm = (data: FeasibilityData | null) => {
     if (data.prjNm) savedOnce.value = true;
 };
 
-/* 최초 로드 시 폼 초기화 */
-initForm(feasibilityRaw.value ?? null);
+/**
+ * 폼 초기화 watch
+ * useApiFetch는 server: false이므로 SSR 시 feasibilityRaw.value = null입니다.
+ * 클라이언트 마운트 후 fetch가 완료되면 데이터가 도착하는데,
+ * 직접 호출만 하면 null → return early로 끝나서 폼이 빈 상태로 유지됩니다.
+ * watch로 비동기 로드 완료 시점을 감지하여 한 번만 초기화합니다.
+ */
+const formInitialized = ref(false);
+watch(feasibilityRaw, (val) => {
+    if (val && !formInitialized.value) {
+        initForm(val);
+        formInitialized.value = true;
+    }
+}, { immediate: true });
 
 // ============================================================================
 // Computed
@@ -159,6 +172,50 @@ const readonly = computed(() => councilStatus.value !== 'DRAFT');
  * 작성완료 이후 팀장 결재를 신청할 수 있습니다.
  */
 const isSubmitted = computed(() => councilStatus.value === 'SUBMITTED');
+
+/**
+ * APPROVED 상태: IT관리자 전용 분기 버튼 표출 조건
+ * 결재완료 후 IT관리자가 생략 또는 개최준비 진행을 선택할 수 있습니다.
+ */
+const isApproved = computed(() => councilStatus.value === 'APPROVED');
+
+// ============================================================================
+// 협의회 생략 처리
+// ============================================================================
+
+/** 생략 처리 진행 중 여부 */
+const skipPending = ref(false);
+
+/**
+ * 협의회 생략 처리
+ *
+ * APPROVED 상태에서 IT관리자가 이 사업의 협의회 개최가 불필요하다고 판단할 경우
+ * 상태를 SKIPPED로 전이하고 사업 PRJ_STS를 '요건 상세화'로 변경합니다.
+ */
+const handleSkip = async () => {
+    skipPending.value = true;
+    try {
+        await skipCouncil(asctId);
+        toast.add({ severity: 'success', summary: '협의회 생략 처리 완료', detail: '사업 진행상태가 요건 상세화로 변경되었습니다.', life: 4000 });
+        await refreshCouncil();
+    } catch {
+        toast.add({
+            severity: 'error',
+            summary: '생략 처리 실패',
+            detail: '생략 처리 중 오류가 발생했습니다.',
+            life: 4000,
+        });
+    } finally {
+        skipPending.value = false;
+    }
+};
+
+/**
+ * 개최준비 진행 → prepare 페이지로 이동
+ */
+const goToPrepare = () => {
+    navigateTo(`/info/council-request/prepare/${asctId}`);
+};
 
 // ============================================================================
 // 파일 업로드
@@ -427,6 +484,35 @@ const submitApproval = async () => {
                 icon="pi pi-send"
                 @click="showApprovalDialog = true"
             />
+        </div>
+
+        <!--
+            ── APPROVED 상태 + IT관리자 전용: 생략 / 개최준비 진행 분기 버튼 ──
+            결재완료 후 IT관리자가 협의회 개최 여부를 결정합니다.
+            - 생략: 협의회 불필요 판단 → SKIPPED 전이, 사업 '요건 상세화'로 이동
+            - 개최준비 진행: 평가위원 선정 등 다음 단계로 이동
+        -->
+        <div v-if="isApproved && isAdmin()" class="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-5">
+            <p class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">IT 관리자 확인</p>
+            <p class="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                타당성검토표 결재가 완료되었습니다. 이 사업의 정보화실무협의회 개최 여부를 결정하세요.
+            </p>
+            <div class="flex justify-end gap-3">
+                <Button
+                    label="협의회 생략"
+                    icon="pi pi-ban"
+                    severity="secondary"
+                    outlined
+                    :loading="skipPending"
+                    @click="handleSkip"
+                />
+                <Button
+                    label="개최준비 진행"
+                    icon="pi pi-arrow-right"
+                    :loading="skipPending"
+                    @click="goToPrepare"
+                />
+            </div>
         </div>
 
         <!--

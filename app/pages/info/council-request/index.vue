@@ -102,6 +102,7 @@ const navigateToProject = (item: typeof filteredCouncils.value[0]) => {
  * 협의회 상태 뱃지 클릭 → 진행상태에 따라 협의회 단계별 페이지로 이동
  *
  * - Step 1 (타당성검토표): DRAFT, SUBMITTED, APPROVAL_PENDING, APPROVED
+ *   APPROVED 상태에서 IT관리자는 [id].vue 내 분기 버튼으로 생략/진행 결정
  * - Step 2 (개최준비):     PREPARING, SCHEDULED, IN_PROGRESS
  * - Step 3 (개최):         EVALUATING, RESULT_WRITING, RESULT_REVIEW, FINAL_APPROVAL, COMPLETED
  *
@@ -110,7 +111,9 @@ const navigateToProject = (item: typeof filteredCouncils.value[0]) => {
 const navigateToCouncil = (item: typeof filteredCouncils.value[0]) => {
     if (!item.asctId || !item.asctSts) return;
 
+    // Step 1: 타당성검토표 (APPROVED 포함 — IT관리자는 [id].vue 내 버튼으로 생략/진행 결정)
     const step1Statuses: string[] = ['DRAFT', 'SUBMITTED', 'APPROVAL_PENDING', 'APPROVED'];
+    // Step 2: 개최준비
     const step2Statuses: string[] = ['PREPARING', 'SCHEDULED', 'IN_PROGRESS'];
 
     if (step1Statuses.includes(item.asctSts)) {

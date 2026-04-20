@@ -193,13 +193,13 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-medium text-zinc-600 dark:text-zinc-400">측정시작일</label>
                     <DatePicker
-                        :modelValue="item.msmSttDt ? new Date(item.msmSttDt) : null"
+                        :modelValue="item.msmSttDt ? new Date(item.msmSttDt + 'T00:00:00') : null"
                         :disabled="readonly"
                         dateFormat="yy-mm-dd"
                         placeholder="YYYY-MM-DD"
                         showIcon
                         fluid
-                        @update:modelValue="(v: Date | null) => updateField(index, 'msmSttDt', v ? v.toISOString().slice(0, 10) : null)"
+                        @update:modelValue="(v: Date | Date[] | (Date | null)[] | null | undefined) => updateField(index, 'msmSttDt', v instanceof Date ? `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}` : null)"
                     />
                 </div>
 
@@ -207,13 +207,13 @@ const updateField = (index: number, field: keyof PerformanceItem, value: unknown
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-medium text-zinc-600 dark:text-zinc-400">측정종료일</label>
                     <DatePicker
-                        :modelValue="item.msmEndDt ? new Date(item.msmEndDt) : null"
+                        :modelValue="item.msmEndDt ? new Date(item.msmEndDt + 'T00:00:00') : null"
                         :disabled="readonly"
                         dateFormat="yy-mm-dd"
                         placeholder="YYYY-MM-DD"
                         showIcon
                         fluid
-                        @update:modelValue="(v: Date | null) => updateField(index, 'msmEndDt', v ? v.toISOString().slice(0, 10) : null)"
+                        @update:modelValue="(v: Date | Date[] | (Date | null)[] | null | undefined) => updateField(index, 'msmEndDt', v instanceof Date ? `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}` : null)"
                     />
                 </div>
 
