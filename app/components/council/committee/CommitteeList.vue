@@ -61,7 +61,8 @@ const allMembers = computed(() => {
         </div>
 
         <!-- 목록 없음 -->
-        <div v-else-if="allMembers.length === 0"
+        <div
+v-else-if="allMembers.length === 0"
             class="text-sm text-zinc-400 py-4 text-center">
             배정된 평가위원이 없습니다.
         </div>

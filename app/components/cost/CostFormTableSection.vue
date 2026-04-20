@@ -22,10 +22,13 @@ index.vue와 동일한 헤더 스타일(blue-900, showGridlines)을 적용합니
 ================================================================================
 -->
 <script setup lang="ts">
-import { type ItCost } from '~/composables/useCost';
+import type { ItCost } from '~/composables/useCost';
+import { getApprovalTagClass } from '~/utils/common';
 import { useEmployeeSearch, type UserSuggestion, type DialogEmployeeResult } from '~/composables/useEmployeeSearch';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import InlineEditCell from '~/components/common/InlineEditCell.vue';
+import { computed } from 'vue';
 
 interface CodeOption { cdId: string; cdNm: string; }
 
@@ -49,6 +52,13 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
     'update:modelValue': [value: ItCost[]];
 }>();
+
+/* ── InlineEditCell용 옵션 변환 (CodeOption → { label, value }) ── */
+const ioeCSelectOptions = computed(() => props.ioeCOptions.map(o => ({ label: o.cdNm, value: o.cdId })));
+const pulDttSelectOptions = computed(() => props.pulDttOptions.map(o => ({ label: o.cdNm, value: o.cdId })));
+const dfrCleSelectOptions = computed(() => props.dfrCleOptions.map(o => ({ label: o.cdNm, value: o.cdId })));
+const abusCSelectOptions = computed(() => props.abusCOptions.map(o => ({ label: o.cdNm, value: o.cdId })));
+const curSelectOptions = computed(() => props.currencyOptions.map(c => ({ label: c, value: c })));
 
 const { employeeSuggestions, employeeDialogVisible, selectedRowIndex, searchEmployee, openEmployeeSearch } = useEmployeeSearch();
 
@@ -90,70 +100,78 @@ const deleteRow = (index: number) => {
         <!-- 사업코드 -->
         <Column header="사업코드" style="min-width: 160px">
             <template #body="{ data }">
-                <Select v-model="data.abusC" :options="abusCOptions" option-label="cdNm"
-                    option-value="cdId" placeholder="사업코드 선택" class="w-full" />
+                <InlineEditCell
+v-model="data.abusC" type="select"
+                    :options="abusCSelectOptions" placeholder="사업코드 선택" />
             </template>
         </Column>
 
         <!-- 비목코드 -->
         <Column header="비목코드" style="min-width: 180px">
             <template #body="{ data }">
-                <Select v-model="data.ioeC" :options="ioeCOptions" option-label="cdNm"
-                    option-value="cdId" placeholder="비목코드 선택" class="w-full" />
+                <InlineEditCell
+v-model="data.ioeC" type="select"
+                    :options="ioeCSelectOptions" placeholder="비목코드 선택" />
             </template>
         </Column>
 
         <!-- 신규/계속 (PUL_DTT) -->
         <Column header="신규/계속" style="min-width: 140px">
             <template #body="{ data }">
-                <Select v-model="data.pulDtt" :options="pulDttOptions" option-label="cdNm"
-                    option-value="cdId" placeholder="신규/계속 선택" class="w-full" />
+                <InlineEditCell
+v-model="data.pulDtt" type="select"
+                    :options="pulDttSelectOptions" placeholder="신규/계속 선택" />
             </template>
         </Column>
 
         <!-- 계약명 -->
         <Column header="계약명" style="min-width: 150px">
             <template #body="{ data }">
-                <InputText v-model="data.cttNm" class="w-full" />
+                <InlineEditCell v-model="data.cttNm" type="text" />
             </template>
         </Column>
 
         <!-- 계약상대처 -->
         <Column header="계약상대처" style="min-width: 120px">
             <template #body="{ data }">
-                <InputText v-model="data.cttOpp" class="w-full" />
+                <InlineEditCell v-model="data.cttOpp" type="text" />
             </template>
         </Column>
 
         <!-- 예산 -->
         <Column header="예산" style="min-width: 120px">
             <template #body="{ data }">
-                <InputNumber v-model="data.itMngcBg" mode="currency" :currency="data.cur || 'KRW'"
-                    locale="ko-KR" class="w-full" :disabled="budgetDisabled" />
+                <InlineEditCell
+v-model="data.itMngcBg" type="number"
+                    :suffix="data.cur || 'KRW'" :disabled="budgetDisabled" />
             </template>
         </Column>
 
         <!-- 통화: currencyFixed 설정 시 고정 표시, 아니면 Select -->
         <Column header="통화" style="width: 100px">
             <template #body="{ data }">
-                <InputText v-if="currencyFixed" :model-value="currencyFixed" class="w-full" disabled />
-                <Select v-else v-model="data.cur" :options="currencyOptions" class="w-full" />
+                <InlineEditCell v-if="currencyFixed" :model-value="currencyFixed" type="text" :disabled="true" />
+                <InlineEditCell
+v-else v-model="data.cur" type="select"
+                    :options="curSelectOptions" />
             </template>
         </Column>
 
         <!-- 지급주기 -->
         <Column header="지급주기" style="min-width: 140px">
             <template #body="{ data }">
-                <Select v-model="data.dfrCle" :options="dfrCleOptions" option-label="cdNm"
-                    option-value="cdId" placeholder="지급주기 선택" class="w-full" />
+                <InlineEditCell
+v-model="data.dfrCle" type="select"
+                    :options="dfrCleSelectOptions" placeholder="지급주기 선택" />
             </template>
         </Column>
 
         <!-- 최초지급일 -->
         <Column header="최초지급일" style="min-width: 140px">
             <template #body="{ data }">
-                <DatePicker v-model="data.fstDfrDt" view="month" dateFormat="yy-mm" showIcon fluid
-                    placeholder="최초지급일" class="w-full" />
+                <InlineEditCell
+v-model="data.fstDfrDt" type="date"
+                    view="month" date-format="yy-mm" placeholder="최초지급일" />
             </template>
         </Column>
 
@@ -161,8 +179,9 @@ const deleteRow = (index: number) => {
         <Column header="담당자" style="min-width: 150px; width: 170px">
             <template #body="{ data, index }">
                 <div class="cgpr-cell">
-                    <AutoComplete :modelValue="data.cgprNm || ''" :suggestions="employeeSuggestions"
-                        optionLabel="usrNm" :placeholder="data.cgprNm || '이름 검색'" @complete="searchEmployee"
+                    <AutoComplete
+                        :model-value="data.cgprNm || ''" :suggestions="employeeSuggestions"
+                        option-label="usrNm" :placeholder="data.cgprNm || '이름 검색'" @complete="searchEmployee"
                         @item-select="onEmployeeAutoSelect(data, $event.value)">
                         <template #option="{ option }">
                             <div class="py-1.5 pl-2.5 border-l-[3px] border-blue-900">
@@ -184,9 +203,20 @@ const deleteRow = (index: number) => {
                             </div>
                         </template>
                     </AutoComplete>
-                    <Button icon="pi pi-search" text size="small" class="!pe-1"
-                        @click="openEmployeeSearch(index)" v-tooltip.top="'직원조회'" />
+                    <Button
+v-tooltip.top="'직원조회'" icon="pi pi-search" text size="small"
+                        class="!pe-1" @click="openEmployeeSearch(index)" />
                 </div>
+            </template>
+        </Column>
+
+        <!-- 결재현황 -->
+        <Column header="결재현황" style="width: 100px; text-align: center">
+            <template #body="{ data }">
+                <Tag
+                    :value="data.apfSts || '예산 작성'"
+                    :class="getApprovalTagClass(data.apfSts || '예산 작성')"
+                    rounded />
             </template>
         </Column>
 

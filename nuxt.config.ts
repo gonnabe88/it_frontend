@@ -91,6 +91,33 @@ export default defineNuxtConfig({
   ],
 
 
+  /* ── Nitro 프리렌더링: 백엔드 의존/미구현 라우트 제외 ── */
+  nitro: {
+    prerender: {
+      ignore: [
+        // 미구현 메뉴 라우트 (AppSidebar에 링크되어 크롤러가 접근)
+        '/info/estimation',
+        '/info/deliberation',
+        '/info/contract',
+        '/info/payment',
+        '/info/evaluation',
+        '/info/council/working',
+        '/info/council/promotion',
+        '/info/council/committee',
+        '/audit/daily',
+        '/audit/monthly',
+        '/audit/quarterly',
+        '/audit/biannual',
+        '/audit/annual',
+        '/audit/manage/daily',
+        '/audit/manage/monthly',
+        '/audit/manage/quarterly',
+        '/audit/manage/biannual',
+        '/audit/manage/annual',
+      ]
+    }
+  },
+
   /* ── Pinia 스토어 자동 인식 디렉토리 ── */
   pinia: {
     storesDirs: ['./app/stores/**']
@@ -149,13 +176,15 @@ export default defineNuxtConfig({
           /**
            * FOUC(Flash of Unstyled Content) 방지용 인라인 스크립트
            * Nuxt 하이드레이션 전에 실행되어 다크 모드 클래스를 즉시 적용합니다.
-           * localStorage 'theme' 값 또는 시스템 다크 모드 설정을 기준으로 판단합니다.
+           * 쿠키 'theme-dark' 값 또는 시스템 다크 모드 설정을 기준으로 판단합니다.
+           * (localStorage 대신 쿠키 사용 — SSR 하이드레이션 불일치 방지)
            */
           innerHTML: `
             (function() {
-              const savedTheme = localStorage.getItem('theme');
-              const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-              if (savedTheme === 'dark' || (!savedTheme && systemDark)) {
+              var m = document.cookie.match('(^|;\\s*)theme-dark=([^;]*)');
+              var saved = m ? decodeURIComponent(m[2]) : null;
+              var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              if (saved === 'true' || (!saved && systemDark)) {
                 document.documentElement.classList.add('dark');
               } else {
                 document.documentElement.classList.remove('dark');

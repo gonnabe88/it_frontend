@@ -72,7 +72,10 @@ export interface ItCost {
     itMngcTp: string;       // 전산업무비유형
     pulDtt: string;      // 전산업무비구분
     bgYy?: string;          // 예산연도 (YYYY)
-    assetBg?: number;       // 자본예산 (원 단���, 비목코드 cttTp=IOE_CPIT)
+    assetBg?: number;       // 자본예산 (원 단위, 비목코드 cttTp=IOE_CPIT)
+    devBg?: number;         // 개발비 (원 단위, 자본예산 중 cdDes=개발비)
+    machBg?: number;        // 기계장치 (원 단위, 자본예산 중 cdDes=기계장치)
+    intanBg?: number;       // 기타무형자산 (원 단위, 자본예산 중 cdDes=기타무형자산)
     costBg?: number;        // 일반관리비 (원 단위, 비목코드 cttTp=IOE_IDR/IOE_SEVS/IOE_XPN/IOE_LEAFE)
     apfSts?: string;        // 결재현황 (전자결재 신청 상태)
     delYn?: string;         // 삭제여부 (Y: 삭제됨 / N: 유효, optional)

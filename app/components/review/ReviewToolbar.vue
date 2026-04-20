@@ -12,8 +12,7 @@ import { useReviewStore } from '~/stores/review';
 
 const emit = defineEmits<{
   (e: 'submit-for-review'): void;
-  (e: 'complete-review', reviewerEno: string): void;
-  (e: 'version-change', version: string): void;
+  (e: 'complete-review' | 'version-change', value: string): void;
 }>();
 
 const store = useReviewStore();

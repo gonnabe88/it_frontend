@@ -96,7 +96,8 @@ const proceedings = [
                     :key="p.seq"
                     class="flex items-center gap-3 text-sm"
                 >
-                    <span class="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400
+                    <span
+class="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400
                                  text-xs font-bold flex items-center justify-center shrink-0">
                         {{ p.seq }}
                     </span>

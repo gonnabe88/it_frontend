@@ -20,6 +20,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 /**
  * 소요자원 항목 인터페이스 (UI 모델)
@@ -49,6 +50,7 @@ interface CodeResponse {
     cdva: string;
     cttTp: string;
     cttTpDes: string;
+    cdSqn?: number | null;
 }
 
 /** CascadeSelect 옵션 노드 타입 */
@@ -59,7 +61,7 @@ interface CategoryOption {
     items?: CategoryOption[];
 }
 
-const props = defineProps<{
+defineProps<{
     /** 통화 선택지 (부모에서 useCurrencyRates로 계산 후 전달) */
     currencyOptions: string[];
     /** 유효성 오류 여부 */
@@ -292,7 +294,7 @@ onMounted(async () => {
                 $apiFetch<CodeResponse[]>(`${config.public.apiBase}/api/ccodem/type/${cttTp}`)
             )
         );
-        ioeCodes.value = results.flat();
+        ioeCodes.value = results.flat().sort((a, b) => (a.cdSqn ?? Infinity) - (b.cdSqn ?? Infinity));
     } catch (e) {
         console.error('IOE 비목 코드 조회 실패', e);
     }
@@ -301,23 +303,26 @@ onMounted(async () => {
 
 <template>
     <!-- 소요자원 상세내용 카드 (토글 폭 사용) -->
-    <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3 transition-all duration-300"
+    <div
+class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3 transition-all duration-300"
         :class="isExpanded ? 'w-full' : 'max-w-[1440px] mx-auto w-full'">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <h3 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">소요자원 상세내용<span
                         class="text-red-500">*</span></h3>
-                <Button :icon="isExpanded ? 'pi pi-window-minimize' : 'pi pi-window-maximize'" variant="text"
-                    severity="secondary" rounded @click="toggleExpand"
-                    v-tooltip.top="isExpanded ? '기본 폭으로' : '넓게 보기'" />
+                <Button
+v-tooltip.top="isExpanded ? '기본 폭으로' : '넓게 보기'" :icon="isExpanded ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
+                    variant="text" severity="secondary" rounded
+                    @click="toggleExpand" />
             </div>
             <Button icon="pi pi-plus" size="small" @click="addRow" />
         </div>
         <p v-if="error" class="text-red-500 text-xs">소요자원을 1개 이상 등록해주세요.</p>
 
         <div class="overflow-x-auto">
-            <DataTable :value="items" resizableColumns columnResizeMode="fit" showGridlines size="small"
-                class="resource-table">
+            <StyledDataTable
+                :value="items" size="small"
+                scrollable scroll-height="400px" class="resource-table">
                 <template #empty>
                     <div class="flex flex-col items-center justify-center text-zinc-500" style="min-height: 350px;">
                         등록된 소요자원이 없습니다. 품목 추가 버튼을 눌러 등록해주세요.
@@ -325,12 +330,14 @@ onMounted(async () => {
                 </template>
 
                 <!-- 구분: CascadeSelect (공통코드 기반 계층 구조) -->
-                <Column header="구분" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="구분" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 160px;">
                     <template #body="{ data }">
-                        <CascadeSelect :model-value="findCategoryOption(data.category)"
-                            :options="resourceCategorySelectOptions" optionLabel="label" optionGroupLabel="label"
-                            optionGroupChildren="items" placeholder="선택" fluid
+                        <CascadeSelect
+                            :model-value="findCategoryOption(data.category)"
+                            :options="resourceCategorySelectOptions" option-label="label" option-group-label="label"
+                            option-group-children="items" placeholder="선택" fluid
                             @change="onCategorySelect(data, $event.value)">
                             <template #value="{ value }">
                                 <template v-if="value && value.cdId">
@@ -346,23 +353,26 @@ onMounted(async () => {
                 </Column>
 
                 <!-- 항목: 자동 줄바꿈 Textarea -->
-                <Column header="항목" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="항목" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 200px">
                     <template #body="{ data }">
-                        <Textarea v-model="data.item" rows="1" autoResize class="w-full" />
+                        <Textarea v-model="data.item" rows="1" auto-resize class="w-full" />
                     </template>
                 </Column>
 
                 <!-- 수량 -->
-                <Column header="수량" headerClass="text-center justify-center [&>div]:justify-center"
-                    bodyClass="col-quantity" style="min-width: 120px">
+                <Column
+header="수량" header-class="text-center justify-center [&>div]:justify-center"
+                    body-class="col-quantity" style="min-width: 120px">
                     <template #body="{ data }">
                         <InputNumber v-model="data.quantity" :min="0" class="w-full" />
                     </template>
                 </Column>
 
                 <!-- 통화: KRW/USD/EUR 등 -->
-                <Column header="통화" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="통화" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 80px">
                     <template #body="{ data }">
                         <Select v-model="data.currency" :options="currencyOptions" class="w-full" />
@@ -370,41 +380,48 @@ onMounted(async () => {
                 </Column>
 
                 <!-- 소계: 직접 입력 → 단가 자동 역산 -->
-                <Column header="소계" headerClass="text-center justify-center [&>div]:justify-center"
-                    bodyClass="col-subtotal" style="min-width: 120px">
+                <Column
+header="소계" header-class="text-center justify-center [&>div]:justify-center"
+                    body-class="col-subtotal" style="min-width: 120px">
                     <template #body="{ data }">
-                        <InputNumber v-model="data.gclAmt" mode="currency" :currency="data.currency || 'KRW'"
+                        <InputNumber
+v-model="data.gclAmt" mode="currency" :currency="data.currency || 'KRW'"
                             locale="ko-KR" class="w-full" />
                     </template>
                 </Column>
 
                 <!-- 산정근거 -->
-                <Column header="산정근거" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="산정근거" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 150px">
                     <template #body="{ data }">
-                        <Textarea v-model="data.basis" rows="1" autoResize class="w-full" />
+                        <Textarea v-model="data.basis" rows="1" auto-resize class="w-full" />
                     </template>
                 </Column>
 
                 <!-- 도입시기/지급주기: cttTp에 따라 다른 입력 컴포넌트 표시 -->
-                <Column header="도입시기/지급주기" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="도입시기/지급주기" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 200px">
                     <template #body="{ data }">
                         <!-- 자본예산(IOE_CPIT): 도입시기 DatePicker (월 단위) -->
                         <div v-if="getCttTpByCdId(data.category) === 'IOE_CPIT'">
-                            <DatePicker v-model="data.introDate" view="month" dateFormat="yy-mm" showIcon fluid
+                            <DatePicker
+v-model="data.introDate" view="month" date-format="yy-mm" show-icon fluid
                                 placeholder="도입시기" class="w-full" />
                         </div>
                         <!-- 임차료/제비/여비/용역비: 지급주기 드롭다운 -->
                         <div v-else-if="data.category && getCttTpByCdId(data.category)">
-                            <Select v-model="data.paymentCycle" :options="paymentCycleOptions" placeholder="지급주기"
+                            <Select
+v-model="data.paymentCycle" :options="paymentCycleOptions" placeholder="지급주기"
                                 class="w-full" />
                         </div>
                     </template>
                 </Column>
 
                 <!-- 정보보호 여부 (Y/N) -->
-                <Column header="정보보호" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="정보보호" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 80px">
                     <template #body="{ data }">
                         <Select v-model="data.infoProtection" :options="ynOptions" class="w-full" />
@@ -412,7 +429,8 @@ onMounted(async () => {
                 </Column>
 
                 <!-- 통합인프라 여부 (Y/N) -->
-                <Column header="통합인프라" headerClass="text-center justify-center [&>div]:justify-center"
+                <Column
+header="통합인프라" header-class="text-center justify-center [&>div]:justify-center"
                     style="min-width: 80px">
                     <template #body="{ data }">
                         <Select v-model="data.integratedInfra" :options="ynOptions" class="w-full" />
@@ -420,44 +438,33 @@ onMounted(async () => {
                 </Column>
 
                 <!-- 행 삭제 버튼 -->
-                <Column header="" headerClass="text-center justify-center [&>div]:justify-center" style="width: 50px">
+                <Column header="" header-class="text-center justify-center [&>div]:justify-center" style="width: 50px">
                     <template #body="{ index }">
                         <Button icon="pi pi-trash" text severity="danger" @click="removeRow(index)" />
                     </template>
                 </Column>
-            </DataTable>
+            </StyledDataTable>
         </div>
     </div>
 </template>
 
-<style scoped>
-/** 소요자원 테이블 헤더 배경색 및 텍스트 색상 */
-.resource-table :deep(.p-datatable-thead > tr > th .p-column-header-content) {
-    justify-content: center;
-}
+<style>
+/*
+ * 비스코프 CSS — StyledDataTable 래퍼(kdb-it-table) 내부 PrimeVue 요소에
+ * <style scoped> + :deep()이 도달하지 못하므로 .resource-table 클래스를 앵커로 사용
+ */
 
-.resource-table :deep(.p-datatable-thead > tr > th) {
-    background-color: #f4f4f5 !important;
-    color: #27272a !important;
-}
-
-/** 소요자원 테이블 최소 높이 */
-.resource-table :deep(.p-datatable-table-container) {
+/** 소요자원 테이블: 스크롤 영역 최소 높이 고정 */
+.resource-table .p-datatable-table-container {
     min-height: 400px;
 }
 
 /** 수량/소계 컬럼 InputNumber: PrimeVue 기본 min-width 강제 제거 */
-.resource-table :deep(.col-quantity .p-inputnumber),
-.resource-table :deep(.col-quantity .p-inputnumber-input),
-.resource-table :deep(.col-subtotal .p-inputnumber),
-.resource-table :deep(.col-subtotal .p-inputnumber-input) {
+.resource-table .col-quantity .p-inputnumber,
+.resource-table .col-quantity .p-inputnumber-input,
+.resource-table .col-subtotal .p-inputnumber,
+.resource-table .col-subtotal .p-inputnumber-input {
     min-width: 0 !important;
     width: 100% !important;
-}
-
-/** 다크모드: html.dark는 컴포넌트 외부 조상 요소이므로 :global()로 선언 */
-:global(html.dark) .resource-table :deep(.p-datatable-thead > tr > th) {
-    background-color: #27272a !important;
-    color: #e4e4e7 !important;
 }
 </style>

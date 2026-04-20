@@ -200,7 +200,7 @@ const containerStyle = computed(() => {
         >
             <!-- 한글 아이콘 -->
             <template v-if="['hwp', 'hwpx'].includes(extension)">
-                <img src="/assets/hwp.ico" width="24" height="24" class="object-contain" alt="HWP" />
+                <img src="/assets/hwp.ico" width="24" height="24" class="object-contain" alt="HWP" >
             </template>
             <i v-else :class="['pi', fileIcon]" style="font-size: 24px;" />
 
@@ -222,8 +222,9 @@ const containerStyle = computed(() => {
         </span>
 
         <!-- 편집 모드: 우측 리사이즈 핸들 -->
-        <span v-if="editor?.isEditable" class="resize-handle" @mousedown.stop.prevent="onResizeStart"
-            title="드래그하여 크기 조절">
+        <span
+v-if="editor?.isEditable" class="resize-handle" title="드래그하여 크기 조절"
+            @mousedown.stop.prevent="onResizeStart">
             <i class="pi pi-ellipsis-v" />
         </span>
     </NodeViewWrapper>

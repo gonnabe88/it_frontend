@@ -72,7 +72,7 @@ const handleGoHome = () => {
             <!-- 아이콘 + 오류 제목 -->
             <div class="flex flex-col items-center gap-3">
                 <div class="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                    <i class="pi pi-exclamation-circle text-3xl text-red-500"></i>
+                    <i class="pi pi-exclamation-circle text-3xl text-red-500"/>
                 </div>
                 <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                     {{ errorMessage }}
@@ -80,7 +80,8 @@ const handleGoHome = () => {
             </div>
 
             <!-- 개발 환경 전용: 상세 오류 메시지 표시 -->
-            <div v-if="isDev && error?.message"
+            <div
+v-if="isDev && error?.message"
                 class="text-left text-sm text-zinc-500 dark:text-zinc-400 font-mono bg-zinc-100 dark:bg-zinc-900 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 break-all">
                 <span class="text-xs font-sans font-semibold text-zinc-400 dark:text-zinc-500 block mb-1">
                     [개발 환경 상세 정보]

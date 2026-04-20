@@ -189,7 +189,7 @@ const formatDate = (dt: string | null): string => {
                         rows="5"
                         placeholder="협의회 종합의견을 입력하세요..."
                         class="w-full text-sm"
-                        autoResize
+                        auto-resize
                     />
                     <p v-else class="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-line p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                         {{ form.synOpnn || '—' }}
@@ -205,7 +205,7 @@ const formatDate = (dt: string | null): string => {
                         rows="4"
                         placeholder="타당성검토의견을 입력하세요..."
                         class="w-full text-sm"
-                        autoResize
+                        auto-resize
                     />
                     <p v-else class="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-line p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
                         {{ form.ckgOpnn || '—' }}

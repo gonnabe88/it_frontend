@@ -23,6 +23,7 @@ import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3';
 const props = defineProps(nodeViewProps);
 
 /** mathlive <math-field> DOM 참조 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mathFieldRef = ref<any>(null);
 
 /**
@@ -124,8 +125,9 @@ watch(isEditable, (val) => {
             - isEditable=false: read-only 렌더링 (조회 모드)
             - nuxt.config.ts의 isCustomElement 설정으로 Vue 경고 없이 사용 가능
         -->
-        <math-field ref="mathFieldRef" :read-only="!isEditable" @mousedown.stop class="math-field-inline"
-            :class="{ 'math-field-readonly': !isEditable }" />
+        <math-field
+ref="mathFieldRef" :read-only="!isEditable" class="math-field-inline" :class="{ 'math-field-readonly': !isEditable }"
+            @mousedown.stop />
     </NodeViewWrapper>
 </template>
 

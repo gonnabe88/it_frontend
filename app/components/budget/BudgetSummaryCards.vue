@@ -23,8 +23,8 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue';
-import { type Project } from '~/composables/useProjects';
-import { type ItCost } from '~/composables/useCost';
+import type { Project } from '~/composables/useProjects';
+import type { ItCost } from '~/composables/useCost';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 
 const props = withDefaults(defineProps<{
@@ -127,14 +127,13 @@ const grandCount = computed(() =>
         <!-- ① 전체 예산 합계 카드 (인디고 그라디언트) -->
         <div
             class="p-6 bg-gradient-to-br from-indigo-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-indigo-100 dark:border-zinc-700 shadow-sm relative overflow-hidden">
-            <div class="absolute -right-6 -top-6 w-28 h-28 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl">
-            </div>
+            <div class="absolute -right-6 -top-6 w-28 h-28 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl"/>
             <!-- 메인 합계 -->
             <div class="relative z-10">
                 <div class="flex items-center gap-2 mb-3">
                     <div
                         class="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                        <i class="pi pi-chart-bar text-indigo-600 dark:text-indigo-400 text-lg"></i>
+                        <i class="pi pi-chart-bar text-indigo-600 dark:text-indigo-400 text-lg"/>
                     </div>
                     <span
                         class="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">전체 예산 합계</span>
@@ -149,7 +148,7 @@ const grandCount = computed(() =>
             <div
                 class="relative z-10 mt-4 pt-4 border-t border-indigo-100 dark:border-zinc-700 grid grid-cols-3 gap-3">
                 <div class="flex items-center gap-2">
-                    <div class="w-1.5 h-8 rounded-full bg-indigo-500 shrink-0"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-indigo-500 shrink-0"/>
                     <div class="min-w-0">
                         <div class="text-[10px] text-zinc-400 font-medium mb-0.5 truncate">정보화사업</div>
                         <div class="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
@@ -158,7 +157,7 @@ const grandCount = computed(() =>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="w-1.5 h-8 rounded-full bg-emerald-500 shrink-0"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-emerald-500 shrink-0"/>
                     <div class="min-w-0">
                         <div class="text-[10px] text-zinc-400 font-medium mb-0.5 truncate">전산업무비</div>
                         <div class="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
@@ -167,7 +166,7 @@ const grandCount = computed(() =>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="w-1.5 h-8 rounded-full bg-amber-500 shrink-0"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-amber-500 shrink-0"/>
                     <div class="min-w-0">
                         <div class="text-[10px] text-zinc-400 font-medium mb-0.5 truncate">경상사업</div>
                         <div class="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
@@ -181,14 +180,13 @@ const grandCount = computed(() =>
         <!-- ② 정보화사업 카드 (인디고 테마) -->
         <div
             class="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
-            <div class="absolute -right-6 -top-6 w-28 h-28 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl">
-            </div>
+            <div class="absolute -right-6 -top-6 w-28 h-28 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl"/>
             <!-- 메인 합계 -->
             <div class="relative z-10">
                 <div class="flex items-center gap-2 mb-3">
                     <div
                         class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                        <i class="pi pi-desktop text-indigo-600 dark:text-indigo-400 text-lg"></i>
+                        <i class="pi pi-desktop text-indigo-600 dark:text-indigo-400 text-lg"/>
                     </div>
                     <span
                         class="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">정보화사업</span>
@@ -203,7 +201,7 @@ const grandCount = computed(() =>
             <div
                 class="relative z-10 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 grid grid-cols-2 gap-4">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-1.5 h-8 rounded-full bg-blue-500"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-blue-500"/>
                     <div>
                         <div class="text-[11px] text-zinc-400 font-medium">자본예산</div>
                         <div class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -212,7 +210,7 @@ const grandCount = computed(() =>
                     </div>
                 </div>
                 <div class="flex items-center gap-2.5">
-                    <div class="w-1.5 h-8 rounded-full bg-sky-500"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-sky-500"/>
                     <div>
                         <div class="text-[11px] text-zinc-400 font-medium">일반관리비</div>
                         <div class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -227,14 +225,13 @@ const grandCount = computed(() =>
         <div
             class="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
             <div
-                class="absolute -right-6 -top-6 w-28 h-28 bg-emerald-100 dark:bg-emerald-900/20 rounded-full blur-2xl">
-            </div>
+                class="absolute -right-6 -top-6 w-28 h-28 bg-emerald-100 dark:bg-emerald-900/20 rounded-full blur-2xl"/>
             <!-- 메인 합계 -->
             <div class="relative z-10">
                 <div class="flex items-center gap-2 mb-3">
                     <div
                         class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
-                        <i class="pi pi-wallet text-emerald-600 dark:text-emerald-400 text-lg"></i>
+                        <i class="pi pi-wallet text-emerald-600 dark:text-emerald-400 text-lg"/>
                     </div>
                     <span
                         class="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">전산업무비</span>
@@ -249,7 +246,7 @@ const grandCount = computed(() =>
             <div
                 class="relative z-10 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 grid grid-cols-4 gap-4">
                 <div v-for="cat in costCategoryOrder" :key="cat" class="flex items-center gap-2.5">
-                    <div class="w-1.5 h-8 rounded-full" :class="getCostCatBar(cat)"></div>
+                    <div class="w-1.5 h-8 rounded-full" :class="getCostCatBar(cat)"/>
                     <div class="min-w-0">
                         <div class="text-[11px] text-zinc-400 font-medium truncate">{{ cat }}</div>
                         <div class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -264,14 +261,13 @@ const grandCount = computed(() =>
         <div
             class="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 relative overflow-hidden">
             <div
-                class="absolute -right-6 -top-6 w-28 h-28 bg-amber-100 dark:bg-amber-900/20 rounded-full blur-2xl">
-            </div>
+                class="absolute -right-6 -top-6 w-28 h-28 bg-amber-100 dark:bg-amber-900/20 rounded-full blur-2xl"/>
             <!-- 메인 합계 -->
             <div class="relative z-10">
                 <div class="flex items-center gap-2 mb-3">
                     <div
                         class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-                        <i class="pi pi-briefcase text-amber-600 dark:text-amber-400 text-lg"></i>
+                        <i class="pi pi-briefcase text-amber-600 dark:text-amber-400 text-lg"/>
                     </div>
                     <span
                         class="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">경상사업</span>
@@ -286,7 +282,7 @@ const grandCount = computed(() =>
             <div
                 class="relative z-10 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 grid grid-cols-2 gap-4">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-1.5 h-8 rounded-full bg-amber-500"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-amber-500"/>
                     <div>
                         <div class="text-[11px] text-zinc-400 font-medium">자본예산</div>
                         <div class="text-sm font-bold text-zinc-900 dark:text-zinc-100">
@@ -295,7 +291,7 @@ const grandCount = computed(() =>
                     </div>
                 </div>
                 <div class="flex items-center gap-2.5">
-                    <div class="w-1.5 h-8 rounded-full bg-orange-400"></div>
+                    <div class="w-1.5 h-8 rounded-full bg-orange-400"/>
                     <div>
                         <div class="text-[11px] text-zinc-400 font-medium">일반관리비</div>
                         <div class="text-sm font-bold text-zinc-900 dark:text-zinc-100">

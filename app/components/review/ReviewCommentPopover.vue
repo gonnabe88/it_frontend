@@ -8,7 +8,7 @@ Design Ref: §5.4 CommentPopover
 ================================================================================
 -->
 <script setup lang="ts">
-import type { ReviewComment, CommentAttachment, ReviewerTeam } from '~/types/review';
+import type { ReviewComment, CommentAttachment } from '~/types/review';
 
 const props = defineProps<{
   /** 팝오버 표시 여부 */
@@ -254,13 +254,13 @@ onMounted(() => {
               class="hidden"
               accept="image/*,.pdf,.hwp,.hwpx,.xlsx,.xls,.docx,.doc"
               @change="handleFileAdd"
-            />
+            >
             <Button
+              v-tooltip.top="'첨부파일'"
               icon="pi pi-paperclip"
               text
               rounded
               size="small"
-              v-tooltip.top="'첨부파일'"
               @click="fileInputRef?.click()"
             />
           </div>

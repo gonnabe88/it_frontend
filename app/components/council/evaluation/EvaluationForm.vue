@@ -125,7 +125,8 @@ const scoreOptions = [
             <!-- 항목 헤더 -->
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400
+                    <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400
                                  text-xs font-bold flex items-center justify-center shrink-0">
                         {{ idx + 1 }}
                     </span>
@@ -146,8 +147,8 @@ const scoreOptions = [
                     <Select
                         v-model="item.ckgRcrd"
                         :options="scoreOptions"
-                        optionLabel="label"
-                        optionValue="value"
+                        option-label="label"
+                        option-value="value"
                         placeholder="점수 선택"
                         class="text-sm"
                         style="min-width: 150px"
@@ -173,7 +174,7 @@ const scoreOptions = [
                     rows="3"
                     placeholder="검토의견을 입력하세요..."
                     class="w-full text-sm"
-                    autoResize
+                    auto-resize
                     :class="item.ckgRcrd !== null && item.ckgRcrd <= 2 && !item.ckgOpnn.trim()
                         ? 'border-amber-400 dark:border-amber-600'
                         : ''"

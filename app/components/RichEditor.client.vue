@@ -1,18 +1,46 @@
+<!--
+================================================================================
+[components/RichEditor.client.vue] PrimeVue Quill 기반 리치 에디터 컴포넌트
+================================================================================
+PrimeVue Editor(Quill) 래퍼 컴포넌트입니다.
+TiptapEditor 도입 전 기존 페이지에서 사용하던 간단한 에디터입니다.
+
+[기능]
+  - 폰트 선택: Noto Sans KR, Sans Serif, Serif, Monospace
+  - 글자 크기: 8px ~ 20px
+  - 서식: 굵게, 기울임, 밑줄, 취소선
+  - 색상: 글자색, 배경색
+  - 정렬: 좌/중앙/우/양쪽
+  - 목록: 번호 매기기, 글머리 기호
+
+[한글 IME 이슈 해결]
+  - 한글 조합 중 placeholder가 사라지지 않는 Quill 버그를 compositionstart/
+    compositionend 이벤트 리스너로 수정합니다.
+
+[Props]
+  - modelValue  : HTML 문자열 (v-model)
+  - placeholder : 입력 안내 텍스트
+  - editorStyle : 에디터 영역 인라인 스타일 (기본: height: 200px)
+
+[클라이언트 전용]
+  - 파일명 접미사 .client.vue로 SSR에서 렌더링하지 않습니다.
+================================================================================
+-->
 <script setup lang="ts">
 import Quill from 'quill';
 
-// Quill Configuration (Fonts & Sizes)
-// Check if already registered to avoid re-registration warnings if possible, 
-// though Quill.register(..., true) allows overwriting.
+// Quill 폰트/크기 설정 (모듈 수준에서 1회 등록, 중복 등록 허용)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Font = Quill.import('formats/font') as any;
 Font.whitelist = ['notosanskr', 'sans-serif', 'serif', 'monospace'];
 Quill.register(Font, true);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Size: any = Quill.import('attributors/style/size');
 Size.whitelist = ['8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px'];
 Quill.register(Size, true);
 
-const props = defineProps({
+defineProps({
     modelValue: {
         type: String,
         default: ''
@@ -33,6 +61,7 @@ const emit = defineEmits(['update:modelValue']);
  * PrimeVue Editor(Quill) 컴포넌트 참조
  * onMounted에서 내부 DOM(.ql-editor)에 접근하기 위해 사용합니다.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const editorRef = ref<any>(null);
 
 /**
@@ -73,7 +102,7 @@ let _observer: MutationObserver | null = null;
 const onCompositionStart = () => _editorEl?.classList.remove('ql-blank');
 const onCompositionEnd = () => {
     // trim() 후 빈 문자열은 falsy이므로 !text 하나로 충분합니다.
-    if (!_editorEl?.innerText?.trim()) _editorEl?.classList.add('ql-blank');
+    if (!_editorEl?.textContent?.trim()) _editorEl?.classList.add('ql-blank');
 };
 
 /**
@@ -136,8 +165,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Editor ref="editorRef" :modelValue="modelValue" @update:modelValue="emit('update:modelValue', $event)"
-        :editorStyle="editorStyle" class="w-full" :placeholder="placeholder">
+    <Editor
+ref="editorRef" :model-value="modelValue" :editor-style="editorStyle"
+        class="w-full" :placeholder="placeholder" @update:model-value="emit('update:modelValue', $event)">
         <template #toolbar>
             <span class="ql-formats">
                 <select class="ql-font">
@@ -158,21 +188,21 @@ onBeforeUnmount(() => {
                 </select>
             </span>
             <span class="ql-formats">
-                <button class="ql-bold"></button>
-                <button class="ql-italic"></button>
-                <button class="ql-underline"></button>
-                <button class="ql-strike"></button>
+                <button class="ql-bold"/>
+                <button class="ql-italic"/>
+                <button class="ql-underline"/>
+                <button class="ql-strike"/>
             </span>
             <span class="ql-formats">
-                <select class="ql-color"></select>
-                <select class="ql-background"></select>
+                <select class="ql-color"/>
+                <select class="ql-background"/>
             </span>
             <span class="ql-formats">
-                <select class="ql-align"></select>
+                <select class="ql-align"/>
             </span>
             <span class="ql-formats">
-                <button class="ql-list" value="ordered"></button>
-                <button class="ql-list" value="bullet"></button>
+                <button class="ql-list" value="ordered"/>
+                <button class="ql-list" value="bullet"/>
             </span>
         </template>
     </Editor>

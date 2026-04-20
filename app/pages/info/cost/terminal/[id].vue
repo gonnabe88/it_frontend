@@ -2,6 +2,8 @@
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useCost } from '~/composables/useCost';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TerminalFormDialog from '~/components/cost/TerminalFormDialog.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -11,6 +13,8 @@ const { fetchCost, deleteCost } = useCost();
 
 const id = route.params.id as string;
 definePageMeta({ title: '금융정보단말기 상세' });
+
+const terminalDialogVisible = ref(false);
 
 const { data: cost, error, refresh: refreshCost } = await fetchCost(id);
 
@@ -59,7 +63,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
             <div class="flex gap-2">
                 <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.back()" />
                 <Button label="삭제" icon="pi pi-trash" severity="danger" outlined @click="handleDelete" />
-                <Button label="수정" icon="pi pi-pencil" @click="navigateTo(`/info/cost/terminal/form?id=${cost.itMngcNo}`)" />
+                <Button label="수정" icon="pi pi-pencil" @click="terminalDialogVisible = true" />
             </div>
         </div>
 
@@ -69,7 +73,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 <!-- 마스터 정보 -->
                 <section class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                        <i class="pi pi-info-circle text-blue-500"></i> 기본 계약 정보
+                        <i class="pi pi-info-circle text-blue-500"/> 기본 계약 정보
                     </h2>
                     <div class="grid grid-cols-2 gap-y-6 gap-x-12">
                         <div class="space-y-1">
@@ -94,9 +98,9 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 <!-- 단말기 상세 목록 -->
                 <section class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                        <i class="pi pi-list text-indigo-500"></i> 단말기 상세 내역 ({{ cost.terminals?.length || 0 }}대)
+                        <i class="pi pi-list text-indigo-500"/> 단말기 상세 내역 ({{ cost.terminals?.length || 0 }}대)
                     </h2>
-                    <DataTable :value="cost.terminals" class="p-datatable-sm" responsiveLayout="scroll">
+                    <StyledDataTable :value="cost.terminals" class="p-datatable-sm" responsive-layout="scroll">
                         <Column field="tmnNm" header="단말기명" />
                         <Column field="tmnTuzManr" header="이동방법" />
                         <Column field="tmnUsg" header="용도" />
@@ -105,7 +109,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                                 {{ formatCurrency(slotProps.data.tmlAmt, slotProps.data.cur) }}
                             </template>
                         </Column>
-                    </DataTable>
+                    </StyledDataTable>
                 </section>
             </div>
 
@@ -134,4 +138,12 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
             </div>
         </div>
     </div>
+
+    <!-- 단말기 상세목록 수정 다이얼로그 -->
+    <TerminalFormDialog
+        v-if="cost"
+        v-model:visible="terminalDialogVisible"
+        :it-mngc-no="cost.itMngcNo"
+        @saved="refreshCost"
+    />
 </template>

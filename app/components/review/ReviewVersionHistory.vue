@@ -65,7 +65,8 @@ const reversedVersions = computed(() =>
         <!-- 버전 정보 -->
         <div class="flex-1 -mt-0.5">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium" :class="
+            <span
+class="text-sm font-medium" :class="
               (store.viewingVersion ?? store.session?.currentVersion) === ver.version
                 ? 'text-primary'
                 : 'text-surface-700 group-hover:text-primary'"

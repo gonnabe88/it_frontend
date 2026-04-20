@@ -10,7 +10,7 @@
  * - localStorage: vi.stubGlobal()로 인메모리 구현체로 대체
  * - process.client: vi.stubGlobal()로 true로 설정
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia, defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 
@@ -40,7 +40,7 @@ const createLocalStorageMock = () => {
     return {
         getItem: (key: string) => store[key] ?? null,
         setItem: (key: string, value: string) => { store[key] = value; },
-        removeItem: (key: string) => { delete store[key]; },
+        removeItem: (key: string) => { const { [key]: _, ...rest } = store; store = rest; },
         clear: () => { store = {}; },
     };
 };
@@ -60,23 +60,20 @@ const useAuthStore = defineStore('auth', () => {
     const API_BASE_URL = 'http://localhost:8080/api/auth';
 
     const login = async (credentials: { eno: string; password: string }): Promise<void> => {
-        try {
-            const response = await $fetch<User>(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                body: credentials,
-                credentials: 'include',
-            });
-            user.value = {
-                eno:    response.eno,
-                empNm:  response.empNm,
-                athIds: response.athIds ?? ['ITPZZ001'],
-                bbrC:   response.bbrC ?? '',
-            };
-            if (process.client) {
-                localStorage.setItem('user', JSON.stringify(user.value));
-            }
-        } catch (error) {
-            throw error;
+        const response = await $fetch<User>(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            body: credentials,
+            credentials: 'include',
+        });
+        user.value = {
+            eno:    response.eno,
+            empNm:  response.empNm,
+            athIds: response.athIds ?? ['ITPZZ001'],
+            bbrC:   response.bbrC ?? '',
+        };
+        // eslint-disable-next-line nuxt/prefer-import-meta
+        if (process.client) {
+            localStorage.setItem('user', JSON.stringify(user.value));
         }
     };
 
@@ -88,6 +85,7 @@ const useAuthStore = defineStore('auth', () => {
             }).catch(() => {});
         } finally {
             user.value = null;
+            // eslint-disable-next-line nuxt/prefer-import-meta
             if (process.client) localStorage.removeItem('user');
         }
     };
@@ -104,6 +102,7 @@ const useAuthStore = defineStore('auth', () => {
     };
 
     const restoreSession = (): void => {
+        // eslint-disable-next-line nuxt/prefer-import-meta
         if (process.client) {
             const storedUser = localStorage.getItem('user');
             if (storedUser) {

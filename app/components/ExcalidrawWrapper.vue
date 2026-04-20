@@ -29,9 +29,11 @@ const props = defineProps<{
 const containerRef = ref<HTMLDivElement | null>(null);
 
 /** Excalidraw API 인스턴스 (장면 데이터 접근용) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let excalidrawAPI: any = null;
 
 /** React DOM 루트 (언마운트 정리용) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let reactRoot: any = null;
 
 /**
@@ -100,6 +102,7 @@ onMounted(async () => {
         const { Excalidraw } = await import('@excalidraw/excalidraw');
 
         // 초기 장면 데이터 파싱
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let initialData: any = undefined;
         if (props.initialSceneData) {
             try {
@@ -123,6 +126,7 @@ onMounted(async () => {
         reactRoot = createRoot(containerRef.value);
         reactRoot.render(
             React.createElement(Excalidraw, {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 excalidrawAPI: (api: any) => {
                     excalidrawAPI = api;
                     // Dialog 트랜지션 완료 후 캔버스 좌표 재보정

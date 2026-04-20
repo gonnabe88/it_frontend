@@ -153,7 +153,8 @@ export const useCouncil = () => {
         approverEno: string,
         rqsOpnn?: string
     ): Promise<{ apfMngNo: string }> => {
-        return await $apiFetch(`${BASE}/${asctId}/approval`, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return await ($apiFetch as any)(`${BASE}/${asctId}/approval`, {
             method: 'POST',
             body: { approverEno, rqsOpnn },
         });

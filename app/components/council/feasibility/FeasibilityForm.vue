@@ -51,9 +51,9 @@ const emit = defineEmits<{
             </div>
             <div class="p-5">
                 <CouncilFeasibilityOverview
-                    :modelValue="modelValue"
+                    :model-value="modelValue"
                     :readonly="readonly"
-                    @update:modelValue="emit('update:modelValue', $event)"
+                    @update:model-value="emit('update:modelValue', $event)"
                 />
             </div>
         </div>
@@ -70,9 +70,9 @@ const emit = defineEmits<{
             </div>
             <div class="p-5">
                 <CouncilFeasibilityChecklist
-                    :modelValue="modelValue.checkItems"
+                    :model-value="modelValue.checkItems"
                     :readonly="readonly"
-                    @update:modelValue="emit('update:modelValue', { ...modelValue, checkItems: $event })"
+                    @update:model-value="emit('update:modelValue', { ...modelValue, checkItems: $event })"
                 />
             </div>
         </div>
@@ -89,9 +89,9 @@ const emit = defineEmits<{
             </div>
             <div class="p-5">
                 <CouncilFeasibilityPerformance
-                    :modelValue="modelValue.performances"
+                    :model-value="modelValue.performances"
                     :readonly="readonly"
-                    @update:modelValue="emit('update:modelValue', { ...modelValue, performances: $event })"
+                    @update:model-value="emit('update:modelValue', { ...modelValue, performances: $event })"
                 />
             </div>
         </div>

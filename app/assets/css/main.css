@@ -45,18 +45,142 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 페이지 클릭 시 텍스트 커서(캐럿) 깜박임 방지 */
-body {
-    caret-color: transparent;
+/* ============================================================================
+   IT Portal 디자인 시스템 토큰 (colors_and_type.css 기반)
+   ============================================================================ */
+:root {
+    /* ── 브랜드 / Primary — Indigo ──────────────────────────────────────── */
+    --indigo-50:  #eef2ff;
+    --indigo-100: #e0e7ff;
+    --indigo-200: #c7d2fe;
+    --indigo-300: #a5b4fc;
+    --indigo-400: #818cf8;
+    --indigo-500: #6366f1;
+    --indigo-600: #4f46e5;
+    --indigo-700: #4338ca;
+    --indigo-800: #3730a3;
+    --indigo-900: #312e81;
+
+    /* ── 중립 — Zinc ────────────────────────────────────────────────────── */
+    --zinc-50:  #fafafa;
+    --zinc-100: #f4f4f5;
+    --zinc-200: #e4e4e7;
+    --zinc-300: #d4d4d8;
+    --zinc-400: #a1a1aa;
+    --zinc-500: #71717a;
+    --zinc-600: #52525b;
+    --zinc-700: #3f3f46;
+    --zinc-800: #27272a;
+    --zinc-900: #18181b;
+
+    /* ── 도메인 악센트 ──────────────────────────────────────────────────── */
+    --accent-project:  #4f46e5;  /* 정보화사업 */
+    --accent-cost:     #059669;  /* 전산업무비 */
+    --accent-ordinary: #dc2626;  /* 경상사업 */
+    --accent-audit:    #ea580c;  /* IT자체감사 */
+    --accent-approval: #2563eb;  /* 전자결재 */
+    --accent-admin:    #eab308;  /* 관리자 (왕관) */
+
+    /* ── 시맨틱 서피스 / 포그라운드 (라이트) ────────────────────────────── */
+    --bg-app:       #f4f4f5;
+    --bg-surface:   #ffffff;
+    --bg-muted:     #fafafa;
+    --bg-primary:   #4f46e5;
+    --fg1:          #18181b;
+    --fg2:          #3f3f46;
+    --fg3:          #71717a;
+    --fg4:          #a1a1aa;
+    --fg-on-primary:#ffffff;
+    --border-1:     #e4e4e7;
+    --border-2:     #f4f4f5;
+
+    /* ── DataTable ──────────────────────────────────────────────────────── */
+    --table-header-bg: #1e3a8a;
+    --table-header-fg: #ffffff;
+    --table-row-hover: #fafafa;
+
+    /* ── 엘리베이션 ─────────────────────────────────────────────────────── */
+    --shadow-sm:      0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow:         0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    --shadow-md:      0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg:      0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    --shadow-xl:      0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+    --shadow-2xl:     0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-sidebar: 0 10px 15px -3px rgb(0 0 0 / 0.10);
+    --shadow-tab-active: 0 -2px 5px rgb(0 0 0 / 0.02);
+
+    /* ── 코너 반경 ──────────────────────────────────────────────────────── */
+    --radius-sm:   4px;
+    --radius:      6px;
+    --radius-md:   8px;
+    --radius-lg:   12px;
+    --radius-xl:   16px;
+    --radius-2xl:  20px;
+    --radius-full: 9999px;
+
+    /* ── 애니메이션 ─────────────────────────────────────────────────────── */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+    --dur-fast:      150ms;
+    --dur:           300ms;
+    --dur-slow:      500ms;
+
+    /* ── 레이아웃 ────────────────────────────────────────────────────────── */
+    --sidebar-w:           288px;
+    --sidebar-w-collapsed: 80px;
+    --header-h:            76px;
+    --tabbar-h:            50px;
+
+    /* ── 전역 커서 및 텍스트 선택 정책 (REQ-6: 폼 외부 I-빔 방지) ─────── */
+    cursor: default;
+    user-select: none;
 }
 
-/* 실제 입력 필드에서는 커서가 보이도록 예외 처리 */
+/* ── 다크 테마 (:root.dark 또는 html.dark) ──────────────────────────────── */
+:root.dark,
+html.dark {
+    --bg-app:     #09090b;
+    --bg-surface: #18181b;
+    --bg-muted:   #27272a;
+    --fg1:        #fafafa;
+    --fg2:        #e4e4e7;
+    --fg3:        #a1a1aa;
+    --fg4:        #71717a;
+    --border-1:   #27272a;
+    --border-2:   #3f3f46;
+    --bg-primary: #6366f1;
+}
+
+/* 실제 입력 필드에서는 커서와 텍스트 선택이 가능하도록 예외 처리 */
 input,
 textarea,
 select,
 [contenteditable="true"],
-.ql-editor {
+.ql-editor,
+.cursor-text {
+    cursor: text !important;
+    user-select: text !important;
     caret-color: auto;
+}
+
+/* 인터랙티브 요소 (버튼, 링크 등) 포인터 커서 적용 */
+a,
+button,
+[role="button"],
+.p-button,
+.p-link,
+.p-checkbox,
+.p-radiobutton,
+.p-select,
+.p-autocomplete,
+.p-datepicker,
+.cursor-pointer {
+    cursor: pointer !important;
+}
+
+/* 페이지 전반의 기본 캐럿 색상 투명화 (보충) */
+body {
+    caret-color: transparent;
 }
 
 /* Quill Font Customization - Global */
@@ -291,4 +415,17 @@ select,
 ::view-transition-old(root),
 ::view-transition-new(root) {
     animation-duration: 300ms;
+}
+
+/* ========================================================================
+   로그인 페이지 로고 float 애니메이션
+   login.vue의 animate-float 클래스에서 사용됩니다.
+   ======================================================================== */
+@keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-5px); }
+}
+
+.animate-float {
+    animation: floatY 3s ease-in-out infinite;
 }

@@ -66,7 +66,7 @@ const handleConfirm = async () => {
     <div class="p-5 border border-zinc-200 dark:border-zinc-700 rounded-lg text-center space-y-4">
 
         <div v-if="readonly || confirmed" class="space-y-2">
-            <i class="pi pi-check-circle text-3xl text-emerald-500"></i>
+            <i class="pi pi-check-circle text-3xl text-emerald-500"/>
             <p class="text-sm font-medium text-emerald-600 dark:text-emerald-400">결과서 검토를 완료했습니다.</p>
         </div>
 

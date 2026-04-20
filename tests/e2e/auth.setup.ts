@@ -10,6 +10,9 @@ import { test as setup } from '@playwright/test';
 const authFile = '.auth/user.json';
 
 setup('authenticate', async ({ page }) => {
+    // 수동 로그인 대기를 위해 전역 60초 타임아웃을 6분으로 덮어씁니다.
+    setup.setTimeout(360000);
+
     // 1. 로그인 페이지로 이동
     await page.goto('/login');
 

@@ -60,6 +60,7 @@ const useApiFetch = <T>(url: string, options: Record<string, unknown> = {}) => {
         onResponseError: vi.fn(),
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return useFetch<T>(url, params as any);
 };
 

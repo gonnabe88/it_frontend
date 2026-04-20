@@ -145,7 +145,8 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
         <div class="flex items-start justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 mb-1">
-                    <NuxtLink to="/info/council-request"
+                    <NuxtLink
+to="/info/council-request"
                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
                         협의회 목록
                     </NuxtLink>
@@ -181,61 +182,69 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
             <template v-if="!isAdminUser">
 
                 <!-- 1. 일정 입력 (SCHEDULED) -->
-                <div v-if="canInputSchedule"
+                <div
+v-if="canInputSchedule"
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">가능 일정 입력</h2>
                     </div>
                     <div class="p-5">
-                        <ScheduleInput :asctId="asctId" @submitted="onScheduleSubmitted" />
+                        <ScheduleInput :asct-id="asctId" @submitted="onScheduleSubmitted" />
                     </div>
                 </div>
 
                 <!-- 2. 평가의견 작성 (EVALUATING) -->
-                <div v-if="canEvaluate"
+                <div
+v-if="canEvaluate"
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">2</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">평가의견 작성</h2>
                     </div>
                     <div class="p-5">
-                        <EvaluationForm :asctId="asctId" @submitted="onEvaluationSubmitted" />
+                        <EvaluationForm :asct-id="asctId" @submitted="onEvaluationSubmitted" />
                     </div>
                 </div>
 
                 <!-- 3. 결과서 확인 (RESULT_REVIEW) -->
-                <div v-if="canReviewResult"
+                <div
+v-if="canReviewResult"
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">3</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">결과서 검토</h2>
                     </div>
                     <div class="p-5 space-y-4">
                         <!-- 결과서 내용 (읽기 전용) -->
                         <ResultForm
-                            :asctId="asctId"
-                            :councilDetail="councilDetail"
+                            :asct-id="asctId"
+                            :council-detail="councilDetail"
                             :feasibility="feasibilityData"
                             :readonly="true"
                         />
                         <!-- 확인 버튼 -->
-                        <ResultReview :asctId="asctId" @confirmed="onResultConfirmed" />
+                        <ResultReview :asct-id="asctId" @confirmed="onResultConfirmed" />
                     </div>
                 </div>
 
                 <!-- 완료 안내 (COMPLETED) -->
-                <div v-if="councilStatus === 'COMPLETED'"
+                <div
+v-if="councilStatus === 'COMPLETED'"
                     class="text-center py-10 text-zinc-500 space-y-2">
-                    <i class="pi pi-check-circle text-4xl text-emerald-500 block"></i>
+                    <i class="pi pi-check-circle text-4xl text-emerald-500 block"/>
                     <p class="font-medium">협의회가 완료되었습니다.</p>
                 </div>
 
                 <!-- 상태 대기 안내 -->
-                <div v-if="!canInputSchedule && !canEvaluate && !canReviewResult && councilStatus !== 'COMPLETED'"
+                <div
+v-if="!canInputSchedule && !canEvaluate && !canReviewResult && councilStatus !== 'COMPLETED'"
                     class="text-center py-10 text-zinc-400 text-sm">
                     현재 상태에서는 추가 작업이 없습니다.
                 </div>
@@ -248,31 +257,34 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
             <template v-else>
 
                 <!-- 평가의견 현황 (탭 형태) -->
-                <div v-if="canViewEvalSummary"
+                <div
+v-if="canViewEvalSummary"
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">평가의견 현황</h2>
                     </div>
                     <div class="p-5">
                         <!-- 평가의견 현황 인라인 표출 -->
-                        <EvalSummaryPanel :asctId="asctId" />
+                        <EvalSummaryPanel :asct-id="asctId" />
                     </div>
                 </div>
 
                 <!-- 결과서 작성 -->
                 <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">2</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">결과서</h2>
                         <span v-if="resultReadonly" class="text-xs text-zinc-400">(읽기 전용)</span>
                     </div>
                     <div class="p-5">
                         <ResultForm
-                            :asctId="asctId"
-                            :councilDetail="councilDetail"
+                            :asct-id="asctId"
+                            :council-detail="councilDetail"
                             :feasibility="feasibilityData"
                             :readonly="resultReadonly"
                             @saved="onResultSaved"
@@ -285,14 +297,15 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
             <!-- 타당성검토표 참고 (접힌 섹션) -->
             <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                 <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                    <span class="w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400
+                    <span
+class="w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400
                                  text-xs font-bold flex items-center justify-center">i</span>
                     <h2 class="font-semibold text-sm text-zinc-700 dark:text-zinc-300">타당성검토표 (참고용)</h2>
                 </div>
                 <div class="p-5">
                     <CouncilFeasibilityForm
                         v-if="feasibilityData"
-                        :modelValue="feasibilityData"
+                        :model-value="feasibilityData"
                         :readonly="true"
                     />
                     <Skeleton v-else height="8rem" class="w-full" />
