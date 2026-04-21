@@ -116,7 +116,7 @@ const unifiedItems = computed<UnifiedBudgetItem[]>(() => {
     const costItems: UnifiedBudgetItem[] = costs.value.map((c: ItCost) => ({
         _id: c.itMngcNo || '',
         _type: '비용',
-        _link: '/info/cost/',
+        _link: c.itMngcNo ? `/info/cost/${c.itMngcNo}` : '/info/cost',
         name: c.cttNm,
         category: c.pulDtt || '',
         bgYy: String(c.bgYy || ''),
