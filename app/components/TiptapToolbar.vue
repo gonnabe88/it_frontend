@@ -412,6 +412,8 @@ const insertBlockMath = () => {
 
 // ── Excalidraw 다이어그램 삽입 ──
 const { isOpen: isExcalidrawOpen, initialSceneData, open: openExcalidraw, close: closeExcalidraw, confirm: confirmExcalidraw } = useExcalidrawDialog();
+const isExcalidrawSaving = ref(false);
+const { saveScene } = useExcalidrawAttachment();
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const excalidrawWrapperRef = ref<any>(null);
 
@@ -422,7 +424,8 @@ const insertExcalidraw = () => {
             type: 'excalidraw',
             attrs: {
                 svgContent: data.svgContent,
-                sceneData: data.sceneData
+                sceneData: data.sceneData,
+                attachmentId: data.attachmentId
             }
         }).run();
     });
@@ -431,8 +434,18 @@ const insertExcalidraw = () => {
 /** Excalidraw 다이얼로그에서 저장 버튼 클릭 */
 const handleExcalidrawSave = async () => {
     const data = await excalidrawWrapperRef.value?.exportData();
-    if (data) {
-        confirmExcalidraw(data);
+    if (!data) return;
+
+    isExcalidrawSaving.value = true;
+    try {
+        const attachmentId = await saveScene(data.sceneData);
+        confirmExcalidraw({
+            svgContent: data.svgContent,
+            sceneData: data.sceneData,
+            attachmentId
+        });
+    } finally {
+        isExcalidrawSaving.value = false;
     }
 };
 
@@ -873,7 +886,7 @@ v-if="isExcalidrawOpen" ref="excalidrawWrapperRef"
             </div>
             <template #footer>
                 <Button label="취소" severity="secondary" icon="pi pi-times" @click="closeExcalidraw" />
-                <Button label="다이어그램 저장" icon="pi pi-check" @click="handleExcalidrawSave" />
+                <Button label="다이어그램 저장" icon="pi pi-check" :loading="isExcalidrawSaving" @click="handleExcalidrawSave" />
             </template>
         </Dialog>
 
