@@ -52,6 +52,7 @@
     "isomorphic-dompurify": "^3.0.0",
     "jszip": "^3.10.1",
     "lowlight": "^3.3.0",
+    "lz-string": "^1.5.0",
     "mathlive": "^0.109.0",
     "nuxt": "^4.0.0",
     "pdfmake": "^0.3.3",
