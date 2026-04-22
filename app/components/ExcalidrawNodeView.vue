@@ -33,6 +33,31 @@ const { open: openExcalidrawDialog } = useExcalidrawDialog();
  */
 const displaySvgUrl = ref<string | null>(null);
 
+const localSceneData = ref<string | null>(null);
+
+const loadAndRenderFromAttachment = async (attachmentId: string) => {
+    try {
+        const { loadScene } = useExcalidrawAttachment();
+        const fullSceneData = await loadScene(attachmentId);
+        localSceneData.value = fullSceneData;
+
+        const { exportToSvg } = await import('@excalidraw/excalidraw');
+        const parsed = JSON.parse(fullSceneData);
+        const svgEl = await exportToSvg({
+            elements: parsed.elements || [],
+            appState: {
+                ...(parsed.appState || {}),
+                exportWithDarkMode: false,
+                exportBackground: true
+            },
+            files: parsed.files || {}
+        });
+        setSvgUrl(new XMLSerializer().serializeToString(svgEl));
+    } catch (e) {
+        console.error('[ExcalidrawNodeView] 첨부파일에서 장면 로드 실패:', e);
+    }
+};
+
 /**
  * SVG 문자열로 Blob URL 생성
  * 기존 URL은 메모리 누수 방지를 위해 해제 후 새로 생성합니다.
@@ -77,10 +102,11 @@ const regenerateSvgFromSceneData = async () => {
 };
 
 onMounted(() => {
-    // svgContent가 있으면 바로 사용, 없으면 sceneData에서 재생성
     if (props.node.attrs.svgContent) {
         setSvgUrl(props.node.attrs.svgContent);
-    } else {
+    } else if (props.node.attrs.attachmentId) {
+        loadAndRenderFromAttachment(props.node.attrs.attachmentId);
+    } else if (props.node.attrs.sceneData) {
         regenerateSvgFromSceneData();
     }
 });
@@ -104,13 +130,15 @@ onBeforeUnmount(() => {
  * 저장 시 updateAttributes로 노드 속성을 갱신합니다.
  */
 const onEdit = () => {
+    const sceneForEdit = props.node.attrs.sceneData || localSceneData.value;
     openExcalidrawDialog(
-        props.node.attrs.sceneData || null,
+        sceneForEdit,
         (data) => {
-            // Tiptap 노드 속성 업데이트 (SVG + 장면 데이터 교체)
+            localSceneData.value = data.sceneData;
             props.updateAttributes({
                 svgContent: data.svgContent,
-                sceneData: data.sceneData
+                sceneData: data.sceneData,
+                attachmentId: data.attachmentId
             });
         }
     );
