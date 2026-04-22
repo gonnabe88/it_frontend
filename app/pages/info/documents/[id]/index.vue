@@ -23,9 +23,14 @@ const route = useRoute();
 const docMngNo = route.params.id as string;
 
 /** 쿼리파라미터의 ?version=0.02 값 (없으면 undefined → 최신 버전) */
-const versionQuery = computed(() =>
-    route.query.version ? Number(route.query.version) : undefined
-);
+const versionQuery = computed(() => {
+    const raw = Array.isArray(route.query.version)
+        ? route.query.version[0]
+        : route.query.version;
+    if (!raw) return undefined;
+    const parsed = parseFloat(raw);
+    return isNaN(parsed) ? undefined : parsed;
+});
 
 const title = '요구사항 정의서 상세';
 definePageMeta({ title });
@@ -57,7 +62,15 @@ try {
 const { data: filesData, refresh: refreshFiles } = fetchFiles('요구사항정의서', docMngNo);
 
 /** KeepAlive 재활성화 시 최신 데이터 재조회 */
-onActivated(() => { refresh(); refreshFiles(); });
+onActivated(async () => {
+    refresh();
+    refreshFiles();
+    try {
+        versions.value = await fetchVersionHistory(docMngNo);
+    } catch {
+        versions.value = [];
+    }
+});
 
 /** 첨부파일 목록 (flDtt === '첨부파일') */
 const attachedFiles = computed<FileRecord[]>(() =>
@@ -499,7 +512,7 @@ icon="pi pi-arrow-left" severity="secondary" text rounded
                         <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
                             {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
                             <!-- 현재 조회 중인 문서의 버전 배지 -->
-                            <Tag :value="`v${Number(doc.docVrs).toFixed(2)}`" severity="info" class="ml-2" />
+                            <Tag :value="`v${doc.docVrs.toFixed(2)}`" severity="info" class="ml-2" />
                         </h1>
                         <p class="text-xs text-zinc-400 mt-0.5 font-mono">{{ docMngNo }}</p>
                     </div>
@@ -859,11 +872,11 @@ class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors dur
                             <ul v-if="versions.length > 0" class="list-none p-0 m-0">
                                 <li
 v-for="v in versions" :key="`${v.docMngNo}_${v.docVrs}`"
-                                    class="flex align-items-center justify-content-between py-2 border-bottom-1 surface-border cursor-pointer hover:surface-100"
-                                    :class="{ 'font-bold text-primary': Number(v.docVrs) === (versionQuery ?? (doc ? Number(doc.docVrs) : undefined)) }"
+                                    class="flex items-center justify-between py-2 border-b border-zinc-200 dark:border-zinc-700 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                                    :class="{ 'font-bold text-primary': v.docVrs === (versionQuery ?? (doc ? doc.docVrs : undefined)) }"
                                     @click="navigateTo(`/info/documents/${v.docMngNo}?version=${v.docVrs}`)">
-                                    <span>v{{ Number(v.docVrs).toFixed(2) }}</span>
-                                    <span class="text-sm text-500">{{ v.lstChgDtm }}</span>
+                                    <span>v{{ v.docVrs.toFixed(2) }}</span>
+                                    <span class="text-sm text-zinc-500">{{ v.lstChgDtm }}</span>
                                 </li>
                             </ul>
                             <p v-else class="text-xs text-zinc-400 italic m-0">버전 정보가 없습니다.</p>
