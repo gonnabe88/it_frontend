@@ -99,7 +99,7 @@ const regenerateSvgFromSceneData = async () => {
             files: parsed.files || {}
         });
         setSvgUrl(new XMLSerializer().serializeToString(svgEl));
-    } catch (e) {
+    } catch (e: unknown) {
         console.error('[ExcalidrawNodeView] sceneData에서 SVG 재생성 실패:', e);
     }
 };

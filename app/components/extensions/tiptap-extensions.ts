@@ -114,8 +114,6 @@ const extractExcalidrawAttrs = (el: HTMLElement | null, img: HTMLImageElement | 
         } catch { /* 파싱 실패 시 무시 */ }
     }
 
-    // 디버그 (문제 해결 후 제거)
-    console.log('[ExcalidrawExt extract] rawDataScene:', rawDataScene?.substring(0, 50), 'sceneData from SVG:', !!sceneData);
 
     return { sceneData, svgContent };
 };
