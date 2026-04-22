@@ -18,8 +18,10 @@
 interface ExcalidrawSaveData {
     /** SVG 문자열 (에디터 내 인라인 미리보기용) */
     svgContent: string;
-    /** Excalidraw 장면 JSON 문자열 (재편집용) */
-    sceneData: string;
+    /** Excalidraw 장면 JSON 문자열 (인메모리 편집용, HTML에는 직렬화되지 않음) */
+    sceneData: string | null;
+    /** 업로드된 scene 파일의 flMngNo */
+    attachmentId: string | null;
 }
 
 /**
