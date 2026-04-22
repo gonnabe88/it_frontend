@@ -63,7 +63,11 @@ export const extractFiles = (sceneData: string): {
  */
 export const dataUrlToFile = (dataUrl: string, mimeType: string, fileName: string): File => {
     const parts = dataUrl.split(',');
-    const binaryStr = atob(parts[1]!);
+    const base64Part = parts[1];
+    if (!base64Part) {
+        throw new Error(`유효하지 않은 dataURL 형식입니다: ${dataUrl.slice(0, 50)}`);
+    }
+    const binaryStr = atob(base64Part);
     const bytes = new Uint8Array(binaryStr.length);
     for (let i = 0; i < binaryStr.length; i++) {
         bytes[i] = binaryStr.charCodeAt(i);
@@ -169,10 +173,18 @@ export const useExcalidrawAttachment = () => {
             responseType: 'text'
         });
         const sceneJson = decompressScene(compressed);
-        const parsed = JSON.parse(sceneJson) as {
+        let parsed: {
             files?: Record<string, { attachmentId?: string; mimeType?: string; dataURL?: string; [key: string]: unknown }>;
             [key: string]: unknown;
         };
+        try {
+            parsed = JSON.parse(sceneJson) as {
+                files?: Record<string, { attachmentId?: string; mimeType?: string; dataURL?: string; [key: string]: unknown }>;
+                [key: string]: unknown;
+            };
+        } catch {
+            throw new Error('[useExcalidrawAttachment] scene 파일 복원 실패: 유효하지 않은 JSON');
+        }
 
         // ② 이미지 첨부파일 병렬 fetch → dataURL 복원
         if (parsed.files) {
@@ -183,9 +195,10 @@ export const useExcalidrawAttachment = () => {
                     const blob = await $apiFetch<Blob>(`${API_BASE}/${imageFlMngNo}/preview`, {
                         responseType: 'blob'
                     });
-                    const dataUrl = await new Promise<string>((resolve) => {
+                    const dataUrl = await new Promise<string>((resolve, reject) => {
                         const reader = new FileReader();
                         reader.onloadend = () => resolve(reader.result as string);
+                        reader.onerror = () => reject(new Error('FileReader 변환 실패'));
                         reader.readAsDataURL(blob);
                     });
                     parsed.files![fileId]!.dataURL = dataUrl;
