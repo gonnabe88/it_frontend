@@ -205,8 +205,7 @@ const onSave = async () => {
     isSaving.value = true;
     try {
         // 1단계: 요구사항 정의서 저장 (PK 획득)
-        const newDoc = await createDocument(form);
-        const docMngNo = newDoc.docMngNo;
+        const docMngNo = await createDocument(form);
 
         // 2단계: 첨부파일 일괄 업로드 (PK를 orcPkVl로 설정)
         if (pendingAttachments.value.length > 0) {
