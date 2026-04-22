@@ -93,12 +93,8 @@ export const useDocuments = () => {
      * @returns 버전 요약 배열
      */
     const fetchVersionHistory = async (docMngNo: string): Promise<VersionSummary[]> => {
-        // useApiFetch는 반응형 래퍼이지만, 여기서는 즉시 값을 꺼내어 Promise로 반환
-        const { data, error } = await useApiFetch<VersionSummary[]>(
-            `${API_BASE_URL}/${docMngNo}/versions`
-        );
-        if (error.value) throw error.value;
-        return data.value ?? [];
+        // $apiFetch($fetch 래퍼)로 일회성 GET 호출 — 다른 imperative 함수와 패턴 통일
+        return await $apiFetch<VersionSummary[]>(`${API_BASE_URL}/${docMngNo}/versions`);
     };
 
     /**
@@ -140,10 +136,10 @@ export const useDocuments = () => {
      * @param docMngNo - 문서 관리번호
      * @param version  - (선택) 삭제할 특정 버전. 미지정 시 해당 문서의 전체 버전 삭제
      */
-    const deleteDocument = async (docMngNo: string, version?: number) => {
+    const deleteDocument = async (docMngNo: string, version?: number): Promise<void> => {
         // version 파라미터가 존재할 때만 query 객체를 포함시킨다
         const query = version !== undefined ? { version } : undefined;
-        return await $apiFetch(`${API_BASE_URL}/${docMngNo}`, {
+        await $apiFetch<void>(`${API_BASE_URL}/${docMngNo}`, {
             method: 'DELETE',
             ...(query && { query })
         });
