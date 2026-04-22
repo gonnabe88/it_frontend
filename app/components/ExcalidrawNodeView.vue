@@ -34,8 +34,10 @@ const { open: openExcalidrawDialog } = useExcalidrawDialog();
 const displaySvgUrl = ref<string | null>(null);
 
 const localSceneData = ref<string | null>(null);
+const loadError = ref(false);
 
 const loadAndRenderFromAttachment = async (attachmentId: string) => {
+    loadError.value = false;
     try {
         const { loadScene } = useExcalidrawAttachment();
         const fullSceneData = await loadScene(attachmentId);
@@ -53,7 +55,8 @@ const loadAndRenderFromAttachment = async (attachmentId: string) => {
             files: parsed.files || {}
         });
         setSvgUrl(new XMLSerializer().serializeToString(svgEl));
-    } catch (e) {
+    } catch (e: unknown) {
+        loadError.value = true;
         console.error('[ExcalidrawNodeView] 첨부파일에서 장면 로드 실패:', e);
     }
 };
@@ -168,6 +171,14 @@ const onDelete = () => {
             -->
             <div v-if="displaySvgUrl" class="excalidraw-preview p-3 overflow-auto">
                 <img :src="displaySvgUrl" class="max-w-full block h-auto" alt="Excalidraw 다이어그램" >
+            </div>
+
+            <!-- 첨부파일 로드 실패 시 에러 상태 -->
+            <div v-else-if="loadError" class="flex items-center justify-center h-48 text-red-500 dark:text-red-400">
+                <div class="text-center">
+                    <i class="pi pi-exclamation-triangle text-5xl mb-3 block"/>
+                    <span class="text-sm">다이어그램 로드 실패 — 저장 후 다시 시도하세요.</span>
+                </div>
             </div>
 
             <!-- SVG 없을 때 placeholder -->
