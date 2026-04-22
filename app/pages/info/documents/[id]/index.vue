@@ -14,6 +14,9 @@ import { useDocuments } from '~/composables/useDocuments';
 import type { RequirementDocument, RequirementDocumentForm } from '~/composables/useDocuments';
 import { useFiles } from '~/composables/useFiles';
 import type { FileRecord } from '~/composables/useFiles';
+import { useExcalidrawAttachment } from '~/composables/useExcalidrawAttachment';
+
+const { getPendingFlMngNos, clearPendingFlMngNos } = useExcalidrawAttachment();
 
 const route = useRoute();
 /** 문서 관리번호 (라우트 파라미터) */
@@ -23,7 +26,7 @@ const title = '요구사항 정의서 상세';
 definePageMeta({ title });
 
 const { fetchDocument, updateDocument, deleteDocument } = useDocuments();
-const { fetchFiles, uploadFile, uploadFilesBulk, deleteFile, getPreviewUrl, getDownloadUrl } = useFiles();
+const { fetchFiles, uploadFile, uploadFilesBulk, deleteFile, getPreviewUrl, getDownloadUrl, updateFileMeta } = useFiles();
 const { exportToHwpx, isExporting } = useHwpxExport();
 const toast = useToast();
 const confirm = useConfirm();
@@ -243,6 +246,12 @@ const onSave = async () => {
         if (newAttachments.value.length > 0) {
             await uploadFilesBulk(newAttachments.value, '첨부파일', docMngNo, '요구사항정의서');
         }
+
+        // 4단계: Excalidraw 장면 파일 및 임베드 이미지의 orcPkVl을 실제 docMngNo로 업데이트
+        for (const flMngNo of getPendingFlMngNos()) {
+            await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+        }
+        clearPendingFlMngNos();
 
         toast.add({ severity: 'success', summary: '저장 완료', detail: '요구사항 정의서가 수정되었습니다.', life: 3000 });
         isEditing.value = false;
