@@ -131,14 +131,29 @@ export const ExcalidrawExtension = TiptapNode.create({
         return {
             /** 에디터 내 미리보기용 SVG 문자열 */
             svgContent: { default: '' },
-            /** 재편집을 위한 Excalidraw 장면 JSON 문자열 */
-            sceneData: { default: null }
+            /** 재편집을 위한 Excalidraw 장면 JSON 문자열 (인메모리, HTML에 직렬화 안 됨) */
+            sceneData: { default: null },
+            /** 업로드된 scene 파일의 flMngNo */
+            attachmentId: { default: null }
         };
     },
 
     parseHTML() {
         return [
             {
+                // 신규 형식: data-attachment-id만 있는 figure
+                tag: 'figure[data-type="excalidraw"][data-attachment-id]',
+                getAttrs: (element) => {
+                    const el = element as HTMLElement;
+                    return {
+                        attachmentId: el.dataset.attachmentId || null,
+                        svgContent: '',
+                        sceneData: null
+                    };
+                }
+            },
+            {
+                // 구형식: data-scene이 있는 figure (하위 호환)
                 tag: 'figure[data-type="excalidraw"]',
                 getAttrs: (element) => {
                     const el = element as HTMLElement;
@@ -147,12 +162,11 @@ export const ExcalidrawExtension = TiptapNode.create({
                 }
             },
             {
-                // 백엔드 sanitizer에 의해 <figure>가 잘리고 <img>만 남은 경우 대비
+                // 백엔드 sanitizer에 의해 figure가 잘리고 img만 남은 경우 (구형식 하위 호환)
                 tag: 'img[src^="data:image/svg+xml"]',
                 getAttrs: (element) => {
                     const img = element as HTMLImageElement;
                     const attrs = extractExcalidrawAttrs(null, img);
-                    // excalidraw-scene-data 주석이 확인된 경우에만 excalidraw 노드로 인식
                     if (attrs.sceneData) return attrs;
                     return false;
                 }
@@ -161,12 +175,23 @@ export const ExcalidrawExtension = TiptapNode.create({
     },
 
     renderHTML({ node }) {
-        // sceneData를 Base64로 인코딩
+        // 신규 형식: attachmentId가 있으면 HTML에 ID만 기록 (sceneData 인라인 저장 안 함)
+        if (node.attrs.attachmentId) {
+            return [
+                'figure',
+                {
+                    'data-type': 'excalidraw',
+                    'data-attachment-id': node.attrs.attachmentId,
+                    style: 'margin: 1rem 0;'
+                }
+            ];
+        }
+
+        // 구형식 폴백: attachmentId 없는 경우 (레거시 노드 또는 업로드 전)
         const encodedScene = node.attrs.sceneData
             ? btoa(encodeURIComponent(node.attrs.sceneData))
             : '';
 
-        // SVG 문자열 끝에 주석 형태로 sceneData 삽입 (백엔드 sanitization 우회)
         let finalSvgContent = node.attrs.svgContent || '';
         if (encodedScene && finalSvgContent.includes('</svg>')) {
             finalSvgContent = finalSvgContent.replace('</svg>', `<!-- excalidraw-scene-data:${encodedScene} --></svg>`);
