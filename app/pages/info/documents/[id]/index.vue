@@ -11,7 +11,7 @@ GET /api/documents/{id}로 문서를 조회하고,
 -->
 <script setup lang="ts">
 import { useDocuments } from '~/composables/useDocuments';
-import type { RequirementDocument, RequirementDocumentForm } from '~/composables/useDocuments';
+import type { RequirementDocument, RequirementDocumentForm, VersionSummary } from '~/composables/useDocuments';
 import { useFiles } from '~/composables/useFiles';
 import type { FileRecord } from '~/composables/useFiles';
 import { useExcalidrawAttachment } from '~/composables/useExcalidrawAttachment';
@@ -22,17 +22,35 @@ const route = useRoute();
 /** 문서 관리번호 (라우트 파라미터) */
 const docMngNo = route.params.id as string;
 
+/** 쿼리파라미터의 ?version=0.02 값 (없으면 undefined → 최신 버전) */
+const versionQuery = computed(() =>
+    route.query.version ? Number(route.query.version) : undefined
+);
+
 const title = '요구사항 정의서 상세';
 definePageMeta({ title });
 
-const { fetchDocument, updateDocument, deleteDocument } = useDocuments();
+const { fetchDocument, fetchVersionHistory, createNewVersion, updateDocument, deleteDocument } = useDocuments();
 const { fetchFiles, uploadFile, uploadFilesBulk, deleteFile, getPreviewUrl, getDownloadUrl, updateFileMeta } = useFiles();
 const { exportToHwpx, isExporting } = useHwpxExport();
 const toast = useToast();
 const confirm = useConfirm();
 
 /* ── 데이터 로드 ── */
-const { data: docData, pending: loadPending, error, refresh } = await fetchDocument(docMngNo);
+const { data: docData, pending: loadPending, error, refresh } = await fetchDocument(docMngNo, versionQuery.value);
+
+/* ── 버전 히스토리 로드 ── */
+/** 현재 문서의 버전 히스토리 목록 */
+const versions = ref<VersionSummary[]>([]);
+/** 과거 버전 조회 여부 (쿼리에 version이 있을 때만 true) */
+const isHistoricalVersion = computed(() => versionQuery.value !== undefined);
+
+// 페이지 초기화 시 버전 히스토리 조회 (실패 시 빈 배열 유지)
+try {
+    versions.value = await fetchVersionHistory(docMngNo);
+} catch {
+    versions.value = [];
+}
 
 /* ── 파일 목록 로드 ── */
 // 해당 문서에 연결된 파일 목록을 조회합니다. (await 없이 반응형으로 동작)
@@ -296,6 +314,23 @@ const onDelete = (event: Event) => {
     });
 };
 
+/* ── 새 버전 생성 처리 ── */
+/**
+ * 현재 문서를 기반으로 다음 버전을 생성하고 최신 버전 상세로 이동합니다.
+ * (서버가 다음 버전을 자동 계산하여 신규 Brdocm 레코드를 생성)
+ */
+const onCreateNewVersion = async () => {
+    try {
+        await createNewVersion(docMngNo);
+        toast.add({ severity: 'success', summary: '새 버전 생성', detail: '새 버전이 생성되었습니다.', life: 3000 });
+        // 쿼리 없이(=최신 버전) 이동하여 새 버전 데이터를 로드
+        await navigateTo(`/info/documents/${docMngNo}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '새 버전 생성 실패', detail: e?.data?.message || '새 버전 생성 중 오류가 발생했습니다.', life: 4000 });
+    }
+};
+
 /* ── AI 반영 처리 ── */
 /**
  * AI 응답 내용을 요구사항 정의서 본문(reqCone)에 반영합니다.
@@ -449,6 +484,11 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
         <!-- 본문 -->
         <template v-else-if="doc">
 
+            <!-- 과거 버전 읽기 전용 안내 배너 -->
+            <Message v-if="isHistoricalVersion" severity="warn" :closable="false" class="mb-4">
+                이전 버전(v{{ versionQuery?.toFixed(2) }})을 보고 있습니다. 수정하려면 최신 버전을 조회하세요.
+            </Message>
+
             <!-- 페이지 헤더 -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -456,8 +496,10 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
 icon="pi pi-arrow-left" severity="secondary" text rounded
                         @click="navigateTo('/info/documents')" />
                     <div>
-                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
                             {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
+                            <!-- 현재 조회 중인 문서의 버전 배지 -->
+                            <Tag :value="`v${Number(doc.docVrs).toFixed(2)}`" severity="info" class="ml-2" />
                         </h1>
                         <p class="text-xs text-zinc-400 mt-0.5 font-mono">{{ docMngNo }}</p>
                     </div>
@@ -473,9 +515,17 @@ label="사전협의" icon="pi pi-comments" severity="info" outlined
 label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
-                        <Button label="편집" icon="pi pi-pencil" @click="startEdit" />
+                        <!-- 새 버전으로 저장 (최신 버전에서만 노출) -->
                         <Button
-label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
+v-if="!isHistoricalVersion"
+                            label="새 버전으로 저장" icon="pi pi-copy" severity="secondary"
+                            @click="onCreateNewVersion" />
+                        <!-- 편집/삭제는 최신 버전에서만 허용 -->
+                        <Button
+v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
+                        <Button
+v-if="!isHistoricalVersion"
+                            label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
                             @click="onDelete" />
                     </template>
                     <!-- 편집 모드 액션 -->
@@ -803,6 +853,21 @@ class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors dur
                                 </div>
                             </li>
                         </ul>
+
+                        <!-- 버전 히스토리 패널 -->
+                        <Panel header="버전 히스토리" class="mt-6">
+                            <ul v-if="versions.length > 0" class="list-none p-0 m-0">
+                                <li
+v-for="v in versions" :key="`${v.docMngNo}_${v.docVrs}`"
+                                    class="flex align-items-center justify-content-between py-2 border-bottom-1 surface-border cursor-pointer hover:surface-100"
+                                    :class="{ 'font-bold text-primary': Number(v.docVrs) === (versionQuery ?? (doc ? Number(doc.docVrs) : undefined)) }"
+                                    @click="navigateTo(`/info/documents/${v.docMngNo}?version=${v.docVrs}`)">
+                                    <span>v{{ Number(v.docVrs).toFixed(2) }}</span>
+                                    <span class="text-sm text-500">{{ v.lstChgDtm }}</span>
+                                </li>
+                            </ul>
+                            <p v-else class="text-xs text-zinc-400 italic m-0">버전 정보가 없습니다.</p>
+                        </Panel>
                     </div>
                 </div> <!-- // 우측(1/4) 영역 종료 -->
 
