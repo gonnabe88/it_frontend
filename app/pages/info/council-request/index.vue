@@ -29,6 +29,7 @@
 import { ref, computed } from 'vue';
 import { useCouncil } from '~/composables/useCouncil';
 import { useAuth } from '~/composables/useAuth';
+import { useOrganization } from '~/composables/useOrganization';
 
 const title = '정보화실무협의회';
 definePageMeta({ title });
@@ -42,6 +43,29 @@ const { data: councilsData, pending, error, refresh } = await fetchCouncilList()
 
 /** CCODEM 기반 코드 변환 */
 const { getStatusLabel, getHearingTypeLabel, hearingTypeOptions } = useCouncilCodes();
+
+/* ── 부서 조직도 (부서코드 → 부서명 변환용) ── */
+const { fetchOrganizations } = useOrganization();
+const { data: orgsData } = fetchOrganizations();
+
+/** 부서코드 → 부서명 맵 */
+const deptNameMap = computed(() => {
+    const map = new Map<string, string>();
+    orgsData.value?.forEach(org => map.set(org.prlmOgzCCone, org.bbrNm));
+    return map;
+});
+
+/**
+ * 부서코드를 부서명으로 변환
+ * 맵에 없으면 코드를 그대로 반환
+ *
+ * @param code 부서코드 (null 가능)
+ * @returns 부서명 또는 null
+ */
+const getDeptName = (code: string | null): string | null => {
+    if (!code) return null;
+    return deptNameMap.value.get(code) ?? code;
+};
 
 /** 협의회 목록 (null 안전 처리) */
 const councils = computed(() => councilsData.value ?? []);
@@ -231,6 +255,17 @@ const formatBudget = (prjBg: number | null) => {
 };
 
 /**
+ * HTML 태그 제거 (사업설명 등 리치텍스트 필드용)
+ *
+ * @param html HTML 문자열 (null 가능)
+ * @returns 태그가 제거된 순수 텍스트
+ */
+const stripHtml = (html: string | null): string => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+};
+
+/**
  * 사업유형 코드 → 라벨 변환
  *
  * @param prjTp 사업유형 코드 (null 가능)
@@ -334,33 +369,54 @@ const getPrjTpLabel = (prjTp: string | null) => {
             <div
                 v-for="council in filteredCouncils"
                 :key="council.applied ? council.asctId! : `${council.prjMngNo}-${council.prjSno}`"
-                class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 cursor-pointer transition-all"
-                :class="!council.applied ? 'border-dashed' : ''"
+                class="bg-white dark:bg-zinc-900 rounded-xl border shadow-sm hover:shadow-md cursor-pointer transition-all overflow-hidden"
+                :class="council.applied
+                    ? 'border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700'
+                    : 'border-dashed border-amber-200 dark:border-amber-800 hover:border-amber-400 dark:hover:border-amber-600'"
                 @click="navigateToProject(council)"
             >
-                <!-- 상단: 사업명 + 상태 뱃지 -->
-                <div class="flex items-start justify-between gap-4">
+                <!-- 상단 본문 -->
+                <div class="flex items-start gap-4 p-4">
                     <div class="flex-1 min-w-0">
                         <!-- 사업명 -->
-                        <p class="font-bold text-zinc-900 dark:text-zinc-100 truncate text-base">
+                        <h3 class="font-bold text-zinc-900 dark:text-zinc-100 text-[15px] leading-snug truncate">
                             {{ council.prjNm ?? '—' }}
-                        </p>
-                        <!-- 협의회ID / 신청전 표시 + 사업관리번호 + 심의유형 + 회의일자 -->
-                        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                            <span v-if="council.applied">{{ council.asctId }}</span>
-                            <span v-else class="text-amber-500 text-xs font-medium">신청 전</span>
-                            <span class="ml-1 text-zinc-400 text-xs">{{ council.prjMngNo }}</span>
-                            <span v-if="council.dbrTp" class="ml-2">
-                                · {{ getHearingTypeLabel(council.dbrTp) }}
+                        </h3>
+
+                        <!-- 주관부서 · 심의유형 · 회의일자 -->
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+                            <!-- 주관부서명 -->
+                            <span
+                                v-if="getDeptName(council.svnDpm)"
+                                class="flex items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400"
+                            >
+                                <i class="pi pi-building text-[11px] text-zinc-400" />
+                                {{ getDeptName(council.svnDpm) }}
                             </span>
-                            <span v-if="council.cnrcDt" class="ml-2">
-                                · 회의일자 {{ formatCnrcDt(council.cnrcDt) }}
+                            <!-- 심의유형 뱃지 -->
+                            <span
+                                v-if="council.dbrTp"
+                                class="inline-flex items-center px-2 py-0.5 rounded-full
+                                       bg-indigo-50 dark:bg-indigo-900/30
+                                       text-indigo-700 dark:text-indigo-300
+                                       text-xs font-medium
+                                       border border-indigo-200 dark:border-indigo-700"
+                            >
+                                {{ getHearingTypeLabel(council.dbrTp) }}
                             </span>
-                        </p>
+                            <!-- 회의일자 -->
+                            <span
+                                v-if="council.cnrcDt"
+                                class="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400"
+                            >
+                                <i class="pi pi-calendar text-[11px]" />
+                                {{ formatCnrcDt(council.cnrcDt) }}
+                            </span>
+                        </div>
                     </div>
 
-                    <!-- 우측: 진행상태 뱃지 + 아이콘 -->
-                    <div class="flex items-center gap-3 flex-shrink-0">
+                    <!-- 우측: 상태 뱃지 + 이동 아이콘 -->
+                    <div class="flex items-center gap-2 flex-shrink-0 self-center">
                         <!-- 신청된 건: 뱃지 클릭 → 협의회 단계 페이지로 이동 -->
                         <CouncilStatusBadge
                             v-if="council.applied && council.asctSts"
@@ -370,47 +426,65 @@ const getPrjTpLabel = (prjTp: string | null) => {
                         />
                         <!-- 미신청 건: 뱃지 클릭 → 협의회 신청 Dialog 오픈 -->
                         <span
-v-else
-                            class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-xs font-medium border border-amber-200 dark:border-amber-700 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
-                            @click.stop="openApplyDialog(council)">
+                            v-else
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full
+                                   bg-amber-50 dark:bg-amber-900/30
+                                   text-amber-600 dark:text-amber-400
+                                   text-xs font-medium
+                                   border border-amber-200 dark:border-amber-700
+                                   cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+                            @click.stop="openApplyDialog(council)"
+                        >
                             <i class="pi pi-plus-circle text-xs" />
                             협의회 신청
                         </span>
-                        <i class="pi pi-chevron-right text-zinc-400 dark:text-zinc-600" />
+                        <i class="pi pi-chevron-right text-sm text-zinc-300 dark:text-zinc-600" />
                     </div>
                 </div>
 
-                <!-- 하단: 사업 상세 정보 칩 목록 -->
-                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                <!-- 하단 메타 정보 바 -->
+                <div
+                    class="flex flex-wrap items-center gap-x-4 gap-y-1
+                           px-4 py-2
+                           bg-zinc-50 dark:bg-zinc-800/50
+                           border-t border-zinc-100 dark:border-zinc-800
+                           text-xs text-zinc-500 dark:text-zinc-400"
+                >
                     <!-- 사업연도 -->
                     <span v-if="council.prjYy" class="flex items-center gap-1">
-                        <i class="pi pi-calendar text-[10px]" />{{ council.prjYy }}년도
+                        <i class="pi pi-hashtag text-[10px]" />{{ council.prjYy }}년도
                     </span>
                     <!-- 사업유형 -->
                     <span v-if="getPrjTpLabel(council.prjTp)" class="flex items-center gap-1">
                         <i class="pi pi-tag text-[10px]" />{{ getPrjTpLabel(council.prjTp) }}
-                    </span>
-                    <!-- 주관부서 -->
-                    <span v-if="council.svnDpm" class="flex items-center gap-1">
-                        <i class="pi pi-building text-[10px]" />{{ council.svnDpm }}
                     </span>
                     <!-- 사업예산 -->
                     <span v-if="formatBudget(council.prjBg)" class="flex items-center gap-1">
                         <i class="pi pi-wallet text-[10px]" />{{ formatBudget(council.prjBg) }}
                     </span>
                     <!-- 사업기간 -->
-                    <span v-if="formatDate(council.sttDt) || formatDate(council.endDt)" class="flex items-center gap-1">
+                    <span
+                        v-if="formatDate(council.sttDt) || formatDate(council.endDt)"
+                        class="flex items-center gap-1"
+                    >
                         <i class="pi pi-clock text-[10px]" />
                         {{ formatDate(council.sttDt) ?? '?' }} ~ {{ formatDate(council.endDt) ?? '?' }}
                     </span>
-                    <!-- IT담당부서 -->
-                    <span v-if="council.itDpm" class="flex items-center gap-1">
-                        <i class="pi pi-desktop text-[10px]" />IT: {{ council.itDpm }}
+                    <!-- IT담당부서명 -->
+                    <span v-if="getDeptName(council.itDpm)" class="flex items-center gap-1">
+                        <i class="pi pi-desktop text-[10px]" />IT: {{ getDeptName(council.itDpm) }}
                     </span>
-                    <!-- 사업설명 (최대 60자) -->
-                    <span v-if="council.prjDes" class="flex items-center gap-1 w-full truncate">
-                        <i class="pi pi-align-left text-[10px]" />
-                        <span class="truncate">{{ council.prjDes.length > 60 ? council.prjDes.slice(0, 60) + '…' : council.prjDes }}</span>
+                    <!-- 사업설명 (최대 80자, HTML 태그 제거) -->
+                    <span
+                        v-if="stripHtml(council.prjDes)"
+                        class="flex items-center gap-1 w-full truncate text-zinc-400 dark:text-zinc-500"
+                    >
+                        <i class="pi pi-align-left text-[10px] flex-shrink-0" />
+                        <span class="truncate">
+                            {{ stripHtml(council.prjDes).length > 80
+                                ? stripHtml(council.prjDes).slice(0, 80) + '…'
+                                : stripHtml(council.prjDes) }}
+                        </span>
                     </span>
                 </div>
             </div>
