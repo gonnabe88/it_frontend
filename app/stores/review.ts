@@ -101,15 +101,17 @@ export const useReviewStore = defineStore('review', () => {
   );
 
   /** 세션 로드 (매 진입 시 새로 생성) */
-  function loadSession(docMngNo: string, docTitle: string, initialContent: string) {
+  async function loadSession(docMngNo: string, docTitle: string, initialContent: string, docVrs: number = 0) {
     viewingVersion.value = null;
     activeCommentId.value = null;
+
+    const currentVersion = docVrs > 0 ? docVrs.toFixed(2) : '0.0';
 
     session.value = {
       docMngNo,
       docTitle,
       status: 'draft',
-      currentVersion: '0.0',
+      currentVersion,
       draftContent: '',
       versions: [],
       reviewers: [...defaultReviewers.map(r => ({ ...r }))],
@@ -118,6 +120,17 @@ export const useReviewStore = defineStore('review', () => {
 
     if (initialContent) {
       _setDraftContent(initialContent);
+    }
+
+    // 서버에서 해당 버전의 기존 코멘트 로드
+    if (docVrs > 0) {
+      try {
+        const api = useReviewCommentApi();
+        const serverComments = await api.fetchComments(docMngNo, docVrs);
+        session.value.comments = serverComments;
+      } catch {
+        // 코멘트 로드 실패 시 빈 목록으로 유지
+      }
     }
   }
 

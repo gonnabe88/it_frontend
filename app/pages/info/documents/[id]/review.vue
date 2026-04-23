@@ -27,6 +27,7 @@ const {
   submitForReview,
   addInlineComment,
   addGeneralComment,
+  resolveComment,
   completeReview,
   updateContent,
   viewVersion,
@@ -41,14 +42,14 @@ watch(docMngNo, async (newId) => {
   const { data } = await fetchDocument(newId);
   const doc = data.value;
   if (doc) {
-    loadSession(newId, doc.reqNm || '요구사항 정의서', doc.reqCone || '');
+    await loadSession(newId, doc.reqNm || '요구사항 정의서', doc.reqCone || '', doc.docVrs ?? 0);
   }
 });
 
 /** 최초 문서 로드 완료 시 세션 초기화 */
-watch(docData, (doc) => {
+watch(docData, async (doc) => {
   if (doc) {
-    loadSession(docMngNo.value, doc.reqNm || '요구사항 정의서', doc.reqCone || '');
+    await loadSession(docMngNo.value, doc.reqNm || '요구사항 정의서', doc.reqCone || '', doc.docVrs ?? 0);
   }
 }, { immediate: true });
 
@@ -123,7 +124,7 @@ const handleCommentMarkClick = (commentId: string) => {
 };
 
 /** 코멘트 팝오버 등록 */
-const handleCommentSubmit = (payload: {
+const handleCommentSubmit = async (payload: {
   type: 'inline' | 'general';
   text: string;
   markId?: string;
@@ -134,7 +135,7 @@ const handleCommentSubmit = (payload: {
     // 인라인 코멘트: 에디터에 마크 적용 후 코멘트 추가
     editorRef.value?.applyCommentMark(payload.markId);
 
-    addInlineComment({
+    await addInlineComment({
       text: payload.text,
       markId: payload.markId,
       quotedText: payload.quotedText ?? '',
@@ -145,7 +146,7 @@ const handleCommentSubmit = (payload: {
     });
   } else {
     // 전반 코멘트
-    addGeneralComment({
+    await addGeneralComment({
       text: payload.text,
       authorEno: currentUser.eno,
       authorName: currentUser.empNm,
@@ -156,15 +157,15 @@ const handleCommentSubmit = (payload: {
 };
 
 /** 코멘트 해결 */
-const handleResolve = (commentId: string) => {
-  store.resolveComment(commentId);
+const handleResolve = async (commentId: string) => {
+  await resolveComment(commentId);
   editorRef.value?.resolveCommentMark(commentId);
   popover.value.visible = false;
 };
 
 /** 메신저에서 전반 코멘트 등록 */
-const handleMessengerComment = (payload: { text: string; attachments: CommentAttachment[] }) => {
-  addGeneralComment({
+const handleMessengerComment = async (payload: { text: string; attachments: CommentAttachment[] }) => {
+  await addGeneralComment({
     text: payload.text,
     authorEno: currentUser.eno,
     authorName: currentUser.empNm,

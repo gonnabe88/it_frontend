@@ -45,8 +45,8 @@ export const useReview = () => {
    * @param docTitle - 문서 제목
    * @param initialContent - 초기 본문 HTML 내용
    */
-  const loadSession = (docMngNo: string, docTitle: string, initialContent: string) => {
-    store.loadSession(docMngNo, docTitle, initialContent);
+  const loadSession = async (docMngNo: string, docTitle: string, initialContent: string, docVrs: number = 0) => {
+    await store.loadSession(docMngNo, docTitle, initialContent, docVrs);
   };
 
   /**
