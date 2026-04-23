@@ -24,7 +24,8 @@
       "Bash(tar -t)",
       "Read(//c/tmp/**)",
       "Bash(gunzip -c /c/Users/gonna/.claude/projects/C--it-it-frontend/539b2fd7-c12a-422d-8225-f19fd639bb08/tool-results/webfetch-1776569935351-2spjz9.bin)",
-      "Bash(tar -x)"
+      "Bash(tar -x)",
+      "Bash(timeout 90 npx nuxi build)"
     ]
   },
   "language": "korean"
