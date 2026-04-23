@@ -37,6 +37,42 @@ vi.stubGlobal('crypto', {
 });
 
 // ============================================================================
+// useReviewCommentApi Mock — 서버 호출을 로컬 stub으로 대체
+// ============================================================================
+// createComment mock이 호출될 때마다 증가하여 각 코멘트에 고유한 ID를 부여
+let commentIdCounter = 0;
+// 테스트에서 호출 인자 검증을 위해 mock 함수 인스턴스를 외부로 노출
+const mockCreateComment = vi.fn(async (_docMngNo: string, payload: {
+    docVrs: number;
+    ivgTp: 'I' | 'G';
+    ivgCone: string;
+    markId?: string;
+    qtdCone?: string;
+}): Promise<ReviewComment> => ({
+    id: `server-id-${++commentIdCounter}`,
+    type: payload.ivgTp === 'I' ? 'inline' : 'general',
+    text: payload.ivgCone,
+    attachments: [],
+    authorEno: 'EMP001',
+    authorName: '홍길동',
+    authorTeam: '개발/운영팀',
+    createdAt: new Date().toISOString(),
+    markId: payload.markId,
+    quotedText: payload.qtdCone,
+    resolved: false,
+}));
+const mockResolveComment = vi.fn(async () => undefined);
+const mockFetchComments = vi.fn(async () => [] as ReviewComment[]);
+
+vi.mock('~/composables/useReviewCommentApi', () => ({
+    useReviewCommentApi: () => ({
+        fetchComments: mockFetchComments,
+        createComment: mockCreateComment,
+        resolveComment: mockResolveComment,
+    }),
+}));
+
+// ============================================================================
 // stores/review.ts 인라인 구현 (Nuxt auto-import 없이 테스트)
 // ============================================================================
 
@@ -150,18 +186,24 @@ const useReviewStore = defineStore('review', {
             });
             this.viewingVersion = null;
         },
-        addComment(comment: Omit<ReviewComment, 'id' | 'createdAt'>) {
+        async addComment(comment: Omit<ReviewComment, 'id' | 'createdAt'>) {
             if (!this.session) return undefined;
-            const newComment: ReviewComment = {
-                ...comment,
-                id: generateId(),
-                createdAt: new Date().toISOString(),
-            };
-            this.session.comments.push(newComment);
-            return newComment;
+            // production store와 동일: useReviewCommentApi.createComment()로 서버 저장 후 UI 타입 반환
+            const docVrs = Number.parseFloat(this.session.currentVersion);
+            const saved = await mockCreateComment(this.session.docMngNo, {
+                docVrs,
+                ivgTp: comment.type === 'inline' ? 'I' : 'G',
+                ivgCone: comment.text,
+                markId: comment.markId,
+                qtdCone: comment.quotedText,
+            });
+            this.session.comments.push(saved);
+            return saved;
         },
-        resolveComment(commentId: string) {
+        async resolveComment(commentId: string) {
             if (!this.session) return;
+            // production store와 동일: 서버 PATCH 호출 후 로컬 상태 갱신
+            await mockResolveComment(this.session.docMngNo, commentId);
             const comment = this.session.comments.find((c: ReviewComment) => c.id === commentId);
             if (comment) {
                 comment.resolved = true;
@@ -196,6 +238,7 @@ describe('useReviewStore', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
         uuidCounter = 0;
+        commentIdCounter = 0;
         vi.clearAllMocks();
     });
 
@@ -346,14 +389,17 @@ describe('useReviewStore', () => {
     // addComment
     // -------------------------------------------------------------------------
     describe('addComment', () => {
-        it('코멘트 추가 시 고유 ID와 createdAt을 자동 부여한다', () => {
+        it('코멘트 추가 시 고유 ID와 createdAt을 자동 부여한다', async () => {
             const store = useReviewStore();
             store.loadSession('DOC-001', '문서', '내용');
 
-            const comment = store.addComment({
-                content: '검토 코멘트',
+            const comment = await store.addComment({
+                text: '검토 코멘트',
                 type: 'general',
-                author: { eno: 'R001', empNm: '홍길동' },
+                attachments: [],
+                authorEno: 'R001',
+                authorName: '홍길동',
+                authorTeam: '개발/운영팀',
                 resolved: false,
             });
 
@@ -363,23 +409,42 @@ describe('useReviewStore', () => {
             expect(store.session?.comments).toHaveLength(1);
         });
 
-        it('session이 없으면 undefined를 반환한다', () => {
+        it('session이 없으면 undefined를 반환한다', async () => {
             const store = useReviewStore();
-            const result = store.addComment({
-                content: '코멘트',
+            const result = await store.addComment({
+                text: '코멘트',
                 type: 'general',
-                author: { eno: 'R001', empNm: '홍길동' },
+                attachments: [],
+                authorEno: 'R001',
+                authorName: '홍길동',
+                authorTeam: '개발/운영팀',
                 resolved: false,
             });
             expect(result).toBeUndefined();
         });
 
-        it('여러 코멘트 추가 시 각각 다른 ID를 부여한다', () => {
+        it('여러 코멘트 추가 시 각각 다른 ID를 부여한다', async () => {
             const store = useReviewStore();
             store.loadSession('DOC-001', '문서', '내용');
 
-            const c1 = store.addComment({ content: '코멘트1', type: 'general', author: { eno: 'R001', empNm: '홍길동' }, resolved: false });
-            const c2 = store.addComment({ content: '코멘트2', type: 'inline', author: { eno: 'R002', empNm: '김영희' }, resolved: false });
+            const c1 = await store.addComment({
+                text: '코멘트1',
+                type: 'general',
+                attachments: [],
+                authorEno: 'R001',
+                authorName: '홍길동',
+                authorTeam: '개발/운영팀',
+                resolved: false,
+            });
+            const c2 = await store.addComment({
+                text: '코멘트2',
+                type: 'inline',
+                attachments: [],
+                authorEno: 'R002',
+                authorName: '김영희',
+                authorTeam: '계약팀',
+                resolved: false,
+            });
 
             expect(c1?.id).not.toBe(c2?.id);
         });
@@ -389,26 +454,29 @@ describe('useReviewStore', () => {
     // resolveComment
     // -------------------------------------------------------------------------
     describe('resolveComment', () => {
-        it('코멘트 해결 시 resolved가 true로 변경된다', () => {
+        it('코멘트 해결 시 resolved가 true로 변경된다', async () => {
             const store = useReviewStore();
             store.loadSession('DOC-001', '문서', '내용');
-            const comment = store.addComment({
-                content: '코멘트',
+            const comment = await store.addComment({
+                text: '코멘트',
                 type: 'general',
-                author: { eno: 'R001', empNm: '홍길동' },
+                attachments: [],
+                authorEno: 'R001',
+                authorName: '홍길동',
+                authorTeam: '개발/운영팀',
                 resolved: false,
             });
 
-            store.resolveComment(comment!.id);
+            await store.resolveComment(comment!.id);
 
             expect(store.session?.comments[0].resolved).toBe(true);
         });
 
-        it('존재하지 않는 ID로 해결 요청 시 예외 없이 처리된다', () => {
+        it('존재하지 않는 ID로 해결 요청 시 예외 없이 처리된다', async () => {
             const store = useReviewStore();
             store.loadSession('DOC-001', '문서', '내용');
 
-            expect(() => store.resolveComment('non-existent-id')).not.toThrow();
+            await expect(store.resolveComment('non-existent-id')).resolves.not.toThrow();
         });
     });
 
@@ -540,11 +608,27 @@ describe('useReviewStore', () => {
     });
 
     describe('inlineComments getter', () => {
-        it('인라인 타입 코멘트만 필터링하여 반환한다', () => {
+        it('인라인 타입 코멘트만 필터링하여 반환한다', async () => {
             const store = useReviewStore();
             store.loadSession('DOC-001', '문서', '내용');
-            store.addComment({ content: '일반 코멘트', type: 'general', author: { eno: 'R001', empNm: '홍' }, resolved: false });
-            store.addComment({ content: '인라인 코멘트', type: 'inline', author: { eno: 'R002', empNm: '김' }, resolved: false });
+            await store.addComment({
+                text: '일반 코멘트',
+                type: 'general',
+                attachments: [],
+                authorEno: 'R001',
+                authorName: '홍',
+                authorTeam: '개발/운영팀',
+                resolved: false,
+            });
+            await store.addComment({
+                text: '인라인 코멘트',
+                type: 'inline',
+                attachments: [],
+                authorEno: 'R002',
+                authorName: '김',
+                authorTeam: '계약팀',
+                resolved: false,
+            });
 
             expect(store.inlineComments).toHaveLength(1);
             expect(store.inlineComments[0].type).toBe('inline');

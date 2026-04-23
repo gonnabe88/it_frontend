@@ -31,12 +31,6 @@ import type {
 } from '~/types/review';
 
 /**
- * UUID 생성 (간이)
- * crypto.randomUUID가 지원되지 않는 환경에서는 타임스탬프 기반 대체 ID를 생성합니다.
- */
-const generateId = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-/**
  * 다음 버전 번호 계산
  * 현재 버전에서 0.1을 증가시켜 소수점 1자리 문자열로 반환합니다.
  *
@@ -174,23 +168,38 @@ export const useReviewStore = defineStore('review', () => {
     viewingVersion.value = null;
   }
 
-  /** 코멘트 추가 */
-  function addComment(comment: Omit<ReviewComment, 'id' | 'createdAt'>): ReviewComment | undefined {
+  /** 코멘트 추가 (서버 API 연동) */
+  async function addComment(
+    comment: Omit<ReviewComment, 'id' | 'createdAt'>,
+  ): Promise<ReviewComment | undefined> {
     if (!session.value) return;
 
-    const newComment: ReviewComment = {
-      ...comment,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
+    // useReviewCommentApi: /api/documents/{docMngNo}/review-comments POST 호출
+    const api = useReviewCommentApi();
+    // 현재 버전을 숫자형 docVrs로 변환 (예: "0.1" → 0.1)
+    const docVrs = Number.parseFloat(session.value.currentVersion);
 
-    session.value.comments.push(newComment);
-    return newComment;
+    // 서버에 저장 후 UI 타입으로 변환된 코멘트 반환
+    const saved = await api.createComment(session.value.docMngNo, {
+      docVrs,
+      ivgTp: comment.type === 'inline' ? 'I' : 'G',
+      ivgCone: comment.text,
+      markId: comment.markId,
+      qtdCone: comment.quotedText,
+    });
+
+    session.value.comments.push(saved);
+    return saved;
   }
 
-  /** 코멘트 해결 처리 */
-  function resolveComment(commentId: string) {
+  /** 코멘트 해결 처리 (서버 API 연동) */
+  async function resolveComment(commentId: string): Promise<void> {
     if (!session.value) return;
+
+    // 서버에 rslvYn='Y'로 업데이트 후 로컬 상태 반영
+    const api = useReviewCommentApi();
+    await api.resolveComment(session.value.docMngNo, commentId);
+
     const comment = session.value.comments.find(c => c.id === commentId);
     if (comment) comment.resolved = true;
   }
