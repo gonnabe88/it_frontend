@@ -101,14 +101,14 @@ export const useReview = () => {
    * @param params - 코멘트 정보 (내용, 작성자 정보 등)
    * @returns 생성된 ReviewComment 객체
    */
-  const addGeneralComment = (params: {
+  const addGeneralComment = async (params: {
     text: string;
     authorEno: string;
     authorName: string;
     authorTeam: ReviewerTeam;
     attachments?: ReviewComment['attachments'];
   }) => {
-    return store.addComment({
+    return await store.addComment({
       type: 'general',
       text: params.text,
       authorEno: params.authorEno,
@@ -125,8 +125,8 @@ export const useReview = () => {
    *
    * @param commentId - 해결할 코멘트 UUID
    */
-  const resolveComment = (commentId: string) => {
-    store.resolveComment(commentId);
+  const resolveComment = async (commentId: string) => {
+    await store.resolveComment(commentId);
   };
 
   /**
