@@ -83,8 +83,11 @@ function toReviewComment(api: ApiComment): ReviewComment {
  * @returns 코멘트 조회/생성/해결 비동기 함수 모음
  */
 export const useReviewCommentApi = () => {
-    // plugins/auth.ts에서 provide된 인증 $apiFetch 사용 (POST/PATCH 변경 요청)
+    // plugins/auth.ts에서 provide된 인증 $apiFetch 사용 (GET/POST/PATCH 요청)
     const { $apiFetch } = useNuxtApp();
+    // 백엔드 API 베이스 URL (runtimeConfig: http://localhost:8080)
+    const config = useRuntimeConfig();
+    const BASE = `${config.public.apiBase}/api/documents`;
 
     /**
      * 특정 문서 버전의 코멘트 목록 조회
@@ -98,7 +101,7 @@ export const useReviewCommentApi = () => {
         docVrs: number,
     ): Promise<ReviewComment[]> => {
         const data = await $apiFetch<ApiComment[]>(
-            `/api/documents/${docMngNo}/review-comments`,
+            `${BASE}/${docMngNo}/review-comments`,
             { query: { docVrs } },
         );
         return data.map(toReviewComment);
@@ -122,7 +125,7 @@ export const useReviewCommentApi = () => {
         },
     ): Promise<ReviewComment> => {
         const data = await $apiFetch<ApiComment>(
-            `/api/documents/${docMngNo}/review-comments`,
+            `${BASE}/${docMngNo}/review-comments`,
             { method: 'POST', body: payload },
         );
         return toReviewComment(data);
@@ -139,7 +142,7 @@ export const useReviewCommentApi = () => {
         ivgSno: string,
     ): Promise<void> => {
         await $apiFetch(
-            `/api/documents/${docMngNo}/review-comments/${ivgSno}/resolve`,
+            `${BASE}/${docMngNo}/review-comments/${ivgSno}/resolve`,
             { method: 'PATCH' },
         );
     };
