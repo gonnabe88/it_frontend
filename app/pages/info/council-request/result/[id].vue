@@ -23,18 +23,16 @@
 -->
 <script setup lang="ts">
 import type { CouncilStatus } from '~/types/council';
-import { useToast } from 'primevue/usetoast';
 import { useAuth } from '~/composables/useAuth';
 
 // ── 라우트 파라미터 ──────────────────────────────────────────────────
 const route = useRoute();
 const asctId = route.params.id as string;
 
-const { fetchCouncil, fetchFeasibility } = useCouncil();
-const { isAdmin } = useAuth();
-const toast = useToast();
+const { fetchCouncil, fetchFeasibility, fetchCommittee } = useCouncil();
+const { isAdmin, user } = useAuth();
 
-// ── 협의회 상세 + 타당성검토표 조회 ─────────────────────────────────
+// ── 협의회 상세 + 타당성검토표 + 위원 목록 조회 ──────────────────────
 const {
     data: councilDetail,
     pending: loadingCouncil,
@@ -46,24 +44,63 @@ const {
     pending: loadingFeasibility,
 } = fetchFeasibility(asctId);
 
+const {
+    data: committeeData,
+    pending: loadingCommittee,
+} = fetchCommittee(asctId);
+
 // ── 권한/상태 computed ───────────────────────────────────────────────
 const councilStatus = computed<CouncilStatus | null>(
     () => (councilDetail.value?.asctSts as CouncilStatus) ?? null
 );
 
-/** IT관리자 여부 */
+/** IT관리자 권한 여부 */
 const isAdminUser = computed(() => isAdmin());
+
+/**
+ * 현재 사용자가 이 협의회의 평가위원으로 등록되어 있는지 여부
+ * IT관리자라도 위원으로 등록되어 있으면 true — 일정 입력/평가 화면을 표출합니다.
+ */
+const isCommitteeMember = computed(() => {
+    if (!user.value?.eno || !committeeData.value) return false;
+    const all = [
+        ...(committeeData.value.mandatory ?? []),
+        ...(committeeData.value.call ?? []),
+        ...(committeeData.value.secretary ?? []),
+    ];
+    return all.some(m => m.eno === user.value!.eno);
+});
+
+/**
+ * IT관리자 전용 현황 화면 표출 여부
+ * 관리자이면서 평가위원이 아닌 경우에만 현황 화면을 표출합니다.
+ */
+const isAdminOnly = computed(() => isAdminUser.value && !isCommitteeMember.value);
+
+/**
+ * 추진부서 담당자 여부
+ * 관리자도 아니고 평가위원도 아닌 일반 사용자 = 추진부서 담당자
+ */
+const isDeptUser = computed(() => !isAdminUser.value && !isCommitteeMember.value);
 
 // ── 평가위원 화면 노출 조건 ──────────────────────────────────────────
 
-/** 일정 입력 활성 여부 (SCHEDULED 상태에서 평가위원) */
+/**
+ * 일정 입력 섹션 표출 여부
+ * PREPARING: 입력/수정 가능
+ * SCHEDULED: 제출한 일정 읽기 전용으로 표출 (일정 확정 후 잠금)
+ */
 const canInputSchedule = computed(() =>
-    !isAdminUser.value && councilStatus.value === 'SCHEDULED'
+    isCommitteeMember.value &&
+    (councilStatus.value === 'PREPARING' || councilStatus.value === 'SCHEDULED')
 );
+
+/** 일정 입력 읽기 전용 여부 — 일정 확정(SCHEDULED) 이후 수정 불가 */
+const scheduleInputReadonly = computed(() => councilStatus.value !== 'PREPARING');
 
 /** 평가의견 입력 활성 여부 */
 const canEvaluate = computed(() =>
-    !isAdminUser.value && (
+    isCommitteeMember.value && (
         councilStatus.value === 'IN_PROGRESS' ||
         councilStatus.value === 'EVALUATING'
     )
@@ -71,24 +108,42 @@ const canEvaluate = computed(() =>
 
 /** 결과서 확인 버튼 활성 여부 */
 const canReviewResult = computed(() =>
-    !isAdminUser.value && (
+    isCommitteeMember.value && (
         councilStatus.value === 'RESULT_WRITING' ||
         councilStatus.value === 'RESULT_REVIEW'
     )
 );
 
-// ── IT관리자 화면 노출 조건 ──────────────────────────────────────────
+// ── 사전질의응답 노출 조건 ──────────────────────────────────────────
 
-/** 평가의견 현황 조회 가능 */
+/**
+ * 평가위원의 사전질의 등록 가능 여부
+ * SCHEDULED 상태에서만 질의 등록 허용
+ */
+const canAskQna = computed(() =>
+    isCommitteeMember.value && councilStatus.value === 'SCHEDULED'
+);
+
+/**
+ * 추진부서 담당자의 답변 가능 여부
+ * SCHEDULED 상태에서만 답변 허용
+ */
+const canReplyQna = computed(() =>
+    isDeptUser.value && councilStatus.value === 'SCHEDULED'
+);
+
+// ── IT관리자 전용 화면 노출 조건 ────────────────────────────────────
+
+/** 평가의견 현황 조회 가능 (관리자 전용) */
 const canViewEvalSummary = computed(() =>
-    isAdminUser.value && councilStatus.value !== null &&
+    isAdminOnly.value && councilStatus.value !== null &&
     ['EVALUATING', 'RESULT_WRITING', 'RESULT_REVIEW', 'FINAL_APPROVAL', 'COMPLETED']
         .includes(councilStatus.value)
 );
 
 /** 결과서 편집 가능 */
 const resultReadonly = computed(() =>
-    !isAdminUser.value ||
+    !isAdminOnly.value ||
     !['RESULT_WRITING', 'RESULT_REVIEW'].includes(councilStatus.value ?? '')
 );
 
@@ -113,8 +168,9 @@ const onResultConfirmed = async () => {
 // ── 상태별 안내 ────────────────────────────────────────────────────
 const statusGuide = computed(() => {
     if (!councilStatus.value) return '';
-    if (isAdminUser.value) {
+    if (isAdminOnly.value) {
         const map: Partial<Record<CouncilStatus, string>> = {
+            PREPARING: '평가위원들이 가능 일정을 입력 중입니다.',
             EVALUATING: '평가위원들이 평가의견을 작성 중입니다.',
             RESULT_WRITING: '평가의견 취합이 완료되었습니다. 결과서를 작성해 주세요.',
             RESULT_REVIEW: '결과서 작성이 완료되었습니다. 평가위원 전원 확인을 기다립니다.',
@@ -122,9 +178,16 @@ const statusGuide = computed(() => {
             COMPLETED: '협의회가 완료되었습니다.',
         };
         return map[councilStatus.value] ?? '';
+    } else if (isDeptUser.value) {
+        const map: Partial<Record<CouncilStatus, string>> = {
+            SCHEDULED: '평가위원의 사전 질의에 답변해 주세요.',
+            COMPLETED: '협의회가 완료되었습니다.',
+        };
+        return map[councilStatus.value] ?? '';
     } else {
         const map: Partial<Record<CouncilStatus, string>> = {
-            SCHEDULED: '협의회 일정이 확정되었습니다. 가능 일정을 입력해 주세요.',
+            PREPARING: '가능한 일정을 입력해 주세요.',
+            SCHEDULED: '협의회 일정이 확정되었습니다. 사전 질의를 등록할 수 있습니다.',
             IN_PROGRESS: '협의회가 진행 중입니다.',
             EVALUATING: '평가의견을 작성해 주세요.',
             RESULT_WRITING: '결과서가 작성 중입니다.',
@@ -135,7 +198,7 @@ const statusGuide = computed(() => {
     }
 });
 
-const loading = computed(() => loadingCouncil.value || loadingFeasibility.value);
+const loading = computed(() => loadingCouncil.value || loadingFeasibility.value || loadingCommittee.value);
 </script>
 
 <template>
@@ -177,9 +240,9 @@ to="/info/council-request"
         <template v-else>
 
             <!-- ══════════════════════════════════════════════════════
-                 평가위원 화면
+                 평가위원 화면 (이 협의회의 위원으로 등록된 사용자)
             ══════════════════════════════════════════════════════ -->
-            <template v-if="!isAdminUser">
+            <template v-if="isCommitteeMember">
 
                 <!-- 1. 일정 입력 (SCHEDULED) -->
                 <div
@@ -192,7 +255,7 @@ class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">가능 일정 입력</h2>
                     </div>
                     <div class="p-5">
-                        <ScheduleInput :asct-id="asctId" @submitted="onScheduleSubmitted" />
+                        <CouncilScheduleInput :asct-id="asctId" :readonly="scheduleInputReadonly" @submitted="onScheduleSubmitted" />
                     </div>
                 </div>
 
@@ -207,7 +270,7 @@ class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">평가의견 작성</h2>
                     </div>
                     <div class="p-5">
-                        <EvaluationForm :asct-id="asctId" @submitted="onEvaluationSubmitted" />
+                        <CouncilEvaluationForm :asct-id="asctId" @submitted="onEvaluationSubmitted" />
                     </div>
                 </div>
 
@@ -223,14 +286,29 @@ class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                     </div>
                     <div class="p-5 space-y-4">
                         <!-- 결과서 내용 (읽기 전용) -->
-                        <ResultForm
+                        <CouncilResultForm
                             :asct-id="asctId"
-                            :council-detail="councilDetail"
-                            :feasibility="feasibilityData"
+                            :council-detail="councilDetail ?? null"
+                            :feasibility="feasibilityData ?? null"
                             :readonly="true"
                         />
                         <!-- 확인 버튼 -->
-                        <ResultReview :asct-id="asctId" @confirmed="onResultConfirmed" />
+                        <CouncilResultReview :asct-id="asctId" @confirmed="onResultConfirmed" />
+                    </div>
+                </div>
+
+                <!-- 사전질의 등록 (SCHEDULED 상태) -->
+                <div
+                    v-if="canAskQna"
+                    class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
+                >
+                    <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
+                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                                     dark:text-indigo-400 text-xs font-bold flex items-center justify-center">2</span>
+                        <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">사전질의</h2>
+                    </div>
+                    <div class="p-5">
+                        <CouncilQna :asct-id="asctId" :can-ask="true" :can-reply="false" />
                     </div>
                 </div>
 
@@ -244,17 +322,62 @@ v-if="councilStatus === 'COMPLETED'"
 
                 <!-- 상태 대기 안내 -->
                 <div
-v-if="!canInputSchedule && !canEvaluate && !canReviewResult && councilStatus !== 'COMPLETED'"
-                    class="text-center py-10 text-zinc-400 text-sm">
+                    v-if="!canInputSchedule && !canEvaluate && !canReviewResult && !canAskQna && councilStatus !== 'COMPLETED'"
+                    class="text-center py-10 text-zinc-400 text-sm"
+                >
                     현재 상태에서는 추가 작업이 없습니다.
                 </div>
 
             </template>
 
             <!-- ══════════════════════════════════════════════════════
-                 IT관리자 화면
+                 추진부서 담당자 화면 (관리자/위원 아닌 일반 사용자)
             ══════════════════════════════════════════════════════ -->
-            <template v-else>
+            <template v-if="isDeptUser">
+
+                <!-- 사전질의 답변 (SCHEDULED 상태) -->
+                <div
+                    v-if="canReplyQna"
+                    class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
+                >
+                    <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
+                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                                     dark:text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
+                        <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">사전질의 답변</h2>
+                    </div>
+                    <div class="p-5">
+                        <CouncilQna :asct-id="asctId" :can-ask="false" :can-reply="true" />
+                    </div>
+                </div>
+
+                <!-- 상태 대기 안내 -->
+                <div
+                    v-if="!canReplyQna"
+                    class="text-center py-10 text-zinc-400 text-sm"
+                >
+                    현재 상태에서는 추가 작업이 없습니다.
+                </div>
+
+            </template>
+
+            <!-- ══════════════════════════════════════════════════════
+                 IT관리자 전용 화면 (위원이 아닌 관리자)
+            ══════════════════════════════════════════════════════ -->
+            <template v-if="isAdminOnly">
+
+                <!-- 일정 응답 현황 (PREPARING 상태) -->
+                <div
+                    v-if="councilStatus === 'PREPARING'"
+                    class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                    <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
+                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                                     dark:text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
+                        <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">일정 응답 현황</h2>
+                    </div>
+                    <div class="p-5">
+                        <CouncilScheduleStatus :asct-id="asctId" :readonly="true" :show-confirm="false" />
+                    </div>
+                </div>
 
                 <!-- 평가의견 현황 (탭 형태) -->
                 <div
@@ -268,7 +391,7 @@ class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                     </div>
                     <div class="p-5">
                         <!-- 평가의견 현황 인라인 표출 -->
-                        <EvalSummaryPanel :asct-id="asctId" />
+                        <CouncilEvaluationEvalSummaryPanel :asct-id="asctId" />
                     </div>
                 </div>
 
@@ -282,10 +405,10 @@ class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                         <span v-if="resultReadonly" class="text-xs text-zinc-400">(읽기 전용)</span>
                     </div>
                     <div class="p-5">
-                        <ResultForm
+                        <CouncilResultForm
                             :asct-id="asctId"
-                            :council-detail="councilDetail"
-                            :feasibility="feasibilityData"
+                            :council-detail="councilDetail ?? null"
+                            :feasibility="feasibilityData ?? null"
                             :readonly="resultReadonly"
                             @saved="onResultSaved"
                         />

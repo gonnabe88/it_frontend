@@ -62,7 +62,9 @@ export const useFiles = () => {
      */
     const fetchFiles = (orcDtt: string, orcPkVl: string) => {
         return useApiFetch<FileRecord[]>(API_BASE, {
-            query: { orcDtt, orcPkVl }
+            query: { orcDtt, orcPkVl },
+            // 파일 없음(404)은 정상 상태이므로 toast 억제
+            suppressNotFound: true,
         });
     };
 

@@ -22,16 +22,14 @@ IT관리자(ITPAD001)가 협의회 개최준비 단계에서 사용하는 페이
 ================================================================================
 -->
 <script setup lang="ts">
-import type { CouncilDetail, CouncilStatus, FeasibilityData } from '~/types/council';
+import type { CouncilStatus } from '~/types/council';
 import { useToast } from 'primevue/usetoast';
-import { useAuth } from '~/composables/useAuth';
 
 // ── 라우트 파라미터 ──────────────────────────────────────────────────
 const route = useRoute();
 const asctId = route.params.id as string;
 
-const { fetchCouncil, fetchFeasibility, skipCouncil } = useCouncil();
-const { user } = useAuth();
+const { fetchCouncil, fetchFeasibility, skipCouncil, startCouncil, confirmResult } = useCouncil();
 const toast = useToast();
 
 definePageMeta({
@@ -42,14 +40,12 @@ definePageMeta({
 // ── 협의회 상세 조회 ─────────────────────────────────────────────────
 const {
     data: councilDetail,
-    pending: loadingCouncil,
     refresh: refreshCouncil,
 } = fetchCouncil(asctId);
 
 // ── 타당성검토표 조회 (일정공지 탭 표출용) ───────────────────────────
 const {
     data: feasibilityData,
-    pending: loadingFeasibility,
 } = fetchFeasibility(asctId);
 
 /** 협의회 현재 상태 */
@@ -83,12 +79,96 @@ const noticeTabEnabled = computed(() => {
 });
 
 /**
- * 추진부서 담당자 여부 (사전질의응답 답변 권한)
- * 실제 권한 체계에서는 소관부서 담당자(ITPZZ001)가 답변합니다.
- * IT관리자 화면이지만 QnA 답변은 ITPZZ001이 수행하므로
- * 여기서는 관리자(ITPAD001)도 답변 가능하도록 허용합니다.
+ * 결과서 탭 활성화 여부
+ * 평가의견 작성이 시작된 EVALUATING 이후에만 표출합니다.
  */
-const canReplyQna = computed(() => true);
+const resultTabEnabled = computed(() => {
+    const status = councilStatus.value;
+    return status === 'EVALUATING' || status === 'RESULT_WRITING'
+        || status === 'RESULT_REVIEW' || status === 'FINAL_APPROVAL'
+        || status === 'COMPLETED';
+});
+
+/**
+ * 결과서 편집 가능 여부
+ * RESULT_WRITING 상태까지만 편집 허용합니다.
+ */
+const resultReadonly = computed(() =>
+    !['EVALUATING', 'RESULT_WRITING'].includes(councilStatus.value ?? '')
+);
+
+/**
+ * IT관리자 사전질의 등록 가능 여부
+ * SCHEDULED 이후 상태에서만 질의 등록이 허용됩니다.
+ * 답변(canReply)은 추진부서 담당자 전용이므로 이 페이지에서는 false 고정입니다.
+ */
+const canAskQna = computed(() =>
+    ['SCHEDULED', 'IN_PROGRESS'].includes(councilStatus.value ?? '')
+);
+
+// ── 결과서 확정 처리 ─────────────────────────────────────────────────
+
+/** 결과서 확정 진행 중 여부 */
+const confirmPending = ref(false);
+
+/**
+ * 결과서 확정 (RESULT_WRITING → RESULT_REVIEW)
+ * 결과서 작성 완료 후 평가위원 검토 단계로 전이합니다.
+ */
+const handleConfirmResult = async () => {
+    confirmPending.value = true;
+    try {
+        await confirmResult(asctId);
+        toast.add({
+            severity: 'success',
+            summary: '결과서 확정',
+            detail: '결과서가 확정되었습니다. 평가위원 검토 단계로 전환됩니다.',
+            life: 4000,
+        });
+        await refreshCouncil();
+    } catch {
+        toast.add({
+            severity: 'error',
+            summary: '처리 실패',
+            detail: '결과서 확정 중 오류가 발생했습니다.',
+            life: 4000,
+        });
+    } finally {
+        confirmPending.value = false;
+    }
+};
+
+// ── 협의회 개최 시작 처리 ────────────────────────────────────────────
+
+/** 협의회 개최 시작 진행 중 여부 */
+const startPending = ref(false);
+
+/**
+ * 협의회 개최 시작 (SCHEDULED → IN_PROGRESS)
+ * IT관리자가 오프라인 협의회가 시작되었음을 확인하는 처리입니다.
+ */
+const handleStart = async () => {
+    startPending.value = true;
+    try {
+        await startCouncil(asctId);
+        toast.add({
+            severity: 'success',
+            summary: '협의회 개최',
+            detail: '협의회가 개최 중으로 변경되었습니다.',
+            life: 4000,
+        });
+        await refreshCouncil();
+    } catch {
+        toast.add({
+            severity: 'error',
+            summary: '처리 실패',
+            detail: '협의회 개최 처리 중 오류가 발생했습니다.',
+            life: 4000,
+        });
+    } finally {
+        startPending.value = false;
+    }
+};
 
 // ── 협의회 생략 처리 ─────────────────────────────────────────────────
 
@@ -154,7 +234,7 @@ const statusGuide = computed(() => {
         case 'PREPARING':
             return '평가위원을 선정하고 확정하면 위원들에게 일정 입력 요청이 발송됩니다.';
         case 'SCHEDULED':
-            return '일정이 확정되었습니다. 평가위원들의 사전 질의에 답변해 주세요.';
+            return '일정이 확정되었습니다. 협의회 개최 후 \'협의회 개최\' 버튼을 눌러 주세요.';
         case 'IN_PROGRESS':
             return '협의회가 진행 중입니다.';
         default:
@@ -162,8 +242,6 @@ const statusGuide = computed(() => {
     }
 });
 
-// ── 전체 로딩 ────────────────────────────────────────────────────────
-const loading = computed(() => loadingCouncil.value || loadingFeasibility.value);
 </script>
 
 <template>
@@ -213,110 +291,182 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value)
             />
         </div>
 
-        <!-- 탭 구조: ClientOnly로 SSR hydration 불일치 방지 -->
+        <!--
+            SCHEDULED 상태: 협의회 개최 버튼
+            오프라인 협의회가 시작되면 IT관리자가 개최 처리하여 IN_PROGRESS로 전이합니다.
+        -->
+        <div v-if="councilStatus === 'SCHEDULED'" class="flex justify-end">
+            <Button
+                label="협의회 개최"
+                icon="pi pi-play"
+                severity="success"
+                :loading="startPending"
+                @click="handleStart"
+            />
+        </div>
+
+        <!--
+            탭 구조: ClientOnly로 SSR hydration 불일치 방지
+            ※ loading 상태로 탭 전체를 v-if/v-else 처리하면 CommitteeSelector가
+              unmount → remount 반복되어 내부 상태가 초기화됩니다.
+              fallback 슬롯으로 SSR 플레이스홀더를 제공하고,
+              탭은 항상 DOM에 유지합니다.
+        -->
         <ClientOnly>
-            <!-- 로딩 스켈레톤 -->
-            <template v-if="loading">
-                <div class="space-y-4">
+            <!-- SSR / 하이드레이션 전 플레이스홀더 -->
+            <template #fallback>
+                <div class="space-y-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-5">
                     <Skeleton height="3rem" class="w-full" />
                     <Skeleton height="12rem" class="w-full" />
                 </div>
             </template>
 
-        <div v-else class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
-            <Tabs v-model:value="activeTabIndex">
-                <TabList class="border-b border-zinc-100 dark:border-zinc-800 px-4 pt-2">
-                    <!-- 탭1: 평가위원 선정 -->
-                    <Tab value="0">
-                        <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
-                            <i class="pi pi-users text-xs"/>
-                            평가위원 선정
-                        </div>
-                    </Tab>
-
-                    <!-- 탭2: 일정 취합 -->
-                    <Tab value="1">
-                        <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
-                            <i class="pi pi-calendar text-xs"/>
-                            일정 취합
-                        </div>
-                    </Tab>
-
-                    <!-- 탭3: 일정공지 (SCHEDULED 이후 활성) -->
-                    <Tab value="2" :disabled="!noticeTabEnabled">
-                        <div
-                            class="flex items-center gap-1.5 py-1 px-1 text-sm"
-                            :class="!noticeTabEnabled ? 'opacity-40' : ''"
-                        >
-                            <i class="pi pi-bell text-xs"/>
-                            일정공지
-                        </div>
-                    </Tab>
-
-                    <!-- 탭4: 사전질의응답 -->
-                    <Tab value="3">
-                        <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
-                            <i class="pi pi-comments text-xs"/>
-                            사전질의응답
-                        </div>
-                    </Tab>
-                </TabList>
-
-                <TabPanels>
-
-                    <!-- ── 탭1: 평가위원 선정 ── -->
-                    <TabPanel value="0">
-                        <div class="p-5">
-                            <CommitteeSelector
-                                :asct-id="asctId"
-                                :dbr-tp="dbrTp"
-                                :readonly="committeeReadonly"
-                                @saved="onCommitteeSaved"
-                            />
-                        </div>
-                    </TabPanel>
-
-                    <!-- ── 탭2: 일정 취합 ── -->
-                    <TabPanel value="1">
-                        <div class="p-5">
-                            <ScheduleStatus
-                                :asct-id="asctId"
-                                :readonly="committeeReadonly === false ? false : councilStatus === 'SCHEDULED'"
-                                @confirmed="onScheduleConfirmed"
-                            />
-                        </div>
-                    </TabPanel>
-
-                    <!-- ── 탭3: 일정공지 ── -->
-                    <TabPanel value="2">
-                        <div class="p-5">
-                            <CouncilNotice
-                                v-if="noticeTabEnabled"
-                                :asct-id="asctId"
-                                :council-detail="councilDetail ?? null"
-                                :feasibility="feasibilityData ?? null"
-                            />
-                            <div v-else class="text-sm text-zinc-400 py-8 text-center">
-                                일정 확정 후 표출됩니다.
+                <Tabs v-model:value="activeTabIndex">
+                    <TabList class="border-b border-zinc-100 dark:border-zinc-800 px-4 pt-2">
+                        <!-- 탭1: 평가위원 선정 -->
+                        <Tab value="0">
+                            <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
+                                <i class="pi pi-users text-xs"/>
+                                평가위원 선정
                             </div>
-                        </div>
-                    </TabPanel>
+                        </Tab>
 
-                    <!-- ── 탭4: 사전질의응답 ── -->
-                    <TabPanel value="3">
-                        <div class="p-5">
-                            <CouncilQna
-                                :asct-id="asctId"
-                                :can-reply="canReplyQna"
-                            />
-                        </div>
-                    </TabPanel>
+                        <!-- 탭2: 일정 취합 -->
+                        <Tab value="1">
+                            <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
+                                <i class="pi pi-calendar text-xs"/>
+                                일정 취합
+                            </div>
+                        </Tab>
 
-                </TabPanels>
-            </Tabs>
+                        <!-- 탭3: 일정공지 (SCHEDULED 이후 활성) -->
+                        <Tab value="2" :disabled="!noticeTabEnabled">
+                            <div
+                                class="flex items-center gap-1.5 py-1 px-1 text-sm"
+                                :class="!noticeTabEnabled ? 'opacity-40' : ''"
+                            >
+                                <i class="pi pi-bell text-xs"/>
+                                일정공지
+                            </div>
+                        </Tab>
 
-        </div>
+                        <!-- 탭4: 사전질의응답 -->
+                        <Tab value="3">
+                            <div class="flex items-center gap-1.5 py-1 px-1 text-sm">
+                                <i class="pi pi-comments text-xs"/>
+                                사전질의응답
+                            </div>
+                        </Tab>
+
+                        <!-- 탭5: 결과서 (EVALUATING 이후 활성) -->
+                        <Tab value="4" :disabled="!resultTabEnabled">
+                            <div
+                                class="flex items-center gap-1.5 py-1 px-1 text-sm"
+                                :class="!resultTabEnabled ? 'opacity-40' : ''"
+                            >
+                                <i class="pi pi-file-edit text-xs"/>
+                                결과서
+                            </div>
+                        </Tab>
+                    </TabList>
+
+                    <TabPanels>
+
+                        <!-- ── 탭1: 평가위원 선정 ── -->
+                        <TabPanel value="0">
+                            <div class="p-5">
+                                <CouncilCommitteeSelector
+                                    :asct-id="asctId"
+                                    :dbr-tp="dbrTp"
+                                    :readonly="committeeReadonly"
+                                    @saved="onCommitteeSaved"
+                                />
+                            </div>
+                        </TabPanel>
+
+                        <!-- ── 탭2: 일정 취합 ── -->
+                        <TabPanel value="1">
+                            <div class="p-5">
+                                <CouncilScheduleStatus
+                                    :asct-id="asctId"
+                                    :readonly="committeeReadonly === false ? false : councilStatus === 'SCHEDULED'"
+                                    @confirmed="onScheduleConfirmed"
+                                />
+                            </div>
+                        </TabPanel>
+
+                        <!-- ── 탭3: 일정공지 ── -->
+                        <TabPanel value="2">
+                            <div class="p-5">
+                                <CouncilNotice
+                                    v-if="noticeTabEnabled"
+                                    :asct-id="asctId"
+                                    :council-detail="councilDetail ?? null"
+                                    :feasibility="feasibilityData ?? null"
+                                />
+                                <div v-else class="text-sm text-zinc-400 py-8 text-center">
+                                    일정 확정 후 표출됩니다.
+                                </div>
+                            </div>
+                        </TabPanel>
+
+                        <!-- ── 탭4: 사전질의응답 ── -->
+                        <TabPanel value="3">
+                            <div class="p-5">
+                                <CouncilQna
+                                    :asct-id="asctId"
+                                    :can-ask="canAskQna"
+                                    :can-reply="false"
+                                />
+                            </div>
+                        </TabPanel>
+
+                        <!-- ── 탭5: 결과서 ── -->
+                        <TabPanel value="4">
+                            <div class="p-5">
+                                <template v-if="resultTabEnabled">
+                                    <!-- 평가의견 현황 (참고용) -->
+                                    <div class="mb-6">
+                                        <h3 class="text-sm font-semibold text-zinc-600 dark:text-zinc-400 mb-3">
+                                            평가의견 현황 (참고)
+                                        </h3>
+                                        <CouncilEvaluationEvalSummaryPanel :asct-id="asctId" />
+                                    </div>
+                                    <Divider />
+                                    <!-- 결과서 작성 -->
+                                    <CouncilResultForm
+                                        :asct-id="asctId"
+                                        :council-detail="councilDetail ?? null"
+                                        :feasibility="feasibilityData ?? null"
+                                        :readonly="resultReadonly"
+                                        @saved="refreshCouncil"
+                                    />
+                                    <!-- 결과서 확정 버튼 (RESULT_WRITING 상태에서만) -->
+                                    <div
+                                        v-if="councilStatus === 'RESULT_WRITING'"
+                                        class="flex justify-end mt-4"
+                                    >
+                                        <Button
+                                            label="결과서 확정"
+                                            icon="pi pi-check-circle"
+                                            severity="success"
+                                            :loading="confirmPending"
+                                            @click="handleConfirmResult"
+                                        />
+                                    </div>
+                                </template>
+                                <div v-else class="text-sm text-zinc-400 py-8 text-center">
+                                    평가의견 작성 시작 후 표출됩니다.
+                                </div>
+                            </div>
+                        </TabPanel>
+
+                    </TabPanels>
+                </Tabs>
+
+            </div>
         </ClientOnly>
 
         <!-- 타당성검토표 확인 (접힌 상태로 표출) -->

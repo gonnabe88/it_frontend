@@ -22,10 +22,13 @@ import { useToast } from 'primevue/usetoast';
 interface Props {
     asctId: string;
     readonly?: boolean;
+    /** false 시 일정 확정 버튼/완료 태그를 표시하지 않습니다. (현황 조회 전용) */
+    showConfirm?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     readonly: false,
+    showConfirm: true,
 });
 
 const emit = defineEmits<{
@@ -49,6 +52,32 @@ const {
  */
 const allResponded = computed(() => statusData.value?.allRequiredResponded ?? false);
 
+// ── 공통 슬롯 선택 ──────────────────────────────────────────────────
+
+/** 공통 가능 일정 중 선택된 슬롯 (단일 선택) */
+const selectedCommonSlot = ref<{ dsdDt: string; dsdTm: string } | null>(null);
+
+/**
+ * 공통 슬롯 뱃지 클릭 시 선택/해제 토글
+ * 이미 선택된 슬롯을 다시 클릭하면 해제합니다.
+ */
+const toggleCommonSlot = (dsdDt: string, dsdTm: string) => {
+    if (selectedCommonSlot.value?.dsdDt === dsdDt && selectedCommonSlot.value?.dsdTm === dsdTm) {
+        selectedCommonSlot.value = null;
+    } else {
+        selectedCommonSlot.value = { dsdDt, dsdTm };
+    }
+};
+
+/** 일정 확정 버튼 비활성화 여부
+ * 공통 슬롯이 있으면 반드시 하나를 선택해야 활성화됩니다.
+ * 공통 슬롯이 없으면 기존 allResponded 기준을 따릅니다.
+ */
+const confirmButtonDisabled = computed(() => {
+    if (commonSlotKeys.value.size > 0) return selectedCommonSlot.value === null;
+    return !allResponded.value;
+});
+
 // ── 일정 확정 다이얼로그 ─────────────────────────────────────────────
 const confirmDialogVisible = ref(false);
 const confirmForm = reactive({
@@ -60,11 +89,18 @@ const confirming = ref(false);
 
 /**
  * 일정 확정 다이얼로그를 엽니다.
- * 전원 응답 완료 상태에서만 호출됩니다.
+ * 선택된 공통 슬롯이 있으면 날짜·시간을 자동으로 채웁니다.
  */
 const openConfirmDialog = () => {
-    confirmForm.cnrcDt = null;
-    confirmForm.cnrcTm = '';
+    if (selectedCommonSlot.value) {
+        /* yyyy-MM-dd → Date 변환 */
+        const [y, m, d] = selectedCommonSlot.value.dsdDt.split('-').map(Number);
+        confirmForm.cnrcDt = new Date(y, m - 1, d);
+        confirmForm.cnrcTm = selectedCommonSlot.value.dsdTm;
+    } else {
+        confirmForm.cnrcDt = null;
+        confirmForm.cnrcTm = '';
+    }
     confirmForm.cnrcPlc = '';
     confirmDialogVisible.value = true;
 };
@@ -106,6 +142,37 @@ const typeLabel = (type: string): string => {
 const availableSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: string }>) => {
     return slots.filter((s) => s.psbYn === 'Y');
 };
+
+/**
+ * 응답 완료한 위원 전원이 공통으로 선택한 날짜·시간대 키 Set
+ * Key 형식: "yyyy-MM-dd|HH:mm"
+ * 응답자가 0명이면 빈 Set을 반환합니다.
+ */
+const commonSlotKeys = computed<Set<string>>(() => {
+    const members = statusData.value?.memberStatuses ?? [];
+    const respondedMembers = members.filter(m => m.responded);
+    if (respondedMembers.length === 0) return new Set();
+
+    // 각 슬롯의 선택 횟수를 집계
+    const countMap = new Map<string, number>();
+    for (const member of respondedMembers) {
+        for (const slot of member.slots) {
+            if (slot.psbYn !== 'Y') continue;
+            const key = `${slot.dsdDt}|${slot.dsdTm}`;
+            countMap.set(key, (countMap.get(key) ?? 0) + 1);
+        }
+    }
+
+    // 전원이 선택한 슬롯만 추출
+    const total = respondedMembers.length;
+    return new Set([...countMap.entries()]
+        .filter(([, count]) => count === total)
+        .map(([key]) => key));
+});
+
+/** 해당 슬롯이 공통 선택 슬롯인지 여부 */
+const isCommonSlot = (dsdDt: string, dsdTm: string) =>
+    commonSlotKeys.value.has(`${dsdDt}|${dsdTm}`);
 </script>
 
 <template>
@@ -133,17 +200,42 @@ const availableSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: stri
                 <div class="text-xs text-zinc-400 mt-1">미응답</div>
             </div>
 
-            <!-- 일정 확정 버튼 (전원 응답 완료 시 활성화) -->
-            <div class="ml-auto">
+            <!-- 일정 확정 버튼 / 완료 태그 (showConfirm=false 시 미표출) -->
+            <div v-if="showConfirm" class="ml-auto">
                 <Button
                     v-if="!readonly"
                     label="일정 확정"
                     icon="pi pi-calendar-plus"
-                    :disabled="!allResponded"
+                    :disabled="confirmButtonDisabled"
                     severity="primary"
                     @click="openConfirmDialog"
                 />
                 <Tag v-else value="일정 확정 완료" severity="success" />
+            </div>
+        </div>
+
+        <!-- 공통 가능 일정 요약 (1개 이상일 때만 표출) -->
+        <div
+            v-if="commonSlotKeys.size > 0"
+            class="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800 space-y-2"
+        >
+            <div class="flex items-center gap-1.5">
+                <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">공통 가능 일정</span>
+                <span class="text-xs text-violet-500 dark:text-violet-400">— 하나를 선택 후 일정 확정 버튼을 클릭하세요</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+                <button
+                    v-for="key in commonSlotKeys"
+                    :key="key"
+                    type="button"
+                    class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border transition-all"
+                    :class="selectedCommonSlot && `${selectedCommonSlot.dsdDt}|${selectedCommonSlot.dsdTm}` === key
+                        ? 'bg-violet-600 text-white border-violet-600 dark:bg-violet-500 dark:border-violet-500 ring-2 ring-violet-300 dark:ring-violet-700'
+                        : 'bg-violet-100 text-violet-800 border-violet-300 hover:bg-violet-200 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700 dark:hover:bg-violet-800/50'"
+                    @click="toggleCommonSlot(...(key.split('|') as [string, string]))"
+                >
+                    {{ key.replace('|', ' ') }}
+                </button>
             </div>
         </div>
 
@@ -217,9 +309,10 @@ const availableSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: stri
                                     <span
                                         v-for="slot in availableSlots(member.slots)"
                                         :key="`${slot.dsdDt}-${slot.dsdTm}`"
-                                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs
-                                               bg-emerald-50 text-emerald-700 border border-emerald-200
-                                               dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800"
+                                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                                        :class="isCommonSlot(slot.dsdDt, slot.dsdTm)
+                                            ? 'bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700'
+                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'"
                                     >
                                         {{ slot.dsdDt.slice(5) }} {{ slot.dsdTm }}
                                     </span>
@@ -247,8 +340,20 @@ const availableSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: stri
             class="w-full max-w-md"
         >
             <div class="space-y-4 py-2">
-                <!-- 회의일자 -->
-                <div class="flex flex-col gap-1">
+                <!-- 공통 슬롯 선택 시 안내 -->
+                <div
+                    v-if="selectedCommonSlot"
+                    class="flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-700 text-sm"
+                >
+                    <i class="pi pi-calendar text-violet-500 text-xs" />
+                    <span class="text-violet-700 dark:text-violet-300 font-medium">
+                        {{ selectedCommonSlot.dsdDt }} {{ selectedCommonSlot.dsdTm }}
+                    </span>
+                    <span class="text-violet-500 dark:text-violet-400 text-xs">(공통 선택 일정)</span>
+                </div>
+
+                <!-- 회의일자 (공통 슬롯 미선택 시에만 직접 입력) -->
+                <div v-if="!selectedCommonSlot" class="flex flex-col gap-1">
                     <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                         회의일자 <span class="text-red-500">*</span>
                     </label>
@@ -261,8 +366,8 @@ const availableSlots = (slots: Array<{ dsdDt: string; dsdTm: string; psbYn: stri
                     />
                 </div>
 
-                <!-- 회의시간 -->
-                <div class="flex flex-col gap-1">
+                <!-- 회의시간 (공통 슬롯 미선택 시에만 직접 입력) -->
+                <div v-if="!selectedCommonSlot" class="flex flex-col gap-1">
                     <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                         회의시간 <span class="text-red-500">*</span>
                     </label>

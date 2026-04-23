@@ -28,9 +28,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useCouncil } from '~/composables/useCouncil';
+import { useAuth } from '~/composables/useAuth';
 
 const title = '정보화실무협의회';
 definePageMeta({ title });
+
+/* ── 인증 ── */
+const { isAdmin } = useAuth();
 
 /* ── 데이터 로드 ── */
 const { fetchCouncilList, createCouncil } = useCouncil();
@@ -118,9 +122,11 @@ const navigateToCouncil = (item: typeof filteredCouncils.value[0]) => {
 
     if (step1Statuses.includes(item.asctSts)) {
         navigateTo(`/info/council-request/${item.asctId}`);
-    } else if (step2Statuses.includes(item.asctSts)) {
+    } else if (step2Statuses.includes(item.asctSts) && isAdmin()) {
+        // Step 2(개최준비)는 IT관리자만 접근 가능
         navigateTo(`/info/council-request/prepare/${item.asctId}`);
     } else {
+        // 평가위원은 SCHEDULED 상태에서 result 페이지의 일정 입력 화면으로 이동
         navigateTo(`/info/council-request/result/${item.asctId}`);
     }
 };

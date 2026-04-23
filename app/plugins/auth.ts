@@ -67,16 +67,22 @@ export default defineNuxtPlugin(() => {
 
         /**
          * 응답 에러 인터셉터: HTTP 에러 응답 시 실행
-         * 401 Unauthorized 발생 시 토큰 갱신을 시도합니다.
+         * 401 Unauthorized 발생 시 토큰 갱신을 시도하고, 성공하면 원래 요청을 재시도합니다.
          *
          * [처리 흐름]
          *  1. 로그아웃 API(/auth/logout) 자체의 401은 무시 (이미 로그아웃 중)
          *  2. isRefreshing 플래그 확인 → 이미 갱신 중이면 스킵
          *  3. refresh() 호출 → 서버가 새 쿠키 세팅
-         *  4. 갱신 실패 시 logout() → /login 리다이렉트
-         *  5. finally에서 isRefreshing 플래그 해제
+         *  4. 갱신 성공 시: 원래 요청을 새 쿠키로 자동 재시도 → 호출자에게 정상 응답 반환
+         *  5. 갱신 실패 시 logout() → /login 리다이렉트
+         *  6. finally에서 isRefreshing 플래그 해제
+         *
+         * [이전 동작과의 차이]
+         *  이전: 갱신 성공 후 별도 처리 없이 종료 → 에러가 호출자(catch 블록)까지 전파
+         *  변경: 갱신 성공 후 원래 요청 재시도 → 호출자는 정상 응답을 받음
          */
-        async onResponseError({ response, request }) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async onResponseError({ response, request, options }: any) {
             if (response.status === 401) {
                 const url = request.toString();
 
@@ -97,12 +103,14 @@ export default defineNuxtPlugin(() => {
                 try {
                     const refreshed = await refresh();
 
-                    if (!refreshed) {
+                    if (refreshed) {
+                        // 갱신 성공 → 원래 요청을 새 쿠키로 재시도하여 호출자에게 정상 응답 반환
+                        return apiFetch(request, options);
+                    } else {
                         // refreshToken도 만료되었거나 갱신 실패 → 강제 로그아웃
                         await logout();
                         navigateTo('/login');
                     }
-                    // 갱신 성공 시: 서버가 새 쿠키를 세팅하므로 별도 처리 불필요
                 } finally {
                     // 갱신 성공/실패 여부와 상관없이 플래그 반드시 해제
                     isRefreshing = false;

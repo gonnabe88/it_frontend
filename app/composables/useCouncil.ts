@@ -186,7 +186,10 @@ export const useCouncil = () => {
      * @param asctId 협의회ID
      */
     const fetchCommittee = (asctId: string) => {
-        return useApiFetch<CommitteeList>(`${BASE}/${asctId}/committee`);
+        return useApiFetch<CommitteeList>(`${BASE}/${asctId}/committee`, {
+            // 위원이 아직 등록되지 않은 경우 404 응답 → 빈 상태로 처리 (toast 억제)
+            suppressNotFound: true,
+        });
     };
 
     /**
@@ -200,7 +203,7 @@ export const useCouncil = () => {
      */
     const saveCommittee = async (
         asctId: string,
-        payload: CommitteeList
+        payload: { dbrTp: string; members: { eno: string; vlrTp: string }[] }
     ): Promise<void> => {
         await $apiFetch(`${BASE}/${asctId}/committee`, {
             method: 'PUT',
@@ -262,6 +265,39 @@ export const useCouncil = () => {
     };
 
     /**
+     * 사전 질의 등록 (평가위원 · IT관리자)
+     *
+     * 미답변(REP_YN='N') 상태로 등록됩니다.
+     * QTN_ID는 서버에서 자동 채번합니다.
+     *
+     * @param asctId  협의회ID
+     * @param qtnCone 질의 내용
+     * @returns 생성된 질의응답ID
+     */
+    const createQna = async (asctId: string, qtnCone: string): Promise<string> => {
+        return await $apiFetch<string>(`${BASE}/${asctId}/qna`, {
+            method: 'POST',
+            body: { qtnCone },
+        });
+    };
+
+    /**
+     * 사전 질의 수정 (질의 등록자 · IT관리자)
+     *
+     * PATCH /api/council/{asctId}/qna/{qtnId}
+     *
+     * @param asctId  협의회ID
+     * @param qtnId   질의응답ID
+     * @param qtnCone 수정할 질의 내용
+     */
+    const updateQna = async (asctId: string, qtnId: string, qtnCone: string): Promise<void> => {
+        await $apiFetch(`${BASE}/${asctId}/qna/${qtnId}`, {
+            method: 'PATCH',
+            body: { qtnCone },
+        });
+    };
+
+    /**
      * 사전질의 답변 등록 (추진부서 담당자)
      *
      * @param asctId  협의회ID
@@ -282,6 +318,21 @@ export const useCouncil = () => {
     // =========================================================================
     // 일정 입력 (Step 2 — 평가위원)
     // =========================================================================
+
+    /**
+     * 내 일정 조회 (평가위원 본인)
+     *
+     * 로그인한 평가위원이 이미 제출한 슬롯 목록을 반환합니다.
+     * 제출 이력이 없으면 빈 배열을 반환합니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const fetchMySchedule = (asctId: string) => {
+        return useApiFetch<import('~/types/council').ScheduleSlot[]>(
+            `${BASE}/${asctId}/schedule/my`,
+            { suppressNotFound: true }
+        );
+    };
 
     /**
      * 평가위원 일정 입력 제출
@@ -382,6 +433,24 @@ export const useCouncil = () => {
     };
 
     // =========================================================================
+    // 협의회 개최 시작 (IT관리자 전용)
+    // =========================================================================
+
+    /**
+     * 협의회 개최 시작 (SCHEDULED → IN_PROGRESS)
+     *
+     * IT관리자가 오프라인 협의회 개최를 확인하고 진행 상태로 전이합니다.
+     * SCHEDULED 상태에서만 호출 가능합니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const startCouncil = async (asctId: string): Promise<void> => {
+        await $apiFetch(`${BASE}/${asctId}/start`, {
+            method: 'PATCH',
+        });
+    };
+
+    // =========================================================================
     // 협의회 생략 (IT관리자 전용)
     // =========================================================================
 
@@ -409,9 +478,12 @@ export const useCouncil = () => {
         fetchDefaultCommittee,
         fetchCommittee,
         saveCommittee,
+        fetchMySchedule,
         fetchScheduleStatus,
         confirmSchedule,
         fetchQnaList,
+        createQna,
+        updateQna,
         replyQna,
         submitSchedule,
         fetchEvaluationSummary,
@@ -419,6 +491,7 @@ export const useCouncil = () => {
         fetchResult,
         saveResult,
         confirmResult,
+        startCouncil,
         skipCouncil,
     };
 };

@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-04-04T09:51:40.808Z",
+  "timestamp": "2026-04-22T19:38:21.185Z",
   "reason": "compaction",
   "status": {
     "version": "3.0",
-    "lastUpdated": "2026-04-04T09:51:39.554Z",
+    "lastUpdated": "2026-04-22T19:38:18.684Z",
     "activeFeatures": [
       "it_frontend",
       "unit",
@@ -24,30 +24,25 @@
       "service",
       "controller",
       "council",
-      "feasibility"
+      "feasibility",
+      "committee",
+      "schedule",
+      "notice",
+      "qna",
+      "prepare",
+      "evaluation",
+      "result",
+      "council-request"
     ],
     "primaryFeature": "it_frontend",
     "features": {
       "it_frontend": {
         "phase": "do",
-        "phaseNumber": 3,
-        "matchRate": null,
+        "matchRate": 100,
         "iterationCount": 0,
-        "requirements": [],
-        "documents": {},
-        "timestamps": {
-          "started": "2026-03-07T16:21:56.632Z",
-          "lastUpdated": "2026-04-04T09:28:49.310Z"
-        },
-        "lastFile": "c:\\it\\it_frontend\\app\\utils\\common.ts",
-        "stateMachine": {
-          "currentState": "do",
-          "previousState": null,
-          "stateHistory": [],
-          "retryCount": 0,
-          "maxRetries": 5,
-          "circuitBreakerOpen": false
-        },
+        "startedAt": "2026-03-07T16:21:56.632Z",
+        "archivedAt": "2026-04-05T10:35:00.000Z",
+        "archivedTo": "docs/archive/2026-04/it_frontend/",
         "metrics": {
           "qualityScore": null,
           "conventionCompliance": null,
@@ -56,7 +51,12 @@
           "iterationEfficiency": null
         },
         "phaseTimestamps": {},
-        "automationLevel": 2
+        "automationLevel": 2,
+        "phaseNumber": 3,
+        "lastFile": "c:\\it\\it_frontend\\nuxt.config.ts",
+        "timestamps": {
+          "lastUpdated": "2026-04-20T19:06:37.120Z"
+        }
       },
       "unit": {
         "phase": "do",
@@ -127,7 +127,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-03-07T16:23:36.885Z",
-          "lastUpdated": "2026-04-04T09:49:42.604Z"
+          "lastUpdated": "2026-04-22T19:08:34.142Z"
         },
         "lastFile": "c:\\it\\it_frontend\\app\\composables\\useCouncil.ts",
         "stateMachine": {
@@ -338,9 +338,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-03-19T22:59:23.479Z",
-          "lastUpdated": "2026-03-28T00:38:20.489Z"
+          "lastUpdated": "2026-04-06T17:22:46.344Z"
         },
-        "lastFile": "C:\\it\\it_frontend\\app\\pages\\info\\projects\\form.vue",
+        "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\projects\\report.vue",
         "stateMachine": {
           "currentState": "do",
           "previousState": null,
@@ -424,9 +424,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-04-02T12:07:05.762Z",
-          "lastUpdated": "2026-04-02T17:24:55.571Z"
+          "lastUpdated": "2026-04-09T18:29:17.298Z"
         },
-        "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\common\\iam\\repository\\UserRepository.java"
+        "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\repository\\CouncilRepository.java"
       },
       "dto": {
         "phase": "do",
@@ -437,7 +437,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-04-02T13:12:11.700Z",
-          "lastUpdated": "2026-04-02T18:17:50.200Z"
+          "lastUpdated": "2026-04-09T19:08:50.518Z"
         },
         "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\dto\\CouncilDto.java"
       },
@@ -450,9 +450,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-04-02T13:12:52.941Z",
-          "lastUpdated": "2026-04-02T18:19:39.423Z"
+          "lastUpdated": "2026-04-22T19:07:24.746Z"
         },
-        "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\service\\ResultService.java"
+        "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\service\\ScheduleService.java"
       },
       "controller": {
         "phase": "do",
@@ -463,7 +463,7 @@
         "documents": {},
         "timestamps": {
           "started": "2026-04-02T13:13:30.532Z",
-          "lastUpdated": "2026-04-04T08:49:52.683Z"
+          "lastUpdated": "2026-04-22T19:08:05.136Z"
         },
         "lastFile": "c:\\it\\it_backend\\src\\main\\java\\com\\kdb\\it\\domain\\council\\controller\\CouncilController.java"
       },
@@ -476,9 +476,9 @@
         "documents": {},
         "timestamps": {
           "started": "2026-04-04T09:29:15.902Z",
-          "lastUpdated": "2026-04-04T09:30:35.994Z"
+          "lastUpdated": "2026-04-10T21:15:21.674Z"
         },
-        "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council\\index.vue"
+        "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\CouncilStatusBadge.vue"
       },
       "feasibility": {
         "phase": "do",
@@ -489,9 +489,113 @@
         "documents": {},
         "timestamps": {
           "started": "2026-04-04T09:50:24.463Z",
-          "lastUpdated": "2026-04-04T09:51:39.553Z"
+          "lastUpdated": "2026-04-09T19:13:53.957Z"
         },
         "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\feasibility\\FeasibilityPerformance.vue"
+      },
+      "committee": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:25:09.552Z",
+          "lastUpdated": "2026-04-22T18:41:46.049Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\committee\\CommitteeSelector.vue"
+      },
+      "schedule": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:26:00.560Z",
+          "lastUpdated": "2026-04-22T19:38:18.684Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\schedule\\ScheduleStatus.vue"
+      },
+      "notice": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:26:37.606Z",
+          "lastUpdated": "2026-04-04T19:26:37.606Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\notice\\CouncilNotice.vue"
+      },
+      "qna": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:27:18.981Z",
+          "lastUpdated": "2026-04-04T19:27:18.981Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\qna\\CouncilQna.vue"
+      },
+      "prepare": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:28:15.665Z",
+          "lastUpdated": "2026-04-22T18:23:18.062Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\prepare\\[id].vue"
+      },
+      "evaluation": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:53:40.336Z",
+          "lastUpdated": "2026-04-04T19:56:35.461Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\components\\council\\evaluation\\EvalSummaryPanel.vue"
+      },
+      "result": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-04T19:54:26.992Z",
+          "lastUpdated": "2026-04-22T19:28:58.512Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\result\\[id].vue"
+      },
+      "council-request": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-04-09T15:49:46.516Z",
+          "lastUpdated": "2026-04-22T19:32:58.331Z"
+        },
+        "lastFile": "c:\\it\\it_frontend\\app\\pages\\info\\council-request\\index.vue"
       }
     },
     "pipeline": {
@@ -502,7 +606,7 @@
     "session": {
       "startedAt": "2026-03-07T15:52:46.492Z",
       "onboardingCompleted": false,
-      "lastActivity": "2026-04-04T09:51:39.554Z"
+      "lastActivity": "2026-04-22T19:38:18.684Z"
     },
     "history": [
       {
@@ -2788,6 +2892,1212 @@
       {
         "timestamp": "2026-04-04T09:51:39.553Z",
         "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T09:57:09.896Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T15:22:11.334Z",
+        "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T15:28:35.020Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T16:58:43.006Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T18:59:47.363Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:07:59.272Z",
+        "feature": "controller",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:17:00.908Z",
+        "feature": "controller",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:17:20.387Z",
+        "feature": "controller",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:23:36.065Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:23:55.452Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:24:02.620Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:25:09.553Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:26:00.560Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:26:37.606Z",
+        "feature": "notice",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:27:18.981Z",
+        "feature": "qna",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:28:15.665Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:32:11.391Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:32:20.747Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:32:28.363Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:32:48.442Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:51:40.180Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:52:00.135Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:52:05.927Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:52:54.603Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:53:40.336Z",
+        "feature": "evaluation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:54:26.992Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:54:55.085Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:56:09.218Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:56:16.160Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-04T19:56:35.461Z",
+        "feature": "evaluation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T06:15:19.552Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T06:28:48.266Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:06:45.755Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:08:45.902Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:09:30.991Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:11:37.332Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:18:02.747Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:20:37.917Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:22:17.289Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:26:28.028Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:30:56.290Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:32:44.828Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T08:37:18.947Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:06:20.625Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:06:54.099Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:18:03.035Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:31:08.208Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:46:49.198Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:54:28.337Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T09:59:37.876Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:00:03.185Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:01:31.593Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:05:07.580Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:05:51.530Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:07:08.146Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:15:08.017Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:15:21.579Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:27:37.269Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:27:54.415Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:29:43.180Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T10:30:14.485Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T13:45:24.839Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-05T13:49:20.916Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:10:40.690Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:12:00.436Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:12:56.715Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:13:02.403Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:13:19.075Z",
+        "feature": "projects",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:22:13.519Z",
+        "feature": "projects",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:22:27.517Z",
+        "feature": "projects",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:22:46.344Z",
+        "feature": "projects",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:51:11.201Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-06T17:52:28.158Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T15:49:46.516Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T15:53:30.506Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:01:30.994Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:03:32.395Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:32:39.021Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:32:46.515Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:32:58.758Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:39:34.375Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:40:15.497Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:40:24.758Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T16:41:16.982Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:08:10.964Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:08:18.224Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:29:06.544Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:29:17.298Z",
+        "feature": "repository",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:29:25.955Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:41:23.838Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:46:35.653Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:49:40.409Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:49:58.565Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:50:20.674Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:50:34.035Z",
+        "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:50:47.757Z",
+        "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:50:54.638Z",
+        "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:51:04.745Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:51:14.183Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:55:30.902Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:55:52.633Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:56:05.921Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T18:59:56.528Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:01:14.253Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:01:22.822Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:01:32.921Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:08:50.518Z",
+        "feature": "dto",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:09:03.309Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:09:24.795Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:09:41.050Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:11:20.489Z",
+        "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:13:53.957Z",
+        "feature": "feasibility",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:16:29.395Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:16:47.017Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-09T19:17:01.406Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:13:38.948Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:13:56.255Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:14:53.693Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:15:21.674Z",
+        "feature": "council",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:15:31.785Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:15:43.300Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:15:59.181Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:16:09.711Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:16:22.964Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:16:56.888Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:17:03.588Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:17:13.367Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:17:19.137Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:17:24.619Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-10T21:17:30.286Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T16:49:04.307Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T16:49:44.520Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:03:21.249Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:03:28.129Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:03:39.180Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:18:18.301Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:21:10.183Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:21:49.526Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:21:52.048Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-11T17:39:52.865Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T19:05:28.086Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T19:05:37.882Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T19:06:37.120Z",
+        "feature": "it_frontend",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T19:21:11.673Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T23:34:27.934Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T23:34:40.191Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T23:34:50.823Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T23:35:52.579Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-20T23:41:41.696Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-21T12:25:55.780Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-21T12:27:58.715Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-21T12:30:13.091Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-21T12:33:28.951Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T12:56:25.118Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T12:59:58.525Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T13:04:16.312Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T13:10:34.657Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T13:10:51.980Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T13:11:11.842Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:07:42.067Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:08:02.568Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:11:32.682Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:15:15.246Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:22:57.349Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:23:18.062Z",
+        "feature": "prepare",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:26:27.144Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:32:38.133Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:33:12.895Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:38:20.900Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:40:56.319Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:41:27.614Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:41:46.049Z",
+        "feature": "committee",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:52:56.545Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:54:17.698Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:55:39.723Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T18:59:36.007Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:04:39.419Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:07:24.746Z",
+        "feature": "service",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:08:05.136Z",
+        "feature": "controller",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:08:21.870Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:08:34.142Z",
+        "feature": "composables",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:10:17.203Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:11:06.077Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:17:02.021Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:17:39.032Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:17:58.784Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:18:11.766Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:20:41.073Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:21:04.294Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:25:48.327Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:27:42.066Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:27:59.522Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:28:58.512Z",
+        "feature": "result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:32:58.331Z",
+        "feature": "council-request",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:34:32.814Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:34:53.324Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:35:05.501Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:37:37.755Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:37:55.646Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:38:03.178Z",
+        "feature": "schedule",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-04-22T19:38:18.684Z",
+        "feature": "schedule",
         "phase": "do",
         "action": "updated"
       }

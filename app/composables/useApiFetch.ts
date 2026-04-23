@@ -73,10 +73,12 @@ const tokenRefreshSignal = ref(0);
  */
 interface ApiFetchOptions<T> extends UseFetchOptions<T> {
     suppressNotFound?: boolean;
+    /** true 시 네트워크 오류(서버 연결 불가) Toast를 표시하지 않습니다. */
+    suppressNetworkError?: boolean;
 }
 
 export const useApiFetch = <T>(url: string | (() => string), options: ApiFetchOptions<T> = {}) => {
-    const { suppressNotFound, ...fetchOptions } = options;
+    const { suppressNotFound, suppressNetworkError, ...fetchOptions } = options;
     options = fetchOptions as ApiFetchOptions<T>;
     // 인증 store에서 인증 관련 함수를 가져옴
     const { refresh, logout } = useAuth();
@@ -130,6 +132,8 @@ export const useApiFetch = <T>(url: string | (() => string), options: ApiFetchOp
             if (err && (err.name === 'AbortError' || err.message?.includes('aborted'))) {
                 return;
             }
+            // suppressNetworkError: true 시 Toast 억제
+            if (suppressNetworkError) return;
             /* 1초 내 동일 오류가 여러 요청에서 동시에 발생해도 Toast 1개만 표시 */
             const now = Date.now();
             if (now - networkErrorLastShown < 1000) return;
