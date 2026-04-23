@@ -44,37 +44,56 @@ import JSZip from 'jszip';
 // 상수
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 변경 파일 기준 charPr ID */
+/**
+ * charPr ID 매핑 (모든 글자 맑은 고딕 = font id=0)
+ * 0~5: 구조/헤더용. 6~9: 본문 인라인 서식용 (14pt 기반).
+ */
 const CHAR_PR = {
-    COMPAT:  0,   // 한컴바탕 10pt (기존 호환)
-    NORMAL:  1,   // 맑은 고딕 10pt
-    SEC:     2,   // 맑은 고딕 15pt (secPr 단락용)
-    H1:      3,   // 맑은 고딕 15pt + bold
-    BOLD:    4,   // 맑은 고딕 10pt + bold  (H2~H4, inline bold, 표 헤더)
-    H3:      5,   // 맑은 고딕 12pt
+    COMPAT:    0,   // 10pt (바탕글 스타일 기본값)
+    NORMAL:    1,   // 14pt                → 본문
+    SEC:       2,   // 15pt                → secPr 제어 단락
+    TITLE:     3,   // 18pt + bold         → Title 표 가운데 셀
+    BOLD:      4,   // 15pt + bold         → H2/H3 텍스트, 표 헤더 셀
+    SYM:       5,   // 15pt                → H2/H3 기호, Title 양/우측 셀
+    B_BODY:    6,   // 14pt + bold         → 본문 인라인 굵게
+    I_BODY:    7,   // 14pt + italic       → 본문 인라인 기울임
+    U_BODY:    8,   // 14pt + underline    → 본문 인라인 밑줄
+    S_BODY:    9,   // 14pt + strike       → 본문 인라인 취소선
 } as const;
 type CharPrId = (typeof CHAR_PR)[keyof typeof CHAR_PR];
 
-/** 변경 파일 기준 paraPr ID */
+/**
+ * sample.hwpx 기준 paraPr ID 매핑
+ * (모두 줄간격 160%)
+ */
 const PARA_PR = {
-    BASE:   0,   // 기본 160%             (표 데이터 셀)
-    CENTER: 1,   // 가운데 160%           (표 헤더 셀)
-    NORMAL: 2,   // 양쪽 180%, 전후 400  (secPr + 일반 단락)
-    INDENT: 3,   // 양쪽 180%, indent=-5642
-    HEAD:   4,   // 양쪽 180%, prev=1000  (제목)
-    LIST:   5,   // 양쪽 180%, indent=-6138 (목록)
+    BASE:   0,   // JUSTIFY, 여백 없음         → 표 데이터 셀
+    CENTER: 1,   // CENTER,  여백 없음         → Title 표 셀 / 표 헤더 셀
+    NORMAL: 2,   // JUSTIFY, 여백 없음         → secPr + 본문 단락
+    H2:     3,   // JUSTIFY, next=1000         → H2 단락
+    H3:     4,   // JUSTIFY, next=600          → H3 단락
+    LIST:   5,   // JUSTIFY, indent=-6910      → 번호/글머리 목록
 } as const;
 type ParaPrId = (typeof PARA_PR)[keyof typeof PARA_PR];
 
-/** HTML 블록 태그 → (paraPrId, charPrId, prefix) 매핑 */
-const TAG_MAP: Record<string, { para: ParaPrId; char: CharPrId; prefix?: string }> = {
+/**
+ * HTML 블록 태그 → (paraPrId, charPrId, prefix, prefixCharPrId) 매핑
+ * H2/H3의 기호(□, ㅇ)는 별도 run에 SYM(regular)로 표기하고
+ * 실제 텍스트는 BOLD로 표기하여 sample.hwpx와 동일한 형태로 출력합니다.
+ */
+const TAG_MAP: Record<string, {
+    para: ParaPrId;
+    char: CharPrId;
+    prefix?: string;
+    prefixChar?: CharPrId;
+}> = {
     p:  { para: PARA_PR.NORMAL, char: CHAR_PR.NORMAL },
-    h1: { para: PARA_PR.HEAD,   char: CHAR_PR.H1                   },
-    h2: { para: PARA_PR.HEAD,   char: CHAR_PR.H1                   },
-    h3: { para: PARA_PR.HEAD,   char: CHAR_PR.H3,   prefix: '□ ' },  // 12pt, □ 수식어
-    h4: { para: PARA_PR.HEAD,   char: CHAR_PR.BOLD,  prefix: 'ㅇ ' },  // 10pt bold, ㅇ 수식어
-    h5: { para: PARA_PR.HEAD,   char: CHAR_PR.BOLD  },
-    h6: { para: PARA_PR.HEAD,   char: CHAR_PR.BOLD  },
+    h1: { para: PARA_PR.H2,     char: CHAR_PR.BOLD, prefix: '□ ',  prefixChar: CHAR_PR.SYM },
+    h2: { para: PARA_PR.H2,     char: CHAR_PR.BOLD, prefix: '□ ',  prefixChar: CHAR_PR.SYM },
+    h3: { para: PARA_PR.H3,     char: CHAR_PR.BOLD, prefix: ' ㅇ ', prefixChar: CHAR_PR.SYM },
+    h4: { para: PARA_PR.H3,     char: CHAR_PR.BOLD, prefix: ' ㅇ ', prefixChar: CHAR_PR.SYM },
+    h5: { para: PARA_PR.H3,     char: CHAR_PR.BOLD },
+    h6: { para: PARA_PR.H3,     char: CHAR_PR.BOLD },
 };
 
 // 표 관련 상수 (변경 파일 기준)
@@ -83,6 +102,18 @@ const ROW_HEIGHT   = 1848;   // 행 높이 (HWPUNIT)
 const CELL_BF_TH   = 4;      // th 셀 borderFillIDRef (파란 배경)
 const CELL_BF_TD   = 3;      // td 셀 borderFillIDRef (흰 배경 실선)
 
+// 모든 <hp:p>의 필수 자식 — linesegarray.
+// Hangul은 단락 구조 검증 시 이 요소 존재를 필요로 하므로 반드시 출력하되,
+// 모든 수치 속성을 0으로 두고 flags=0으로 지정하여
+// "이 lineseg는 확정된 레이아웃 정보가 아니므로 Hangul이 재계산하라"는 의미로 사용합니다.
+//
+// ⚠ 이전에 horzsize=42520, flags=393216 으로 설정하면 Hangul이 이를 "이 단락 전체 텍스트는
+//    textpos=0부터 이 한 줄에 모두 들어간다"로 해석하여 긴 문장이 한 줄로만 표시되는 버그가 있었음.
+const DEFAULT_LINESEG =
+    `<hp:linesegarray>` +
+    `<hp:lineseg textpos="0" vertpos="0" vertsize="0" textheight="0" baseline="0" spacing="0" horzpos="0" horzsize="0" flags="0"/>` +
+    `</hp:linesegarray>`;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 문서 노드 타입
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,6 +121,31 @@ const CELL_BF_TD   = 3;      // td 셀 borderFillIDRef (흰 배경 실선)
 interface TextRun {
     text: string;
     charPrId: CharPrId;
+    /**
+     * 이미지 run일 경우 설정. 설정 시 <hp:pic>이 생성되고 text는 무시됨.
+     *  - binId  : header의 binDataList에서 부여된 ID (1부터 시작)
+     *  - width  : HWPUNIT (1 HWPUNIT ≈ 1/7200 inch)
+     *  - height : HWPUNIT
+     */
+    image?: { binId: number; width: number; height: number };
+}
+
+/** 이미지 원본 메타 (fetch 전) */
+interface PendingImage {
+    src: string;       // 원본 URL (절대/상대/data:)
+    binId: number;     // 부여된 순번 (1부터)
+    width: number;     // HWPUNIT (기본 또는 HTML width에서 계산)
+    height: number;    // HWPUNIT
+}
+
+/** fetch 완료 후 */
+interface ResolvedImage extends PendingImage {
+    data: Uint8Array;
+    ext: string;       // 파일 확장자 (png/jpg/jpeg/gif)
+    /** 실제 이미지 픽셀 너비 (없으면 0 → fallback 사용) */
+    naturalWidth: number;
+    /** 실제 이미지 픽셀 높이 */
+    naturalHeight: number;
 }
 
 interface ParagraphNode {
@@ -102,11 +158,19 @@ interface ParagraphNode {
 interface CellData {
     isHeader: boolean;   // th 태그 여부
     runs: TextRun[];
+    /** 셀 테두리/배경 오버라이드 — 지정 시 isHeader 기본값 무시 */
+    borderFillId?: number;
+    /** 셀 내부 단락 스타일 오버라이드 */
+    paraPrId?: ParaPrId;
 }
 
 interface TableNode {
     type: 'table';
     rows: CellData[][];
+    /** 각 열의 너비 배열 (HWPUNIT). 미지정 시 균등 분배 */
+    cellWidths?: number[];
+    /** 각 행의 높이 (HWPUNIT). 미지정 시 ROW_HEIGHT 사용 */
+    rowHeight?: number;
 }
 
 type DocNode = ParagraphNode | TableNode;
@@ -145,7 +209,7 @@ const makeCharPr = (
     height: number,
     fontIdx: number,
     borderFillId: number,
-    opts: { bold?: boolean; italic?: boolean; underline?: boolean } = {},
+    opts: { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean } = {},
 ): string => {
     const f = String(fontIdx);
     return (
@@ -158,7 +222,8 @@ const makeCharPr = (
         `<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>` +
         (opts.bold      ? `<hh:bold/>`      : '') +
         (opts.italic    ? `<hh:italic/>`    : '') +
-        (opts.underline ? `<hh:underline/>` : '') +
+        (opts.underline ? `<hh:underline type="SOLID" shape="SOLID" color="#000000"/>` : '') +
+        (opts.strike    ? `<hh:strikeout type="SOLID" shape="SOLID" color="#000000"/>` : '') +
         `</hh:charPr>`
     );
 };
@@ -203,18 +268,21 @@ const makeParaPr = (
     );
 };
 
+// sample.hwpx와 동일하게 font id=0 = 맑은 고딕을 기본 폰트로 사용 (모든 charPr가 이를 참조)
 const makeFontface = (lang: string): string =>
-    `<hh:fontface lang="${lang}" fontCnt="2">` +
-    `<hh:font id="0" face="한컴바탕" type="TTF" isEmbedded="0">` +
-    `<hh:typeInfo familyType="FCAT_GOTHIC" weight="6" proportion="0" contrast="0" strokeVariation="1" armStyle="1" letterform="1" midline="1" xHeight="1"/>` +
-    `</hh:font>` +
-    `<hh:font id="1" face="맑은 고딕" type="TTF" isEmbedded="0">` +
+    `<hh:fontface lang="${lang}" fontCnt="1">` +
+    `<hh:font id="0" face="맑은 고딕" type="TTF" isEmbedded="0">` +
     `<hh:typeInfo familyType="FCAT_GOTHIC" weight="5" proportion="3" contrast="2" strokeVariation="0" armStyle="0" letterform="2" midline="0" xHeight="4"/>` +
     `</hh:font>` +
     `</hh:fontface>`;
 
-const buildHeaderXml = (): string =>
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+/**
+ * header.xml 생성
+ * 참고: 이미지 BinData 등록은 header.xml의 binDataList가 아닌
+ *       content.hpf의 <opf:manifest><opf:item>에 이루어짐 (sample.hwpx 기준)
+ */
+const buildHeaderXml = (_images: ResolvedImage[] = []): string => {
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<hh:head ${COMMON_XMLNS} version="1.2" secCnt="1">` +
     `<hh:beginNum page="1" footnote="1" endnote="1" pic="1" tbl="1" equation="1"/>` +
     `<hh:refList>` +
@@ -254,44 +322,59 @@ const buildHeaderXml = (): string =>
     `<hc:fillBrush><hc:winBrush faceColor="#DFE6F7" hatchColor="#999999" alpha="0"/></hc:fillBrush>` +
     `</hh:borderFill>` +
     `</hh:borderFills>` +
-    // charProperties (6개)
-    `<hh:charProperties itemCnt="6">` +
-    makeCharPr(CHAR_PR.COMPAT, 1000, 0, 1)               +
-    makeCharPr(CHAR_PR.NORMAL, 1000, 1, 2)               +
-    makeCharPr(CHAR_PR.SEC,    1500, 1, 2)               +
-    makeCharPr(CHAR_PR.H1,     1500, 1, 2, { bold: true }) +
-    makeCharPr(CHAR_PR.BOLD,   1000, 1, 2, { bold: true }) +
-    makeCharPr(CHAR_PR.H3,     1200, 1, 2)               +
+    // charProperties (10개) — 구조/헤더 + 본문 인라인 서식
+    `<hh:charProperties itemCnt="10">` +
+    makeCharPr(CHAR_PR.COMPAT, 1000, 0, 1)                            +  // 10pt
+    makeCharPr(CHAR_PR.NORMAL, 1400, 0, 2)                            +  // 14pt 본문
+    makeCharPr(CHAR_PR.SEC,    1500, 0, 2)                            +  // 15pt secPr
+    makeCharPr(CHAR_PR.TITLE,  1800, 0, 2, { bold: true })            +  // 18pt B Title
+    makeCharPr(CHAR_PR.BOLD,   1500, 0, 2, { bold: true })            +  // 15pt B 헤더
+    makeCharPr(CHAR_PR.SYM,    1500, 0, 2)                            +  // 15pt 기호
+    makeCharPr(CHAR_PR.B_BODY, 1400, 0, 2, { bold: true })            +  // 14pt B 본문 굵게
+    makeCharPr(CHAR_PR.I_BODY, 1400, 0, 2, { italic: true })          +  // 14pt I 본문 기울임
+    makeCharPr(CHAR_PR.U_BODY, 1400, 0, 2, { underline: true })       +  // 14pt U 본문 밑줄
+    makeCharPr(CHAR_PR.S_BODY, 1400, 0, 2, { strike: true })          +  // 14pt S 본문 취소선
     `</hh:charProperties>` +
     // tabProperties
     `<hh:tabProperties itemCnt="1">` +
     `<hh:tabPr id="0" autoTabLeft="0" autoTabRight="0"/>` +
     `</hh:tabProperties>` +
-    // paraProperties (6개)
+    // paraProperties (6개) — 본문 및 목록은 한국어 자연 줄바꿈(BREAK_WORD)
     `<hh:paraProperties itemCnt="6">` +
-    makeParaPr(PARA_PR.BASE,   { lineSpacing: 160, borderFillId: 1 })                            +
+    makeParaPr(PARA_PR.BASE,   { lineSpacing: 160, borderFillId: 1, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.CENTER, { align: 'CENTER', lineSpacing: 160, borderFillId: 2, breakNonLatin: 'BREAK_WORD' }) +
-    makeParaPr(PARA_PR.NORMAL, { prevMargin: 400, nextMargin: 400 })                             +
-    makeParaPr(PARA_PR.INDENT, { indent: -5642, prevMargin: 400, nextMargin: 400 })              +
-    makeParaPr(PARA_PR.HEAD,   { prevMargin: 1000, nextMargin: 400 })                            +
-    makeParaPr(PARA_PR.LIST,   { indent: -6138, prevMargin: 400, nextMargin: 400 })              +
+    makeParaPr(PARA_PR.NORMAL, { lineSpacing: 160, breakNonLatin: 'BREAK_WORD' })                 +
+    makeParaPr(PARA_PR.H2,     { lineSpacing: 160, nextMargin: 1000, breakNonLatin: 'BREAK_WORD' }) +
+    makeParaPr(PARA_PR.H3,     { lineSpacing: 160, prevMargin: 1000, nextMargin: 600, breakNonLatin: 'BREAK_WORD' }) +
+    makeParaPr(PARA_PR.LIST,   { lineSpacing: 160, indent: -6910, breakNonLatin: 'BREAK_WORD' })  +
     `</hh:paraProperties>` +
     // styles
     `<hh:styles itemCnt="1">` +
     `<hh:style id="0" type="PARA" name="바탕글" engName="Normal" paraPrIDRef="${PARA_PR.BASE}" charPrIDRef="${CHAR_PR.COMPAT}" nextStyleIDRef="0" langID="1042" lockForm="0"/>` +
     `</hh:styles>` +
     `</hh:refList>` +
+    // sample.hwpx와 동일하게 빈 layoutCompatibility와 "trackchageConfig" 형태 유지
+    // (Hangul 실제 출력 포맷이므로 소위 "오타"도 그대로 둬야 함)
     `<hh:compatibleDocument targetProgram="HWP201X"><hh:layoutCompatibility/></hh:compatibleDocument>` +
-    `<hh:docOption><hh:linkinfo path="" pageInherit="1" footnoteInherit="0"/></hh:docOption>` +
+    `<hh:docOption><hh:linkinfo path="" pageInherit="0" footnoteInherit="0"/></hh:docOption>` +
     `<hh:trackchageConfig flags="56"/>` +
     `</hh:head>`;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HTML → DocNode 변환
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 인라인 요소에서 TextRun 배열 추출 */
-const extractRuns = (node: Node, inheritedCharPr: CharPrId): TextRun[] => {
+/**
+ * 인라인 요소에서 TextRun 배열 추출
+ * strong/b → 굵게, em/i → 기울임, u → 밑줄, s/strike/del → 취소선
+ * img → 이미지 run (imgMap에서 binId/크기 조회)
+ */
+const extractRuns = (
+    node: Node,
+    inheritedCharPr: CharPrId,
+    imgMap: Map<string, PendingImage>,
+): TextRun[] => {
     const runs: TextRun[] = [];
 
     if (node.nodeType === Node.TEXT_NODE) {
@@ -305,15 +388,36 @@ const extractRuns = (node: Node, inheritedCharPr: CharPrId): TextRun[] => {
     const tag = el.tagName.toLowerCase();
     let charPr = inheritedCharPr;
 
+    // 이미지 처리 — <img src="..."> 를 만나면 imgMap에서 바이너리 ID/크기를 가져와 이미지 run으로 삽입
+    if (tag === 'img') {
+        const src = (el as HTMLImageElement).getAttribute('src') || '';
+        const imgInfo = imgMap.get(src);
+        if (imgInfo) {
+            runs.push({
+                text: '',
+                charPrId: inheritedCharPr,
+                image: { binId: imgInfo.binId, width: imgInfo.width, height: imgInfo.height },
+            });
+        }
+        return runs;
+    }
+
+    // 인라인 서식 전환 (본문 문맥에서만 적용)
+    const isBodyContext = inheritedCharPr === CHAR_PR.NORMAL;
     if (tag === 'strong' || tag === 'b') {
-        charPr = CHAR_PR.BOLD;
+        charPr = isBodyContext ? CHAR_PR.B_BODY : CHAR_PR.BOLD;
+    } else if (tag === 'em' || tag === 'i') {
+        if (isBodyContext) charPr = CHAR_PR.I_BODY;
+    } else if (tag === 'u' || tag === 'ins') {
+        if (isBodyContext) charPr = CHAR_PR.U_BODY;
+    } else if (tag === 's' || tag === 'strike' || tag === 'del') {
+        if (isBodyContext) charPr = CHAR_PR.S_BODY;
     } else if (tag === 'br') {
         return runs;
     }
-    // em, u, s 등은 별도 charPr 없이 현재 상속값 유지
 
     for (const child of Array.from(el.childNodes)) {
-        runs.push(...extractRuns(child, charPr));
+        runs.push(...extractRuns(child, charPr, imgMap));
     }
     return runs;
 };
@@ -321,8 +425,9 @@ const extractRuns = (node: Node, inheritedCharPr: CharPrId): TextRun[] => {
 /**
  * HTML 문자열을 DocNode 배열로 변환합니다.
  * 표는 TableNode, 나머지는 ParagraphNode로 변환합니다.
+ * imgMap: HTML src URL → PendingImage(binId/width/height) 매핑
  */
-const htmlToDocNodes = (html: string): DocNode[] => {
+const htmlToDocNodes = (html: string, imgMap: Map<string, PendingImage> = new Map()): DocNode[] => {
     const parser = new DOMParser();
     const doc    = parser.parseFromString(`<div>${html}</div>`, 'text/html');
     const root   = doc.querySelector('div')!;
@@ -344,9 +449,15 @@ const htmlToDocNodes = (html: string): DocNode[] => {
                     && (el.childNodes[0] as Element)?.tagName?.toLowerCase() === 'br';
                 if (isBreakOnly) { addEmptyPara(PARA_PR.NORMAL, CHAR_PR.NORMAL); return; }
             }
-            const runs = extractRuns(el, mapping.char);
-            // h2(□), h3(ㅇ) 수식어를 runs 맨 앞에 삽입
-            if (mapping.prefix) runs.unshift({ text: mapping.prefix, charPrId: mapping.char });
+            const runs = extractRuns(el, mapping.char, imgMap);
+            // 헤더 기호(□/ㅇ)는 텍스트와 다른 charPr(SYM, regular)로 분리하여
+            // sample.hwpx와 동일하게 "기호 run + 텍스트 run" 구조로 만듭니다.
+            if (mapping.prefix) {
+                runs.unshift({
+                    text: mapping.prefix,
+                    charPrId: mapping.prefixChar ?? mapping.char,
+                });
+            }
             nodes.push({
                 type: 'para',
                 paraPrId: mapping.para,
@@ -355,13 +466,13 @@ const htmlToDocNodes = (html: string): DocNode[] => {
             });
 
         } else if (tag === 'ol' || tag === 'ul') {
-            // 목록
+            // 목록 — sample.hwpx와 동일하게 2칸 들여쓰기 후 번호(또는 bullet) 삽입
             let idx = 0;
             for (const li of Array.from(el.children)) {
                 if (li.tagName.toLowerCase() !== 'li') continue;
                 idx++;
-                const prefix = tag === 'ol' ? `${idx}. ` : '• ';
-                const runs   = extractRuns(li, CHAR_PR.NORMAL);
+                const prefix = tag === 'ol' ? `  ${idx}. ` : '  • ';
+                const runs   = extractRuns(li, CHAR_PR.NORMAL, imgMap);
                 runs.unshift({ text: prefix, charPrId: CHAR_PR.NORMAL });
                 nodes.push({ type: 'para', paraPrId: PARA_PR.LIST, charPrId: CHAR_PR.NORMAL, runs });
                 // 중첩 목록
@@ -379,14 +490,38 @@ const htmlToDocNodes = (html: string): DocNode[] => {
                 for (const cell of Array.from(tr.querySelectorAll('th, td'))) {
                     const isHeader = cell.tagName.toLowerCase() === 'th';
                     const charPr   = isHeader ? CHAR_PR.BOLD : CHAR_PR.NORMAL;
-                    const runs     = extractRuns(cell, charPr);
+                    const runs     = extractRuns(cell, charPr, imgMap);
                     cells.push({ isHeader, runs: runs.length ? runs : [{ text: '', charPrId: charPr }] });
                 }
                 if (cells.length > 0) tableRows.push(cells);
             }
             if (tableRows.length > 0) nodes.push({ type: 'table', rows: tableRows });
 
+        } else if (tag === 'img') {
+            // Block-level <img> — Tiptap의 NodeView 이미지는 <p> 바깥에 배치되므로
+            // 단독 단락으로 감싸 <hp:pic>가 본문 흐름에 삽입되도록 한다.
+            const src = (el as HTMLImageElement).getAttribute('src') || '';
+            const imgInfo = imgMap.get(src);
+            if (imgInfo) {
+                nodes.push({
+                    type: 'para',
+                    paraPrId: PARA_PR.NORMAL,
+                    charPrId: CHAR_PR.NORMAL,
+                    runs: [{
+                        text: '',
+                        charPrId: CHAR_PR.NORMAL,
+                        image: {
+                            binId: imgInfo.binId,
+                            width: imgInfo.width,
+                            height: imgInfo.height,
+                        },
+                    }],
+                });
+            }
+
         } else if (tag === 'blockquote' || tag === 'div' || tag === 'figure') {
+            // 래퍼 요소 — 자식 요소를 재귀 처리
+            // (data-node-view-wrapper 등 Tiptap 내부 래핑도 이 경로로 처리됨)
             for (const child of Array.from(el.children)) processNode(child);
         }
     };
@@ -401,17 +536,73 @@ const htmlToDocNodes = (html: string): DocNode[] => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * 이미지 run XML 생성 (hp:pic 삽입)
+ * treatAsChar=1: 글자처럼 인라인 배치 → 본문 흐름에 자연스럽게 삽입
+ */
+const buildPicRunXml = (
+    charPrId: number,
+    img: { binId: number; width: number; height: number },
+): string => {
+    const { binId, width: W, height: H } = img;
+    // Hangul 실제 출력 포맷을 따라 큰 정수 id/instid를 사용
+    const picId  = Math.floor(Math.random() * 0x7FFFFFFF);
+    const instId = Math.floor(Math.random() * 0x7FFFFFFF);
+    // binaryItemIDRef는 content.hpf manifest의 item id와 일치해야 함 (문자열 "image{N}")
+    const binRef = `image${binId}`;
+    return (
+        `<hp:run charPrIDRef="${charPrId}">` +
+        // 속성: sample.hwpx 기준 — href, groupLevel, instid 포함. flip/fix/fixsize/pageBreak/repeatHeader 제외.
+        `<hp:pic id="${picId}" zOrder="0" numberingType="PICTURE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" ` +
+        `lock="0" dropcapstyle="None" href="" groupLevel="0" instid="${instId}" reverse="0">` +
+        // 1) ShapeObject 기본 자식 (순서 주의)
+        `<hp:offset x="0" y="0"/>` +
+        `<hp:orgSz width="${W}" height="${H}"/>` +
+        `<hp:curSz width="0" height="0"/>` +
+        `<hp:flip horizontal="0" vertical="0"/>` +
+        `<hp:rotationInfo angle="0" centerX="${Math.floor(W/2)}" centerY="${Math.floor(H/2)}" rotateimage="1"/>` +
+        `<hp:renderingInfo>` +
+        `<hc:transMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>` +
+        `<hc:scaMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>` +
+        `<hc:rotMatrix e1="1" e2="0" e3="0" e4="0" e5="1" e6="0"/>` +
+        `</hp:renderingInfo>` +
+        // 2) Picture 고유 자식
+        `<hp:imgRect>` +
+        `<hc:pt0 x="0" y="0"/><hc:pt1 x="${W}" y="0"/><hc:pt2 x="${W}" y="${H}"/><hc:pt3 x="0" y="${H}"/>` +
+        `</hp:imgRect>` +
+        `<hp:imgClip left="0" right="${W}" top="0" bottom="${H}"/>` +
+        `<hp:inMargin left="0" right="0" top="0" bottom="0"/>` +
+        // hc:img — 네임스페이스 주의! (hp가 아닌 hc)
+        `<hc:img binaryItemIDRef="${binRef}" bright="0" contrast="0" effect="REAL_PIC" alpha="0"/>` +
+        `<hp:effects/>` +
+        // 3) 크기/위치/여백 — 이 순서가 sample.hwpx와 일치
+        `<hp:sz width="${W}" widthRelTo="ABSOLUTE" height="${H}" heightRelTo="ABSOLUTE" protect="0"/>` +
+        `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" ` +
+        `vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
+        `<hp:outMargin left="0" right="0" top="0" bottom="0"/>` +
+        `</hp:pic>` +
+        `</hp:run>`
+    );
+};
+
+/** 단일 run을 XML로 — 이미지인 경우 hp:pic, 아니면 hp:t */
+const runToXml = (run: TextRun): string => {
+    if (run.image) return buildPicRunXml(run.charPrId, run.image);
+    const tEl = run.text === ''
+        ? `<hp:t/>`
+        : `<hp:t xml:space="preserve">${escXml(run.text)}</hp:t>`;
+    return `<hp:run charPrIDRef="${run.charPrId}">${tEl}</hp:run>`;
+};
+
+/**
  * 단락 XML 생성
+ * sample.hwpx와 동일하게 각 <hp:p>에 <hp:linesegarray>를 포함시킵니다.
  */
 const buildParaXml = (para: ParagraphNode, id: number): string => {
-    const runsXml = para.runs.map(run =>
-        `<hp:run charPrIDRef="${run.charPrId}">` +
-        `<hp:t xml:space="preserve">${escXml(run.text)}</hp:t>` +
-        `</hp:run>`
-    ).join('');
+    const runsXml = para.runs.map(runToXml).join('');
     return (
         `<hp:p id="${id}" paraPrIDRef="${para.paraPrId}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
         runsXml +
+        DEFAULT_LINESEG +
         `</hp:p>`
     );
 };
@@ -427,25 +618,30 @@ const buildParaXml = (para: ParagraphNode, id: number): string => {
 const buildTableXml = (table: TableNode, paraId: number): string => {
     const rowCnt  = table.rows.length;
     const colCnt  = Math.max(...table.rows.map(r => r.length), 1);
-    const colW    = Math.floor(TABLE_WIDTH / colCnt);
-    const lastColW = TABLE_WIDTH - colW * (colCnt - 1);  // 나머지 너비를 마지막 열에 추가
-    const totalH  = rowCnt * ROW_HEIGHT;
+    // 열 너비 — 명시된 cellWidths 사용, 없으면 균등 분배
+    const widths: number[] = table.cellWidths && table.cellWidths.length === colCnt
+        ? table.cellWidths
+        : (() => {
+            const w = Math.floor(TABLE_WIDTH / colCnt);
+            return Array.from({ length: colCnt }, (_, i) =>
+                i === colCnt - 1 ? TABLE_WIDTH - w * (colCnt - 1) : w
+            );
+        })();
+    const tableWidth = widths.reduce((a, b) => a + b, 0);
+    const rowH    = table.rowHeight ?? ROW_HEIGHT;
+    const totalH  = rowCnt * rowH;
     const tblId   = Math.floor(Math.random() * 0x7FFFFFFF);
 
     const rowsXml = table.rows.map((row, r) => {
         const cellsXml = row.map((cell, c) => {
-            const isLastCol  = c === colCnt - 1;
-            const cellWidth  = isLastCol ? lastColW : colW;
-            const bfId       = cell.isHeader ? CELL_BF_TH : CELL_BF_TD;
-            const paraPrId   = cell.isHeader ? PARA_PR.CENTER : PARA_PR.BASE;
+            const cellWidth  = widths[c] ?? widths[widths.length - 1]!;
+            // cell.borderFillId/paraPrId이 지정되면 isHeader 기본값보다 우선
+            const bfId       = cell.borderFillId ?? (cell.isHeader ? CELL_BF_TH : CELL_BF_TD);
+            const paraPrId   = cell.paraPrId     ?? (cell.isHeader ? PARA_PR.CENTER : PARA_PR.BASE);
             const charPrId   = cell.isHeader ? CHAR_PR.BOLD   : CHAR_PR.NORMAL;
             const runs       = cell.runs.length ? cell.runs : [{ text: '', charPrId }];
 
-            const runsXml = runs.map(run =>
-                `<hp:run charPrIDRef="${run.charPrId}">` +
-                `<hp:t xml:space="preserve">${escXml(run.text)}</hp:t>` +
-                `</hp:run>`
-            ).join('');
+            const runsXml = runs.map(runToXml).join('');
 
             return (
                 `<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="${bfId}">` +
@@ -453,11 +649,12 @@ const buildTableXml = (table: TableNode, paraId: number): string => {
                 `linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">` +
                 `<hp:p id="0" paraPrIDRef="${paraPrId}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
                 runsXml +
+                DEFAULT_LINESEG +
                 `</hp:p>` +
                 `</hp:subList>` +
                 `<hp:cellAddr colAddr="${c}" rowAddr="${r}"/>` +
                 `<hp:cellSpan colSpan="1" rowSpan="1"/>` +
-                `<hp:cellSz width="${cellWidth}" height="${ROW_HEIGHT}"/>` +
+                `<hp:cellSz width="${cellWidth}" height="${rowH}"/>` +
                 `<hp:cellMargin left="510" right="510" top="141" bottom="141"/>` +
                 `</hp:tc>`
             );
@@ -466,23 +663,37 @@ const buildTableXml = (table: TableNode, paraId: number): string => {
         return `<hp:tr>${cellsXml}</hp:tr>`;
     }).join('');
 
-    // 표는 단락 내 인라인 객체로 삽입 (변경 파일과 동일한 구조)
-    return (
-        `<hp:p id="${paraId}" paraPrIDRef="${PARA_PR.NORMAL}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
-        `<hp:run charPrIDRef="${CHAR_PR.H1}">` +
+    // <hp:tbl>...</hp:tbl> 엘리먼트만 반환 — 단락/run 래퍼는 호출측에서 결정
+    const tblInner =
         `<hp:tbl id="${tblId}" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" ` +
         `lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" ` +
         `rowCnt="${rowCnt}" colCnt="${colCnt}" cellSpacing="0" borderFillIDRef="3" noAdjust="0">` +
-        `<hp:sz width="${TABLE_WIDTH}" widthRelTo="ABSOLUTE" height="${totalH}" heightRelTo="ABSOLUTE" protect="0"/>` +
+        `<hp:sz width="${tableWidth}" widthRelTo="ABSOLUTE" height="${totalH}" heightRelTo="ABSOLUTE" protect="0"/>` +
         `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" ` +
         `vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
         `<hp:outMargin left="283" right="283" top="283" bottom="283"/>` +
         `<hp:inMargin left="510" right="510" top="141" bottom="141"/>` +
         rowsXml +
-        `</hp:tbl>` +
+        `</hp:tbl>`;
+
+    // 표는 단락 내 인라인 객체로 삽입
+    return (
+        `<hp:p id="${paraId}" paraPrIDRef="${PARA_PR.NORMAL}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+        `<hp:run charPrIDRef="${CHAR_PR.NORMAL}">` +
+        tblInner +
         `</hp:run>` +
+        DEFAULT_LINESEG +
         `</hp:p>`
     );
+};
+
+/** 표 엘리먼트만 추출 (다른 run 내부에 임베드할 때 사용) */
+const buildTblElementOnly = (table: TableNode): string => {
+    const full = buildTableXml(table, 0);
+    // <hp:tbl ...>...</hp:tbl> 부분만 추출
+    const start = full.indexOf('<hp:tbl');
+    const end   = full.indexOf('</hp:tbl>') + '</hp:tbl>'.length;
+    return full.substring(start, end);
 };
 
 /**
@@ -490,10 +701,18 @@ const buildTableXml = (table: TableNode, paraId: number): string => {
  * - 첫 번째 단락(id=0)에 secPr 내장
  * - 이후 각 DocNode를 순서대로 변환 (id=1부터)
  */
-const buildSectionXml = (nodes: DocNode[]): string => {
-    // secPr 제어 단락 (변경 파일 기준: paraPrIDRef=2, charPrIDRef=2)
-    const secPrPara =
-        `<hp:p id="0" paraPrIDRef="${PARA_PR.NORMAL}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+const buildSectionXml = (nodes: DocNode[], headerTable?: TableNode): string => {
+    // secPr 제어 단락 — sample.hwpx 구조 기준
+    //   <hp:p>
+    //     <hp:run charPrIDRef="SEC">                        ← 첫 run: secPr + ctrl/colPr
+    //       <hp:secPr>...</hp:secPr>
+    //       <hp:ctrl><hp:colPr .../></hp:ctrl>
+    //     </hp:run>
+    //     <hp:run charPrIDRef="TITLE"> <hp:tbl .../> </hp:run>  ← 두 번째 run: Title 표 임베드
+    //     <hp:linesegarray>...</hp:linesegarray>
+    //   </hp:p>
+    // → Title 표를 secPr 단락과 같은 <hp:p>에 넣어 상단의 시각적 빈 줄(secPr 단락 하나 분량) 제거
+    const secPrRun =
         `<hp:run charPrIDRef="${CHAR_PR.SEC}">` +
         `<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" outlineShapeIDRef="0" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="0">` +
         `<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>` +
@@ -521,7 +740,21 @@ const buildSectionXml = (nodes: DocNode[]): string => {
         `<hp:offset left="0" right="0" top="0" bottom="0"/>` +
         `</hp:pageBorderFill>` +
         `</hp:secPr>` +
-        `</hp:run>` +
+        `<hp:ctrl>` +
+        `<hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/>` +
+        `</hp:ctrl>` +
+        `</hp:run>`;
+
+    // Title 표 run — secPr 단락에 같이 임베드 (sample.hwpx 패턴)
+    const titleTableRun = headerTable
+        ? `<hp:run charPrIDRef="${CHAR_PR.TITLE}">${buildTblElementOnly(headerTable)}</hp:run>`
+        : '';
+
+    const secPrPara =
+        `<hp:p id="0" paraPrIDRef="${headerTable ? PARA_PR.CENTER : PARA_PR.NORMAL}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
+        secPrRun +
+        titleTableRun +
+        DEFAULT_LINESEG +
         `</hp:p>`;
 
     // 내용 노드 변환 (id=1부터)
@@ -542,23 +775,46 @@ const buildSectionXml = (nodes: DocNode[]): string => {
 // 보조 파일들
 // ─────────────────────────────────────────────────────────────────────────────
 
-const buildContentHpf = (): string =>
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+// content.hpf — sample.hwpx 구조 기준
+// - manifest에 이미지(BinData/imageN.ext)를 `isEmbeded="1"`로 등록
+// - spine: header linear="yes", section0 linear="no" (sample 기준)
+// - 참고: Hangul은 "isEmbeded" 철자(오타)를 그대로 사용하므로 변경 불가
+const buildContentHpf = (title: string = '요구사항 정의서', images: ResolvedImage[] = []): string => {
+    const mimeOf = (ext: string): string => {
+        const e = ext.toLowerCase();
+        if (e === 'jpg' || e === 'jpeg') return 'image/jpeg';
+        if (e === 'gif')  return 'image/gif';
+        if (e === 'bmp')  return 'image/bmp';
+        if (e === 'webp') return 'image/webp';
+        return 'image/png';
+    };
+    // 이미지 manifest 엔트리 — id="image1", id="image2", ... (buildPicRunXml의 binaryItemIDRef와 매칭)
+    const imageItems = images.map(img =>
+        `<opf:item id="image${img.binId}" href="BinData/image${img.binId}.${img.ext}" media-type="${mimeOf(img.ext)}" isEmbeded="1"/>`
+    ).join('');
+
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
     `<opf:package ${COMMON_XMLNS} version="" unique-identifier="" id="">` +
-    `<opf:metadata><opf:title/><opf:language>ko</opf:language></opf:metadata>` +
+    `<opf:metadata>` +
+    `<opf:title>${escXml(title)}</opf:title>` +
+    `<opf:language>ko</opf:language>` +
+    `</opf:metadata>` +
     `<opf:manifest>` +
-    `<opf:item id="header"   href="Contents/header.xml"   media-type="application/xml"/>` +
+    `<opf:item id="header" href="Contents/header.xml" media-type="application/xml"/>` +
+    imageItems +
     `<opf:item id="section0" href="Contents/section0.xml" media-type="application/xml"/>` +
-    `<opf:item id="settings" href="settings.xml"          media-type="application/xml"/>` +
+    `<opf:item id="settings" href="settings.xml" media-type="application/xml"/>` +
     `</opf:manifest>` +
     `<opf:spine>` +
-    `<opf:itemref idref="header"   linear="yes"/>` +
-    `<opf:itemref idref="section0" linear="yes"/>` +
+    `<opf:itemref idref="header" linear="yes"/>` +
+    `<opf:itemref idref="section0" linear="no"/>` +
     `</opf:spine>` +
     `</opf:package>`;
+};
 
+// 주의: "tagetApplication"은 Hangul 실제 출력 포맷 (오타가 아니라 속성명 자체가 이 형태)
 const VERSION_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
     `<hv:HCFVersion xmlns:hv="http://www.hancom.co.kr/hwpml/2011/version" ` +
     `tagetApplication="WORDPROCESSOR" major="5" minor="1" micro="0" buildNumber="1" ` +
     `os="1" xmlVersion="1.2" application="Hancom Office Hangul" appVersion="11, 0, 0, 2129 WIN32LEWindows_8"/>`;
@@ -569,18 +825,21 @@ const SETTINGS_XML =
     `<ha:CaretPosition listIDRef="0" paraIDRef="0" pos="0"/>` +
     `</ha:HWPApplicationSetting>`;
 
+// container.xml — Hangul 실제 출력본 sample.hwpx와 동일하게 3개 rootfile 유지.
+// (OCF 일반 스펙과 다르지만 Hangul이 이 형태를 요구함)
 const CONTAINER_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
     `<ocf:container xmlns:ocf="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf">` +
     `<ocf:rootfiles>` +
     `<ocf:rootfile full-path="Contents/content.hpf" media-type="application/hwpml-package+xml"/>` +
-    `<ocf:rootfile full-path="Preview/PrvText.txt"  media-type="text/plain"/>` +
+    `<ocf:rootfile full-path="Preview/PrvText.txt" media-type="text/plain"/>` +
     `<ocf:rootfile full-path="META-INF/container.rdf" media-type="application/rdf+xml"/>` +
     `</ocf:rootfiles>` +
     `</ocf:container>`;
 
+// META-INF/manifest.xml — sample.hwpx는 빈 매니페스트 사용
 const MANIFEST_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
     `<odf:manifest xmlns:odf="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"/>`;
 
 const CONTAINER_RDF =
@@ -597,32 +856,406 @@ const CONTAINER_RDF =
 // 공개 API
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Title 표 옵션 — 각 셀 텍스트를 호출자가 커스터마이즈할 수 있도록 공개 */
+export interface HwpxTitleOptions {
+    /** 좌측 셀 (부서명 등). 기본값: '{부서명}' (placeholder) */
+    left?: string;
+    /** 중앙 셀 (문서 제목). 필수 */
+    center: string;
+    /** 우측 셀 (연월 등). 기본값: 현재 YY.MM (예: '26.04') */
+    right?: string;
+}
+
+/**
+ * 문서 최상단의 Title 표를 생성합니다 (3셀 1행).
+ * 배경 없음(bf=3 = 실선 테두리만) + 가운데 정렬(paraPr=CENTER) + 높이 11mm.
+ * 너비 비율 1:4:1 (좁은-넓은-좁은).
+ */
+const buildTitleTableNode = (opts: HwpxTitleOptions): TableNode => {
+    const sideW = Math.floor(TABLE_WIDTH / 6);
+    const midW  = TABLE_WIDTH - sideW * 2;
+    // 11mm → HWPUNIT: 11 * 7200 / 25.4 ≈ 3118
+    const TITLE_ROW_HEIGHT = 3118;
+    return {
+        type: 'table',
+        cellWidths: [sideW, midW, sideW],
+        rowHeight: TITLE_ROW_HEIGHT,
+        rows: [[
+            {
+                isHeader: false,
+                borderFillId: CELL_BF_TD,   // 실선 테두리, 배경 없음
+                paraPrId: PARA_PR.CENTER,
+                runs: [{ text: opts.left ?? '{부서명}', charPrId: CHAR_PR.SYM }],
+            },
+            {
+                isHeader: false,
+                borderFillId: CELL_BF_TD,
+                paraPrId: PARA_PR.CENTER,
+                runs: [{ text: opts.center, charPrId: CHAR_PR.TITLE }],
+            },
+            {
+                isHeader: false,
+                borderFillId: CELL_BF_TD,
+                paraPrId: PARA_PR.CENTER,
+                runs: [{ text: opts.right ?? defaultYearMonth(), charPrId: CHAR_PR.SYM }],
+            },
+        ]],
+    };
+};
+
+/** 현재 연월을 "YY.MM" 형식으로 반환 (예: 2026-04 → "26.04") */
+const defaultYearMonth = (): string => {
+    const d = new Date();
+    const yy = String(d.getFullYear() % 100).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${yy}.${mm}`;
+};
+
+/**
+ * HTML 내 모든 <img src="..."> 태그를 수집하여 PendingImage 목록과 src→PendingImage 매핑을 만듭니다.
+ * width/height 속성이 있으면 px 단위로 해석하고, 없으면 기본값(12000×9000 HWPUNIT ≈ 4.2×3.2cm)을 사용합니다.
+ *
+ * 1 px ≈ 9525 HWPUNIT (1/96 inch * 7200/in ÷ 100) 로 근사 — 정밀하게는 96dpi 기준 75 HWPUNIT/px
+ * HWPX는 HWPUNIT = 1/7200 inch. 1 inch = 96 px (CSS 기본) → 1 px = 75 HWPUNIT.
+ */
+const collectImages = (html: string): { list: PendingImage[]; map: Map<string, PendingImage> } => {
+    const list: PendingImage[] = [];
+    const map = new Map<string, PendingImage>();
+    if (typeof DOMParser === 'undefined') return { list, map };
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+    const imgs = Array.from(doc.querySelectorAll('img')) as HTMLImageElement[];
+    let nextId = 1;
+    for (const el of imgs) {
+        const src = el.getAttribute('src');
+        if (!src || map.has(src)) continue;
+        // HTML width/height 속성을 HWPUNIT로 변환. 없으면 기본 크기.
+        const px2hu = 75; // 1 px = 75 HWPUNIT (96dpi 기준)
+        const wAttr = parseInt(el.getAttribute('width') || '0', 10);
+        const hAttr = parseInt(el.getAttribute('height') || '0', 10);
+        const width  = wAttr > 0 ? wAttr * px2hu : 12000;
+        const height = hAttr > 0 ? hAttr * px2hu : 9000;
+        const info: PendingImage = { src, binId: nextId++, width, height };
+        list.push(info);
+        map.set(src, info);
+    }
+    return { list, map };
+};
+
+/** MIME 타입 또는 URL 확장자로부터 이미지 확장자 추출 */
+const detectExt = (mime: string, url: string): string => {
+    const mt = mime.toLowerCase();
+    if (mt.includes('png'))  return 'png';
+    if (mt.includes('jpeg') || mt.includes('jpg')) return 'jpg';
+    if (mt.includes('gif'))  return 'gif';
+    if (mt.includes('bmp'))  return 'bmp';
+    if (mt.includes('webp')) return 'webp';
+    const urlExt = url.match(/\.(png|jpe?g|gif|bmp|webp)(\?|$)/i)?.[1];
+    return (urlExt || 'png').toLowerCase().replace('jpeg', 'jpg');
+};
+
+/** 이미지 fetch 콜백 타입 — 호출자가 인증/쿠키를 자동 처리하는 fetcher 주입 가능 */
+export type HwpxImageFetch = (src: string) => Promise<ArrayBuffer | null>;
+
+/**
+ * PNG IHDR 청크에서 (width, height)를 읽어옵니다.
+ * PNG 구조: 8-byte signature + 4-byte IHDR length + "IHDR" + 4-byte width + 4-byte height
+ */
+const parsePngDims = (data: Uint8Array): { w: number; h: number } | null => {
+    if (data.length < 24) return null;
+    // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+    if (data[0] !== 0x89 || data[1] !== 0x50 || data[2] !== 0x4E || data[3] !== 0x47) return null;
+    // IHDR at bytes 12-15
+    if (data[12] !== 0x49 || data[13] !== 0x48 || data[14] !== 0x44 || data[15] !== 0x52) return null;
+    const w = (data[16]! << 24) | (data[17]! << 16) | (data[18]! << 8) | data[19]!;
+    const h = (data[20]! << 24) | (data[21]! << 16) | (data[22]! << 8) | data[23]!;
+    return { w, h };
+};
+
+/** JPEG SOF 마커에서 (width, height)를 읽어옵니다. */
+const parseJpegDims = (data: Uint8Array): { w: number; h: number } | null => {
+    if (data.length < 4 || data[0] !== 0xFF || data[1] !== 0xD8) return null;
+    let i = 2;
+    while (i < data.length - 8) {
+        if (data[i] !== 0xFF) { i++; continue; }
+        const marker = data[i + 1]!;
+        // SOF0(C0)~SOF15(CF) 중 일부가 실제 frame header: C0~C3, C5~C7, C9~CB, CD~CF
+        if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2 || marker === 0xC3 ||
+            marker === 0xC5 || marker === 0xC6 || marker === 0xC7 ||
+            marker === 0xC9 || marker === 0xCA || marker === 0xCB ||
+            marker === 0xCD || marker === 0xCE || marker === 0xCF) {
+            // Marker payload: 2-byte length, 1-byte precision, 2-byte height, 2-byte width
+            const h = (data[i + 5]! << 8) | data[i + 6]!;
+            const w = (data[i + 7]! << 8) | data[i + 8]!;
+            return { w, h };
+        }
+        // Skip segment: 2-byte length
+        const segLen = (data[i + 2]! << 8) | data[i + 3]!;
+        i += 2 + segLen;
+    }
+    return null;
+};
+
+/** 브라우저 Image API로 자연 크기 조회 (PNG/JPEG 파싱이 실패한 경우 fallback) */
+const imageDimsViaBrowser = (data: Uint8Array, mime: string): Promise<{ w: number; h: number } | null> =>
+    new Promise(resolve => {
+        try {
+            const blob = new Blob([data as BlobPart], { type: mime || 'image/png' });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                resolve({ w: img.naturalWidth, h: img.naturalHeight });
+                URL.revokeObjectURL(url);
+            };
+            img.onerror = () => {
+                resolve(null);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        } catch {
+            resolve(null);
+        }
+    });
+
+/** 바이너리 데이터가 SVG인지 판별 (Excalidraw가 SVG로 저장됨) */
+const isSvgData = (data: Uint8Array): boolean => {
+    if (data.length < 5) return false;
+    // 첫 수십 바이트를 텍스트로 보고 <svg 또는 <?xml 검사
+    const head = new TextDecoder('utf-8', { fatal: false })
+        .decode(data.slice(0, Math.min(data.length, 256)))
+        .trim()
+        .toLowerCase();
+    return head.startsWith('<svg') || (head.startsWith('<?xml') && head.includes('<svg'));
+};
+
+/**
+ * SVG 바이너리를 PNG로 래스터화합니다. Hangul은 SVG를 렌더링하지 못하므로
+ * Excalidraw 같은 SVG 이미지는 PNG로 변환해 임베드해야 합니다.
+ * 브라우저의 canvas API를 사용하며, 실패 시 null을 반환합니다.
+ */
+const svgToPngData = (data: Uint8Array): Promise<{ data: Uint8Array; width: number; height: number } | null> =>
+    new Promise(resolve => {
+        try {
+            const blob = new Blob([data as BlobPart], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = async () => {
+                try {
+                    // SVG 원본의 viewBox 기준 크기 — 없으면 기본 800x600
+                    const W = img.naturalWidth  || 800;
+                    const H = img.naturalHeight || 600;
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = W;
+                    canvas.height = H;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) { resolve(null); URL.revokeObjectURL(url); return; }
+                    // 흰 배경 채움 — 투명 PNG는 Hangul에서 검게 표시되는 경우가 있음
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, W, H);
+                    ctx.drawImage(img, 0, 0, W, H);
+                    URL.revokeObjectURL(url);
+                    // canvas → PNG blob → Uint8Array
+                    canvas.toBlob(async (pngBlob) => {
+                        if (!pngBlob) { resolve(null); return; }
+                        const buf = await pngBlob.arrayBuffer();
+                        resolve({ data: new Uint8Array(buf), width: W, height: H });
+                    }, 'image/png');
+                } catch {
+                    resolve(null);
+                    URL.revokeObjectURL(url);
+                }
+            };
+            img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+            img.src = url;
+        } catch {
+            resolve(null);
+        }
+    });
+
+/**
+ * 이미지를 fetch하여 ResolvedImage 배열로 변환. 실패한 이미지는 제외됩니다.
+ * data: URL은 인라인 디코딩, 나머지는 imageFetch(주입 시) 또는 fetch() 기본값을 사용합니다.
+ * 실제 픽셀 크기도 함께 감지하여 크롭 없이 전체 이미지가 보이도록 합니다.
+ */
+const resolveImages = async (
+    pending: PendingImage[],
+    imageFetch?: HwpxImageFetch,
+): Promise<ResolvedImage[]> => {
+    const results: ResolvedImage[] = [];
+    for (const p of pending) {
+        try {
+            let data: Uint8Array;
+            let mime = '';
+            if (p.src.startsWith('data:')) {
+                const match = p.src.match(/^data:([^;,]+)?[^,]*,(.*)$/);
+                if (!match) continue;
+                mime = match[1] || '';
+                const payload = match[2] || '';
+                const isBase64 = /;base64/i.test(p.src);
+                const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                data = bytes;
+            } else if (imageFetch) {
+                const buf = await imageFetch(p.src);
+                if (!buf) continue;
+                data = new Uint8Array(buf);
+            } else {
+                const res = await fetch(p.src, { credentials: 'include' });
+                if (!res.ok) continue;
+                mime = res.headers.get('content-type') || '';
+                data = new Uint8Array(await res.arrayBuffer());
+            }
+            let ext = detectExt(mime, p.src);
+
+            // SVG 감지 → Hangul 호환을 위해 PNG로 래스터화
+            // (서버가 Excalidraw 첨부를 SVG로 반환하는 경우 대응)
+            if (isSvgData(data)) {
+                const png = await svgToPngData(data);
+                if (png) {
+                    data = png.data;
+                    ext = 'png';
+                    mime = 'image/png';
+                    results.push({
+                        ...p,
+                        data,
+                        ext,
+                        naturalWidth:  png.width,
+                        naturalHeight: png.height,
+                    });
+                    continue;
+                }
+                // 변환 실패 시 이미지 건너뜀 (Hangul은 SVG를 표시할 수 없음)
+                continue;
+            }
+
+            // 실제 픽셀 크기 감지: PNG/JPEG 파싱 → 실패 시 브라우저 Image API fallback
+            let dims: { w: number; h: number } | null = null;
+            if (ext === 'png') dims = parsePngDims(data);
+            else if (ext === 'jpg') dims = parseJpegDims(data);
+            if (!dims) dims = await imageDimsViaBrowser(data, mime);
+
+            results.push({
+                ...p,
+                data,
+                ext,
+                naturalWidth:  dims?.w || 0,
+                naturalHeight: dims?.h || 0,
+            });
+        } catch {
+            // 개별 이미지 실패는 무시하고 나머지 진행
+        }
+    }
+    return results;
+};
+
+/** htmlToHwpxBlob 옵션 */
+export interface HwpxBlobOptions {
+    /**
+     * 이미지 fetch 콜백 — 지정 시 cross-origin/인증 요청을 호출자가 처리.
+     * 지정하지 않으면 기본 fetch()를 사용합니다 (credentials: 'include').
+     */
+    imageFetch?: HwpxImageFetch;
+}
+
 /**
  * HTML 문자열을 HWPX Blob으로 변환합니다.
+ * 문서마다 다른 제목(reqNm)을 반영하려면 2번째 인자로 실제 문서 제목을 넘기세요.
  *
- * @param html - Tiptap HTML 문자열 (p, h1~h6, ul/ol, table 지원)
+ * @param html  - Tiptap HTML 문자열 (p, h1~h6, ul/ol, table 지원)
+ * @param title - 문서 상단 Title 표의 중앙 셀 제목 (또는 HwpxTitleOptions)
+ * @param opts  - 추가 옵션 (imageFetch 등)
  * @returns HWPX Blob (application/hwp+zip)
  */
-export const htmlToHwpxBlob = async (html: string): Promise<Blob> => {
-    const nodes = htmlToDocNodes(html);
+export const htmlToHwpxBlob = async (
+    html: string,
+    title: string | HwpxTitleOptions = '요구사항 정의서',
+    opts: HwpxBlobOptions = {},
+): Promise<Blob> => {
+    // Title 옵션 정규화
+    const titleOpts: HwpxTitleOptions = typeof title === 'string'
+        ? { center: title || '요구사항 정의서' }
+        : { ...title, center: title.center || '요구사항 정의서' };
+
+    // 1) HTML에서 <img> 수집 → binId 부여 → fetch (콜백 우선 사용)
+    const { map: imgMap } = collectImages(html);
+    const resolvedImgs = await resolveImages(Array.from(imgMap.values()), opts.imageFetch);
+
+    // 2) 실제 픽셀 크기로 imgMap의 width/height 업데이트 — 원본 비율과 크기 그대로 표시
+    //    (naturalWidth/Height가 있으면 px→HWPUNIT 변환해 적용, 없으면 기존 기본값 유지)
+    const px2hu = 75; // 1px = 75 HWPUNIT (96 dpi 기준)
+    const sizeByBinId = new Map<number, { w: number; h: number }>();
+    for (const r of resolvedImgs) {
+        if (r.naturalWidth > 0 && r.naturalHeight > 0) {
+            sizeByBinId.set(r.binId, {
+                w: r.naturalWidth * px2hu,
+                h: r.naturalHeight * px2hu,
+            });
+        }
+    }
+    for (const [, info] of imgMap.entries()) {
+        const sz = sizeByBinId.get(info.binId);
+        if (sz) {
+            info.width  = sz.w;
+            info.height = sz.h;
+        }
+    }
+
+    // 실패한 이미지는 imgMap에서 제거하여 run 생성 시 이미지 placeholder를 만들지 않음
+    const successIds = new Set(resolvedImgs.map(r => r.binId));
+    for (const [src, info] of imgMap.entries()) {
+        if (!successIds.has(info.binId)) imgMap.delete(src);
+    }
+
+    // 2) 본문 노드 추출 (imgMap을 넘겨 img 태그 → 이미지 run으로 변환)
+    //    리딩 빈 단락 제거 → Title 표와 본문 사이 의미없는 공백 방지
+    const bodyNodes = htmlToDocNodes(html, imgMap);
+    while (bodyNodes.length > 0) {
+        const first = bodyNodes[0];
+        if (first && first.type === 'para'
+            && first.runs.every(r => !r.image && (!r.text || !r.text.trim()))) {
+            bodyNodes.shift();
+        } else {
+            break;
+        }
+    }
+    // Title 표 아래에 한 줄 빈 단락을 추가 (제목과 본문 시각적 구분)
+    bodyNodes.unshift({
+        type: 'para',
+        paraPrId: PARA_PR.NORMAL,
+        charPrId: CHAR_PR.NORMAL,
+        runs: [{ text: '', charPrId: CHAR_PR.NORMAL }],
+    });
+
+    // Title 표는 별도로 넘겨 secPr 단락 내부에 임베드 (최상단 빈 줄 제거 목적)
+    const titleTable = buildTitleTableNode(titleOpts);
+    const nodes: DocNode[] = bodyNodes;
     const zip   = new JSZip();
 
     zip.file('mimetype',               'application/hwp+zip', { compression: 'STORE' });
     zip.file('version.xml',            VERSION_XML);
-    zip.file('Contents/header.xml',    buildHeaderXml());
-    zip.file('Contents/section0.xml',  buildSectionXml(nodes));
+    zip.file('Contents/header.xml',    buildHeaderXml(resolvedImgs));
+    zip.file('Contents/section0.xml',  buildSectionXml(nodes, titleTable));
 
-    // PrvText.txt: 표는 셀 텍스트를 탭으로 구분하여 미리보기
-    const plainText = nodes.map(node => {
-        if (node.type === 'para')  return node.runs.map(r => r.text).join('');
-        if (node.type === 'table') return node.rows.map(row => row.map(c => c.runs.map(r => r.text).join('')).join('\t')).join('\n');
+    // 3) 이미지 바이너리를 BinData/imageN.ext 로 추가
+    for (const img of resolvedImgs) {
+        zip.file(`BinData/image${img.binId}.${img.ext}`, img.data);
+    }
+
+    // PrvText.txt: Title 표 + body 순서로 미리보기 생성
+    const allForPreview: DocNode[] = [titleTable, ...nodes];
+    const plainText = allForPreview.map(node => {
+        if (node.type === 'para')  return node.runs.map(r => r.image ? '[이미지]' : r.text).join('');
+        if (node.type === 'table') return node.rows.map(row => row.map(c => `<${c.runs.map(r => r.text).join('')}>`).join('')).join('\n');
         return '';
     }).join('\n');
     zip.file('Preview/PrvText.txt',    plainText);
 
     zip.file('settings.xml',           SETTINGS_XML);
     zip.file('META-INF/container.rdf', CONTAINER_RDF);
-    zip.file('Contents/content.hpf',   buildContentHpf());
+    zip.file('Contents/content.hpf',   buildContentHpf(titleOpts.center, resolvedImgs));
     zip.file('META-INF/container.xml', CONTAINER_XML);
     zip.file('META-INF/manifest.xml',  MANIFEST_XML);
 

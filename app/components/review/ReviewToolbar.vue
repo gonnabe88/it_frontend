@@ -9,6 +9,8 @@ Design Ref: §5.4 Toolbar 영역
 -->
 <script setup lang="ts">
 import { useReviewStore } from '~/stores/review';
+import VersionHistoryDialog from '~/components/common/VersionHistoryDialog.vue';
+import type { VersionHistoryItem } from '~/components/common/VersionHistoryDialog.vue';
 
 const emit = defineEmits<{
   (e: 'submit-for-review'): void;
@@ -25,9 +27,43 @@ const goBack = () => {
   router.push(`/info/documents/${docId}`);
 };
 
-/** 버전 변경 */
-const handleVersionChange = (event: { value: string }) => {
-  emit('version-change', event.value);
+/* ── 버전 히스토리 다이얼로그 ── */
+/** 버전 뱃지 클릭 시 열리는 다이얼로그 표시 여부 */
+const versionDialogVisible = ref(false);
+
+/** 현재 표시 버전 문자열 (과거 열람 중이면 viewingVersion, 아니면 currentVersion) */
+const currentVersionStr = computed<string | undefined>(() => {
+  if (!store.session) return undefined;
+  return store.viewingVersion ?? store.session.currentVersion;
+});
+
+/** 현재 버전 숫자 (공통 다이얼로그 하이라이트용) */
+const currentVersionNum = computed<number | undefined>(() => {
+  if (!currentVersionStr.value) return undefined;
+  const parsed = Number.parseFloat(currentVersionStr.value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+});
+
+/**
+ * 공통 VersionHistoryDialog에 전달할 버전 아이템 목록
+ * session.versions는 오름차순으로 저장되어 있으므로
+ * 최신 버전을 상단에 보여주기 위해 reverse 처리합니다.
+ */
+const versionItems = computed<VersionHistoryItem[]>(() => {
+  if (!store.session) return [];
+  return [...store.session.versions].reverse().map(v => ({
+    key: v.version,
+    version: Number.parseFloat(v.version),
+    changedAt: v.createdAt,
+  }));
+});
+
+/**
+ * 버전 항목 선택 → 부모(review.vue)로 version-change 이벤트 전달
+ * 공통 컴포넌트는 number 타입을 사용하므로 string("0.08") 포맷으로 변환하여 전달합니다.
+ */
+const onSelectVersion = (item: VersionHistoryItem) => {
+  emit('version-change', item.version.toFixed(2));
 };
 
 /** 검토자 선택 다이얼로그 표시 여부 */
@@ -81,17 +117,14 @@ const pendingReviewers = computed(() =>
       {{ store.session?.docTitle ?? '사전협의' }}
     </h1>
 
-    <!-- 버전 선택 -->
-    <Select
-      v-if="store.versionList.length > 0"
-      :model-value="store.viewingVersion ?? store.session?.currentVersion"
-      :options="store.versionList"
-      option-label="label"
-      option-value="value"
-      placeholder="버전"
-      class="w-28"
-      size="small"
-      @change="handleVersionChange"
+    <!-- 버전 뱃지 (클릭 시 버전 목록 다이얼로그) -->
+    <Tag
+      v-if="currentVersionStr"
+      :value="`v${currentVersionStr}`"
+      severity="info"
+      class="cursor-pointer hover:opacity-80 transition-opacity"
+      title="버전 목록 보기"
+      @click="versionDialogVisible = true"
     />
 
     <!-- 검토요청 버튼 (작성자용) -->
@@ -117,6 +150,14 @@ const pendingReviewers = computed(() =>
     />
 
   </div>
+
+  <!-- 버전 히스토리 다이얼로그 (버전 뱃지 클릭 시 표시) -->
+  <VersionHistoryDialog
+    v-model:visible="versionDialogVisible"
+    :versions="versionItems"
+    :current-version="currentVersionNum"
+    @select="onSelectVersion"
+  />
 
   <!-- 검토자 선택 다이얼로그 -->
   <Dialog

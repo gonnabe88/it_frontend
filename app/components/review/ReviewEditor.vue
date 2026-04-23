@@ -38,8 +38,20 @@ const CommentMark = Mark.create({
 
   addAttributes() {
     return {
-      commentId: { default: null },
-      resolved: { default: false },
+      // data-comment-id ↔ commentId 양방향 매핑 (DB 재로드 시 마크 복원)
+      commentId: {
+        default: null,
+        parseHTML: el => (el as HTMLElement).getAttribute('data-comment-id'),
+        renderHTML: attrs => ({ 'data-comment-id': attrs.commentId }),
+      },
+      // data-resolved ↔ resolved 양방향 매핑 (해결 상태 복원)
+      resolved: {
+        default: false,
+        parseHTML: el => (el as HTMLElement).getAttribute('data-resolved') === 'true',
+        renderHTML: attrs => ({
+          'data-resolved': String(attrs.resolved === true || attrs.resolved === 'true'),
+        }),
+      },
     };
   },
 
@@ -48,11 +60,10 @@ const CommentMark = Mark.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const resolved = HTMLAttributes.resolved === true || HTMLAttributes.resolved === 'true';
+    const resolved = HTMLAttributes['data-resolved'] === 'true';
     return [
       'span',
       mergeAttributes(HTMLAttributes, {
-        'data-comment-id': HTMLAttributes.commentId,
         class: resolved ? 'review-comment-resolved' : 'review-comment-highlight',
         style: resolved
           ? 'background-color: #e5e7eb; cursor: pointer;'
@@ -83,6 +94,10 @@ const headingGuardPlugin = new Plugin({
   filterTransaction(transaction, state) {
     if (!transaction.docChanged) return true;
 
+    // 프로그래매틱 전체 치환(setContent with emitUpdate: false)은 가드 우회.
+    // 버전 전환 시 TiptapEditor가 setContent로 본문을 교체할 때 H2/H3 삭제로 오인되어 차단되는 것을 방지합니다.
+    if (transaction.getMeta('preventUpdate')) return true;
+
     let blocked = false;
     const oldDoc = state.doc;
 
@@ -112,6 +127,18 @@ const reviewEventsPlugin = new Plugin({
   key: new PluginKey('reviewEvents'),
   props: {
     handleDOMEvents: {
+      /** 코멘트 마크 위에 마우스를 올리면 해당 코멘트 팝오버 표시 */
+      mouseover(_view, event) {
+        const target = event.target as HTMLElement;
+        const commentEl = target.closest('[data-comment-id]') as HTMLElement | null;
+        if (commentEl) {
+          const commentId = commentEl.dataset.commentId;
+          if (commentId && commentId !== 'null') {
+            emit('comment-mark-click', commentId);
+          }
+        }
+        return false;
+      },
       contextmenu(view, event) {
         event.preventDefault();
         const { state } = view;

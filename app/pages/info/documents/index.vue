@@ -145,6 +145,15 @@ v-else :value="filteredDocuments" :loading="pending" paginator :rows="10"
 field="docMngNo" header="문서번호" sortable style="width: 14%"
                     :pt="{ bodyCell: { style: 'text-align: center' } }"/>
 
+                <!-- 버전 -->
+                <Column
+                    field="docVrs" header="버전" sortable style="width: 80px"
+                    :pt="{ bodyCell: { style: 'text-align: center' } }">
+                    <template #body="{ data }">
+                        v{{ Number(data.docVrs).toFixed(2) }}
+                    </template>
+                </Column>
+
                 <!-- 요구사항명: 상세 페이지 링크 -->
                 <Column field="reqNm" header="요구사항명" sortable header-class="font-bold">
                     <template #body="{ data }">

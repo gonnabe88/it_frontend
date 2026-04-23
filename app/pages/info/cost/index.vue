@@ -326,8 +326,20 @@ onMounted(async () => {
 
 });
 
-/** KeepAlive 재활성화 시 목록 새로고침 (단말기 폼 저장 후 돌아왔을 때 예산 현행화) */
+/**
+ * KeepAlive 재활성화 시 목록 새로고침 (단말기 폼 저장 후 돌아왔을 때 예산 현행화)
+ *
+ * [첫 활성화는 스킵]
+ *  keepalive 특성상 최초 마운트 시 onActivated가 함께 호출됩니다.
+ *  이때 초기 fetch가 진행 중이면 refresh()가 abort 시켜 데이터 로딩 실패로 이어질 수 있습니다.
+ *  따라서 첫 활성화는 건너뛰고 다른 페이지에서 돌아온 경우에만 갱신합니다.
+ */
+let isFirstActivation = true;
 onActivated(() => {
+    if (isFirstActivation) {
+        isFirstActivation = false;
+        return;
+    }
     refreshCostsRaw();
 });
 

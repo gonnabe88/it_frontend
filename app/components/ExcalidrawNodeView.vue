@@ -33,6 +33,34 @@ const { open: openExcalidrawDialog } = useExcalidrawDialog();
  */
 const displaySvgUrl = ref<string | null>(null);
 
+const localSceneData = ref<string | null>(null);
+const loadError = ref(false);
+
+const loadAndRenderFromAttachment = async (attachmentId: string) => {
+    loadError.value = false;
+    try {
+        const { loadScene } = useExcalidrawAttachment();
+        const fullSceneData = await loadScene(attachmentId);
+        localSceneData.value = fullSceneData;
+
+        const { exportToSvg } = await import('@excalidraw/excalidraw');
+        const parsed = JSON.parse(fullSceneData);
+        const svgEl = await exportToSvg({
+            elements: parsed.elements || [],
+            appState: {
+                ...(parsed.appState || {}),
+                exportWithDarkMode: false,
+                exportBackground: true
+            },
+            files: parsed.files || {}
+        });
+        setSvgUrl(new XMLSerializer().serializeToString(svgEl));
+    } catch (e: unknown) {
+        loadError.value = true;
+        console.error('[ExcalidrawNodeView] 첨부파일에서 장면 로드 실패:', e);
+    }
+};
+
 /**
  * SVG 문자열로 Blob URL 생성
  * 기존 URL은 메모리 누수 방지를 위해 해제 후 새로 생성합니다.
@@ -71,16 +99,17 @@ const regenerateSvgFromSceneData = async () => {
             files: parsed.files || {}
         });
         setSvgUrl(new XMLSerializer().serializeToString(svgEl));
-    } catch (e) {
+    } catch (e: unknown) {
         console.error('[ExcalidrawNodeView] sceneData에서 SVG 재생성 실패:', e);
     }
 };
 
 onMounted(() => {
-    // svgContent가 있으면 바로 사용, 없으면 sceneData에서 재생성
     if (props.node.attrs.svgContent) {
         setSvgUrl(props.node.attrs.svgContent);
-    } else {
+    } else if (props.node.attrs.attachmentId) {
+        loadAndRenderFromAttachment(props.node.attrs.attachmentId);
+    } else if (props.node.attrs.sceneData) {
         regenerateSvgFromSceneData();
     }
 });
@@ -104,13 +133,15 @@ onBeforeUnmount(() => {
  * 저장 시 updateAttributes로 노드 속성을 갱신합니다.
  */
 const onEdit = () => {
+    const sceneForEdit = props.node.attrs.sceneData || localSceneData.value;
     openExcalidrawDialog(
-        props.node.attrs.sceneData || null,
+        sceneForEdit,
         (data) => {
-            // Tiptap 노드 속성 업데이트 (SVG + 장면 데이터 교체)
+            localSceneData.value = data.sceneData;
             props.updateAttributes({
                 svgContent: data.svgContent,
-                sceneData: data.sceneData
+                sceneData: data.sceneData,
+                attachmentId: data.attachmentId
             });
         }
     );
@@ -140,6 +171,14 @@ const onDelete = () => {
             -->
             <div v-if="displaySvgUrl" class="excalidraw-preview p-3 overflow-auto">
                 <img :src="displaySvgUrl" class="max-w-full block h-auto" alt="Excalidraw 다이어그램" >
+            </div>
+
+            <!-- 첨부파일 로드 실패 시 에러 상태 -->
+            <div v-else-if="loadError" class="flex items-center justify-center h-48 text-red-500 dark:text-red-400">
+                <div class="text-center">
+                    <i class="pi pi-exclamation-triangle text-5xl mb-3 block"/>
+                    <span class="text-sm">다이어그램 로드 실패 — 저장 후 다시 시도하세요.</span>
+                </div>
             </div>
 
             <!-- SVG 없을 때 placeholder -->

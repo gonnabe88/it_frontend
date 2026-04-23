@@ -11,32 +11,121 @@ GET /api/documents/{id}로 문서를 조회하고,
 -->
 <script setup lang="ts">
 import { useDocuments } from '~/composables/useDocuments';
-import type { RequirementDocument, RequirementDocumentForm } from '~/composables/useDocuments';
+import type { RequirementDocument, RequirementDocumentForm, VersionSummary } from '~/composables/useDocuments';
 import { useFiles } from '~/composables/useFiles';
 import type { FileRecord } from '~/composables/useFiles';
+import { useExcalidrawAttachment } from '~/composables/useExcalidrawAttachment';
+import VersionHistoryDialog from '~/components/common/VersionHistoryDialog.vue';
+import type { VersionHistoryItem } from '~/components/common/VersionHistoryDialog.vue';
+
+const { getPendingFlMngNos, clearPendingFlMngNos } = useExcalidrawAttachment();
+
+// Excalidraw pending 목록은 모듈 레벨 ref라 이전 세션 stale ID가 남을 수 있음 →
+// 페이지 진입 시 즉시 초기화하여 현재 편집 세션에서 생성된 ID만 추적
+clearPendingFlMngNos();
 
 const route = useRoute();
 /** 문서 관리번호 (라우트 파라미터) */
 const docMngNo = route.params.id as string;
 
+/** 쿼리파라미터의 ?version=0.02 값 (없으면 undefined → 최신 버전) */
+const versionQuery = computed(() => {
+    const raw = Array.isArray(route.query.version)
+        ? route.query.version[0]
+        : route.query.version;
+    if (!raw) return undefined;
+    const parsed = parseFloat(raw);
+    return isNaN(parsed) ? undefined : parsed;
+});
+
 const title = '요구사항 정의서 상세';
 definePageMeta({ title });
 
-const { fetchDocument, updateDocument, deleteDocument } = useDocuments();
-const { fetchFiles, uploadFile, uploadFilesBulk, deleteFile, getPreviewUrl, getDownloadUrl } = useFiles();
+const { fetchDocument, fetchVersionHistory, createNewVersion, updateDocument, deleteDocument } = useDocuments();
+const { fetchFiles, uploadFile, uploadFilesBulk, deleteFile, getPreviewUrl, getDownloadUrl, updateFileMeta } = useFiles();
 const { exportToHwpx, isExporting } = useHwpxExport();
 const toast = useToast();
 const confirm = useConfirm();
 
 /* ── 데이터 로드 ── */
-const { data: docData, pending: loadPending, error, refresh } = await fetchDocument(docMngNo);
+const { data: docData, pending: loadPending, error, refresh } = await fetchDocument(docMngNo, versionQuery);
+
+/* ── 버전 히스토리 로드 ── */
+/** 현재 문서의 버전 히스토리 목록 */
+const versions = ref<VersionSummary[]>([]);
+
+/** 버전 목록 중 최신(가장 높은) 버전 번호 — 버전 목록이 비면 undefined */
+const latestVersion = computed<number | undefined>(() => {
+    if (versions.value.length === 0) return undefined;
+    return Math.max(...versions.value.map(v => v.docVrs));
+});
+
+/**
+ * 과거 버전 조회 여부
+ * 쿼리 파라미터로 버전을 지정했더라도 그 값이 최신 버전과 같다면 과거 버전 아님.
+ * (최신 버전 뱃지 클릭 등으로 `?version=최신` URL이 만들어진 경우에도
+ *  '이전 버전' 안내 배너/편집 잠금이 잘못 적용되는 것을 방지)
+ */
+const isHistoricalVersion = computed(() => {
+    if (versionQuery.value === undefined) return false;
+    if (latestVersion.value === undefined) return false;
+    return versionQuery.value < latestVersion.value;
+});
+
+// 페이지 초기화 시 버전 히스토리 조회 (실패 시 빈 배열 유지)
+try {
+    versions.value = await fetchVersionHistory(docMngNo);
+} catch {
+    versions.value = [];
+}
+
+/* ── 버전 히스토리 다이얼로그 ── */
+/** 버전 뱃지 클릭 시 열리는 다이얼로그 표시 여부 */
+const versionDialogVisible = ref(false);
+
+/** 공통 VersionHistoryDialog에 전달할 VersionHistoryItem[] 변환 */
+const versionItems = computed<VersionHistoryItem[]>(() =>
+    versions.value.map(v => ({
+        key: `${v.docMngNo}-${v.docVrs}`,
+        version: v.docVrs,
+        changedAt: v.lstChgDtm
+    }))
+);
+
+/** 현재 조회 중인 버전 (강조용) — 쿼리 파라미터 우선, 없으면 문서의 최신 버전 */
+const currentDocVrs = computed<number | undefined>(() => {
+    if (versionQuery.value !== undefined) return versionQuery.value;
+    const d = docData.value as RequirementDocument | null;
+    return d ? d.docVrs : undefined;
+});
+
+/**
+ * 버전 항목 선택 → 해당 버전 상세 페이지로 이동
+ * 최신 버전을 선택하면 `?version=` 쿼리를 제거하여 URL을 정리합니다.
+ * (쿼리가 남아 있으면 새로고침/북마크 시에도 최신 뷰로 동작하도록 유지)
+ */
+const onSelectVersion = (item: VersionHistoryItem) => {
+    if (latestVersion.value !== undefined && item.version === latestVersion.value) {
+        navigateTo(`/info/documents/${docMngNo}`);
+    } else {
+        navigateTo(`/info/documents/${docMngNo}?version=${item.version}`);
+    }
+};
 
 /* ── 파일 목록 로드 ── */
 // 해당 문서에 연결된 파일 목록을 조회합니다. (await 없이 반응형으로 동작)
 const { data: filesData, refresh: refreshFiles } = fetchFiles('요구사항정의서', docMngNo);
 
 /** KeepAlive 재활성화 시 최신 데이터 재조회 */
-onActivated(() => { refresh(); refreshFiles(); });
+onActivated(async () => {
+    refresh();
+    refreshFiles();
+    try {
+        versions.value = await fetchVersionHistory(docMngNo);
+    } catch {
+        versions.value = [];
+    }
+});
 
 /** 첨부파일 목록 (flDtt === '첨부파일') */
 const attachedFiles = computed<FileRecord[]>(() =>
@@ -244,12 +333,25 @@ const onSave = async () => {
             await uploadFilesBulk(newAttachments.value, '첨부파일', docMngNo, '요구사항정의서');
         }
 
+        // 4단계: Excalidraw 장면 파일 및 임베드 이미지의 orcPkVl을 실제 docMngNo로 업데이트
+        //   - 개별 파일 업데이트 실패는 전체 저장을 실패시키지 않음 (stale/이미 삭제된 파일 방어)
+        //   - 실패한 건은 콘솔에 기록하고 계속 진행
+        for (const flMngNo of getPendingFlMngNos()) {
+            try {
+                await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } catch (e: any) {
+                // eslint-disable-next-line no-console
+                console.warn(`[onSave] Excalidraw 파일 메타 업데이트 스킵: ${flMngNo}`, e?.data?.message ?? e);
+            }
+        }
+        clearPendingFlMngNos();
+
         toast.add({ severity: 'success', summary: '저장 완료', detail: '요구사항 정의서가 수정되었습니다.', life: 3000 });
+        // 편집 관련 임시 상태 초기화 및 조회 모드 전환
         isEditing.value = false;
-        // 편집 관련 임시 상태 초기화
         newAttachments.value = [];
         deletedFileIds.value = [];
-        // 문서 및 파일 목록 새로고침
         await refresh();
         await refreshFiles();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -285,6 +387,58 @@ const onDelete = (event: Event) => {
             }
         }
     });
+};
+
+/* ── 저장 다이얼로그 ── */
+const saveDialogVisible = ref(false);
+
+/** 저장 버튼 클릭 시 다이얼로그 표시 */
+const openSaveDialog = () => {
+    if (!validate()) return;
+    saveDialogVisible.value = true;
+};
+
+/** 현재 버전 수정 */
+const onSaveCurrentVersion = async () => {
+    saveDialogVisible.value = false;
+    await onSave();
+};
+
+/** 새 버전으로 저장 */
+const onSaveAsNewVersion = async () => {
+    saveDialogVisible.value = false;
+    await onCreateNewVersion();
+};
+
+/* ── 새 버전 생성 처리 ── */
+/**
+ * 현재 문서를 기반으로 다음 버전을 생성하고 최신 버전 상세로 이동합니다.
+ * (서버가 다음 버전을 자동 계산하여 신규 Brdocm 레코드를 생성)
+ */
+const onCreateNewVersion = async () => {
+    try {
+        // 1단계: 기존 버전을 원본 그대로 복제하여 새 버전 생성
+        await createNewVersion(docMngNo);
+        // 2단계: 방금 생성된 최신(새) 버전에 편집 내용 저장
+        await updateDocument(docMngNo, {
+            reqNm: form.reqNm,
+            reqCone: form.reqCone,
+            reqDtt: form.reqDtt,
+            bzDtt: form.bzDtt,
+            fsgTlm: form.fsgTlm
+        });
+        toast.add({ severity: 'success', summary: '새 버전 생성', detail: '새 버전이 생성되었습니다.', life: 3000 });
+        // 편집 상태 초기화 및 조회 모드 전환 후 최신 버전 데이터 재조회
+        isEditing.value = false;
+        newAttachments.value = [];
+        deletedFileIds.value = [];
+        await refresh();
+        await refreshFiles();
+        try { versions.value = await fetchVersionHistory(docMngNo); } catch { versions.value = []; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+        toast.add({ severity: 'error', summary: '새 버전 생성 실패', detail: e?.data?.message || '새 버전 생성 중 오류가 발생했습니다.', life: 4000 });
+    }
 };
 
 /* ── AI 반영 처리 ── */
@@ -440,6 +594,11 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
         <!-- 본문 -->
         <template v-else-if="doc">
 
+            <!-- 과거 버전 읽기 전용 안내 배너 -->
+            <Message v-if="isHistoricalVersion" severity="warn" :closable="false" class="mb-4">
+                이전 버전(v{{ versionQuery?.toFixed(2) }})을 보고 있습니다. 수정하려면 최신 버전을 조회하세요.
+            </Message>
+
             <!-- 페이지 헤더 -->
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -447,8 +606,15 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
 icon="pi pi-arrow-left" severity="secondary" text rounded
                         @click="navigateTo('/info/documents')" />
                     <div>
-                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
                             {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
+                            <!-- 현재 조회 중인 문서의 버전 배지 (클릭 시 버전 목록 다이얼로그) -->
+                            <Tag
+                                :value="`v${doc.docVrs.toFixed(2)}`"
+                                severity="info"
+                                class="ml-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                title="버전 목록 보기"
+                                @click="versionDialogVisible = true" />
                         </h1>
                         <p class="text-xs text-zinc-400 mt-0.5 font-mono">{{ docMngNo }}</p>
                     </div>
@@ -463,16 +629,19 @@ label="사전협의" icon="pi pi-comments" severity="info" outlined
                         <Button
 label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
-                            @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
-                        <Button label="편집" icon="pi pi-pencil" @click="startEdit" />
+                            @click="exportToHwpx(doc.reqCone, doc.reqNm, { authorEno: doc.fstEnrUsid })" />
+                        <!-- 편집/삭제는 최신 버전에서만 허용 -->
                         <Button
-label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
+v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
+                        <Button
+v-if="!isHistoricalVersion"
+                            label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
                             @click="onDelete" />
                     </template>
                     <!-- 편집 모드 액션 -->
                     <template v-else>
                         <Button label="취소" severity="secondary" @click="cancelEdit" />
-                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
+                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="openSaveDialog" />
                     </template>
                 </div>
             </div>
@@ -748,7 +917,7 @@ v-else :model-value="doc.reqCone || ''" :readonly="true"
                     <!-- 하단 편집 모드 액션 -->
                     <div v-if="isEditing" class="flex justify-end gap-3 pb-4">
                         <Button label="취소" severity="secondary" @click="cancelEdit" />
-                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
+                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="openSaveDialog" />
                     </div>
 
                 </div> <!-- // 좌측(3/4) 영역 종료 -->
@@ -794,13 +963,47 @@ class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors dur
                                 </div>
                             </li>
                         </ul>
+
                     </div>
                 </div> <!-- // 우측(1/4) 영역 종료 -->
 
             </div> <!-- // grid 레이아웃 종료 -->
 
         </template>
+    <!-- 저장 방식 선택 다이얼로그 -->
+    <Dialog
+        v-model:visible="saveDialogVisible"
+        header="저장 방식 선택"
+        :modal="true"
+        :closable="true"
+        :style="{ width: '360px' }">
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+            이 문서를 어떻게 저장하시겠습니까?
+        </p>
+        <div class="flex flex-col gap-2">
+            <Button
+                label="현재 버전 수정"
+                icon="pi pi-pencil"
+                class="w-full"
+                :loading="isSaving"
+                @click="onSaveCurrentVersion" />
+            <Button
+                label="새 버전으로 저장"
+                icon="pi pi-copy"
+                severity="secondary"
+                class="w-full"
+                @click="onSaveAsNewVersion" />
+        </div>
+    </Dialog>
+
     <ConfirmPopup />
+
+    <!-- 버전 히스토리 다이얼로그 (버전 뱃지 클릭 시 표시) -->
+    <VersionHistoryDialog
+        v-model:visible="versionDialogVisible"
+        :versions="versionItems"
+        :current-version="currentDocVrs"
+        @select="onSelectVersion" />
 
     <!-- AI 채팅 플로팅 패널 -->
     <GeminiChat

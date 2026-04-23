@@ -181,7 +181,7 @@ const buildTargetItems = () => {
         _id: c.itMngcNo || '',
         _type: '비용',
         _orcTb: 'BCOSTM',
-        _link: '/info/cost/',
+        _link: c.itMngcNo ? `/info/cost/${c.itMngcNo}` : '/info/cost',
         name: c.cttNm,
         totalBg: (c.assetBg || 0) + (c.costBg || 0),
         assetBg: c.assetBg || 0,

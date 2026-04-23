@@ -45,8 +45,8 @@ export const useReview = () => {
    * @param docTitle - 문서 제목
    * @param initialContent - 초기 본문 HTML 내용
    */
-  const loadSession = (docMngNo: string, docTitle: string, initialContent: string) => {
-    store.loadSession(docMngNo, docTitle, initialContent);
+  const loadSession = async (docMngNo: string, docTitle: string, initialContent: string, docVrs: number = 0) => {
+    await store.loadSession(docMngNo, docTitle, initialContent, docVrs);
   };
 
   /**
@@ -72,7 +72,7 @@ export const useReview = () => {
    * @param params - 코멘트 정보 (내용, Mark ID, 인용 텍스트, 작성자 정보 등)
    * @returns 생성된 ReviewComment 객체
    */
-  const addInlineComment = (params: {
+  const addInlineComment = async (params: {
     text: string;
     markId: string;
     quotedText: string;
@@ -81,7 +81,7 @@ export const useReview = () => {
     authorTeam: ReviewerTeam;
     attachments?: ReviewComment['attachments'];
   }) => {
-    return store.addComment({
+    return await store.addComment({
       type: 'inline',
       text: params.text,
       markId: params.markId,
@@ -101,14 +101,14 @@ export const useReview = () => {
    * @param params - 코멘트 정보 (내용, 작성자 정보 등)
    * @returns 생성된 ReviewComment 객체
    */
-  const addGeneralComment = (params: {
+  const addGeneralComment = async (params: {
     text: string;
     authorEno: string;
     authorName: string;
     authorTeam: ReviewerTeam;
     attachments?: ReviewComment['attachments'];
   }) => {
-    return store.addComment({
+    return await store.addComment({
       type: 'general',
       text: params.text,
       authorEno: params.authorEno,
@@ -125,8 +125,8 @@ export const useReview = () => {
    *
    * @param commentId - 해결할 코멘트 UUID
    */
-  const resolveComment = (commentId: string) => {
-    store.resolveComment(commentId);
+  const resolveComment = async (commentId: string) => {
+    await store.resolveComment(commentId);
   };
 
   /**
@@ -164,8 +164,8 @@ export const useReview = () => {
    *
    * @param version - 열람할 버전 번호 (예: '0.1') 또는 null
    */
-  const viewVersion = (version: string | null) => {
-    store.viewVersion(version);
+  const viewVersion = async (version: string | null) => {
+    await store.viewVersion(version);
   };
 
   /**

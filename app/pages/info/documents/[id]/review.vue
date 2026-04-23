@@ -20,13 +20,14 @@ const docMngNo = computed(() => route.params.id as string);
 const title = '사전협의';
 definePageMeta({ title });
 
-const { fetchDocument } = useDocuments();
+const { fetchDocument, updateDocument } = useDocuments();
 const {
   store,
   loadSession,
   submitForReview,
   addInlineComment,
   addGeneralComment,
+  resolveComment,
   completeReview,
   updateContent,
   viewVersion,
@@ -41,14 +42,14 @@ watch(docMngNo, async (newId) => {
   const { data } = await fetchDocument(newId);
   const doc = data.value;
   if (doc) {
-    loadSession(newId, doc.reqNm || '요구사항 정의서', doc.reqCone || '');
+    await loadSession(newId, doc.reqNm || '요구사항 정의서', doc.reqCone || '', doc.docVrs ?? 0);
   }
 });
 
 /** 최초 문서 로드 완료 시 세션 초기화 */
-watch(docData, (doc) => {
+watch(docData, async (doc) => {
   if (doc) {
-    loadSession(docMngNo.value, doc.reqNm || '요구사항 정의서', doc.reqCone || '');
+    await loadSession(docMngNo.value, doc.reqNm || '요구사항 정의서', doc.reqCone || '', doc.docVrs ?? 0);
   }
 }, { immediate: true });
 
@@ -122,8 +123,29 @@ const handleCommentMarkClick = (commentId: string) => {
   };
 };
 
+/**
+ * mark 포함 draftContent를 서버에 저장 (재진입 시 mark 복원 보장)
+ * 인라인 코멘트 추가 시 호출됩니다.
+ */
+const persistDocumentContent = async () => {
+  const doc = docData.value;
+  const content = store.session?.draftContent;
+  if (!doc || !content) return;
+  try {
+    await updateDocument(doc.docMngNo, {
+      reqNm: doc.reqNm,
+      reqCone: content,
+      reqDtt: doc.reqDtt,
+      bzDtt: doc.bzDtt,
+      fsgTlm: doc.fsgTlm,
+    });
+  } catch {
+    // 저장 실패 시 코멘트 기능을 막지 않음 (재시도 없이 무시)
+  }
+};
+
 /** 코멘트 팝오버 등록 */
-const handleCommentSubmit = (payload: {
+const handleCommentSubmit = async (payload: {
   type: 'inline' | 'general';
   text: string;
   markId?: string;
@@ -131,10 +153,10 @@ const handleCommentSubmit = (payload: {
   attachments: CommentAttachment[];
 }) => {
   if (payload.type === 'inline' && payload.markId) {
-    // 인라인 코멘트: 에디터에 마크 적용 후 코멘트 추가
+    // 인라인 코멘트: 에디터에 마크 적용 → 서버 저장 → 문서 내용 업데이트(mark 포함)
     editorRef.value?.applyCommentMark(payload.markId);
 
-    addInlineComment({
+    await addInlineComment({
       text: payload.text,
       markId: payload.markId,
       quotedText: payload.quotedText ?? '',
@@ -143,9 +165,12 @@ const handleCommentSubmit = (payload: {
       authorTeam: currentUser.team,
       attachments: payload.attachments,
     });
+
+    // mark가 포함된 draftContent를 서버에 저장하여 재진입 시에도 mark가 유지되도록 함
+    await persistDocumentContent();
   } else {
     // 전반 코멘트
-    addGeneralComment({
+    await addGeneralComment({
       text: payload.text,
       authorEno: currentUser.eno,
       authorName: currentUser.empNm,
@@ -156,15 +181,15 @@ const handleCommentSubmit = (payload: {
 };
 
 /** 코멘트 해결 */
-const handleResolve = (commentId: string) => {
-  store.resolveComment(commentId);
+const handleResolve = async (commentId: string) => {
+  await resolveComment(commentId);
   editorRef.value?.resolveCommentMark(commentId);
   popover.value.visible = false;
 };
 
 /** 메신저에서 전반 코멘트 등록 */
-const handleMessengerComment = (payload: { text: string; attachments: CommentAttachment[] }) => {
-  addGeneralComment({
+const handleMessengerComment = async (payload: { text: string; attachments: CommentAttachment[] }) => {
+  await addGeneralComment({
     text: payload.text,
     authorEno: currentUser.eno,
     authorName: currentUser.empNm,
@@ -179,8 +204,8 @@ const handleScrollToComment = (markId: string) => {
 };
 
 /** 버전 변경 */
-const handleVersionChange = (version: string) => {
-  viewVersion(version);
+const handleVersionChange = async (version: string) => {
+  await viewVersion(version);
 };
 
 /** 에디터 내용 변경 */
