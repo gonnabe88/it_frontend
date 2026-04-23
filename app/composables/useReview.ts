@@ -72,7 +72,7 @@ export const useReview = () => {
    * @param params - 코멘트 정보 (내용, Mark ID, 인용 텍스트, 작성자 정보 등)
    * @returns 생성된 ReviewComment 객체
    */
-  const addInlineComment = (params: {
+  const addInlineComment = async (params: {
     text: string;
     markId: string;
     quotedText: string;
@@ -81,7 +81,7 @@ export const useReview = () => {
     authorTeam: ReviewerTeam;
     attachments?: ReviewComment['attachments'];
   }) => {
-    return store.addComment({
+    return await store.addComment({
       type: 'inline',
       text: params.text,
       markId: params.markId,

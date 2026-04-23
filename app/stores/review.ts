@@ -177,7 +177,7 @@ export const useReviewStore = defineStore('review', () => {
     // useReviewCommentApi: /api/documents/{docMngNo}/review-comments POST 호출
     const api = useReviewCommentApi();
     // 현재 버전을 숫자형 docVrs로 변환 (예: "0.1" → 0.1)
-    const docVrs = parseFloat(session.value.currentVersion);
+    const docVrs = Number.parseFloat(session.value.currentVersion);
 
     // 서버에 저장 후 UI 타입으로 변환된 코멘트 반환
     const saved = await api.createComment(session.value.docMngNo, {
