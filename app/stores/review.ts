@@ -39,7 +39,7 @@ import type {
  */
 const nextVersion = (current: string): string => {
   const num = Number.parseFloat(current);
-  return (num + 0.1).toFixed(1);
+  return (num + 0.01).toFixed(2);
 };
 
 /**
@@ -105,7 +105,7 @@ export const useReviewStore = defineStore('review', () => {
     viewingVersion.value = null;
     activeCommentId.value = null;
 
-    const currentVersion = docVrs > 0 ? docVrs.toFixed(2) : '0.0';
+    const currentVersion = docVrs > 0 ? docVrs.toFixed(2) : '0.00';
 
     session.value = {
       docMngNo,
@@ -120,6 +120,23 @@ export const useReviewStore = defineStore('review', () => {
 
     if (initialContent) {
       _setDraftContent(initialContent);
+    }
+
+    // 서버에서 버전 히스토리 로드 (드롭다운 목록 구성)
+    try {
+      const { fetchVersionHistory } = useDocuments();
+      const history = await fetchVersionHistory(docMngNo);
+      if (history.length > 0) {
+        // 서버 응답은 버전 내림차순 → 오름차순으로 변환
+        session.value.versions = [...history].reverse().map(h => ({
+          version: (h.docVrs as number).toFixed(2),
+          content: h.docVrs === docVrs ? initialContent : '',
+          createdAt: h.fstEnrDtm,
+          createdBy: 'AUTHOR',
+        }));
+      }
+    } catch {
+      // 히스토리 로드 실패 시 _setDraftContent가 추가한 현재 버전만 유지
     }
 
     // 서버에서 해당 버전의 기존 코멘트 로드
@@ -140,7 +157,7 @@ export const useReviewStore = defineStore('review', () => {
     session.value.draftContent = content;
     if (session.value.versions.length === 0) {
       session.value.versions.push({
-        version: '0.0',
+        version: session.value.currentVersion,
         content,
         createdAt: new Date().toISOString(),
         createdBy: 'AUTHOR',
@@ -159,8 +176,8 @@ export const useReviewStore = defineStore('review', () => {
   function submitForReview() {
     if (!session.value) return;
     const content = session.value.draftContent;
-    const newVer = session.value.versions.length === 1 && session.value.currentVersion === '0.0'
-      ? '0.1'
+    const newVer = session.value.currentVersion === '0.00'
+      ? '1.00'
       : nextVersion(session.value.currentVersion);
 
     session.value.versions.push({
@@ -231,9 +248,41 @@ export const useReviewStore = defineStore('review', () => {
     }
   }
 
-  /** 특정 버전 보기 */
-  function viewVersion(version: string | null) {
+  /** 특정 버전 보기 (본문·코멘트 모두 해당 버전으로 갱신, null이면 현재 버전으로 복귀) */
+  async function viewVersion(version: string | null) {
     viewingVersion.value = version;
+    if (!session.value) return;
+
+    // null이면 현재(최신) 버전으로 복귀
+    const targetVersion = version ?? session.value.currentVersion;
+
+    // 과거 버전 본문 온디맨드 조회
+    if (version) {
+      const ver = session.value.versions.find(v => v.version === version);
+      if (ver && !ver.content) {
+        try {
+          const { $apiFetch } = useNuxtApp();
+          const config = useRuntimeConfig();
+          const base = `${config.public.apiBase}/api/documents`;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const doc = await ($apiFetch as any)<{ reqCone: string }>(
+            `${base}/${session.value.docMngNo}?version=${parseFloat(version)}`,
+          );
+          ver.content = doc.reqCone ?? '';
+        } catch {
+          // 해당 버전 내용 조회 실패 시 빈 내용 유지
+        }
+      }
+    }
+
+    // 해당 버전의 코멘트 로드 (버전 복귀 시 현재 버전 코멘트로 재조회)
+    try {
+      const api = useReviewCommentApi();
+      const comments = await api.fetchComments(session.value.docMngNo, parseFloat(targetVersion));
+      session.value.comments = comments;
+    } catch {
+      session.value.comments = [];
+    }
   }
 
   /** 활성 코멘트 설정 */

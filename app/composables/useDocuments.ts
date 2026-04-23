@@ -78,12 +78,17 @@ export const useDocuments = () => {
      * @param docMngNo - 문서 관리번호
      * @param version  - (선택) 조회할 문서 버전. 미지정 시 최신 버전 반환
      */
-    const fetchDocument = (docMngNo: string, version?: number) => {
-        // version 파라미터가 존재할 때만 query 객체를 전달
-        const query = version !== undefined ? { version } : undefined;
+    const fetchDocument = (docMngNo: string, version?: number | Ref<number | undefined>) => {
+        // Ref(ComputedRef 포함)이면 그대로 사용, 정적 값이면 ref로 감쌈
+        const versionRef: Ref<number | undefined> = isRef(version) ? version : ref(version);
+        // versionRef가 바뀔 때마다 query가 재계산되고 useFetch가 재요청됨
+        const query = computed(() => {
+            const v = versionRef.value;
+            return v !== undefined ? { version: v } : {};
+        });
         return useApiFetch<RequirementDocument>(
             `${API_BASE_URL}/${docMngNo}`,
-            query ? { query } : {}
+            { query, watch: [versionRef] }
         );
     };
 

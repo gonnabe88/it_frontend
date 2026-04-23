@@ -204,8 +204,8 @@ const handleScrollToComment = (markId: string) => {
 };
 
 /** 버전 변경 */
-const handleVersionChange = (version: string) => {
-  viewVersion(version);
+const handleVersionChange = async (version: string) => {
+  await viewVersion(version);
 };
 
 /** 에디터 내용 변경 */

@@ -164,8 +164,8 @@ export const useReview = () => {
    *
    * @param version - 열람할 버전 번호 (예: '0.1') 또는 null
    */
-  const viewVersion = (version: string | null) => {
-    store.viewVersion(version);
+  const viewVersion = async (version: string | null) => {
+    await store.viewVersion(version);
   };
 
   /**

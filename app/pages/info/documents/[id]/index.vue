@@ -42,7 +42,7 @@ const toast = useToast();
 const confirm = useConfirm();
 
 /* ── 데이터 로드 ── */
-const { data: docData, pending: loadPending, error, refresh } = await fetchDocument(docMngNo, versionQuery.value);
+const { data: docData, pending: loadPending, error, refresh } = await fetchDocument(docMngNo, versionQuery);
 
 /* ── 버전 히스토리 로드 ── */
 /** 현재 문서의 버전 히스토리 목록 */
@@ -285,11 +285,10 @@ const onSave = async () => {
         clearPendingFlMngNos();
 
         toast.add({ severity: 'success', summary: '저장 완료', detail: '요구사항 정의서가 수정되었습니다.', life: 3000 });
+        // 편집 관련 임시 상태 초기화 및 조회 모드 전환
         isEditing.value = false;
-        // 편집 관련 임시 상태 초기화
         newAttachments.value = [];
         deletedFileIds.value = [];
-        // 문서 및 파일 목록 새로고침
         await refresh();
         await refreshFiles();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -327,6 +326,27 @@ const onDelete = (event: Event) => {
     });
 };
 
+/* ── 저장 다이얼로그 ── */
+const saveDialogVisible = ref(false);
+
+/** 저장 버튼 클릭 시 다이얼로그 표시 */
+const openSaveDialog = () => {
+    if (!validate()) return;
+    saveDialogVisible.value = true;
+};
+
+/** 현재 버전 수정 */
+const onSaveCurrentVersion = async () => {
+    saveDialogVisible.value = false;
+    await onSave();
+};
+
+/** 새 버전으로 저장 */
+const onSaveAsNewVersion = async () => {
+    saveDialogVisible.value = false;
+    await onCreateNewVersion();
+};
+
 /* ── 새 버전 생성 처리 ── */
 /**
  * 현재 문서를 기반으로 다음 버전을 생성하고 최신 버전 상세로 이동합니다.
@@ -334,10 +354,24 @@ const onDelete = (event: Event) => {
  */
 const onCreateNewVersion = async () => {
     try {
+        // 1단계: 기존 버전을 원본 그대로 복제하여 새 버전 생성
         await createNewVersion(docMngNo);
+        // 2단계: 방금 생성된 최신(새) 버전에 편집 내용 저장
+        await updateDocument(docMngNo, {
+            reqNm: form.reqNm,
+            reqCone: form.reqCone,
+            reqDtt: form.reqDtt,
+            bzDtt: form.bzDtt,
+            fsgTlm: form.fsgTlm
+        });
         toast.add({ severity: 'success', summary: '새 버전 생성', detail: '새 버전이 생성되었습니다.', life: 3000 });
-        // 쿼리 없이(=최신 버전) 이동하여 새 버전 데이터를 로드
-        await navigateTo(`/info/documents/${docMngNo}`);
+        // 편집 상태 초기화 및 조회 모드 전환 후 최신 버전 데이터 재조회
+        isEditing.value = false;
+        newAttachments.value = [];
+        deletedFileIds.value = [];
+        await refresh();
+        await refreshFiles();
+        try { versions.value = await fetchVersionHistory(docMngNo); } catch { versions.value = []; }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '새 버전 생성 실패', detail: e?.data?.message || '새 버전 생성 중 오류가 발생했습니다.', life: 4000 });
@@ -528,11 +562,6 @@ label="사전협의" icon="pi pi-comments" severity="info" outlined
 label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
-                        <!-- 새 버전으로 저장 (최신 버전에서만 노출) -->
-                        <Button
-v-if="!isHistoricalVersion"
-                            label="새 버전으로 저장" icon="pi pi-copy" severity="secondary"
-                            @click="onCreateNewVersion" />
                         <!-- 편집/삭제는 최신 버전에서만 허용 -->
                         <Button
 v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
@@ -544,7 +573,7 @@ v-if="!isHistoricalVersion"
                     <!-- 편집 모드 액션 -->
                     <template v-else>
                         <Button label="취소" severity="secondary" @click="cancelEdit" />
-                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
+                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="openSaveDialog" />
                     </template>
                 </div>
             </div>
@@ -820,7 +849,7 @@ v-else :model-value="doc.reqCone || ''" :readonly="true"
                     <!-- 하단 편집 모드 액션 -->
                     <div v-if="isEditing" class="flex justify-end gap-3 pb-4">
                         <Button label="취소" severity="secondary" @click="cancelEdit" />
-                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
+                        <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="openSaveDialog" />
                     </div>
 
                 </div> <!-- // 좌측(3/4) 영역 종료 -->
@@ -887,6 +916,32 @@ v-for="v in versions" :key="`${v.docMngNo}_${v.docVrs}`"
             </div> <!-- // grid 레이아웃 종료 -->
 
         </template>
+    <!-- 저장 방식 선택 다이얼로그 -->
+    <Dialog
+        v-model:visible="saveDialogVisible"
+        header="저장 방식 선택"
+        :modal="true"
+        :closable="true"
+        :style="{ width: '360px' }">
+        <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+            이 문서를 어떻게 저장하시겠습니까?
+        </p>
+        <div class="flex flex-col gap-2">
+            <Button
+                label="현재 버전 수정"
+                icon="pi pi-pencil"
+                class="w-full"
+                :loading="isSaving"
+                @click="onSaveCurrentVersion" />
+            <Button
+                label="새 버전으로 저장"
+                icon="pi pi-copy"
+                severity="secondary"
+                class="w-full"
+                @click="onSaveAsNewVersion" />
+        </div>
+    </Dialog>
+
     <ConfirmPopup />
 
     <!-- AI 채팅 플로팅 패널 -->
