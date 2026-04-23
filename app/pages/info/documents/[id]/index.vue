@@ -15,8 +15,14 @@ import type { RequirementDocument, RequirementDocumentForm, VersionSummary } fro
 import { useFiles } from '~/composables/useFiles';
 import type { FileRecord } from '~/composables/useFiles';
 import { useExcalidrawAttachment } from '~/composables/useExcalidrawAttachment';
+import VersionHistoryDialog from '~/components/common/VersionHistoryDialog.vue';
+import type { VersionHistoryItem } from '~/components/common/VersionHistoryDialog.vue';
 
 const { getPendingFlMngNos, clearPendingFlMngNos } = useExcalidrawAttachment();
+
+// Excalidraw pending 목록은 모듈 레벨 ref라 이전 세션 stale ID가 남을 수 있음 →
+// 페이지 진입 시 즉시 초기화하여 현재 편집 세션에서 생성된 ID만 추적
+clearPendingFlMngNos();
 
 const route = useRoute();
 /** 문서 관리번호 (라우트 파라미터) */
@@ -47,8 +53,24 @@ const { data: docData, pending: loadPending, error, refresh } = await fetchDocum
 /* ── 버전 히스토리 로드 ── */
 /** 현재 문서의 버전 히스토리 목록 */
 const versions = ref<VersionSummary[]>([]);
-/** 과거 버전 조회 여부 (쿼리에 version이 있을 때만 true) */
-const isHistoricalVersion = computed(() => versionQuery.value !== undefined);
+
+/** 버전 목록 중 최신(가장 높은) 버전 번호 — 버전 목록이 비면 undefined */
+const latestVersion = computed<number | undefined>(() => {
+    if (versions.value.length === 0) return undefined;
+    return Math.max(...versions.value.map(v => v.docVrs));
+});
+
+/**
+ * 과거 버전 조회 여부
+ * 쿼리 파라미터로 버전을 지정했더라도 그 값이 최신 버전과 같다면 과거 버전 아님.
+ * (최신 버전 뱃지 클릭 등으로 `?version=최신` URL이 만들어진 경우에도
+ *  '이전 버전' 안내 배너/편집 잠금이 잘못 적용되는 것을 방지)
+ */
+const isHistoricalVersion = computed(() => {
+    if (versionQuery.value === undefined) return false;
+    if (latestVersion.value === undefined) return false;
+    return versionQuery.value < latestVersion.value;
+});
 
 // 페이지 초기화 시 버전 히스토리 조회 (실패 시 빈 배열 유지)
 try {
@@ -56,6 +78,39 @@ try {
 } catch {
     versions.value = [];
 }
+
+/* ── 버전 히스토리 다이얼로그 ── */
+/** 버전 뱃지 클릭 시 열리는 다이얼로그 표시 여부 */
+const versionDialogVisible = ref(false);
+
+/** 공통 VersionHistoryDialog에 전달할 VersionHistoryItem[] 변환 */
+const versionItems = computed<VersionHistoryItem[]>(() =>
+    versions.value.map(v => ({
+        key: `${v.docMngNo}-${v.docVrs}`,
+        version: v.docVrs,
+        changedAt: v.lstChgDtm
+    }))
+);
+
+/** 현재 조회 중인 버전 (강조용) — 쿼리 파라미터 우선, 없으면 문서의 최신 버전 */
+const currentDocVrs = computed<number | undefined>(() => {
+    if (versionQuery.value !== undefined) return versionQuery.value;
+    const d = docData.value as RequirementDocument | null;
+    return d ? d.docVrs : undefined;
+});
+
+/**
+ * 버전 항목 선택 → 해당 버전 상세 페이지로 이동
+ * 최신 버전을 선택하면 `?version=` 쿼리를 제거하여 URL을 정리합니다.
+ * (쿼리가 남아 있으면 새로고침/북마크 시에도 최신 뷰로 동작하도록 유지)
+ */
+const onSelectVersion = (item: VersionHistoryItem) => {
+    if (latestVersion.value !== undefined && item.version === latestVersion.value) {
+        navigateTo(`/info/documents/${docMngNo}`);
+    } else {
+        navigateTo(`/info/documents/${docMngNo}?version=${item.version}`);
+    }
+};
 
 /* ── 파일 목록 로드 ── */
 // 해당 문서에 연결된 파일 목록을 조회합니다. (await 없이 반응형으로 동작)
@@ -279,8 +334,16 @@ const onSave = async () => {
         }
 
         // 4단계: Excalidraw 장면 파일 및 임베드 이미지의 orcPkVl을 실제 docMngNo로 업데이트
+        //   - 개별 파일 업데이트 실패는 전체 저장을 실패시키지 않음 (stale/이미 삭제된 파일 방어)
+        //   - 실패한 건은 콘솔에 기록하고 계속 진행
         for (const flMngNo of getPendingFlMngNos()) {
-            await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            try {
+                await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } catch (e: any) {
+                // eslint-disable-next-line no-console
+                console.warn(`[onSave] Excalidraw 파일 메타 업데이트 스킵: ${flMngNo}`, e?.data?.message ?? e);
+            }
         }
         clearPendingFlMngNos();
 
@@ -545,8 +608,13 @@ icon="pi pi-arrow-left" severity="secondary" text rounded
                     <div>
                         <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
                             {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
-                            <!-- 현재 조회 중인 문서의 버전 배지 -->
-                            <Tag :value="`v${doc.docVrs.toFixed(2)}`" severity="info" class="ml-2" />
+                            <!-- 현재 조회 중인 문서의 버전 배지 (클릭 시 버전 목록 다이얼로그) -->
+                            <Tag
+                                :value="`v${doc.docVrs.toFixed(2)}`"
+                                severity="info"
+                                class="ml-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                title="버전 목록 보기"
+                                @click="versionDialogVisible = true" />
                         </h1>
                         <p class="text-xs text-zinc-400 mt-0.5 font-mono">{{ docMngNo }}</p>
                     </div>
@@ -561,7 +629,7 @@ label="사전협의" icon="pi pi-comments" severity="info" outlined
                         <Button
 label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
-                            @click="exportToHwpx(doc.reqCone, doc.reqNm)" />
+                            @click="exportToHwpx(doc.reqCone, doc.reqNm, { authorEno: doc.fstEnrUsid })" />
                         <!-- 편집/삭제는 최신 버전에서만 허용 -->
                         <Button
 v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
@@ -896,20 +964,6 @@ class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors dur
                             </li>
                         </ul>
 
-                        <!-- 버전 히스토리 패널 -->
-                        <Panel header="버전 히스토리" class="mt-6">
-                            <ul v-if="versions.length > 0" class="list-none p-0 m-0">
-                                <li
-v-for="v in versions" :key="`${v.docMngNo}_${v.docVrs}`"
-                                    class="flex items-center justify-between py-2 border-b border-zinc-200 dark:border-zinc-700 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                                    :class="{ 'font-bold text-primary': v.docVrs === (versionQuery ?? (doc ? doc.docVrs : undefined)) }"
-                                    @click="navigateTo(`/info/documents/${v.docMngNo}?version=${v.docVrs}`)">
-                                    <span>v{{ v.docVrs.toFixed(2) }}</span>
-                                    <span class="text-sm text-zinc-500">{{ v.lstChgDtm }}</span>
-                                </li>
-                            </ul>
-                            <p v-else class="text-xs text-zinc-400 italic m-0">버전 정보가 없습니다.</p>
-                        </Panel>
                     </div>
                 </div> <!-- // 우측(1/4) 영역 종료 -->
 
@@ -943,6 +997,13 @@ v-for="v in versions" :key="`${v.docMngNo}_${v.docVrs}`"
     </Dialog>
 
     <ConfirmPopup />
+
+    <!-- 버전 히스토리 다이얼로그 (버전 뱃지 클릭 시 표시) -->
+    <VersionHistoryDialog
+        v-model:visible="versionDialogVisible"
+        :versions="versionItems"
+        :current-version="currentDocVrs"
+        @select="onSelectVersion" />
 
     <!-- AI 채팅 플로팅 패널 -->
     <GeminiChat

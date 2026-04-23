@@ -21,6 +21,10 @@ definePageMeta({ title });
 const { createDocument } = useDocuments();
 const { uploadFile, uploadFilesBulk, updateFileMeta, deleteFile, getPreviewUrl } = useFiles();
 const { getPendingFlMngNos, clearPendingFlMngNos } = useExcalidrawAttachment();
+
+// Excalidraw pending 목록은 모듈 레벨 ref라 이전 세션 stale ID가 남을 수 있음 →
+// 신규 작성 페이지 진입 시 즉시 초기화
+clearPendingFlMngNos();
 const toast = useToast();
 const router = useRouter();
 const { removeTab } = useTabs();
@@ -213,16 +217,26 @@ const onSave = async () => {
         }
 
         // 3단계: 에디터 내 이미지 및 첨부파일의 orcPkVl을 실제 docMngNo로 업데이트
+        //   - 개별 파일 업데이트 실패는 전체 저장을 실패시키지 않음 (stale/이미 삭제된 파일 방어)
+        const safeUpdateFileMeta = async (flMngNo: string) => {
+            try {
+                await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } catch (e: any) {
+                // eslint-disable-next-line no-console
+                console.warn(`[onSave] 파일 메타 업데이트 스킵: ${flMngNo}`, e?.data?.message ?? e);
+            }
+        };
         for (const flMngNo of pendingImageIds.value) {
-            await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            await safeUpdateFileMeta(flMngNo);
         }
         for (const flMngNo of pendingAttachmentIds.value) {
-            await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            await safeUpdateFileMeta(flMngNo);
         }
 
         // 4단계: Excalidraw 장면 파일 및 임베드 이미지의 orcPkVl을 실제 docMngNo로 업데이트
         for (const flMngNo of getPendingFlMngNos()) {
-            await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
+            await safeUpdateFileMeta(flMngNo);
         }
         clearPendingFlMngNos();
 

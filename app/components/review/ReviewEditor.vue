@@ -94,6 +94,10 @@ const headingGuardPlugin = new Plugin({
   filterTransaction(transaction, state) {
     if (!transaction.docChanged) return true;
 
+    // 프로그래매틱 전체 치환(setContent with emitUpdate: false)은 가드 우회.
+    // 버전 전환 시 TiptapEditor가 setContent로 본문을 교체할 때 H2/H3 삭제로 오인되어 차단되는 것을 방지합니다.
+    if (transaction.getMeta('preventUpdate')) return true;
+
     let blocked = false;
     const oldDoc = state.doc;
 

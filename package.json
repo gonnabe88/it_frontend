@@ -48,7 +48,7 @@
     "autoprefixer": "^10.4.23",
     "better-sqlite3": "^12.8.0",
     "chart.js": "^4.5.1",
-    "exceljs": "^4.4.0",
+    "exceljs": "^3.4.0",
     "isomorphic-dompurify": "^3.0.0",
     "jszip": "^3.10.1",
     "lowlight": "^3.3.0",
