@@ -380,7 +380,7 @@ const onDelete = (event: Event) => {
             try {
                 await deleteDocument(docMngNo);
                 toast.add({ severity: 'success', summary: '삭제 완료', detail: '문서가 삭제되었습니다.', life: 3000 });
-                await navigateTo('/info/documents');
+                await navigateTo('/info/documents/list');
             } catch {
                 toast.add({ severity: 'error', summary: '삭제 실패', detail: '삭제 중 오류가 발생했습니다.', life: 4000 });
                 isDeleting.value = false;
@@ -576,7 +576,7 @@ v-else-if="error"
             <i class="pi pi-exclamation-circle text-5xl text-red-400 mb-4 block"/>
             <p class="text-red-500 font-medium">문서를 불러오는 중 오류가 발생했습니다.</p>
             <p class="text-sm text-zinc-400 mt-1">{{ error.message }}</p>
-            <Button label="목록으로" icon="pi pi-arrow-left" class="mt-4" @click="navigateTo('/info/documents')" />
+            <Button label="목록으로" icon="pi pi-arrow-left" class="mt-4" @click="navigateTo('/info/documents/list')" />
         </div>
 
         <!-- 문서 없음 -->
@@ -588,7 +588,7 @@ v-else-if="!doc"
             <p class="text-xs text-zinc-400 mt-1 font-mono">{{ docMngNo }}</p>
             <Button
 label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
-                @click="navigateTo('/info/documents')" />
+                @click="navigateTo('/info/documents/list')" />
         </div>
 
         <!-- 본문 -->
@@ -604,7 +604,7 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
                 <div class="flex items-center gap-3">
                     <Button
 icon="pi pi-arrow-left" severity="secondary" text rounded
-                        @click="navigateTo('/info/documents')" />
+                        @click="navigateTo('/info/documents/list')" />
                     <div>
                         <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
                             {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
