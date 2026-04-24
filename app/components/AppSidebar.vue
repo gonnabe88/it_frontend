@@ -234,6 +234,17 @@ const onLeave = (el: Element) => {
     element.style.height = '0';
 };
 
+/**
+ * 서브메뉴 항목 활성 여부 판단
+ * - 쿼리스트링 포함: route.fullPath와 정확히 비교
+ * - 쿼리스트링 없음: route.path와 비교
+ * NuxtLink의 built-in active-class는 쿼리스트링을 무시하므로 직접 비교합니다.
+ */
+const isSubItemActive = (to: string): boolean => {
+    if (to.includes('?')) return route.fullPath === to;
+    return route.path === to;
+};
+
 // Initialize expanded
 watch(menuItems, (items) => {
     items.forEach(item => {
@@ -280,8 +291,7 @@ v-else class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border bord
                         <NuxtLink
 v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
                             :to="item.to"
-                            class="flex items-center py-3 rounded-lg text-indigo-800 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3"
-                            exact-active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium">
+                            :class="['flex items-center py-3 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3', isSubItemActive(item.to!) ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-indigo-800 dark:text-indigo-400']"
                             <div class="flex items-center">
                                 <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
@@ -315,8 +325,7 @@ v-if="!collapsed"
                                 <li v-for="sub in item.items" :key="sub.label">
                                     <NuxtLink
                                         :to="sub.to"
-                                        class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
-                                        exact-active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
+                                        :class="['flex items-center justify-between py-2 px-3 rounded text-sm hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors', isSubItemActive(sub.to) ? 'text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50' : 'text-zinc-500 dark:text-zinc-400']">
                                         <span class="flex items-center whitespace-nowrap">
                                             {{ sub.label }}
                                             <!-- 관리자 전용 메뉴: 왕관 아이콘 -->
