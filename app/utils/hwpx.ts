@@ -97,7 +97,7 @@ const TAG_MAP: Record<string, {
 };
 
 // 표 관련 상수 (변경 파일 기준)
-const TABLE_WIDTH  = 41954;  // 전체 표 너비 (HWPUNIT)
+const TABLE_WIDTH  = 48190;  // 전체 표 너비 (HWPUNIT) — 좌우 여백 20mm 기준 본문폭
 const ROW_HEIGHT   = 1848;   // 행 높이 (HWPUNIT)
 const CELL_BF_TH   = 4;      // th 셀 borderFillIDRef (파란 배경)
 const CELL_BF_TD   = 3;      // td 셀 borderFillIDRef (흰 배경 실선)
@@ -120,7 +120,7 @@ const DEFAULT_LINESEG =
 
 interface TextRun {
     text: string;
-    charPrId: CharPrId;
+    charPrId: CharPrId | number;
     /**
      * 이미지 run일 경우 설정. 설정 시 <hp:pic>이 생성되고 text는 무시됨.
      *  - binId  : header의 binDataList에서 부여된 ID (1부터 시작)
@@ -128,6 +128,8 @@ interface TextRun {
      *  - height : HWPUNIT
      */
     image?: { binId: number; width: number; height: number };
+    /** 인라인 글자색 (예: "#FF0000"). 설정 시 동적 charPr ID가 발급됨. */
+    color?: string;
 }
 
 /** 이미지 원본 메타 (fetch 전) */
@@ -209,11 +211,12 @@ const makeCharPr = (
     height: number,
     fontIdx: number,
     borderFillId: number,
-    opts: { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean } = {},
+    opts: { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; textColor?: string } = {},
 ): string => {
     const f = String(fontIdx);
+    const textColor = opts.textColor ?? '#000000';
     return (
-        `<hh:charPr id="${id}" height="${height}" textColor="#000000" shadeColor="none" ` +
+        `<hh:charPr id="${id}" height="${height}" textColor="${textColor}" shadeColor="none" ` +
         `useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="${borderFillId}">` +
         `<hh:fontRef hangul="${f}" latin="${f}" hanja="${f}" japanese="${f}" other="${f}" symbol="${f}" user="${f}"/>` +
         `<hh:ratio hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>` +
@@ -281,7 +284,7 @@ const makeFontface = (lang: string): string =>
  * 참고: 이미지 BinData 등록은 header.xml의 binDataList가 아닌
  *       content.hpf의 <opf:manifest><opf:item>에 이루어짐 (sample.hwpx 기준)
  */
-const buildHeaderXml = (_images: ResolvedImage[] = []): string => {
+const buildHeaderXml = (_images: ResolvedImage[] = [], extraCharPrXml = '', extraCharPrCount = 0): string => {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<hh:head ${COMMON_XMLNS} version="1.2" secCnt="1">` +
     `<hh:beginNum page="1" footnote="1" endnote="1" pic="1" tbl="1" equation="1"/>` +
@@ -322,8 +325,8 @@ const buildHeaderXml = (_images: ResolvedImage[] = []): string => {
     `<hc:fillBrush><hc:winBrush faceColor="#DFE6F7" hatchColor="#999999" alpha="0"/></hc:fillBrush>` +
     `</hh:borderFill>` +
     `</hh:borderFills>` +
-    // charProperties (10개) — 구조/헤더 + 본문 인라인 서식
-    `<hh:charProperties itemCnt="10">` +
+    // charProperties (10 고정 + 동적 색상 charPr)
+    `<hh:charProperties itemCnt="${10 + extraCharPrCount}">` +
     makeCharPr(CHAR_PR.COMPAT, 1000, 0, 1)                            +  // 10pt
     makeCharPr(CHAR_PR.NORMAL, 1400, 0, 2)                            +  // 14pt 본문
     makeCharPr(CHAR_PR.SEC,    1500, 0, 2)                            +  // 15pt secPr
@@ -334,6 +337,7 @@ const buildHeaderXml = (_images: ResolvedImage[] = []): string => {
     makeCharPr(CHAR_PR.I_BODY, 1400, 0, 2, { italic: true })          +  // 14pt I 본문 기울임
     makeCharPr(CHAR_PR.U_BODY, 1400, 0, 2, { underline: true })       +  // 14pt U 본문 밑줄
     makeCharPr(CHAR_PR.S_BODY, 1400, 0, 2, { strike: true })          +  // 14pt S 본문 취소선
+    extraCharPrXml +
     `</hh:charProperties>` +
     // tabProperties
     `<hh:tabProperties itemCnt="1">` +
@@ -345,7 +349,7 @@ const buildHeaderXml = (_images: ResolvedImage[] = []): string => {
     makeParaPr(PARA_PR.CENTER, { align: 'CENTER', lineSpacing: 160, borderFillId: 2, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.NORMAL, { lineSpacing: 160, breakNonLatin: 'BREAK_WORD' })                 +
     makeParaPr(PARA_PR.H2,     { lineSpacing: 160, nextMargin: 1000, breakNonLatin: 'BREAK_WORD' }) +
-    makeParaPr(PARA_PR.H3,     { lineSpacing: 160, prevMargin: 1000, nextMargin: 600, breakNonLatin: 'BREAK_WORD' }) +
+    makeParaPr(PARA_PR.H3,     { lineSpacing: 160, prevMargin: 1500, nextMargin: 600, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.LIST,   { lineSpacing: 160, indent: -6910, breakNonLatin: 'BREAK_WORD' })  +
     `</hh:paraProperties>` +
     // styles
@@ -364,6 +368,31 @@ const buildHeaderXml = (_images: ResolvedImage[] = []): string => {
 // ─────────────────────────────────────────────────────────────────────────────
 // HTML → DocNode 변환
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * CSS 색상 값을 HWP가 요구하는 #RRGGBB 형식으로 변환합니다.
+ * - #rgb       → #RRGGBB
+ * - #rrggbb    → #RRGGBB (대문자)
+ * - rgb(r,g,b) → #RRGGBB
+ * 변환할 수 없는 형식이면 그대로 반환합니다.
+ */
+const cssColorToHex = (css: string): string => {
+    const s = css.trim();
+    const hex = s.match(/^#([0-9a-f]{3,6})$/i);
+    if (hex) {
+        const h = hex[1]!;
+        if (h.length === 3) {
+            return '#' + h[0]!.repeat(2) + h[1]!.repeat(2) + h[2]!.repeat(2);
+        }
+        return '#' + h.toUpperCase();
+    }
+    const rgb = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (rgb) {
+        const toHex2 = (n: string) => parseInt(n, 10).toString(16).padStart(2, '0').toUpperCase();
+        return '#' + toHex2(rgb[1]!) + toHex2(rgb[2]!) + toHex2(rgb[3]!);
+    }
+    return s;
+};
 
 /**
  * 인라인 요소에서 TextRun 배열 추출
@@ -416,9 +445,30 @@ const extractRuns = (
         return runs;
     }
 
+    // style="color: ..." 파싱 — 현재 엘리먼트에 인라인 글자색이 있으면 하위 run에 전파
+    const styleAttr  = el.getAttribute('style') ?? '';
+    const colorMatch = styleAttr.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+    const inheritedColor: string | undefined = (el as unknown as { _inheritedColor?: string })._inheritedColor;
+    const resolvedColor = colorMatch
+        ? cssColorToHex(colorMatch[1]!.trim())
+        : inheritedColor;
+
+    const childRuns: TextRun[] = [];
     for (const child of Array.from(el.childNodes)) {
-        runs.push(...extractRuns(child, charPr, imgMap));
+        // 색상 정보를 자식 엘리먼트에 임시 프로퍼티로 전달 (DOM 조작 없이 클로저 대신 활용)
+        if (resolvedColor && child.nodeType === Node.ELEMENT_NODE) {
+            (child as unknown as { _inheritedColor?: string })._inheritedColor = resolvedColor;
+        }
+        childRuns.push(...extractRuns(child, charPr, imgMap));
     }
+
+    // 색상이 있으면 모든 자식 run에 color 설정 (아직 없는 것만)
+    if (resolvedColor) {
+        for (const r of childRuns) {
+            if (!r.color) r.color = resolvedColor;
+        }
+    }
+    runs.push(...childRuns);
     return runs;
 };
 
@@ -537,7 +587,7 @@ const htmlToDocNodes = (html: string, imgMap: Map<string, PendingImage> = new Ma
 
 /**
  * 이미지 run XML 생성 (hp:pic 삽입)
- * treatAsChar=1: 글자처럼 인라인 배치 → 본문 흐름에 자연스럽게 삽입
+ * treatAsChar=1: 글자처럼 인라인 배치 → 본문 흐름에서 정확한 위치 보장
  */
 const buildPicRunXml = (
     charPrId: number,
@@ -577,7 +627,7 @@ const buildPicRunXml = (
         // 3) 크기/위치/여백 — 이 순서가 sample.hwpx와 일치
         `<hp:sz width="${W}" widthRelTo="ABSOLUTE" height="${H}" heightRelTo="ABSOLUTE" protect="0"/>` +
         `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" ` +
-        `vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
+        `vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="CENTER" vertOffset="0" horzOffset="0"/>` +
         `<hp:outMargin left="0" right="0" top="0" bottom="0"/>` +
         `</hp:pic>` +
         `</hp:run>`
@@ -669,14 +719,14 @@ const buildTableXml = (table: TableNode, paraId: number): string => {
         `lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" ` +
         `rowCnt="${rowCnt}" colCnt="${colCnt}" cellSpacing="0" borderFillIDRef="3" noAdjust="0">` +
         `<hp:sz width="${tableWidth}" widthRelTo="ABSOLUTE" height="${totalH}" heightRelTo="ABSOLUTE" protect="0"/>` +
-        `<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" ` +
-        `vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>` +
+        `<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" ` +
+        `vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" horzAlign="CENTER" vertOffset="0" horzOffset="0"/>` +
         `<hp:outMargin left="283" right="283" top="283" bottom="283"/>` +
         `<hp:inMargin left="510" right="510" top="141" bottom="141"/>` +
         rowsXml +
         `</hp:tbl>`;
 
-    // 표는 단락 내 인라인 객체로 삽입
+    // 표는 단락 내 그림 객체로 삽입 (treatAsChar=0, 페이지 경계에서 분리 가능)
     return (
         `<hp:p id="${paraId}" paraPrIDRef="${PARA_PR.NORMAL}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">` +
         `<hp:run charPrIDRef="${CHAR_PR.NORMAL}">` +
@@ -720,7 +770,7 @@ const buildSectionXml = (nodes: DocNode[], headerTable?: TableNode): string => {
         `<hp:visibility hideFirstHeader="0" hideFirstFooter="0" hideFirstMasterPage="0" border="SHOW_ALL" fill="SHOW_ALL" hideFirstPageNum="0" hideFirstEmptyLine="0" showLineNumber="0"/>` +
         `<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>` +
         `<hp:pagePr landscape="WIDELY" width="59528" height="84188" gutterType="LEFT_ONLY">` +
-        `<hp:margin header="4252" footer="4252" gutter="0" left="8504" right="8504" top="5668" bottom="4252"/>` +
+        `<hp:margin header="2268" footer="2268" gutter="0" left="5669" right="5669" top="4252" bottom="4252"/>` +
         `</hp:pagePr>` +
         `<hp:footNotePr>` +
         `<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>` +
@@ -1198,8 +1248,15 @@ export const htmlToHwpxBlob = async (
     for (const [, info] of imgMap.entries()) {
         const sz = sizeByBinId.get(info.binId);
         if (sz) {
-            info.width  = sz.w;
-            info.height = sz.h;
+            // 이미지가 문서 본문 가로폭(TABLE_WIDTH)을 초과하면 비율 유지하며 축소
+            const maxW = TABLE_WIDTH;
+            if (sz.w > maxW) {
+                info.width  = maxW;
+                info.height = Math.round(sz.h * (maxW / sz.w));
+            } else {
+                info.width  = sz.w;
+                info.height = sz.h;
+            }
         }
     }
 
@@ -1232,11 +1289,68 @@ export const htmlToHwpxBlob = async (
     // Title 표는 별도로 넘겨 secPr 단락 내부에 임베드 (최상단 빈 줄 제거 목적)
     const titleTable = buildTitleTableNode(titleOpts);
     const nodes: DocNode[] = bodyNodes;
-    const zip   = new JSZip();
+
+    // 3-a) 색상 charPr 동적 발급 — 모든 run을 순회해 (baseCharPrId, color) 조합마다 ID 할당
+    // 기존 고정 charPr가 ID 0~9를 사용하므로 동적 ID는 10부터 시작
+    const colorRegistry = new Map<string, number>(); // key: "baseId:color" → dynamicId
+    let nextColorId = 10;
+
+    const collectColors = (run: TextRun) => {
+        if (!run.color) return;
+        const key = `${run.charPrId}:${run.color}`;
+        if (!colorRegistry.has(key)) colorRegistry.set(key, nextColorId++);
+    };
+    const walkNodes = (ns: DocNode[]) => {
+        for (const n of ns) {
+            if (n.type === 'para') n.runs.forEach(collectColors);
+            else if (n.type === 'table') n.rows.forEach(row => row.forEach(cell => cell.runs.forEach(collectColors)));
+        }
+    };
+    walkNodes(nodes);
+
+    // 동적 charPr XML 생성: 각 base charPr의 속성을 복製하고 textColor만 교체
+    // base charPr 속성 조회 테이블 (id → height, opts)
+    const BASE_CHAR_PR_OPTS: Record<number, { height: number; bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean }> = {
+        [CHAR_PR.COMPAT]: { height: 1000 },
+        [CHAR_PR.NORMAL]: { height: 1400 },
+        [CHAR_PR.SEC]:    { height: 1500 },
+        [CHAR_PR.TITLE]:  { height: 1800, bold: true },
+        [CHAR_PR.BOLD]:   { height: 1500, bold: true },
+        [CHAR_PR.SYM]:    { height: 1500 },
+        [CHAR_PR.B_BODY]: { height: 1400, bold: true },
+        [CHAR_PR.I_BODY]: { height: 1400, italic: true },
+        [CHAR_PR.U_BODY]: { height: 1400, underline: true },
+        [CHAR_PR.S_BODY]: { height: 1400, strike: true },
+    };
+    let extraCharPrXml = '';
+    for (const [key, dynId] of colorRegistry.entries()) {
+        const colonIdx = key.indexOf(':');
+        const baseId   = Number(key.slice(0, colonIdx));
+        const color    = key.slice(colonIdx + 1);
+        const base     = BASE_CHAR_PR_OPTS[baseId] ?? { height: 1400 };
+        extraCharPrXml += makeCharPr(dynId, base.height, 0, 2, { ...base, textColor: color });
+    }
+
+    // 색상 run의 charPrId를 동적 ID로 인플레이스 교체
+    const resolveColors = (run: TextRun) => {
+        if (!run.color) return;
+        const key   = `${run.charPrId}:${run.color}`;
+        const dynId = colorRegistry.get(key);
+        if (dynId !== undefined) run.charPrId = dynId;
+    };
+    const resolveNodes = (ns: DocNode[]) => {
+        for (const n of ns) {
+            if (n.type === 'para') n.runs.forEach(resolveColors);
+            else if (n.type === 'table') n.rows.forEach(row => row.forEach(cell => cell.runs.forEach(resolveColors)));
+        }
+    };
+    resolveNodes(nodes);
+
+    const zip = new JSZip();
 
     zip.file('mimetype',               'application/hwp+zip', { compression: 'STORE' });
     zip.file('version.xml',            VERSION_XML);
-    zip.file('Contents/header.xml',    buildHeaderXml(resolvedImgs));
+    zip.file('Contents/header.xml',    buildHeaderXml(resolvedImgs, extraCharPrXml, colorRegistry.size));
     zip.file('Contents/section0.xml',  buildSectionXml(nodes, titleTable));
 
     // 3) 이미지 바이너리를 BinData/imageN.ext 로 추가

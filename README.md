@@ -4,6 +4,9 @@
 
 IT Portal (IT 정보화 포탈)은 정보화 예산, 사업, 인력을 관리하는 내부 업무 시스템입니다.  
 
+### 디자인 시스템
+https://claude.ai/design/p/0bb78ad5-3af2-4e1e-ac74-cb56b3efa3ba?via=share
+
 ## 2. 기술 스택
 
 | 구분 | 기술 | 버전/비고 |

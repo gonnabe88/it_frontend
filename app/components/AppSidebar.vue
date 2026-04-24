@@ -236,13 +236,12 @@ const onLeave = (el: Element) => {
 
 /**
  * 서브메뉴 항목 활성 여부 판단
- * - 쿼리스트링 포함: route.fullPath와 정확히 비교
- * - 쿼리스트링 없음: route.path와 비교
- * NuxtLink의 built-in active-class는 쿼리스트링을 무시하므로 직접 비교합니다.
+ * route.fullPath와 완전 일치 비교합니다.
+ * - 쿼리스트링이 없는 항목(/info/documents/list)은 현재 URL에 쿼리가 붙어 있으면 매칭되지 않습니다.
+ * - 쿼리스트링이 있는 항목(?status=reviewing)은 정확히 일치할 때만 활성화됩니다.
  */
 const isSubItemActive = (to: string): boolean => {
-    if (to.includes('?')) return route.fullPath === to;
-    return route.path === to;
+    return route.fullPath === to;
 };
 
 // Initialize expanded
@@ -291,7 +290,7 @@ v-else class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border bord
                         <NuxtLink
 v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
                             :to="item.to"
-                            :class="['flex items-center py-3 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3', isSubItemActive(item.to!) ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-indigo-800 dark:text-indigo-400']"
+                            :class="['flex items-center py-3 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3', isSubItemActive(item.to!) ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-indigo-800 dark:text-indigo-400']">
                             <div class="flex items-center">
                                 <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
