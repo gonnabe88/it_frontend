@@ -281,7 +281,7 @@ v-else class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border bord
 v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
                             :to="item.to"
                             class="flex items-center py-3 rounded-lg text-indigo-800 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3"
-                            active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium">
+                            exact-active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium">
                             <div class="flex items-center">
                                 <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
@@ -316,7 +316,7 @@ v-if="!collapsed"
                                     <NuxtLink
                                         :to="sub.to"
                                         class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
-                                        active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
+                                        exact-active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
                                         <span class="flex items-center whitespace-nowrap">
                                             {{ sub.label }}
                                             <!-- 관리자 전용 메뉴: 왕관 아이콘 -->
