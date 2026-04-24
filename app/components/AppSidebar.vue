@@ -18,6 +18,8 @@
 -->
 <script setup lang="ts">
 import { usePendingApprovalCount } from '~/composables/usePendingApprovalCount';
+import { useDocumentBadgeCount } from '~/composables/useDocumentDashboard';
+import { useApprovalBadgeCount } from '~/composables/useApprovalDashboard';
 import IconCrown from '~/components/icons/IconCrown.vue';
 
 /**
@@ -36,6 +38,12 @@ const { isAdmin: _isAdmin } = useAuth();
 // 새로고침 시 중복 요청으로 인한 네트워크 오류 토스트가 발생하지 않습니다.
 const { data: pendingCountData } = usePendingApprovalCount();
 
+/* ── 사전협의 검토 진행 중 배지 ── */
+const { reviewingCount: docReviewingCount } = useDocumentBadgeCount();
+
+/* ── 전자결재 결재 대기 / 기안 진행 중 배지 ── */
+const { pendingCount: approvalPendingCount, inProgressCount: approvalInProgressCount } = useApprovalBadgeCount();
+
 /**
  * 결재 상신 가능한 항목 수 (정보화사업 + 전산업무비)
  * 사이드바의 [결재 상신] 메뉴 옆 배지에 표시됩니다.
@@ -49,12 +57,54 @@ const toggleSidebar = () => {
 
 const route = useRoute();
 const context = computed(() => {
+    if (route.path.startsWith('/info/documents')) return 'documents';
+    if (route.path.startsWith('/approval')) return 'approval';
     if (route.path.startsWith('/audit')) return 'audit';
     if (route.path.startsWith('/admin')) return 'admin';
     return 'info';
 });
 
 const menuItems = computed(() => {
+    // 사전협의 컨텍스트
+    if (context.value === 'documents') {
+        return [
+            { label: 'Home', icon: 'pi pi-home', to: '/info/documents' },
+            {
+                label: '문서 관리', icon: 'pi pi-folder', items: [
+                    { label: '문서 목록', to: '/info/documents/list' },
+                    { label: '신규 작성', to: '/info/documents/form' }
+                ]
+            },
+            {
+                label: '협의 현황', icon: 'pi pi-chart-pie', items: [
+                    { label: '검토 중', to: '/info/documents/list?status=reviewing', badge: 'docReviewing' },
+                    { label: '협의 완료', to: '/info/documents/list?status=completed' },
+                    { label: '지연', to: '/info/documents/list?status=overdue' }
+                ]
+            }
+        ];
+    }
+
+    // 전자결재 컨텍스트
+    if (context.value === 'approval') {
+        return [
+            { label: 'Home', icon: 'pi pi-home', to: '/approval' },
+            {
+                label: '결재함', icon: 'pi pi-inbox', items: [
+                    { label: '결재 대기', to: '/approval/list?tab=pending', badge: 'approvalPending' },
+                    { label: '결재 완료', to: '/approval/list?tab=done' }
+                ]
+            },
+            {
+                label: '기안함', icon: 'pi pi-send', items: [
+                    { label: '결재 진행 중', to: '/approval/list?tab=in-progress', badge: 'approvalInProgress' },
+                    { label: '완료 기안', to: '/approval/list?tab=draft-done' },
+                    { label: '반려 기안', to: '/approval/list?tab=draft-rejected' }
+                ]
+            }
+        ];
+    }
+
     if (context.value === 'audit') {
         return [
             { label: '홈', icon: 'pi pi-home', to: '/audit' },
@@ -105,7 +155,6 @@ const menuItems = computed(() => {
     // Default: Info
     return [
         { label: 'Home', icon: 'pi pi-home', to: '/info' },
-        { label: '사전협의', icon: 'pi pi-file-edit', to: '/info/documents' },
         { label: '사업 가이드', icon: 'pi pi-book', to: '/guide' },
         {
             label: '전산예산', icon: 'pi pi-wallet', items: [
@@ -271,13 +320,31 @@ v-if="!collapsed"
                                         <span class="flex items-center whitespace-nowrap">
                                             {{ sub.label }}
                                             <!-- 관리자 전용 메뉴: 왕관 아이콘 -->
-                                            <IconCrown v-if="sub.admin" class="w-4 h-4 ml-1 shrink-0 text-yellow-500" />
+                                            <IconCrown v-if="(sub as any).admin" class="w-4 h-4 ml-1 shrink-0 text-yellow-500" />
                                         </span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
                                         <span
 v-if="sub.to === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
                                             {{ approvalCount > 99 ? '99+' : approvalCount }}
+                                        </span>
+                                        <!-- 사전협의: 검토 중 배지 -->
+                                        <span
+                                            v-if="(sub as any).badge === 'docReviewing' && docReviewingCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">
+                                            {{ docReviewingCount > 99 ? '99+' : docReviewingCount }}
+                                        </span>
+                                        <!-- 전자결재: 결재 대기 배지 -->
+                                        <span
+                                            v-if="(sub as any).badge === 'approvalPending' && approvalPendingCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                                            {{ approvalPendingCount > 99 ? '99+' : approvalPendingCount }}
+                                        </span>
+                                        <!-- 전자결재: 기안 진행 중 배지 -->
+                                        <span
+                                            v-if="(sub as any).badge === 'approvalInProgress' && approvalInProgressCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">
+                                            {{ approvalInProgressCount > 99 ? '99+' : approvalInProgressCount }}
                                         </span>
                                     </NuxtLink>
                                 </li>
