@@ -90,11 +90,13 @@ export interface DocumentBadgeCount {
 export const useDocumentDashboard = () => {
     // 로그인 사용자 정보에서 부서코드(bbrC) 추출
     const { user } = useAuth();
+    const config = useRuntimeConfig();
+    const url = `${config.public.apiBase}/api/documents/dashboard`;
 
     // useApiFetch 사용 → 토큰 자동 주입 + 반응형 갱신
     // query를 computed로 감싸 user 변경 시 자동으로 파라미터 업데이트
     const { data, pending, refresh } = useApiFetch<DocumentDashboard>(
-        '/api/documents/dashboard',
+        url,
         { query: computed(() => ({ bbrC: user.value?.bbrC })) }
     );
 
@@ -117,10 +119,12 @@ export const useDocumentDashboard = () => {
 export const useDocumentBadgeCount = () => {
     // 로그인 사용자 정보에서 부서코드(bbrC) 추출
     const { user } = useAuth();
+    const config = useRuntimeConfig();
+    const url = `${config.public.apiBase}/api/documents/badge-count`;
 
     // 전용 집계 API 호출 → 건수만 반환하여 데이터 전송량 최소화
     const { data } = useApiFetch<DocumentBadgeCount>(
-        '/api/documents/badge-count',
+        url,
         { query: computed(() => ({ bbrC: user.value?.bbrC })) }
     );
 
