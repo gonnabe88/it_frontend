@@ -1,10 +1,294 @@
 <script setup lang="ts">
+/**
+ * ============================================================================
+ * [사전협의 Home 대시보드]
+ * ----------------------------------------------------------------------------
+ * 로그인 사용자의 부서코드(bbrC) 기준으로 요구사항 정의서/사전협의 현황을
+ * 한눈에 보여주는 메인 대시보드 페이지입니다.
+ *
+ * [구성]
+ *  1) KPI 카드 4종 (총 문서 / 검토 중 / 완료 / 지연)
+ *  2) 월별 등록 추이 (최근 6개월, 순수 CSS 막대 차트 — Chart.js 미사용)
+ *  3) 검토 중인 요청사항 목록 (최대 3건, 항목 클릭 시 상세 페이지로 이동)
+ *  4) 하단 [전체 목록 보기] 버튼
+ *
+ * [데이터 소스]
+ *  - useDocumentDashboard() composable → /api/documents/dashboard
+ * ============================================================================
+ */
+import Button from 'primevue/button';
+import Skeleton from 'primevue/skeleton';
+
 definePageMeta({ layout: 'default' });
+
+// 대시보드 집계 데이터 조회 (bbrC는 composable 내부에서 자동 주입)
+const { data, pending } = useDocumentDashboard();
+
+// 월별 차트 최대 막대 높이(px) — CSS 막대 차트 렌더링 기준값
+const maxBarHeight = 120;
+
+/**
+ * 월별 등록 추이에서 최대 건수 계산
+ * 모든 막대 높이 비율의 기준이 됩니다. 데이터가 없거나 모두 0일 경우 1을 반환하여
+ * 0으로 나누는 오류를 방지합니다.
+ */
+const maxMonthlyCount = computed<number>(() => {
+    const trend = data.value?.monthlyTrend ?? [];
+    if (trend.length === 0) return 1;
+    const max = Math.max(...trend.map((m) => m.count));
+    return max > 0 ? max : 1;
+});
+
+/**
+ * 특정 월 건수를 픽셀 높이로 변환
+ * - 0건: 4px (최소 가시성 유지)
+ * - 그 외: (count / max) * maxBarHeight
+ */
+const barHeight = (count: number): string => {
+    if (count <= 0) return '4px';
+    const ratio = count / maxMonthlyCount.value;
+    const height = Math.max(4, Math.round(ratio * maxBarHeight));
+    return `${height}px`;
+};
+
+/**
+ * 검토 중인 요청사항 상위 3건만 노출
+ */
+const topReviewing = computed(() => {
+    const list = data.value?.recentReviewing ?? [];
+    return list.slice(0, 3);
+});
+
+/**
+ * 등록 일시를 YYYY-MM-DD 형식으로 변환
+ * ISO 8601 문자열을 가볍게 슬라이싱 (시간대 변환 없이 표시용)
+ */
+const formatDate = (iso: string): string => {
+    if (!iso) return '-';
+    return iso.slice(0, 10);
+};
+
+/**
+ * 상태 배지 스타일 매핑
+ * reviewing: 파란색 / delayed: 빨간색
+ */
+const statusBadgeClass = (status: 'reviewing' | 'delayed'): string => {
+    if (status === 'delayed') {
+        return 'bg-red-100 text-red-700 border border-red-200';
+    }
+    return 'bg-blue-100 text-blue-700 border border-blue-200';
+};
+
+const statusLabel = (status: 'reviewing' | 'delayed'): string => {
+    return status === 'delayed' ? '지연' : '검토중';
+};
+
+/**
+ * 문서 상세 페이지로 이동
+ */
+const goDetail = (docMngNo: string): void => {
+    navigateTo(`/info/documents/${docMngNo}`);
+};
+
+/**
+ * 전체 목록 페이지로 이동
+ */
+const goList = (): void => {
+    navigateTo('/info/documents/list');
+};
 </script>
 
 <template>
-  <div class="flex items-center justify-center h-64 text-zinc-400">
-    <i class="pi pi-spin pi-spinner mr-2" />
-    대시보드 구현 예정
-  </div>
+    <div class="p-6 space-y-6">
+        <!-- 헤더: 페이지 타이틀 + 우측 전체 목록 버튼 -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold text-zinc-900">사전협의 현황</h1>
+                <p class="mt-1 text-sm text-zinc-500">우리 부서의 요구사항 정의서 검토 현황을 확인합니다.</p>
+            </div>
+            <Button
+                icon="pi pi-list"
+                label="전체 목록"
+                severity="secondary"
+                outlined
+                @click="goList"
+            />
+        </div>
+
+        <!-- KPI 카드 4종 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- 총 문서 수 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-600">
+                    <i class="pi pi-file text-xl" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-zinc-500">총 문서 수</div>
+                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
+                    <div v-else class="text-2xl font-bold text-zinc-900 mt-0.5">
+                        {{ data?.totalCount ?? 0 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 검토 진행 중 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600">
+                    <i class="pi pi-clock text-xl" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-zinc-500">검토 진행 중</div>
+                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
+                    <div v-else class="text-2xl font-bold text-orange-600 mt-0.5">
+                        {{ data?.reviewingCount ?? 0 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 협의 완료 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+                    <i class="pi pi-check-circle text-xl" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-zinc-500">협의 완료</div>
+                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
+                    <div v-else class="text-2xl font-bold text-green-600 mt-0.5">
+                        {{ data?.completedCount ?? 0 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 기한 초과 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
+                    <i class="pi pi-exclamation-triangle text-xl" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-medium text-zinc-500">기한 초과</div>
+                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
+                    <div v-else class="text-2xl font-bold text-red-600 mt-0.5">
+                        {{ data?.overdueCount ?? 0 }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 월별 등록 추이 (순수 CSS 막대 차트) -->
+        <div class="bg-white rounded-xl border border-zinc-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-zinc-900">월별 등록 추이</h2>
+                <span class="text-xs text-zinc-400">최근 6개월</span>
+            </div>
+
+            <!-- 로딩 스켈레톤 -->
+            <div v-if="pending" class="flex items-end justify-around gap-3 h-40">
+                <Skeleton v-for="n in 6" :key="n" width="2.5rem" :height="`${40 + n * 10}px`" />
+            </div>
+
+            <!-- 실제 차트 -->
+            <div v-else-if="data && data.monthlyTrend.length > 0" class="flex items-end justify-around gap-3 pt-4">
+                <div
+                    v-for="m in data.monthlyTrend"
+                    :key="m.month"
+                    class="flex flex-col items-center flex-1 min-w-0"
+                >
+                    <!-- 막대 위 건수 표시 -->
+                    <div class="text-xs font-medium text-zinc-700 mb-1">{{ m.count }}</div>
+                    <!-- CSS 막대: 높이는 최대값 대비 비율로 계산 -->
+                    <div
+                        class="w-full max-w-[48px] rounded-t-md bg-gradient-to-b from-blue-500 to-blue-700 transition-all hover:from-blue-600 hover:to-blue-800"
+                        :style="{ height: barHeight(m.count) }"
+                        :title="`${m.month}: ${m.count}건`"
+                    />
+                    <!-- 월 레이블 -->
+                    <div class="text-xs text-zinc-500 mt-2 whitespace-nowrap">{{ m.month }}</div>
+                </div>
+            </div>
+
+            <!-- 빈 상태 -->
+            <div v-else class="h-40 flex items-center justify-center text-sm text-zinc-400">
+                <i class="pi pi-chart-bar mr-2" />
+                표시할 월별 데이터가 없습니다.
+            </div>
+        </div>
+
+        <!-- 검토 중인 요청사항 (최대 3건) -->
+        <div class="bg-white rounded-xl border border-zinc-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-zinc-900">검토 중인 요청사항</h2>
+                <span class="text-xs text-zinc-400">최대 3건</span>
+            </div>
+
+            <!-- 로딩 스켈레톤 3행 -->
+            <div v-if="pending" class="space-y-3">
+                <div
+                    v-for="n in 3"
+                    :key="n"
+                    class="flex items-center gap-4 p-3 border border-zinc-100 rounded-lg"
+                >
+                    <Skeleton shape="circle" size="2.5rem" />
+                    <div class="flex-1 space-y-2">
+                        <Skeleton width="60%" height="1rem" />
+                        <Skeleton width="40%" height="0.75rem" />
+                    </div>
+                    <Skeleton width="4rem" height="1.5rem" />
+                </div>
+            </div>
+
+            <!-- 실제 목록 -->
+            <ul v-else-if="topReviewing.length > 0" class="divide-y divide-zinc-100">
+                <li
+                    v-for="item in topReviewing"
+                    :key="item.docMngNo"
+                    class="py-3 flex items-center gap-4 cursor-pointer hover:bg-zinc-50 rounded-lg px-3 -mx-3 transition-colors"
+                    @click="goDetail(item.docMngNo)"
+                >
+                    <!-- 문서 아이콘 -->
+                    <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                        <i class="pi pi-file-edit" />
+                    </div>
+
+                    <!-- 본문 영역 -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono text-zinc-400">{{ item.docMngNo }}</span>
+                        </div>
+                        <div class="text-sm font-medium text-zinc-900 truncate">{{ item.title }}</div>
+                        <div class="text-xs text-zinc-500 mt-0.5">
+                            <i class="pi pi-user text-[10px] mr-1" />{{ item.authorName }}
+                            <span class="mx-1.5 text-zinc-300">·</span>
+                            <i class="pi pi-calendar text-[10px] mr-1" />{{ formatDate(item.createdAt) }}
+                        </div>
+                    </div>
+
+                    <!-- 상태 배지 -->
+                    <span
+                        class="px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
+                        :class="statusBadgeClass(item.status)"
+                    >
+                        {{ statusLabel(item.status) }}
+                    </span>
+
+                    <i class="pi pi-angle-right text-zinc-300 shrink-0" />
+                </li>
+            </ul>
+
+            <!-- 빈 상태 -->
+            <div v-else class="py-10 flex flex-col items-center justify-center text-zinc-400">
+                <i class="pi pi-inbox text-3xl mb-2" />
+                <span class="text-sm">검토 중인 요청사항이 없습니다</span>
+            </div>
+        </div>
+
+        <!-- 하단 전체 목록 보기 버튼 -->
+        <div class="flex justify-center pt-2">
+            <Button
+                label="전체 목록 보기"
+                icon="pi pi-arrow-right"
+                icon-pos="right"
+                @click="goList"
+            />
+        </div>
+    </div>
 </template>
