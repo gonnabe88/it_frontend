@@ -149,12 +149,8 @@ const generatePdf = async () => {
     if (projects.value.length === 0) return;
 
     try {
-        console.log('=== STARTING PDF GENERATION ===');
         /* generateReport는 Promise<string> (Blob URL)을 반환 */
         const url = await generateReport(projects.value, approvalLine.value);
-
-        console.log('=== PDF URL RECEIVED ===');
-        console.log('URL:', url);
 
         if (url) {
             /* 이전 Blob URL 메모리 해제 */
@@ -162,7 +158,6 @@ const generatePdf = async () => {
                 URL.revokeObjectURL(pdfUrl.value);
             }
             pdfUrl.value = url;
-            console.log('✓ PDF URL set successfully');
         } else {
             console.error('✗ No URL received from generateReport');
         }

@@ -1,0 +1,1499 @@
+<!DOCTYPE html><html data-src-ver="d2fe64bb" lang="ko"><head>
+
+
+
+
+<meta charset="UTF-8">
+<title>Components — IT Portal</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+<style>
+  body { margin:0; padding:40px; background:#f4f4f5; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { font-size:12px; font-weight:500; color:var(--fg3); letter-spacing:0.05em; text-transform:uppercase; margin:0 0 8px; }
+  .title   { font-size:28px; font-weight:700; color:var(--fg1); margin:0 0 4px; letter-spacing:-0.01em; }
+  .subtitle{ font-size:14px; color:var(--fg3); margin:0 0 32px; max-width:720px; line-height:1.6; }
+  h3 { font-size:13px; font-weight:600; color:var(--fg2); text-transform:uppercase; letter-spacing:0.05em; margin:36px 0 14px; }
+  h3:first-of-type { margin-top:0; }
+
+  .panel { background:#fff; border:1px solid var(--border-1); border-radius:12px; padding:24px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .stack > * + * { margin-top:10px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  /* Buttons */
+  .btn { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-sans); font-size:14px; font-weight:500; border-radius:8px; padding:8px 16px; border:1px solid transparent; cursor:pointer; transition: all 150ms var(--ease-standard); }
+  .btn.primary { background: var(--indigo-600); color:#fff; }
+  .btn.primary:hover { background: var(--indigo-700); }
+  .btn.secondary { background:#fff; color:var(--fg2); border-color:var(--border-1); }
+  .btn.secondary:hover { background:#fafafa; border-color:var(--zinc-300); }
+  .btn.ghost { background:transparent; color:var(--indigo-600); }
+  .btn.ghost:hover { background:var(--indigo-50); }
+  .btn.danger { background:#dc2626; color:#fff; }
+  .btn.danger:hover { background:#b91c1c; }
+  .btn.sm { padding:4px 10px; font-size:12px; }
+  .btn.lg { padding:12px 20px; font-size:15px; }
+  .btn[disabled] { opacity:.5; cursor:not-allowed; }
+  .btn i { font-size:13px; }
+
+  /* Icon-only button */
+  .btn.icon { padding: 8px; min-width: 36px; height: 36px; justify-content: center; gap: 0; }
+  .btn.icon.sm { padding: 6px; min-width: 30px; height: 30px; }
+  .btn.icon.lg { padding: 10px; min-width: 44px; height: 44px; }
+  .btn.icon i { font-size: 14px; }
+
+  /* Subtle (utility) button — grey-on-grey */
+  .btn.subtle { background: var(--zinc-100); color: var(--fg2); border-color: transparent; }
+  .btn.subtle:hover { background: var(--zinc-200, #e4e4e7); color: var(--fg1); }
+
+  /* Button group label & sub-section header */
+  .btn-group-row { display:flex; flex-direction:column; gap:8px; padding: 12px 0; }
+  .btn-group-row + .btn-group-row { border-top: 1px dashed var(--border-1); }
+  .btn-group-row .gh {
+    font-family: var(--font-mono); font-size: 10px; font-weight:600;
+    color: var(--fg3); letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .btn-group-row .gh em { font-style:normal; color: var(--fg4); margin-left: 6px; font-weight:400; text-transform:none; letter-spacing: 0; }
+  .btn-group-row .row { gap: 8px; flex-wrap:wrap; }
+
+  /* Input */
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:12px; font-weight:500; color:var(--fg2); }
+  .field .hint { font-size:11px; color:var(--fg3); }
+  .input { font-family:var(--font-sans); font-size:14px; padding:8px 12px; border:1px solid var(--border-1); border-radius:6px; background:#fff; color:var(--fg1); outline:none; transition: border-color 150ms, box-shadow 150ms; }
+  .input:focus { border-color: var(--indigo-500); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .input::placeholder { color: var(--fg4); }
+  .input.error { border-color:#dc2626; }
+
+  .selectwrap { position:relative; }
+  .selectwrap::after { content:""; position:absolute; top:50%; right:12px; width:8px; height:8px; border-right:1.5px solid var(--fg3); border-bottom:1.5px solid var(--fg3); transform: translateY(-80%) rotate(45deg); pointer-events:none; }
+  .select { appearance:none; padding-right:32px; }
+
+  .check { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--fg2); cursor:pointer; user-select:none; }
+  .check .box { width:16px; height:16px; border:1.5px solid var(--zinc-300); border-radius:4px; background:#fff; display:inline-flex; align-items:center; justify-content:center; }
+  .check.checked .box { background: var(--indigo-600); border-color: var(--indigo-600); color:#fff; }
+  .check.checked .box::after { content:"✓"; font-size:11px; line-height:1; }
+
+  /* Tags */
+  .tag {
+    display:inline-flex; align-items:center; padding: 4px 10px;
+    border-radius:6px; font-size:12px; font-weight:500;
+  }
+  .tag.green   { background:var(--tag-green-bg);  color:var(--tag-green-fg); }
+  .tag.blue    { background:var(--tag-blue-bg);   color:var(--tag-blue-fg); }
+  .tag.yellow  { background:var(--tag-yellow-bg); color:var(--tag-yellow-fg); }
+  .tag.red     { background:var(--tag-red-bg);    color:var(--tag-red-fg); }
+  .tag.gray    { background:var(--tag-gray-bg);   color:var(--tag-gray-fg); }
+  .tag.indigo  { background:var(--tag-indigo-bg); color:var(--tag-indigo-fg); }
+  .tag.purple  { background:var(--tag-purple-bg); color:var(--tag-purple-fg); }
+
+  /* ───────── KPI Variation group label ───────── */
+  .var-label { display:flex; align-items:baseline; gap:10px; margin:24px 0 10px; }
+  .var-label .pin { font-family:var(--font-mono); font-size:10px; font-weight:600; color:var(--indigo-700); background:var(--indigo-50); padding:3px 8px; border-radius:4px; letter-spacing:0.06em; }
+  .var-label .nm  { font-size:13px; font-weight:600; color:var(--fg1); }
+  .var-label .dsc { font-size:12px; color:var(--fg3); margin-left:auto; }
+
+  .kpi-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; }
+
+  /* Shared color ramps for KPI accents */
+  :root {
+    --kpi-indigo-bg:#eef2ff; --kpi-indigo-fg:#4f46e5;
+    --kpi-emerald-bg:#d1fae5; --kpi-emerald-fg:#047857;
+    --kpi-amber-bg:#fef3c7; --kpi-amber-fg:#b45309;
+    --kpi-rose-bg:#ffe4e6; --kpi-rose-fg:#be123c;
+    --kpi-blue-bg:#dbeafe; --kpi-blue-fg:#1d4ed8;
+  }
+
+  /* ───────── V1 — Data-led (hairline rail + sparkline) ───────── */
+  .kpi1 {
+    position:relative; background:#fff; border:1px solid var(--border-1);
+    border-radius:14px; padding:18px 20px 16px;
+    display:flex; flex-direction:column; gap:10px;
+    transition: all 200ms var(--ease-standard);
+    overflow:hidden;
+  }
+  .kpi1::before {
+    content:""; position:absolute; inset:0 auto 0 0; width:3px;
+    background: var(--accent, var(--indigo-600));
+    border-radius: 14px 0 0 14px;
+  }
+  .kpi1:hover { border-color: var(--zinc-300); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .kpi1 .head { display:flex; align-items:center; justify-content:space-between; }
+  .kpi1 .lbl { font-size:12px; font-weight:500; color:var(--fg3); text-transform:uppercase; letter-spacing:0.05em; }
+  .kpi1 .unit { font-family:var(--font-mono); font-size:10px; color:var(--fg4); background:var(--zinc-100); padding:2px 6px; border-radius:4px; }
+  .kpi1 .row2 { display:flex; align-items:flex-end; justify-content:space-between; gap:8px; }
+  .kpi1 .num { font-size:32px; font-weight:700; color:var(--fg1); letter-spacing:-0.03em; line-height:1; font-variant-numeric: tabular-nums; }
+  .kpi1 .spark { height:28px; width:88px; flex:none; }
+  .kpi1 .foot { display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--fg3); padding-top:10px; border-top:1px dashed var(--border-1); }
+  .kpi1 .delta { display:inline-flex; align-items:center; gap:4px; font-weight:500; }
+  .kpi1 .delta.up { color:#047857; }
+  .kpi1 .delta.down { color:#be123c; }
+  .kpi1 .delta.warn { color:#b45309; }
+
+  /* ───────── V2 — Tinted surface with progress ring ───────── */
+  .kpi2 {
+    position:relative; border-radius:14px; padding:20px;
+    background: var(--surface, #fff);
+    border:1px solid var(--border, var(--border-1));
+    display:grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap:4px 14px;
+    transition: all 250ms var(--ease-standard);
+  }
+  .kpi2:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .kpi2 .lbl { grid-column:1; font-size:13px; font-weight:500; color: var(--fg3); }
+  .kpi2 .num { grid-column:1; font-size:34px; font-weight:700; line-height:1; letter-spacing:-0.03em; color: var(--fg1); font-variant-numeric: tabular-nums; }
+  .kpi2 .ring { grid-column:2; grid-row:1 / span 2; position:relative; width:56px; height:56px; }
+  .kpi2 .ring svg { transform: rotate(-90deg); width:100%; height:100%; }
+  .kpi2 .ring .track { stroke: rgba(0,0,0,.06); }
+  .kpi2 .ring .fill  { stroke: var(--accent); transition: stroke-dashoffset 600ms; }
+  .kpi2 .ring .pct { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .kpi2 .foot { grid-column: 1 / -1; font-size:12px; color: var(--fg3); margin-top:4px; display:flex; justify-content:space-between; align-items:center; }
+  .kpi2 .foot .target { font-family:var(--font-mono); font-size:11px; }
+
+  /* ───────── V3 — Compact stat-block (tabular, dense) ───────── */
+  .kpi3 {
+    background:#fff; border:1px solid var(--border-1); border-radius:12px;
+    padding: 14px 16px; display:flex; flex-direction:column; gap:6px;
+    transition: all 150ms;
+  }
+  .kpi3:hover { border-color: var(--zinc-300); background: #fafafa; }
+  .kpi3 .head { display:flex; align-items:center; gap:8px; color: var(--fg3); font-size:12px; font-weight:500; }
+  .kpi3 .head .dot { width:6px; height:6px; border-radius:50%; background: var(--accent); flex:none; }
+  .kpi3 .num-row { display:flex; align-items:baseline; gap:8px; }
+  .kpi3 .num { font-size:28px; font-weight:700; color:var(--fg1); letter-spacing:-0.02em; line-height:1; font-variant-numeric: tabular-nums; }
+  .kpi3 .sub { font-size:13px; color: var(--fg3); font-variant-numeric: tabular-nums; }
+  .kpi3 .bar { height:3px; border-radius:2px; background: var(--zinc-100); overflow:hidden; margin-top:2px; }
+  .kpi3 .bar > span { display:block; height:100%; background: var(--accent); border-radius:2px; }
+  .kpi3 .meta { display:flex; justify-content:space-between; font-size:11px; color: var(--fg4); font-family:var(--font-mono); margin-top:2px; }
+
+  /* ───────── V4 — Narrative card with segmented breakdown ───────── */
+  .kpi4 {
+    background:#fff; border:1px solid var(--border-1); border-radius:14px;
+    padding:18px 20px; display:flex; flex-direction:column; gap:12px;
+    transition: all 200ms;
+  }
+  .kpi4:hover { box-shadow: var(--shadow); border-color: var(--zinc-300); }
+  .kpi4 .head { display:flex; align-items:center; gap:10px; }
+  .kpi4 .ic { width:32px; height:32px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background: var(--accent-bg); color: var(--accent); font-size:14px; flex:none; }
+  .kpi4 .lbl { font-size:13px; font-weight:500; color: var(--fg2); }
+  .kpi4 .num-wrap { display:flex; align-items:baseline; gap:8px; }
+  .kpi4 .num { font-size:36px; font-weight:700; color: var(--fg1); letter-spacing:-0.03em; line-height:1; font-variant-numeric: tabular-nums; }
+  .kpi4 .cmp { font-size:12px; color: var(--fg3); }
+  .kpi4 .cmp b { color: var(--fg1); font-weight:600; }
+  .kpi4 .seg { display:flex; height:6px; border-radius:3px; overflow:hidden; background: var(--zinc-100); }
+  .kpi4 .seg > span { height:100%; }
+  .kpi4 .legend { display:flex; gap:14px; font-size:11px; color: var(--fg3); font-variant-numeric: tabular-nums; }
+  .kpi4 .legend span { display:inline-flex; align-items:center; gap:5px; }
+  .kpi4 .legend i.sq { width:8px; height:8px; border-radius:2px; display:inline-block; }
+
+  /* Nav item */
+  .nav-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; font-size:14px; color: var(--indigo-800); cursor:pointer; transition: all 150ms; }
+  .nav-item:hover { background: var(--indigo-50); color: var(--indigo-600); }
+  .nav-item.active { background: var(--indigo-50); color: var(--indigo-700); font-weight:500; }
+  .nav-item i { width:20px; font-size:16px; }
+  .nav-item .crown { margin-left:auto; color:#eab308; font-size:13px; }
+
+  /* Tab bar */
+  .tabbar { display:flex; height:50px; border-bottom:1px solid var(--border-1); background:#fff; border-radius:12px 12px 0 0; padding: 0 8px; }
+  .tab { display:inline-flex; align-items:center; gap:8px; padding: 0 16px; font-size:13px; color:var(--fg3); border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; }
+  .tab:hover { color:var(--fg1); }
+  .tab.active { color: var(--indigo-700); border-bottom-color: var(--indigo-600); font-weight:500; background:#fff; box-shadow: 0 -2px 5px rgb(0 0 0 / 0.02); border-radius:8px 8px 0 0; }
+  .tab .close { opacity:0.4; font-size:11px; }
+  .tab:hover .close { opacity:1; }
+</style>
+</head>
+<body data-cc-id="cc-1" style="cursor: crosshair;">
+<div class="wrap" data-cc-id="cc-37">
+  <p class="eyebrow">구성 요소 · Components</p>
+  <h1 class="title">Components</h1>
+  <p class="subtitle">The core interactive primitives: buttons (primary indigo, secondary white, ghost, danger), inputs with focus ring, tag-based status badges, KPI cards, sidebar nav items, and the distinctive dashed-top active tab.</p>
+
+  <h3>Buttons</h3>
+  <p style="font-size:13px; color:var(--fg3); margin:-6px 0 0; max-width:720px; line-height:1.6;">성격별 버튼 세트 · 아이콘·레이블 / 아이콘 전용 / 레이블 전용 버전을 교차로 배치. 목록 상단 툴바, 디테일 상단 액션, 인라인 액션 등에 수서대로 조합해 사용.</p>
+  <div class="panel" data-cc-id="cc-36">
+    <div class="btn-group-row">
+      <div class="gh">Primary <em>· 클릭 테이키 하나, 페이지당 1개</em></div>
+      <div class="row">
+        <button class="btn primary"><i class="pi pi-plus"></i>사업등록</button>
+        <button class="btn primary"><i class="pi pi-send"></i>결재신청</button>
+        <button class="btn primary"><i class="pi pi-save"></i>저장</button>
+        <button class="btn primary">제출</button>
+        <button class="btn primary" disabled="">제출 중…</button>
+      </div>
+    </div>
+
+    <div class="btn-group-row">
+      <div class="gh">Secondary <em>· 동시에 여러개 녹일 수 있음</em></div>
+      <div class="row">
+        <button class="btn secondary"><i class="pi pi-search"></i>조회</button>
+        <button class="btn secondary"><i class="pi pi-filter"></i>필터</button>
+        <button class="btn secondary"><i class="pi pi-refresh"></i>새로고침</button>
+        <button class="btn secondary"><i class="pi pi-pencil"></i>수정</button>
+        <button class="btn secondary"><i class="pi pi-copy"></i>복사</button>
+        <button class="btn secondary"><i class="pi pi-times"></i>취소</button>
+      </div>
+      <div class="row">
+        <button class="btn secondary">조회</button>
+        <button class="btn secondary">필터</button>
+        <button class="btn secondary">새로고침</button>
+        <button class="btn secondary">수정</button>
+        <button class="btn secondary">복사</button>
+        <button class="btn secondary">취소</button>
+      </div>
+    </div>
+
+    <div class="btn-group-row">
+      <div class="gh">Data I/O <em>· 업로드 / 다운로드 / 내보내기</em></div>
+      <div class="row">
+        <button class="btn secondary"><i class="pi pi-upload"></i>업로드</button>
+        <button class="btn secondary"><i class="pi pi-download"></i>다운로드</button>
+        <button class="btn secondary"><i class="pi pi-file-export"></i>내보내기</button>
+        <button class="btn secondary"><i class="pi pi-file-import"></i>가져오기</button>
+        <button class="btn secondary"><i class="pi pi-print"></i>인쇄</button>
+        <button class="btn secondary"><i class="pi pi-share-alt"></i>공유</button>
+      </div>
+      <div class="row">
+        <button class="btn subtle"><i class="pi pi-file-excel" style="color:#16a34a;"></i>Excel 내보내기</button>
+        <button class="btn subtle"><i class="pi pi-file-pdf" style="color:#dc2626;"></i>PDF 내보내기</button>
+        <button class="btn subtle"><i class="pi pi-file" style="color:#0ea5e9;"></i>HWP 내보내기</button>
+      </div>
+    </div>
+
+    <div class="btn-group-row">
+      <div class="gh">Ghost <em>· 텍스트 링크 대용, 테이블 세트/링크에 사용</em></div>
+      <div class="row">
+        <button class="btn ghost">전체보기<i class="pi pi-angle-right"></i></button>
+        <button class="btn ghost"><i class="pi pi-eye"></i>상세보기</button>
+        <button class="btn ghost">취소</button>
+        <button class="btn ghost"><i class="pi pi-times"></i>모두 닫기</button>
+      </div>
+    </div>
+
+    <div class="btn-group-row">
+      <div class="gh">Danger <em>· 파괴적 액션 (삭제, 반려)</em></div>
+      <div class="row">
+        <button class="btn danger"><i class="pi pi-trash"></i>삭제</button>
+        <button class="btn danger"><i class="pi pi-ban"></i>반려</button>
+        <button class="btn danger">상신 취소</button>
+      </div>
+    </div>
+
+    <div class="btn-group-row" data-cc-id="cc-29">
+      <div class="gh">Icon-only <em>· 툴바, 행 끝 액션 · 도구설명(title) 필수</em></div>
+      <div class="row">
+        <button class="btn secondary icon" title="조회"><i class="pi pi-search"></i></button>
+        <button class="btn secondary icon" title="필터"><i class="pi pi-filter"></i></button>
+        <button class="btn secondary icon" title="새로고침" data-cc-id="cc-28"><i class="pi pi-refresh" data-cc-id="cc-30"></i></button>
+        <button class="btn secondary icon" title="업로드"><i class="pi pi-upload"></i></button>
+        <button class="btn secondary icon" title="다운로드"><i class="pi pi-download"></i></button>
+        <button class="btn secondary icon" title="내보내기"><i class="pi pi-file-export"></i></button>
+        <button class="btn secondary icon" title="인쇄"><i class="pi pi-print"></i></button>
+        <button class="btn secondary icon" title="수정"><i class="pi pi-pencil"></i></button>
+        <button class="btn secondary icon" title="복사"><i class="pi pi-copy"></i></button>
+        <button class="btn secondary icon" title="더보기"><i class="pi pi-ellipsis-h"></i></button>
+        <button class="btn primary icon" title="추가"><i class="pi pi-plus"></i></button>
+        <button class="btn danger icon" title="삭제"><i class="pi pi-trash"></i></button>
+      </div>
+      <div class="row">
+        <button class="btn secondary icon sm" title="조회"><i class="pi pi-search"></i></button>
+        <button class="btn secondary icon" title="조회"><i class="pi pi-search"></i></button>
+        <button class="btn secondary icon lg" title="조회" data-cc-id="cc-31"><i class="pi pi-search"></i></button>
+        <span style="font-size:11px; color:var(--fg4); align-self:center; font-family:var(--font-mono); margin-left:8px;">SM 30 / MD 36 / LG 44</span>
+      </div>
+    </div>
+
+    <div class="btn-group-row" data-cc-id="cc-32">
+      <div class="gh">Sizes <em data-cc-id="cc-33">· 일반 프라이머리 크기 참고</em></div>
+      <div class="row" style="align-items:center;" data-cc-id="cc-35">
+        <button class="btn primary sm">작성</button>
+        <button class="btn primary" data-cc-id="cc-34">작성</button>
+        <button class="btn primary lg">작성 (Large)</button>
+      </div>
+    </div>
+  </div>
+
+  <h3 data-cc-id="cc-38">Integrated Search · 통합조회</h3>
+  <p style="font-size:13px; color:var(--fg3); margin:-6px 0 0; max-width:720px; line-height:1.6;" data-cc-id="cc-39">앱 헤더에 사용되는 통합조회 컴포넌트. 사업·예산·결재 문서를 단일 입력으로 검색. 세 가지 상태/형태: V1 헤더 기본(닫힘), V2 포커스 + 결과 드롭다운(스코프 칩 + 분류된 결과), V3 페이지 레벨 풀폭 검색.</p>
+
+  <style>
+    .gsearch {
+      display:flex; align-items:center; gap:10px;
+      background: var(--zinc-100); border-radius: 10px;
+      padding: 8px 12px;
+      color: var(--fg3);
+      transition: background 150ms, box-shadow 150ms;
+    }
+    .gsearch:hover { background: #f3f4f6; }
+    .gsearch.is-focus {
+      background: #fff;
+      box-shadow: 0 0 0 2px var(--indigo-500), 0 8px 24px -8px rgba(79,70,229,0.25);
+    }
+    .gsearch input {
+      flex:1; border:none; background:transparent; outline:none;
+      font-family: var(--font-sans); font-size:14px; color: var(--fg1);
+      min-width: 0;
+    }
+    .gsearch input::placeholder { color: var(--fg4); }
+    .gsearch .pi-search { font-size:14px; }
+    .gsearch .gs-kbd {
+      font-family: var(--font-mono); font-size: 11px;
+      padding: 2px 6px; border-radius:4px;
+      background:#fff; border:1px solid var(--border-1);
+      color: var(--fg3);
+    }
+    .gsearch .gs-clear {
+      width:18px; height:18px; border:none; cursor:pointer;
+      background: var(--zinc-300, #d4d4d8); color:#fff;
+      border-radius: 999px; display:inline-flex; align-items:center; justify-content:center;
+      font-size: 9px;
+    }
+    .gsearch .gs-clear:hover { background: var(--fg3); }
+    .gsearch.lg { padding: 12px 16px; border-radius: 12px; gap: 12px; }
+    .gsearch.lg input { font-size: 16px; }
+    .gsearch.lg .pi-search { font-size: 18px; }
+
+    /* Wrapper for V2 (search + dropdown) */
+    .gsearch-stack { position: relative; }
+    .gs-dropdown {
+      position: absolute; top: calc(100% + 6px); left:0; right:0;
+      background:#fff; border:1px solid var(--border-1);
+      border-radius: 10px; box-shadow: var(--shadow-xl);
+      overflow:hidden;
+      z-index: 5;
+    }
+    .gs-scopes {
+      display:flex; gap:6px; padding: 10px 12px;
+      border-bottom: 1px solid var(--border-1);
+      background: #fafafa;
+      flex-wrap: wrap;
+    }
+    .gs-scope {
+      display:inline-flex; align-items:center; gap:5px;
+      font-size: 11px; padding: 4px 10px;
+      border-radius: 999px;
+      border:1px solid var(--border-1);
+      background:#fff; color: var(--fg2);
+      cursor: pointer; font-family: var(--font-sans);
+    }
+    .gs-scope.on {
+      background: var(--indigo-600); color:#fff; border-color: var(--indigo-600);
+    }
+    .gs-scope .ct {
+      font-family: var(--font-mono); font-size: 10px;
+      background: rgba(0,0,0,0.06); padding: 0 5px; border-radius: 4px;
+    }
+    .gs-scope.on .ct { background: rgba(255,255,255,0.2); }
+
+    .gs-section { padding: 6px 0; }
+    .gs-section + .gs-section { border-top: 1px solid var(--border-1); }
+    .gs-shead {
+      display:flex; justify-content:space-between; align-items:center;
+      padding: 6px 14px;
+      font-size: 10px; font-family: var(--font-mono);
+      color: var(--fg4); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .gs-shead .more { color: var(--indigo-600); cursor:pointer; text-transform:none; letter-spacing: 0; font-family: var(--font-sans); font-size: 11px; }
+    .gs-result {
+      display:flex; align-items:center; gap:12px;
+      padding: 8px 14px; cursor:pointer;
+      transition: background 100ms;
+    }
+    .gs-result:hover, .gs-result.hi { background: var(--indigo-50); }
+    .gs-result .gsr-ic {
+      width:30px; height:30px; border-radius:8px; flex:none;
+      display:inline-flex; align-items:center; justify-content:center;
+      background: var(--indigo-100); color: var(--indigo-600); font-size:13px;
+    }
+    .gs-result.proj .gsr-ic { background: var(--indigo-100); color: var(--indigo-600); }
+    .gs-result.bud  .gsr-ic { background: #d1fae5; color:#059669; }
+    .gs-result.apr  .gsr-ic { background: #ffedd5; color:#ea580c; }
+    .gs-result.user .gsr-ic { background: #f3e8ff; color:#9333ea; font-weight:600; font-size:12px; }
+    .gsr-body { flex:1; min-width:0; }
+    .gsr-title { font-size: 13px; color: var(--fg1); font-weight: 500; }
+    .gsr-title mark { background: rgba(79,70,229,0.18); color: inherit; padding: 0 2px; border-radius: 2px; font-weight:600; }
+    .gsr-meta { font-size: 11px; color: var(--fg3); margin-top: 1px; display:flex; gap:8px; }
+    .gsr-meta .mono { font-family: var(--font-mono); }
+    .gsr-trail { font-size:10px; color: var(--fg4); font-family: var(--font-mono); flex:none; }
+
+    .gs-foot {
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 8px 14px; border-top: 1px solid var(--border-1);
+      background: #fafafa;
+      font-size: 11px; color: var(--fg3);
+    }
+    .gs-foot .keys { display:flex; gap:8px; }
+    .gs-foot .keys span { display:inline-flex; align-items:center; gap:4px; }
+    .gs-foot kbd {
+      font-family: var(--font-mono); font-size: 10px;
+      padding: 1px 5px; background:#fff;
+      border:1px solid var(--border-1); border-radius: 3px; color: var(--fg2);
+    }
+
+    .gs-empty {
+      padding: 12px 14px; font-size:12px; color: var(--fg3);
+      display:flex; align-items:center; gap:10px;
+    }
+    .gs-empty .pi { color: var(--fg4); }
+  </style>
+
+  <div class="panel" data-cc-id="cc-1">
+    <div class="var-label" style="margin-top:0;"><span class="pin">V1</span><span class="nm">Header default · 닫힘 상태</span><span class="dsc">앱 상단바 기본형. 단축키 안내(⌘K) 표시.</span></div>
+    <div style="background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:14px;">
+      <div class="gsearch" style="width:400px; max-width:100%;">
+        <i class="pi pi-search"></i>
+        <input placeholder="사업, 예산, 결재 검색...">
+        <span class="gs-kbd">⌘K</span>
+      </div>
+    </div>
+
+    <div class="var-label" data-cc-id="cc-27"><span class="pin">V2</span><span class="nm" data-cc-id="cc-26">Focus + 결과 드롭다운 · 스코프 + 그룹</span><span class="dsc">키 입력 후 활성. 사업·예산·결재·사용자 4개 스코프. 결과는 카테고리별로 묶음, 키워드 하이라이트.</span></div>
+    <div style="background:#fafafa; border:1px solid var(--border-1); border-radius:10px; padding:24px; min-height:720px;" data-cc-id="cc-15">
+      <div class="gsearch-stack" style="width:560px; max-width:100%;">
+        <div class="gsearch is-focus">
+          <i class="pi pi-search"></i>
+          <input value="cdp" placeholder="사업, 예산, 결재 검색...">
+          <button class="gs-clear" title="지우기"><i class="pi pi-times"></i></button>
+          <span class="gs-kbd">esc</span>
+        </div>
+
+        <div class="gs-dropdown">
+          <div class="gs-scopes">
+            <button class="gs-scope on">전체 <span class="ct">12</span></button>
+            <button class="gs-scope">사업 <span class="ct">4</span></button>
+            <button class="gs-scope">예산 <span class="ct">3</span></button>
+            <button class="gs-scope">결재 <span class="ct">3</span></button>
+            <button class="gs-scope" style="opacity:0.55;" title="직원 검색은 조직도 다이얼로그 사용">직원 →</button>
+          </div>
+
+          <div class="gs-section">
+            <div class="gs-shead"><span>정보화사업 · 4건</span><span class="more">전체보기</span></div>
+            <div class="gs-result proj hi">
+              <div class="gsr-ic"><i class="pi pi-briefcase"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark>CDP</mark> 구축 2차</div>
+                <div class="gsr-meta"><span class="mono">PROJ-2026-0039</span><span>·</span><span>디지털혁신부</span><span>·</span><span class="tag purple" style="font-size:10px; padding:1px 6px;">과심위</span></div>
+              </div>
+              <div class="gsr-trail">↵ 열기</div>
+            </div>
+            <div class="gs-result proj">
+              <div class="gsr-ic"><i class="pi pi-briefcase"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark>CDP</mark> 구축 1차 · 운영 이관</div>
+                <div class="gsr-meta"><span class="mono">PROJ-2025-0114</span><span>·</span><span>디지털혁신부</span><span>·</span><span class="tag green" style="font-size:10px; padding:1px 6px;">완료</span></div>
+              </div>
+            </div>
+            <div class="gs-result proj" data-cc-id="cc-25">
+              <div class="gsr-ic"><i class="pi pi-briefcase"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark>CDP</mark> 마케팅 자동화 연계</div>
+                <div class="gsr-meta"><span class="mono">PROJ-2026-0028</span><span>·</span><span>마케팅전략부</span><span>·</span><span class="tag indigo" style="font-size:10px; padding:1px 6px;">사전 협의</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gs-section">
+            <div class="gs-shead"><span>예산 항목 · 3건</span><span class="more">전체보기</span></div>
+            <div class="gs-result bud">
+              <div class="gsr-ic"><i class="pi pi-wallet"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark>CDP</mark> 구축 2차 · 예산 편성</div>
+                <div class="gsr-meta"><span class="mono" data-cc-id="cc-24">A-003-01</span><span>·</span><span>2027년</span><span>·</span><span style="font-variant-numeric:tabular-nums; color:var(--fg2);">4,120 백만원</span></div>
+              </div>
+            </div>
+            <div class="gs-result bud" data-cc-id="cc-23">
+              <div class="gsr-ic"><i class="pi pi-wallet"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark>CDP</mark> 운영 유지보수 · 전산업무비</div>
+                <div class="gsr-meta"><span class="mono">B-014-03</span><span>·</span><span>2027년</span><span>·</span><span style="font-variant-numeric:tabular-nums; color:var(--fg2);">280 백만원</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gs-section">
+            <div class="gs-shead"><span data-cc-id="cc-22">결재 문서 · 3건</span><span class="more">전체보기</span></div>
+            <div class="gs-result apr" data-cc-id="cc-21">
+              <div class="gsr-ic"><i class="pi pi-file-edit"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark data-cc-id="cc-20">CDP</mark> 구축 2차 · 과심위 상정</div>
+                <div class="gsr-meta"><span class="mono" data-cc-id="cc-19">APR-2026-00183</span><span>·</span><span>박데이터</span><span>·</span><span class="tag yellow" style="font-size:10px; padding:1px 6px;">검토 중</span></div>
+              </div>
+            </div>
+            <div class="gs-result apr" data-cc-id="cc-18">
+              <div class="gsr-ic"><i class="pi pi-file-edit" data-cc-id="cc-17"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title"><mark>CDP</mark> 1차 종료 보고</div>
+                <div class="gsr-meta"><span class="mono">APR-2025-01402</span><span>·</span><span>장민수</span><span>·</span><span class="tag green" style="font-size:10px; padding:1px 6px;">완료</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gs-foot" data-cc-id="cc-16">
+            <div class="keys">
+              <span><kbd>↑</kbd><kbd>↓</kbd> 이동</span>
+              <span><kbd>↵</kbd> 열기</span>
+              <span><kbd>⌘</kbd><kbd>↵</kbd> 새 탭</span>
+              <span><kbd>esc</kbd> 닫기</span>
+            </div>
+            <span>전체 결과 보기 →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="var-label"><span class="pin">V3</span><span class="nm">Page-level · 풀폭 + 최근 검색</span><span class="dsc">검색 전용 페이지 헤더용. 큰 입력 필드, 최근 검색어와 추천 검색을 칩으로 노출.</span></div>
+    <div style="background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:24px;">
+      <div class="gsearch lg">
+        <i class="pi pi-search"></i>
+        <input placeholder="사업번호, 사업명, 결재문서번호, 담당자로 검색...">
+        <button class="btn primary sm" style="margin-right:-4px;"><i class="pi pi-sliders-h"></i>상세조건</button>
+      </div>
+      <div style="margin-top:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="font-size:11px; color:var(--fg4); font-family:var(--font-mono); letter-spacing:0.05em; text-transform:uppercase;">최근 검색</span>
+        <button class="gs-scope"><i class="pi pi-history" style="font-size:10px;"></i>차세대 결재</button>
+        <button class="gs-scope"><i class="pi pi-history" style="font-size:10px;"></i>CDP 구축</button>
+        <button class="gs-scope"><i class="pi pi-history" style="font-size:10px;"></i>2027 예산편성</button>
+        <button class="gs-scope"><i class="pi pi-history" style="font-size:10px;"></i>박데이터</button>
+        <span style="margin-left:12px; font-size:11px; color:var(--fg4); font-family:var(--font-mono); letter-spacing:0.05em; text-transform:uppercase;">추천</span>
+        <button class="gs-scope"><i class="pi pi-bolt" style="font-size:10px; color:#ea580c;"></i>이번 주 결재 대기</button>
+        <button class="gs-scope"><i class="pi pi-bolt" style="font-size:10px; color:#ea580c;"></i>내가 PM인 사업</button>
+      </div>
+    </div>
+
+    <div class="var-label"><span class="pin">V4</span><span class="nm">Empty / no-results state</span><span class="dsc">검색 결과 없음 안내.</span></div>
+    <div style="background: rgb(250, 250, 250); border: 1px solid var(--border-1); border-radius: 10px; padding: 24px; line-height: 1.5; height: 100px;" data-cc-id="cc-40">
+      <div class="gsearch-stack" style="width: 560px; max-width: 100%; line-height: 1.5;">
+        <div class="gsearch is-focus" data-cc-id="cc-42">
+          <i class="pi pi-search"></i>
+          <input value="zzxx99" placeholder="사업, 예산, 결재 검색..." data-cc-id="cc-41">
+          <button class="gs-clear" title="지우기"><i class="pi pi-times"></i></button>
+        </div>
+        <div class="gs-dropdown" style="line-height: 1.5;">
+          <div class="gs-empty" data-cc-id="cc-11" style="line-height: 1.5;">
+            <i class="pi pi-search-minus" style="font-size:18px;"></i>
+            <div style="line-height: 1.5;">
+              <div style="font-size: 13px; color: var(--fg1); font-weight: 500; line-height: 1.5;" data-cc-id="cc-13">"zzxx99"에 대한 결과가 없습니다</div>
+              <div style="font-size: 11px; color: var(--fg3); margin-top: 2px; line-height: 1.5;" data-cc-id="cc-12">철자를 확인하거나 사업번호(예: <span style="font-family: var(--font-mono); line-height: 1.5;">PROJ-2026</span>) 또는 부서명으로 다시 검색해보세요.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .esd-modal {
+        background:#fff; border:1px solid var(--border-1); border-radius:12px;
+        box-shadow: 0 24px 48px -12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
+        overflow:hidden; width:100%; max-width:920px;
+      }
+      .esd-head {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:14px 18px; border-bottom:1px solid var(--border-1);
+        background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+      }
+      .esd-head h4 {
+        margin:0; font-size:14px; font-weight:600; color:var(--fg1);
+        display:flex; align-items:center; gap:8px;
+      }
+      .esd-head h4 .pi { color: var(--indigo-600); font-size:13px; }
+      .esd-close {
+        width:28px; height:28px; border:none; background:transparent; border-radius:6px;
+        color:var(--fg3); cursor:pointer; display:flex; align-items:center; justify-content:center;
+      }
+      .esd-close:hover { background: var(--zinc-100); color: var(--fg1); }
+      .esd-body { display:flex; height:420px; }
+      .esd-tree {
+        width: 260px; flex-shrink:0; border-right:1px solid var(--border-1);
+        display:flex; flex-direction:column;
+      }
+      .esd-tree-toolbar {
+        display:flex; gap:6px; padding:8px 8px 4px;
+      }
+      .esd-tree-btn {
+        flex:1; padding:6px 8px; border:none; background:transparent;
+        font-size:11px; color:var(--fg3); cursor:pointer; border-radius:6px;
+        display:flex; align-items:center; justify-content:center; gap:4px;
+        font-family: var(--font-sans);
+      }
+      .esd-tree-btn:hover { background: var(--zinc-100); color: var(--fg1); }
+      .esd-tree-search {
+        margin: 0 8px 8px;
+        display:flex; align-items:center; gap:8px;
+        background: var(--zinc-100); border-radius: 10px;
+        padding: 7px 12px; border: 1px solid transparent;
+        transition: background 150ms, box-shadow 150ms;
+      }
+      .esd-tree-search:hover { background: #f3f4f6; }
+      .esd-tree-search:focus-within {
+        background: #fff;
+        box-shadow: 0 0 0 2px var(--indigo-500), 0 8px 24px -8px rgba(79,70,229,0.25);
+      }
+      .esd-tree-search .pi-search { font-size:12px; color: var(--fg3); }
+      .esd-tree-search input {
+        flex:1; border:none; outline:none; background:transparent;
+        font-family: var(--font-sans); font-size:12px; color: var(--fg1);
+        min-width:0;
+      }
+      .esd-tree-search input::placeholder { color: var(--fg4); }
+      .esd-tree-list { flex:1; overflow:auto; padding: 4px 0; }
+      .esd-node {
+        display:flex; align-items:center; gap:6px; padding: 6px 10px;
+        font-size:12px; color: var(--fg1); cursor:pointer;
+        border-left: 2px solid transparent;
+      }
+      .esd-node:hover { background: var(--zinc-100); }
+      .esd-node.sel {
+        background: var(--indigo-50, #eef2ff);
+        border-left-color: var(--indigo-600);
+        color: var(--indigo-700, #4338ca); font-weight:500;
+      }
+      .esd-node .tw { width:10px; color: var(--fg4); font-size:9px; }
+      .esd-node .ic { color: var(--fg3); font-size:11px; }
+      .esd-node.sel .ic { color: var(--indigo-600); }
+      .esd-node.lvl1 { padding-left: 14px; }
+      .esd-node.lvl2 { padding-left: 28px; }
+      .esd-node.lvl3 { padding-left: 42px; }
+      .esd-node.lvl4 { padding-left: 56px; }
+      .esd-node .ct {
+        margin-left:auto; font-size:10px; color:var(--fg4);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .esd-table { flex:1; display:flex; flex-direction:column; min-width:0; }
+      .esd-table-toolbar {
+        display:flex; align-items:center; gap:8px; padding: 10px 14px;
+        border-bottom:1px solid var(--border-2);
+      }
+      .esd-crumbs {
+        display:flex; align-items:center; gap:6px;
+        font-size:11px; color: var(--fg3);
+      }
+      .esd-crumbs .here { color: var(--fg1); font-weight:500; }
+      .esd-crumbs .pi { font-size:9px; color: var(--fg4); }
+      .esd-table-search {
+        margin-left:auto;
+        display:flex; align-items:center; gap:8px;
+        background: var(--zinc-100); border-radius: 10px;
+        padding: 7px 12px; border: 1px solid transparent;
+        min-width: 220px;
+        transition: background 150ms, box-shadow 150ms;
+      }
+      .esd-table-search:hover { background: #f3f4f6; }
+      .esd-table-search:focus-within {
+        background: #fff;
+        box-shadow: 0 0 0 2px var(--indigo-500), 0 8px 24px -8px rgba(79,70,229,0.25);
+      }
+      .esd-table-search .pi-search { font-size: 12px; color: var(--fg3); }
+      .esd-table-search input {
+        flex:1; border:none; outline:none; background:transparent;
+        font-family: var(--font-sans); font-size:12px; color: var(--fg1);
+        min-width: 0;
+      }
+      .esd-table-search input::placeholder { color: var(--fg4); }
+      .esd-table-search .esd-kbd {
+        font-family: var(--font-mono); font-size: 10px;
+        padding: 1px 6px; border-radius: 4px;
+        background: rgba(0,0,0,0.06); color: var(--fg3);
+        line-height: 1.4;
+      }
+
+      .esd-tbl { width:100%; border-collapse: collapse; font-size:12px; }
+      .esd-tbl thead th {
+        position: sticky; top:0; background: var(--zinc-50, #fafafa);
+        text-align:left; padding: 8px 12px; font-weight:500; color:var(--fg3);
+        font-size:11px; border-bottom:1px solid var(--border-1);
+        text-transform: uppercase; letter-spacing: 0.04em;
+      }
+      .esd-tbl thead th .pi { font-size:9px; margin-left:3px; color:var(--fg4); }
+      .esd-tbl tbody td {
+        padding: 9px 12px; border-bottom:1px solid var(--border-2);
+        color: var(--fg1); white-space: nowrap;
+      }
+      .esd-tbl tbody tr { cursor:pointer; }
+      .esd-tbl tbody tr:hover { background: var(--zinc-50, #fafafa); }
+      .esd-tbl tbody tr.sel { background: var(--indigo-50, #eef2ff); }
+      .esd-tbl tbody tr.sel td { color: var(--indigo-700, #4338ca); }
+      .esd-tbl tbody tr:nth-child(even) { background: rgba(244,244,245,0.4); }
+      .esd-tbl tbody tr:nth-child(even):hover { background: var(--zinc-100); }
+      .esd-tbl tbody tr.sel:nth-child(even) { background: var(--indigo-50, #eef2ff); }
+      .esd-tbl .name {
+        display:flex; align-items:center; gap:8px; font-weight:500;
+      }
+      .esd-tbl .ava {
+        width:24px; height:24px; border-radius:50%; background: var(--indigo-100, #e0e7ff);
+        color: var(--indigo-700, #4338ca);
+        font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center;
+        flex-shrink:0;
+      }
+      .esd-tbl .eno { font-family: var(--font-mono); color: var(--fg3); font-size:11px; }
+      .esd-tbl .pos { color: var(--fg2); }
+
+      .esd-foot {
+        display:flex; align-items:center; justify-content:space-between;
+        padding: 10px 14px; border-top:1px solid var(--border-1);
+        background: var(--zinc-50, #fafafa);
+      }
+      .esd-pager {
+        display:flex; align-items:center; gap:8px;
+        font-size:11px; color: var(--fg3);
+      }
+      .esd-pager-btn {
+        width:24px; height:24px; border:1px solid var(--border-1); background:#fff;
+        border-radius:5px; color:var(--fg2); cursor:pointer; font-size:10px;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .esd-pager-btn.on { background: var(--indigo-600); color:#fff; border-color: var(--indigo-600); }
+      .esd-pager-btn:hover:not(.on) { background: var(--zinc-100); }
+      .esd-actions { display:flex; gap:8px; }
+    </style>
+
+    <div class="var-label"><span class="pin" data-cc-id="cc-14">V5</span><span class="nm">EmployeeSearchDialog · 직원 조회 모달</span><span class="dsc">조직도 트리 + 직원 DataTable 분할 레이아웃. 사업·전산업무비 폼에서 담당자/결재자 선택 시 사용. <code>EmployeeSearchDialog.vue</code></span></div>
+    <div style="background: linear-gradient(135deg, rgba(63,63,70,0.06) 0%, rgba(63,63,70,0.12) 100%); border:1px solid var(--border-1); border-radius:10px; padding:32px; display:flex; justify-content:center;" data-cc-id="cc-2">
+      <div class="esd-modal">
+        <div class="esd-head">
+          <h4><i class="pi pi-users"></i>직원 조회</h4>
+          <button class="esd-close" title="닫기"><i class="pi pi-times" style="font-size:11px;"></i></button>
+        </div>
+        <div class="esd-body">
+          <div class="esd-tree" data-cc-id="cc-5">
+            <div class="esd-tree-toolbar">
+              <button class="esd-tree-btn"><i class="pi pi-angle-double-down" style="font-size:10px;"></i>모두 펼치기</button>
+              <button class="esd-tree-btn"><i class="pi pi-angle-double-up" style="font-size:10px;"></i>모두 접기</button>
+            </div>
+            <div class="esd-tree-search" data-cc-id="cc-3">
+              <i class="pi pi-search"></i>
+              <input placeholder="부서 검색" data-cc-id="cc-4">
+            </div>
+            <div class="esd-tree-list">
+              <div class="esd-node lvl0"><span class="tw">▾</span><i class="pi pi-building ic"></i>○○은행<span class="ct">2,847</span></div>
+              <div class="esd-node lvl1"><span class="tw">▾</span><i class="pi pi-sitemap ic"></i>디지털혁신본부<span class="ct">412</span></div>
+              <div class="esd-node lvl2"><span class="tw">▾</span><i class="pi pi-folder ic"></i>IT기획부<span class="ct">86</span></div>
+              <div class="esd-node lvl3"><span class="tw"></span><i class="pi pi-users ic"></i>예산관리팀<span class="ct">9</span></div>
+              <div class="esd-node lvl3 sel"><span class="tw"></span><i class="pi pi-users ic"></i>데이터플랫폼팀<span class="ct">12</span></div>
+              <div class="esd-node lvl3"><span class="tw"></span><i class="pi pi-users ic"></i>아키텍처팀<span class="ct">7</span></div>
+              <div class="esd-node lvl2"><span class="tw">▸</span><i class="pi pi-folder ic"></i>IT운영부<span class="ct">154</span></div>
+              <div class="esd-node lvl2"><span class="tw">▸</span><i class="pi pi-folder ic"></i>정보보호부<span class="ct">42</span></div>
+              <div class="esd-node lvl1"><span class="tw">▸</span><i class="pi pi-sitemap ic"></i>리테일금융본부<span class="ct">1,128</span></div>
+              <div class="esd-node lvl1"><span class="tw">▸</span><i class="pi pi-sitemap ic"></i>기업금융본부<span class="ct">724</span></div>
+              <div class="esd-node lvl1"><span class="tw">▸</span><i class="pi pi-sitemap ic"></i>경영지원본부<span class="ct">198</span></div>
+            </div>
+          </div>
+
+          <div class="esd-table">
+            <div class="esd-table-toolbar" data-cc-id="cc-8">
+              <div class="esd-crumbs">
+                <span>디지털혁신본부</span>
+                <i class="pi pi-angle-right"></i>
+                <span>IT기획부</span>
+                <i class="pi pi-angle-right"></i>
+                <span class="here">데이터플랫폼팀</span>
+                <span style="margin-left:6px; padding:1px 7px; background:var(--zinc-100); border-radius:10px; font-size:10px; color:var(--fg2); font-variant-numeric:tabular-nums;">12명</span>
+              </div>
+              <div class="esd-table-search">
+                <i class="pi pi-search"></i>
+                <input placeholder="이름/사번 검색">
+                <span class="esd-kbd">/</span>
+              </div>
+            </div>
+
+            <div style="flex:1; overflow:auto;">
+              <table class="esd-tbl">
+                <thead>
+                  <tr>
+                    <th data-cc-id="cc-6">이름<i class="pi pi-sort-alt"></i></th>
+                    <th data-cc-id="cc-7">사번<i class="pi pi-sort-amount-down"></i></th>
+                    <th data-cc-id="cc-9">직위</th>
+                    <th data-cc-id="cc-10">팀</th>
+                    <th>이메일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><div class="name"><span class="ava">김</span>김선임</div></td><td class="eno">EMP-20151102</td><td class="pos">팀장</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ddb6b4b0f3aeb39dbfbcb3b6f3beb2f3b6af">[email&#160;protected]</a></td></tr>
+                  <tr class="sel"><td><div class="name"><span class="ava">박</span>박데이터</div></td><td class="eno">EMP-20180342</td><td class="pos">차장</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7f0f1e0d14511b1e0b1e3f1d1e1114511c1051140d">[email&#160;protected]</a></td></tr>
+                  <tr><td><div class="name"><span class="ava">이</span>이정훈</div></td><td class="eno">EMP-20190827</td><td class="pos">과장</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bbd7dede95d1d3fbd9dad5d095d8d495d0c9">[email&#160;protected]</a></td></tr>
+                  <tr><td><div class="name"><span class="ava">최</span>최유진</div></td><td class="eno">EMP-20201156</td><td class="pos">대리</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="62010a0d0b4c1b082200030c094c010d4c0910">[email&#160;protected]</a></td></tr>
+                  <tr><td><div class="name"><span class="ava">정</span>정민철</div></td><td class="eno">EMP-20210491</td><td class="pos">대리</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="48223d262f66252b082a292623662b2766233a">[email&#160;protected]</a></td></tr>
+                  <tr><td><div class="name"><span class="ava">한</span>한지원</div></td><td class="eno">EMP-20220215</td><td class="pos">사원</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6109000f4f0b162103000f0a4f020e4f0a13">[email&#160;protected]</a></td></tr>
+                  <tr><td><div class="name"><span class="ava">송</span>송재욱</div></td><td class="eno">EMP-20230108</td><td class="pos">사원</td><td class="pos">데이터플랫폼팀</td><td class="pos"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="35465a5b521b5f427557545b5e1b565a1b5e47">[email&#160;protected]</a></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="esd-foot">
+              <div class="esd-pager">
+                <button class="esd-pager-btn"><i class="pi pi-angle-left"></i></button>
+                <button class="esd-pager-btn on">1</button>
+                <button class="esd-pager-btn">2</button>
+                <button class="esd-pager-btn"><i class="pi pi-angle-right"></i></button>
+                <span style="margin-left:6px; font-variant-numeric:tabular-nums;">총 12건 · 1–7</span>
+              </div>
+              <div class="esd-actions">
+                <button class="btn ghost sm">취소</button>
+                <button class="btn primary sm"><i class="pi pi-check" style="font-size:10px;"></i>선택</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:12px; color:var(--fg3); margin-top:14px; line-height:1.6;">
+      <strong style="color:var(--fg2);">사용 패턴.</strong>
+      사업·전산업무비 폼의 담당자/결재자 필드는 두 입력 방식을 결합합니다 — 셀 내부의
+      <code>AutoComplete</code>로 이름을 빠르게 입력하거나(V6), 우측 돋보기 버튼으로
+      <code>EmployeeSearchDialog</code>(V5)를 열어 조직도에서 명시적으로 선택할 수 있습니다.
+      헤더 통합 검색(V1–V4)에는 직원 결과를 노출하지 않습니다.
+    </p>
+
+    <style>
+      .iec-table {
+        width:100%; border-collapse: separate; border-spacing: 0;
+        font-size:12px; background:#fff;
+        border:1px solid var(--border-1); border-radius:8px;
+      }
+      .iec-table thead th:first-child { border-top-left-radius: 8px; }
+      .iec-table thead th:last-child  { border-top-right-radius: 8px; }
+      .iec-table tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
+      .iec-table tbody tr:last-child td:last-child  { border-bottom-right-radius: 8px; }
+      .iec-table thead th {
+        background: var(--zinc-50, #fafafa);
+        text-align:left; padding: 9px 12px; font-weight:500; color:var(--fg3);
+        font-size:11px; border-bottom:1px solid var(--border-1);
+        text-transform: uppercase; letter-spacing: 0.04em;
+      }
+      .iec-table tbody td {
+        padding: 8px 12px; border-bottom:1px solid var(--border-2);
+        color: var(--fg1); white-space: nowrap; vertical-align: middle;
+        overflow: visible;
+      }
+      .iec-table tbody tr.editing td { position: relative; z-index: 5; }
+      .iec-table tbody tr:last-child td { border-bottom: none; }
+      .iec-table tbody tr.editing { background: var(--indigo-50, #eef2ff); }
+      .iec-table .num { font-variant-numeric: tabular-nums; text-align:right; }
+      .iec-table .mono { font-family: var(--font-mono); }
+
+      /* Cell layout: autocomplete + magnifier button */
+      .cgpr-cell {
+        display:grid; grid-template-columns: 1fr auto; gap:4px;
+        align-items:center; min-width: 200px;
+      }
+      .iec-ac {
+        display:flex; align-items:center; gap:6px;
+        background:#fff; border:1px solid var(--indigo-500);
+        border-radius:6px; padding: 5px 9px;
+        box-shadow: 0 0 0 2px rgba(79,70,229,0.12);
+      }
+      .iec-ac input {
+        flex:1; border:none; outline:none; background:transparent;
+        font-family: var(--font-sans); font-size:12px; color:var(--fg1);
+        min-width: 0;
+      }
+      .iec-ac .pi-spinner {
+        font-size:11px; color: var(--indigo-500);
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .iec-mag {
+        width:28px; height:28px; border:none; background:transparent;
+        border-radius:6px; color: var(--indigo-600); cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+      }
+      .iec-mag:hover { background: var(--indigo-50, #eef2ff); }
+
+      /* Suggestions panel — wider than the cell so long names/depts don't clip */
+      .iec-panel {
+        position: absolute; left:0; top: calc(100% + 4px);
+        min-width: 100%; width: 360px;
+        background:#fff; border:1px solid var(--border-1); border-radius:8px;
+        box-shadow: 0 12px 32px -8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.04);
+        z-index: 5; max-height: 360px; overflow:auto;
+        padding: 4px 0;
+      }
+      .iec-opt {
+        padding: 7px 10px 7px 0; cursor: pointer; display:flex; gap:0;
+        white-space: nowrap;
+      }
+      .iec-opt:hover { background: var(--zinc-100); }
+      .iec-opt.hi { background: var(--indigo-50, #eef2ff); }
+      .iec-opt-bar {
+        width:3px; flex-shrink:0; margin: 0 10px 0 0;
+        background: #1e3a8a; /* blue-900 */
+        border-radius: 0 2px 2px 0;
+      }
+      .iec-opt-body { display:flex; flex-direction:column; gap:2px; flex:1; min-width:0; }
+      .iec-opt-line1 {
+        display:flex; align-items:baseline; gap:6px;
+        font-size:13px; color: var(--fg1);
+      }
+      .iec-opt-line1 .nm { font-weight:600; }
+      .iec-opt-line1 .nm mark { background: rgba(252,211,77,0.55); color: inherit; padding:0 1px; border-radius:2px; }
+      .iec-opt-line1 .eno {
+        font-family: var(--font-mono); font-size:11px;
+        color: var(--zinc-400, #a1a1aa);
+      }
+      .iec-opt-line1 .pos {
+        font-size:11px; color: var(--indigo-600);
+        opacity: 0.85;
+      }
+      .iec-opt-line2 {
+        display:flex; align-items:center; gap:5px; font-size:11px;
+        color: var(--zinc-400, #a1a1aa);
+      }
+      .iec-opt-line2 .pi { font-size:9px; }
+      .iec-opt-line2 .sep { color: var(--zinc-300, #d4d4d8); }
+
+      .iec-panel-foot {
+        border-top:1px solid var(--border-2); padding: 7px 12px;
+        font-size:11px; color: var(--fg3);
+        display:flex; align-items:center; justify-content:space-between;
+        background: var(--zinc-50, #fafafa);
+      }
+      .iec-panel-foot .keys { display:flex; gap:10px; }
+      .iec-panel-foot kbd {
+        display:inline-block; padding: 1px 5px; min-width:14px; text-align:center;
+        background:#fff; border:1px solid var(--border-1); border-bottom-width:2px;
+        border-radius:3px; font-size:10px; color:var(--fg2); font-family:var(--font-mono);
+      }
+      .iec-panel-foot .open-dialog {
+        color: var(--indigo-600); cursor:pointer; display:flex; align-items:center; gap:4px;
+      }
+      .iec-panel-foot .open-dialog .pi { font-size:9px; }
+
+      /* Other cell states */
+      .iec-readonly {
+        display:flex; align-items:center; gap:4px;
+        padding: 5px 9px; color: var(--fg1);
+        border:1px solid transparent;
+      }
+      .iec-readonly .nm { font-size:12px; }
+      .iec-readonly .em { color: var(--fg4); font-style: italic; font-size:11px; }
+    </style>
+
+    <div class="var-label"><span class="pin">V6</span><span class="nm">InlineEdit AutoComplete · 담당자 셀</span><span class="dsc">테이블 셀 내부에서 이름 입력 → 자동완성. <code>useEmployeeSearch</code> + PrimeVue <code>AutoComplete</code> · 250ms 디바운스 · 동일 부서 우선.</span></div>
+    <div style="background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:24px;">
+      <table class="iec-table" style="height: 200px">
+        <thead>
+          <tr>
+            <th style="width:24px;"></th>
+            <th>구분</th>
+            <th style="width:36%;">계약명</th>
+            <th>담당자</th>
+            <th style="width:120px;">계약금액</th>
+            <th style="width:90px;">상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:center; color:var(--fg4);">1</td>
+            <td>유지보수</td>
+            <td>CDP 운영 유지보수 · 2026</td>
+            <td>
+              <div class="cgpr-cell">
+                <div class="iec-readonly"><span class="nm">박데이터</span><span class="em">(차장)</span></div>
+                <button class="iec-mag" title="직원조회"><i class="pi pi-search" style="font-size:11px;"></i></button>
+              </div>
+            </td>
+            <td class="num">312,000,000</td>
+            <td><span class="tag green" style="font-size:10px; padding:1px 7px;">확정</span></td>
+          </tr>
+
+          <tr class="editing">
+            <td style="text-align:center; color:var(--indigo-600); font-weight:600;">2</td>
+            <td>구축</td>
+            <td>CDP 구축 2차 · PoC 컨설팅</td>
+            <td>
+              <div class="cgpr-cell" style="position:relative;">
+                <div class="iec-ac">
+                  <input value="민" />
+                  <i class="pi pi-spinner"></i>
+                </div>
+                <button class="iec-mag" title="직원조회"><i class="pi pi-search" style="font-size:11px;"></i></button>
+
+                <div class="iec-panel">
+                  <div class="iec-opt hi">
+                    <div class="iec-opt-bar"></div>
+                    <div class="iec-opt-body">
+                      <div class="iec-opt-line1">
+                        <span class="nm">정<mark>민</mark>철</span>
+                        <span class="eno">EMP-20210491</span>
+                        <span class="pos">대리</span>
+                      </div>
+                      <div class="iec-opt-line2">
+                        <i class="pi pi-building"></i>
+                        <span>IT기획부</span>
+                        <span class="sep">·</span>
+                        <span>데이터플랫폼팀</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="iec-opt">
+                    <div class="iec-opt-bar"></div>
+                    <div class="iec-opt-body">
+                      <div class="iec-opt-line1">
+                        <span class="nm">장<mark>민</mark>수</span>
+                        <span class="eno">EMP-20210815</span>
+                        <span class="pos">책임</span>
+                      </div>
+                      <div class="iec-opt-line2">
+                        <i class="pi pi-building"></i>
+                        <span>IT운영부</span>
+                        <span class="sep">·</span>
+                        <span>CDP운영팀</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="iec-opt">
+                    <div class="iec-opt-bar"></div>
+                    <div class="iec-opt-body">
+                      <div class="iec-opt-line1">
+                        <span class="nm">한지<mark>민</mark></span>
+                        <span class="eno">EMP-20220215</span>
+                        <span class="pos">사원</span>
+                      </div>
+                      <div class="iec-opt-line2">
+                        <i class="pi pi-building"></i>
+                        <span>IT기획부</span>
+                        <span class="sep">·</span>
+                        <span>데이터플랫폼팀</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="iec-panel-foot">
+                    <div class="keys">
+                      <span><kbd>↑</kbd><kbd>↓</kbd> 이동</span>
+                      <span><kbd>↵</kbd> 선택</span>
+                      <span><kbd>esc</kbd> 닫기</span>
+                    </div>
+                    <span class="open-dialog"><i class="pi pi-external-link"></i>직원조회 다이얼로그 열기</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="num" style="color:var(--fg4);">—</td>
+            <td><span class="tag gray" style="font-size:10px; padding:1px 7px;">예산 작성</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align:center; color:var(--fg4);">3</td>
+            <td>회선</td>
+            <td>본사 ↔ DR센터 전용회선 · 갱신</td>
+            <td>
+              <div class="cgpr-cell">
+                <div class="iec-readonly"><span class="em">담당자를 선택하세요</span></div>
+                <button class="iec-mag" title="직원조회"><i class="pi pi-search" style="font-size:11px;"></i></button>
+              </div>
+            </td>
+            <td class="num">84,500,000</td>
+            <td><span class="tag yellow" style="font-size:10px; padding:1px 7px;">검토 중</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:18px; padding-top:18px; border-top:1px solid var(--border-2);">
+        <div>
+          <div style="font-size:11px; color:var(--fg4); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">동작</div>
+          <div style="font-size:12px; color:var(--fg2); line-height:1.6;">
+            250ms 디바운스 후 <code>/api/users/search</code> 호출. 로그인 사용자의 부서(<code>bbrC</code>)를 기본 범위로 사용.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--fg4); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">시각 규칙</div>
+          <div style="font-size:12px; color:var(--fg2); line-height:1.6;">
+            옵션 좌측 <span style="color:#1e3a8a; font-weight:600;">blue-900</span> 3px 바 = 부서 일치 결과. 매치된 글자는 <mark style="background:rgba(252,211,77,0.55);">노란 하이라이트</mark>.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--fg4); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">폴백</div>
+          <div style="font-size:12px; color:var(--fg2); line-height:1.6;">
+            결과가 모호하거나 타 부서를 찾을 때는 우측 돋보기 → <code>EmployeeSearchDialog</code>(V5)로 전환.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Inputs</h3>
+  <div class="panel">
+    <div class="grid2">
+      <div class="field">
+        <label>사원번호</label>
+        <input class="input" placeholder="사원번호를 입력하세요">
+        <span class="hint">숫자 8자리</span>
+      </div>
+      <div class="field">
+        <label>비밀번호</label>
+        <input class="input" type="password" value="••••••••">
+      </div>
+      <div class="field">
+        <label>사업 검색</label>
+        <input class="input" value="정보화사업 2026">
+      </div>
+      <div class="field">
+        <label>예산 구분</label>
+        <div class="selectwrap">
+          <select class="input select"><option>정보화사업</option><option>전산업무비</option><option>경상사업</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>오류 상태</label>
+        <input class="input error" value="잘못된 입력">
+        <span class="hint" style="color:#dc2626;">필수 항목입니다.</span>
+      </div>
+      <div class="field">
+        <label>체크박스</label>
+        <div style="display:flex; gap:16px; padding-top:6px;">
+          <span class="check checked"><span class="box"></span>IT기획부</span>
+          <span class="check"><span class="box"></span>IT운영부</span>
+          <span class="check"><span class="box"></span>IT보안부</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Tags · lifecycle status</h3>
+  <div class="panel">
+    <div class="row">
+      <span class="tag yellow">예산 작성</span>
+      <span class="tag indigo">사전 협의</span>
+      <span class="tag purple">정실협</span>
+      <span class="tag gray">요건 상세화</span>
+      <span class="tag blue">사업 추진</span>
+      <span class="tag green">완료</span>
+      <span class="tag red">반려</span>
+    </div>
+  </div>
+
+  <h3>KPI cards</h3>
+  <p style="font-size:13px; color:var(--fg3); margin:-6px 0 0; max-width:720px; line-height:1.6;">Four directions for the dashboard KPI card. Each communicates the same four metrics differently — V1 leans data-editorial, V2 adds goal-tracking, V3 is ultra-compact for dense grids, V4 is narrative with a composition breakdown. Pick one, or mix (e.g. V2 for dashboards, V3 for sidebars).</p>
+
+  <div class="var-label"><span class="pin">V1</span><span class="nm">Data-led · hairline rail + sparkline</span><span class="dsc">Restrained; lets the number breathe; quick-scan trendline.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi1" style="--accent: var(--kpi-indigo-fg);">
+      <div class="head"><span class="lbl">진행중인 사업</span><span class="unit">건</span></div>
+      <div class="row2">
+        <span class="num">12</span>
+        <svg class="spark" viewBox="0 0 88 28" fill="none">
+          <polyline points="0,22 12,20 22,18 32,14 44,15 56,10 68,11 80,6 88,4" stroke="var(--kpi-indigo-fg)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <polyline points="0,22 12,20 22,18 32,14 44,15 56,10 68,11 80,6 88,4 88,28 0,28" fill="var(--kpi-indigo-fg)" fill-opacity="0.08" stroke="none"></polyline>
+          <circle cx="88" cy="4" r="2" fill="var(--kpi-indigo-fg)"></circle>
+        </svg>
+      </div>
+      <div class="foot">
+        <span class="delta up"><i class="pi pi-arrow-up-right" style="font-size:11px;"></i>+2 (MoM)</span>
+        <span>12주 추이</span>
+      </div>
+    </div>
+
+    <div class="kpi1" style="--accent: var(--kpi-blue-fg);">
+      <div class="head"><span class="lbl">결재 대기</span><span class="unit">건</span></div>
+      <div class="row2">
+        <span class="num">7</span>
+        <svg class="spark" viewBox="0 0 88 28" fill="none">
+          <polyline points="0,12 12,14 22,10 32,16 44,12 56,18 68,14 80,22 88,20" stroke="var(--kpi-blue-fg)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <polyline points="0,12 12,14 22,10 32,16 44,12 56,18 68,14 80,22 88,20 88,28 0,28" fill="var(--kpi-blue-fg)" fill-opacity="0.08" stroke="none"></polyline>
+          <circle cx="88" cy="20" r="2" fill="var(--kpi-blue-fg)"></circle>
+        </svg>
+      </div>
+      <div class="foot">
+        <span class="delta warn"><i class="pi pi-exclamation-circle" style="font-size:11px;"></i>3건 처리지연</span>
+        <span>SLA 3영업일</span>
+      </div>
+    </div>
+
+    <div class="kpi1" style="--accent: var(--kpi-emerald-fg);">
+      <div class="head"><span class="lbl">완료 사업</span><span class="unit">건</span></div>
+      <div class="row2">
+        <span class="num">48</span>
+        <svg class="spark" viewBox="0 0 88 28" fill="none">
+          <polyline points="0,24 12,22 22,20 32,18 44,16 56,12 68,9 80,6 88,3" stroke="var(--kpi-emerald-fg)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <polyline points="0,24 12,22 22,20 32,18 44,16 56,12 68,9 80,6 88,3 88,28 0,28" fill="var(--kpi-emerald-fg)" fill-opacity="0.08" stroke="none"></polyline>
+          <circle cx="88" cy="3" r="2" fill="var(--kpi-emerald-fg)"></circle>
+        </svg>
+      </div>
+      <div class="foot">
+        <span class="delta up"><i class="pi pi-arrow-up-right" style="font-size:11px;"></i>연간 누적</span>
+        <span>YoY +14%</span>
+      </div>
+    </div>
+
+    <div class="kpi1" style="--accent: var(--kpi-emerald-fg);">
+      <div class="head"><span class="lbl">감사 이슈</span><span class="unit">건</span></div>
+      <div class="row2">
+        <span class="num">0</span>
+        <svg class="spark" viewBox="0 0 88 28" fill="none">
+          <line x1="0" y1="14" x2="88" y2="14" stroke="var(--kpi-emerald-fg)" stroke-width="1.5" stroke-dasharray="3 3" stroke-linecap="round"></line>
+          <circle cx="88" cy="14" r="2" fill="var(--kpi-emerald-fg)"></circle>
+        </svg>
+      </div>
+      <div class="foot">
+        <span class="delta up"><i class="pi pi-check" style="font-size:11px;"></i>정상 운영 중</span>
+        <span>127일 무중단</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="var-label"><span class="pin">V2</span><span class="nm">Progress ring · goal-tracking</span><span class="dsc">Great when the metric has a target (quarterly plan, budget 집행률).</span></div>
+  <div class="kpi-grid">
+    <div class="kpi2" style="--accent: var(--kpi-indigo-fg);">
+      <div class="lbl">예산 편성률</div>
+      <div class="num">82<span style="font-size:20px; color:var(--fg3); font-weight:500;">%</span></div>
+      <div class="ring">
+        <svg viewBox="0 0 36 36">
+          <circle class="track" cx="18" cy="18" r="15" fill="none" stroke-width="3"></circle>
+          <circle class="fill" cx="18" cy="18" r="15" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.25" stroke-dashoffset="16.97"></circle>
+        </svg>
+        <span class="pct">82%</span>
+      </div>
+      <div class="foot"><span>목표 기준</span><span class="target">82 / 100</span></div>
+    </div>
+    <div class="kpi2" style="--accent: var(--kpi-amber-fg);">
+      <div class="lbl">결재 처리율</div>
+      <div class="num">64<span style="font-size:20px; color:var(--fg3); font-weight:500;">%</span></div>
+      <div class="ring">
+        <svg viewBox="0 0 36 36">
+          <circle class="track" cx="18" cy="18" r="15" fill="none" stroke-width="3"></circle>
+          <circle class="fill" cx="18" cy="18" r="15" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.25" stroke-dashoffset="33.93"></circle>
+        </svg>
+        <span class="pct">64%</span>
+      </div>
+      <div class="foot"><span>SLA 내 처리</span><span class="target">16 / 25</span></div>
+    </div>
+    <div class="kpi2" style="--accent: var(--kpi-emerald-fg);">
+      <div class="lbl">연간 목표 달성</div>
+      <div class="num">96<span style="font-size:20px; color:var(--fg3); font-weight:500;">%</span></div>
+      <div class="ring">
+        <svg viewBox="0 0 36 36">
+          <circle class="track" cx="18" cy="18" r="15" fill="none" stroke-width="3"></circle>
+          <circle class="fill" cx="18" cy="18" r="15" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.25" stroke-dashoffset="3.77"></circle>
+        </svg>
+        <span class="pct">96%</span>
+      </div>
+      <div class="foot"><span>48 / 50 완료</span><span class="target">+14% YoY</span></div>
+    </div>
+    <div class="kpi2" style="--accent: #047857;">
+      <div class="lbl">지감 감사 이행률</div>
+      <div class="num">100<span style="font-size:20px; color:var(--fg3); font-weight:500;">%</span></div>
+      <div class="ring">
+        <svg viewBox="0 0 36 36">
+          <circle class="track" cx="18" cy="18" r="15" fill="none" stroke-width="3"></circle>
+          <circle class="fill" cx="18" cy="18" r="15" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.25" stroke-dashoffset="0"></circle>
+        </svg>
+        <span class="pct">100%</span>
+      </div>
+      <div class="foot"><span>이슈 0건</span><span class="target">127일 무중단</span></div>
+    </div>
+  </div>
+
+  <div class="var-label"><span class="pin">V3</span><span class="nm">Compact stat-block</span><span class="dsc">Dense layouts: report headers, sidebars, drill-down panels.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi3" style="--accent: var(--kpi-indigo-fg);">
+      <div class="head"><span class="dot"></span>진행중인 사업</div>
+      <div class="num-row"><span class="num">12</span><span class="sub">/ 48건 전체</span></div>
+      <div class="bar"><span style="width:25%;"></span></div>
+      <div class="meta"><span>25%</span><span>+2 MoM</span></div>
+    </div>
+    <div class="kpi3" style="--accent: var(--kpi-blue-fg);">
+      <div class="head"><span class="dot"></span>결재 대기</div>
+      <div class="num-row"><span class="num">7</span><span class="sub">/ 11건 수신</span></div>
+      <div class="bar"><span style="width:63%;"></span></div>
+      <div class="meta"><span style="color:#b45309;">3건 지연</span><span>SLA 3D</span></div>
+    </div>
+    <div class="kpi3" style="--accent: var(--kpi-emerald-fg);">
+      <div class="head"><span class="dot"></span>완료 사업</div>
+      <div class="num-row"><span class="num">48</span><span class="sub">/ 50건 목표</span></div>
+      <div class="bar"><span style="width:96%;"></span></div>
+      <div class="meta"><span>96%</span><span>YoY +14%</span></div>
+    </div>
+    <div class="kpi3" style="--accent: #047857;">
+      <div class="head"><span class="dot"></span>감사 이슈</div>
+      <div class="num-row"><span class="num">0</span><span class="sub">/ 0 경고</span></div>
+      <div class="bar"><span style="width:100%;"></span></div>
+      <div class="meta"><span style="color:#047857;">정상</span><span>127d 무중단</span></div>
+    </div>
+  </div>
+
+  <div class="var-label"><span class="pin">V4</span><span class="nm">Narrative · segmented breakdown</span><span class="dsc">Shows composition — ideal when the total has meaningful sub-parts.</span></div>
+  <div class="kpi-grid">
+    <div class="kpi4" style="--accent: var(--kpi-indigo-fg); --accent-bg: var(--kpi-indigo-bg);">
+      <div class="head"><span class="ic"><i class="pi pi-briefcase"></i></span><span class="lbl">진행중인 사업</span></div>
+      <div class="num-wrap"><span class="num">12</span><span class="cmp">전월 대비 <b style="color:#047857;">+2</b></span></div>
+      <div class="seg">
+        <span style="width:42%; background:#4f46e5;"></span>
+        <span style="width:33%; background:#818cf8;"></span>
+        <span style="width:25%; background:#c7d2fe;"></span>
+      </div>
+      <div class="legend">
+        <span><i class="sq" style="background:#4f46e5;"></i>사업 추진 5</span>
+        <span><i class="sq" style="background:#818cf8;"></i>사전협의 4</span>
+        <span><i class="sq" style="background:#c7d2fe;"></i>예산 작성 3</span>
+      </div>
+    </div>
+    <div class="kpi4" style="--accent: var(--kpi-blue-fg); --accent-bg: var(--kpi-blue-bg);">
+      <div class="head"><span class="ic"><i class="pi pi-inbox"></i></span><span class="lbl">결재 대기</span></div>
+      <div class="num-wrap"><span class="num">7</span><span class="cmp">지연 <b style="color:#b45309;">3건</b></span></div>
+      <div class="seg">
+        <span style="width:57%; background:#1d4ed8;"></span>
+        <span style="width:43%; background:#f59e0b;"></span>
+      </div>
+      <div class="legend">
+        <span><i class="sq" style="background:#1d4ed8;"></i>정상 4</span>
+        <span><i class="sq" style="background:#f59e0b;"></i>지연 3</span>
+      </div>
+    </div>
+    <div class="kpi4" style="--accent: var(--kpi-emerald-fg); --accent-bg: var(--kpi-emerald-bg);">
+      <div class="head"><span class="ic"><i class="pi pi-check-square"></i></span><span class="lbl">완료 사업</span></div>
+      <div class="num-wrap"><span class="num">48</span><span class="cmp">목표 50 중 <b>96%</b></span></div>
+      <div class="seg">
+        <span style="width:60%; background:#047857;"></span>
+        <span style="width:27%; background:#10b981;"></span>
+        <span style="width:13%; background:#6ee7b7;"></span>
+      </div>
+      <div class="legend">
+        <span><i class="sq" style="background:#047857;"></i>정보화 29</span>
+        <span><i class="sq" style="background:#10b981;"></i>전산업무 13</span>
+        <span><i class="sq" style="background:#6ee7b7;"></i>경상 6</span>
+      </div>
+    </div>
+    <div class="kpi4" style="--accent: #047857; --accent-bg: #d1fae5;">
+      <div class="head"><span class="ic"><i class="pi pi-shield"></i></span><span class="lbl">감사 이슈</span></div>
+      <div class="num-wrap"><span class="num">0</span><span class="cmp">127일 무중단</span></div>
+      <div class="seg">
+        <span style="width:100%; background:#10b981;"></span>
+      </div>
+      <div class="legend">
+        <span><i class="sq" style="background:#10b981;"></i>정상 운영 중</span>
+        <span style="margin-left:auto;">최근 2026.04.17</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>Sidebar nav items</h3>
+  <div class="panel" style="max-width:320px;">
+    <div class="stack">
+      <div class="nav-item active"><i class="pi pi-home"></i>홈</div>
+      <div class="nav-item"><i class="pi pi-briefcase"></i>정보화사업</div>
+      <div class="nav-item"><i class="pi pi-wallet"></i>예산관리</div>
+      <div class="nav-item"><i class="pi pi-shield"></i>IT자체감사</div>
+      <div class="nav-item"><i class="pi pi-file-edit"></i>전자결재</div>
+      <div class="nav-item"><i class="pi pi-cog"></i>관리자<span class="crown">♛</span></div>
+    </div>
+  </div>
+
+  <h3>Tab bar · drag-reorderable, active underline</h3>
+  <div class="tabbar">
+    <div class="tab"><i class="pi pi-home"></i>홈<i class="pi pi-times close"></i></div>
+    <div class="tab active"><i class="pi pi-briefcase"></i>정보화사업 목록<i class="pi pi-times close"></i></div>
+    <div class="tab"><i class="pi pi-wallet"></i>예산 작성<i class="pi pi-times close"></i></div>
+    <div class="tab"><i class="pi pi-file-edit"></i>결재 상신<i class="pi pi-times close"></i></div>
+  </div>
+
+  <style>
+    /* ───────── Pagination styles ───────── */
+    .pg-wrap { background:#fff; border:1px solid var(--border-1); border-radius:12px; padding:16px 20px; margin-top:8px; }
+    .pg-meta { font-size:12px; color:var(--fg3); display:flex; align-items:center; gap:6px; }
+    .pg-meta b { color:var(--fg1); font-weight:600; font-variant-numeric:tabular-nums; }
+
+    /* V1 — Numbered (matches ui_kits/portal table footer) */
+    .pg1 { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding: 14px 24px; }
+    .pg1 .pg-meta { font-size:12px; color:var(--fg3); }
+    .pg1 .nums { display:inline-flex; gap:4px; }
+    .pg1 button {
+      display:inline-flex; align-items:center; justify-content:center;
+      font-family: var(--font-sans); font-size:12px; font-weight:500;
+      border-radius: 8px;
+      border: 1px solid var(--border-1);
+      background:#fff; color: var(--fg2);
+      cursor:pointer; font-variant-numeric: tabular-nums;
+      transition: all 150ms var(--ease-standard);
+    }
+    .pg1 button.num { padding: 4px 10px; min-width: 30px; }
+    .pg1 button.arrow { padding: 4px 8px; }
+    .pg1 button.arrow .pi { font-size: 12px; }
+    .pg1 button:hover:not(.on) { background: var(--zinc-100); color: var(--fg1); }
+    .pg1 button.on {
+      background: var(--indigo-600); color:#fff; border-color: var(--indigo-600);
+    }
+    .pg1 button.on:hover { background: var(--indigo-700); border-color: var(--indigo-700); color:#fff; }
+
+    /* V2 — Compact arrows + jump */
+    .pg2 { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .pg2 .ctrls { display:inline-flex; align-items:center; gap:4px; }
+    .pg2 button {
+      width:30px; height:30px; padding:0; border:1px solid var(--border-1); background:#fff;
+      color:var(--fg2); border-radius:6px; cursor:pointer; transition: all 120ms;
+      display:inline-flex; align-items:center; justify-content:center;
+    }
+    .pg2 button:hover:not([disabled]) { border-color:var(--indigo-400); color:var(--indigo-600); background:var(--indigo-50); }
+    .pg2 button[disabled] { color:var(--fg4); cursor:not-allowed; background:var(--zinc-100); }
+    .pg2 button .pi { font-size:11px; }
+    .pg2 .page-of {
+      display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--fg2);
+      padding: 0 8px; font-variant-numeric:tabular-nums;
+    }
+    .pg2 .page-of input {
+      width:42px; height:28px; text-align:center; border:1px solid var(--border-1); border-radius:6px;
+      font-family:var(--font-mono); font-size:12px; color:var(--fg1); outline:none;
+    }
+    .pg2 .page-of input:focus { border-color:var(--indigo-500); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    .pg2 .page-of .total { color:var(--fg3); }
+
+    /* V3 — Load more */
+    .pg3 { display:flex; flex-direction:column; align-items:center; gap:12px; padding: 16px 0 4px; }
+    .pg3 .progress {
+      width:240px; height:4px; background:var(--zinc-100); border-radius:2px; overflow:hidden;
+    }
+    .pg3 .progress > span { display:block; height:100%; background: linear-gradient(90deg, var(--indigo-500), var(--indigo-600)); border-radius:2px; transition: width 400ms; }
+    .pg3 .pg3-meta { font-size:12px; color:var(--fg3); font-variant-numeric:tabular-nums; }
+    .pg3 .pg3-meta b { color:var(--fg1); font-weight:600; }
+    .pg3 .more {
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 9px 22px; background:#fff; border:1px solid var(--border-1);
+      border-radius:999px; color:var(--indigo-600); font-size:13px; font-weight:500;
+      font-family:var(--font-sans); cursor:pointer; transition: all 150ms;
+    }
+    .pg3 .more:hover { border-color:var(--indigo-400); background:var(--indigo-50); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .pg3 .more .pi { font-size:11px; transition: transform 200ms; }
+    .pg3 .more:hover .pi { transform: translateY(2px); }
+  </style>
+
+  <h3>Pagination · 페이지네이션</h3>
+  <p style="font-size:13px; color:var(--fg3); margin:-6px 0 0; max-width:720px; line-height:1.6;">세 가지 패턴: V1 페이지 번호(테이블 기본), V2 화살표 + 페이지 점프(관리자/대량 데이터), V3 더 보기(모바일/피드).</p>
+
+  <div class="var-label"><span class="pin">V1</span><span class="nm">Numbered · 테이블 기본형</span><span class="dsc">ui_kits/portal 테이블 푸터와 동일. 사업 목록, 결재 이력 등 일반 테이블 하단.</span></div>
+  <div class="pg-wrap pg1">
+    <div class="pg-meta">총 27건 중 1–8 표시</div>
+    <div class="nums">
+      <button class="arrow" title="이전"><i class="pi pi-chevron-left"></i></button>
+      <button class="num on">1</button>
+      <button class="num">2</button>
+      <button class="num">3</button>
+      <button class="num">4</button>
+      <button class="arrow" title="다음"><i class="pi pi-chevron-right"></i></button>
+    </div>
+  </div>
+
+  <div class="var-label"><span class="pin">V2</span><span class="nm">Compact arrows + jump</span><span class="dsc">페이지가 많을 때 직접 입력 점프 지원.</span></div>
+  <div class="pg-wrap pg2">
+    <div class="pg-meta">총 <b>1,284</b>건 · 페이지당 <b>50</b>건</div>
+    <div class="ctrls">
+      <button title="처음" disabled=""><i class="pi pi-angle-double-left"></i></button>
+      <button title="이전" disabled=""><i class="pi pi-angle-left"></i></button>
+      <span class="page-of">
+        <input value="1">
+        <span class="total">/ 26</span>
+      </span>
+      <button title="다음"><i class="pi pi-angle-right"></i></button>
+      <button title="끝"><i class="pi pi-angle-double-right"></i></button>
+    </div>
+  </div>
+
+  <div class="var-label"><span class="pin">V3</span><span class="nm">Load more · 점진 로드</span><span class="dsc">모바일, 알림 피드, 첨부 목록.</span></div>
+  <div class="pg-wrap pg3">
+    <div class="pg3-meta"><b>40</b> / 248건 표시됨</div>
+    <div class="progress"><span style="width:16%;"></span></div>
+    <button class="more">더 보기 <span style="color:var(--fg4); font-family:var(--font-mono); font-size:11px;">+20</span><i class="pi pi-chevron-down"></i></button>
+  </div>
+</div>
+
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></body></html>

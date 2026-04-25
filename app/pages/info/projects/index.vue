@@ -7,7 +7,6 @@
 [주요 기능]
   - 정보화사업 + 경상사업 통합 DataTable 조회
   - 구분(정보화/경상) 필터링
-  - 다중 선택 체크박스 + 결재신청 버튼
   - 예산 단위 변환 (원/천원/백만원/억원)
   - 상세 조회 Drawer (오른쪽 슬라이드): 조건 다중 필터링
   - 사업명 클릭 → 상세 페이지 이동
@@ -45,40 +44,8 @@ onActivated(() => refreshProjects());
 /* ── 공통코드 코드명 변환 ── */
 const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
 
-/* ── 사업등록 SplitButton 메뉴 ── */
-const registerMenuItems = ref([
-    {
-        label: '경상사업 등록',
-        icon: 'pi pi-plus',
-        command: () => navigateTo('/info/projects/form?ordinary=true')
-    }
-]);
-
 /** 정보화사업 목록 (null 안전 처리) */
 const projects = computed(() => projectsData.value || []);
-/** DataTable 다중 선택 항목 */
-const selectedProjects = ref([]);
-
-/**
- * 결재신청 처리
- * 선택된 프로젝트들의 관리번호를 sessionStorage에 저장 후 보고서 페이지로 이동합니다.
- * 선택 없이 호출 시 알림만 표시합니다.
- */
-const requestApproval = () => {
-    if (selectedProjects.value.length === 0) {
-        alert('결재할 프로젝트를 선택해주세요.');
-        return;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ids = selectedProjects.value.map((p: any) => p.prjMngNo);
-
-    /* 쿼리 파라미터 대신 sessionStorage 사용 (URL 길이 제한 우회) */
-    if (import.meta.client) {
-        sessionStorage.setItem('selectedProjectIds', JSON.stringify(ids));
-    }
-
-    navigateTo('/info/projects/report');
-};
 
 /* ── 검색 Drawer 상태 ── */
 /** 우측 검색 Drawer 표시 여부 */
@@ -246,14 +213,6 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="basic" />
                 <!-- 상세 검색 Drawer 열기 -->
                 <Button label="조회" icon="pi pi-search" severity="secondary" outlined @click="visibleDrawer = true" />
-                <!-- 신규 사업 등록: 기본=정보화사업, 드롭다운=경상사업 -->
-                <SplitButton
-label="사업등록" icon="pi pi-plus" :model="registerMenuItems"
-                    @click="navigateTo('/info/projects/form')" />
-                <!-- 선택된 항목이 있을 때만 활성화 -->
-                <Button
-label="결재신청" icon="pi pi-check-square" severity="help" :disabled="selectedProjects.length === 0"
-                    @click="requestApproval" />
             </div>
         </div>
 
@@ -263,10 +222,8 @@ label="결재신청" icon="pi pi-check-square" severity="help" :disabled="select
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
             <StyledDataTable
-v-else v-model:selection="selectedProjects" :value="filteredProjects" paginator :rows="10"
+v-else :value="filteredProjects" paginator :rows="10"
                 :rows-per-page-options="[10, 20, 50]" sort-field="prjMngNo" :sort-order="-1" data-key="prjMngNo">
-                <!-- 다중 선택 체크박스 -->
-                <Column selection-mode="multiple" header-style="width: 3rem"/>
 
                 <!-- 구분: 정보화사업/경상사업 태그 -->
                 <Column field="ornYn" header="구분" sortable header-style="width: 7rem">

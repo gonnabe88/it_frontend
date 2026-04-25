@@ -37,13 +37,25 @@
 -->
 <script setup lang="ts">
 defineOptions({ inheritAttrs: false });
+
+// V1 페이지네이션 기본값 — 사용자가 명시적으로 전달하면 덮어씌워짐
+const DEFAULT_PAGINATOR_TEMPLATE = 'CurrentPageReport PrevPageLink PageLinks NextPageLink';
+const DEFAULT_PAGE_REPORT_TEMPLATE = '총 {totalRecords}건 중 {first}–{last} 표시';
 </script>
 
 <template>
     <!-- kdb-it-table: 비스코프 CSS 타겟팅 기준 래퍼 -->
     <div class="kdb-it-table">
+        <!--
+            paginator-template / current-page-report-template: V1 기본값 (먼저 선언)
+            v-bind="$attrs": 사용처에서 동일 prop 전달 시 덮어씌워짐
+            show-gridlines 등 마지막 선언: 항상 강제 적용
+        -->
         <DataTable
-v-bind="$attrs" show-gridlines resizable-columns column-resize-mode="fit"
+            :paginator-template="DEFAULT_PAGINATOR_TEMPLATE"
+            :current-page-report-template="DEFAULT_PAGE_REPORT_TEMPLATE"
+            v-bind="$attrs"
+            show-gridlines resizable-columns column-resize-mode="fit"
             table-style="min-width: 50rem" :pt="{
                 bodyRow: { class: 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors' },
             }">

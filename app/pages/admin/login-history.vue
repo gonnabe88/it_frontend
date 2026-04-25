@@ -153,14 +153,14 @@ class="text-xs text-zinc-400 truncate block max-w-[240px]"
             </Column>
         </StyledDataTable>
 
-        <!-- 페이지네이션 -->
-        <div class="mt-4 flex justify-center">
+        <!-- 페이지네이션 (V1 Numbered 스타일) -->
+        <div class="mt-2">
             <Paginator
                 :rows="PAGE_SIZE"
                 :total-records="historyData?.totalElements ?? 0"
                 :first="currentPage * PAGE_SIZE"
-                template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport"
-                current-page-report-template="{first}–{last} / {totalRecords}건"
+                template="CurrentPageReport PrevPageLink PageLinks NextPageLink"
+                current-page-report-template="총 {totalRecords}건 중 {first}–{last} 표시"
                 @page="onPageChange" />
         </div>
 

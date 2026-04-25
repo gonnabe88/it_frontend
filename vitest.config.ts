@@ -20,6 +20,9 @@ export default defineConfig({
         globals: true,
         // Playwright E2E 테스트 파일은 Vitest에서 제외 (playwright.config.ts에서 별도 실행)
         exclude: ['node_modules', 'tests/e2e/**'],
+        // 리포트: 콘솔 + HTML (test-results/index.html)
+        reporters: ['default', 'html'],
+        outputFile: { html: 'test-results/index.html' },
     },
     resolve: {
         alias: {

@@ -20,29 +20,13 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import logo from '@/assets/logo.png';
 import IconCrown from '~/components/icons/IconCrown.vue';
+import GlobalSearchBar from '~/components/GlobalSearchBar.vue';
 import { useAuth } from '~/composables/useAuth';
-import { useGlobalSearch, type SearchResult } from '~/composables/useGlobalSearch';
 import { ROLE } from '~/types/auth';
-
-/** 예산 금액을 백만원 단위로 간략 표시 */
-const fmtBudget = (amt: number) => {
-    if (!amt) return '-';
-    return `${(amt / 1_000_000).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}백만원`;
-};
 
 const route = useRoute();
 const router = useRouter();
 const { user, logout } = useAuth();
-
-/* ── 통합검색 ──────────────────────────────────────────────── */
-const { suggestions, searchByName } = useGlobalSearch();
-const searchQuery = ref('');
-
-/** 통합검색 결과 선택 시 상세 페이지로 이동 */
-const onSearchSelect = (event: { value: SearchResult }) => {
-    searchQuery.value = '';
-    navigateTo(event.value.route);
-};
 
 // 시스템관리자 여부 (ITPAD001 역할 보유 시 [관리자] 메뉴 표시)
 const isAdmin = computed(() => user.value?.athIds?.includes(ROLE.ADMIN));
@@ -259,48 +243,8 @@ const navigateToTab = async (path: string) => {
 
             <!-- 우측 영역: 검색·테마·알림·사용자 -->
             <div class="flex items-center gap-2 flex-shrink-0">
-                <!-- 통합검색 AutoComplete -->
-                <div class="global-search relative" style="width: 16rem">
-                    <AutoComplete
-                        v-model="searchQuery" :suggestions="suggestions" option-label="name"
-                        placeholder="통합검색" fluid :input-class="'!py-1.5 !text-sm !pr-8'" @complete="searchByName"
-                        @item-select="onSearchSelect">
-                        <template #option="{ option }">
-                            <div
-                                class="py-1.5 pl-2.5 border-l-[3px]"
-                                :class="option.type === '정보화사업' ? 'border-blue-900' : 'border-emerald-600'">
-                                <div class="leading-tight">
-                                    <div class="flex items-baseline gap-1.5">
-                                        <span class="font-semibold text-sm">{{ option.name }}</span>
-                                        <span
-                                            class="text-[11px] rounded px-1"
-                                            :class="option.type === '정보화사업'
-                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'">
-                                            {{ option.type }}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center gap-1 text-[11px] text-surface-400 mt-0.5">
-                                        <i class="pi pi-building text-[10px]" />
-                                        <span>{{ option.deptNm || '-' }}</span>
-                                        <span class="text-surface-300">·</span>
-                                        <span>{{ fmtBudget(option.budget) }}</span>
-                                        <template v-if="option.status">
-                                            <span class="text-surface-300">·</span>
-                                            <span>{{ option.status }}</span>
-                                        </template>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </AutoComplete>
-                    <button
-                        v-if="searchQuery"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors z-10"
-                        @click="searchQuery = ''">
-                        <i class="pi pi-times text-xs"/>
-                    </button>
-                </div>
+                <!-- 통합검색 (V1 기본 상태 + V2 포커스 드롭다운) -->
+                <GlobalSearchBar />
 
                 <button
                     class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"

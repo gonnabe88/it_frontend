@@ -21,6 +21,7 @@
 import { useDocuments } from '~/composables/useDocuments';
 import type { RequirementDocument } from '~/composables/useDocuments';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
 import EmployeeInfoDialog from '~/components/common/EmployeeInfoDialog.vue';
 
 const title = '사전협의';
@@ -118,10 +119,11 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
 
             <!-- 검색 영역 -->
             <div class="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
-                <div class="relative flex-1 max-w-sm">
-                    <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm"/>
-                    <InputText v-model="searchText" placeholder="문서 제목 검색..." class="pl-9 w-full" />
-                </div>
+                <TableSearchInput
+                    v-model="searchText"
+                    placeholder="문서 제목 검색..."
+                    width="24rem"
+                />
                 <Button
 v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :loading="pending"
                     @click="() => refresh()" />

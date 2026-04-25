@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Color palette — IT Portal</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin:0; padding:40px; background:#f4f4f5; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { font-size:12px; font-weight:500; color:var(--fg3); letter-spacing:var(--tracking-wider); text-transform:uppercase; margin:0 0 8px; }
+  .title   { font-size:28px; font-weight:700; color:var(--fg1); margin:0 0 4px; letter-spacing:-0.01em; }
+  .subtitle{ font-size:14px; color:var(--fg3); margin:0 0 32px; max-width:700px; line-height:1.6; }
+
+  h3 { font-size:13px; font-weight:600; color:var(--fg2); text-transform:uppercase; letter-spacing:0.05em; margin:40px 0 14px; }
+  h3:first-of-type { margin-top: 0; }
+
+  /* Indigo scale */
+  .scale { display:grid; grid-template-columns: repeat(10, 1fr); gap:0; border-radius:10px; overflow:hidden; border:1px solid var(--border-1); }
+  .scale .sw { aspect-ratio: 1 / 1.2; padding:10px; display:flex; flex-direction:column; justify-content:space-between; font-size:11px; font-family: var(--font-mono); }
+  .scale .sw .n { font-weight:600; }
+  .scale .sw .h { opacity:0.8; }
+
+  /* Semantics */
+  .sem { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; }
+  .sem .card { background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .sem .row { display:flex; align-items:center; gap:10px; }
+  .sem .chip { width:40px; height:40px; border-radius:8px; border:1px solid rgba(0,0,0,.06); flex:none; }
+  .sem .lbl { font-size:13px; font-weight:600; color:var(--fg1); }
+  .sem .hex { font-size:11px; color:var(--fg3); font-family: var(--font-mono); }
+  .sem .use { font-size:12px; color:var(--fg2); line-height:1.5; border-top:1px solid var(--border-2); padding-top:8px; }
+
+  /* Tags */
+  .tags { display:flex; flex-wrap:wrap; gap:8px; }
+  .tag {
+    display:inline-flex; align-items:center;
+    padding: 4px 10px; border-radius:6px;
+    font-size:12px; font-weight:500;
+    font-family: var(--font-sans);
+  }
+  .tag.green   { background:var(--tag-green-bg);  color:var(--tag-green-fg); }
+  .tag.blue    { background:var(--tag-blue-bg);   color:var(--tag-blue-fg); }
+  .tag.yellow  { background:var(--tag-yellow-bg); color:var(--tag-yellow-fg); }
+  .tag.red     { background:var(--tag-red-bg);    color:var(--tag-red-fg); }
+  .tag.gray    { background:var(--tag-gray-bg);   color:var(--tag-gray-fg); }
+  .tag.indigo  { background:var(--tag-indigo-bg); color:var(--tag-indigo-fg); }
+  .tag.purple  { background:var(--tag-purple-bg); color:var(--tag-purple-fg); }
+  .tag.pink    { background:var(--tag-pink-bg);   color:var(--tag-pink-fg); }
+  .tag.orange  { background:var(--tag-orange-bg); color:var(--tag-orange-fg); }
+  .tag.cyan    { background:var(--tag-cyan-bg);   color:var(--tag-cyan-fg); }
+  .tag.slate   { background:var(--tag-slate-bg);  color:var(--tag-slate-fg); }
+  .tag.teal    { background:var(--tag-teal-bg);   color:var(--tag-teal-fg); }
+  .tag.rose    { background:var(--tag-rose-bg);   color:var(--tag-rose-fg); }
+
+  /* Domain accents */
+  .accents { display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; }
+  .accents .a { background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+  .accents .dot { width:32px; height:32px; border-radius:8px; }
+  .accents .kr { font-size:14px; font-weight:600; color:var(--fg1); }
+  .accents .en { font-size:11px; color:var(--fg3); font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">색상 시스템 · Colors</p>
+  <h1 class="title">Color palette</h1>
+  <p class="subtitle">Indigo is the single brand hue; neutrals are Zinc across the board; thirteen <code>kdb-tag-*</code> pairs encode lifecycle status. Domain accents are used sparingly — each business area gets exactly one color for icons and hovers.</p>
+
+  <h3>Brand · Indigo scale</h3>
+  <div class="scale">
+    <div class="sw" style="background:var(--indigo-50); color:#312e81;"><span class="n">50</span><span class="h">#eef2ff</span></div>
+    <div class="sw" style="background:var(--indigo-100);color:#312e81;"><span class="n">100</span><span class="h">#e0e7ff</span></div>
+    <div class="sw" style="background:var(--indigo-200);color:#312e81;"><span class="n">200</span><span class="h">#c7d2fe</span></div>
+    <div class="sw" style="background:var(--indigo-300);color:#312e81;"><span class="n">300</span><span class="h">#a5b4fc</span></div>
+    <div class="sw" style="background:var(--indigo-400);color:#fff;"><span class="n">400</span><span class="h">#818cf8</span></div>
+    <div class="sw" style="background:var(--indigo-500);color:#fff;"><span class="n">500</span><span class="h">#6366f1</span></div>
+    <div class="sw" style="background:var(--indigo-600);color:#fff;"><span class="n">600 ★</span><span class="h">#4f46e5</span></div>
+    <div class="sw" style="background:var(--indigo-700);color:#fff;"><span class="n">700</span><span class="h">#4338ca</span></div>
+    <div class="sw" style="background:var(--indigo-800);color:#fff;"><span class="n">800</span><span class="h">#3730a3</span></div>
+    <div class="sw" style="background:var(--indigo-900);color:#fff;"><span class="n">900</span><span class="h">#312e81</span></div>
+  </div>
+
+  <h3>Neutrals · Zinc scale</h3>
+  <div class="scale">
+    <div class="sw" style="background:var(--zinc-50); color:#18181b;"><span class="n">50</span><span class="h">#fafafa</span></div>
+    <div class="sw" style="background:var(--zinc-100);color:#18181b;"><span class="n">100 ★</span><span class="h">#f4f4f5</span></div>
+    <div class="sw" style="background:var(--zinc-200);color:#18181b;"><span class="n">200</span><span class="h">#e4e4e7</span></div>
+    <div class="sw" style="background:var(--zinc-300);color:#18181b;"><span class="n">300</span><span class="h">#d4d4d8</span></div>
+    <div class="sw" style="background:var(--zinc-400);color:#18181b;"><span class="n">400</span><span class="h">#a1a1aa</span></div>
+    <div class="sw" style="background:var(--zinc-500);color:#fff;"><span class="n">500</span><span class="h">#71717a</span></div>
+    <div class="sw" style="background:var(--zinc-600);color:#fff;"><span class="n">600</span><span class="h">#52525b</span></div>
+    <div class="sw" style="background:var(--zinc-700);color:#fff;"><span class="n">700</span><span class="h">#3f3f46</span></div>
+    <div class="sw" style="background:var(--zinc-800);color:#fff;"><span class="n">800</span><span class="h">#27272a</span></div>
+    <div class="sw" style="background:var(--zinc-900);color:#fff;"><span class="n">900</span><span class="h">#18181b</span></div>
+  </div>
+
+  <h3>Semantic roles (light)</h3>
+  <div class="sem">
+    <div class="card">
+      <div class="row"><div class="chip" style="background:#ffffff;"></div><div><div class="lbl">Surface</div><div class="hex">#ffffff</div></div></div>
+      <div class="use">Cards, header, sidebar, modals.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:var(--zinc-100);"></div><div><div class="lbl">App bg</div><div class="hex">#f4f4f5 · zinc-100</div></div></div>
+      <div class="use">Page background beneath cards.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:var(--indigo-600);"></div><div><div class="lbl">Primary</div><div class="hex">#4f46e5 · indigo-600</div></div></div>
+      <div class="use">Primary buttons, active nav, links.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:#1e3a8a;"></div><div><div class="lbl">Table header</div><div class="hex">#1e3a8a · blue-900</div></div></div>
+      <div class="use">StyledDataTable headers only.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:var(--zinc-900);"></div><div><div class="lbl">Text · fg1</div><div class="hex">#18181b · zinc-900</div></div></div>
+      <div class="use">Headings, KPI numbers, strong.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:var(--zinc-700);"></div><div><div class="lbl">Text · fg2</div><div class="hex">#3f3f46 · zinc-700</div></div></div>
+      <div class="use">Body copy.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:var(--zinc-500);"></div><div><div class="lbl">Text · fg3</div><div class="hex">#71717a · zinc-500</div></div></div>
+      <div class="use">Captions, muted meta.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chip" style="background:var(--zinc-200);"></div><div><div class="lbl">Border-1</div><div class="hex">#e4e4e7 · zinc-200</div></div></div>
+      <div class="use">Default dividers, card borders.</div>
+    </div>
+  </div>
+
+  <h3>Domain accents · 업무 영역</h3>
+  <div class="accents">
+    <div class="a"><div class="dot" style="background:var(--accent-project);"></div>   <div class="kr">정보화사업</div><div class="en">indigo-600</div></div>
+    <div class="a"><div class="dot" style="background:var(--accent-cost);"></div>      <div class="kr">전산업무비</div><div class="en">emerald-600</div></div>
+    <div class="a"><div class="dot" style="background:var(--accent-ordinary);"></div>  <div class="kr">경상사업</div>  <div class="en">red-600</div></div>
+    <div class="a"><div class="dot" style="background:var(--accent-approval);"></div>  <div class="kr">전자결재</div>  <div class="en">blue-600</div></div>
+    <div class="a"><div class="dot" style="background:var(--accent-audit);"></div>     <div class="kr">IT자체감사</div><div class="en">orange-600</div></div>
+    <div class="a"><div class="dot" style="background:var(--accent-admin);"></div>     <div class="kr">관리자</div>    <div class="en">yellow-500</div></div>
+  </div>
+
+  <h3>Tag palette · <code>kdb-tag-*</code></h3>
+  <div class="tags">
+    <span class="tag green">완료</span>
+    <span class="tag blue">사업 추진</span>
+    <span class="tag yellow">예산 작성</span>
+    <span class="tag red">반려</span>
+    <span class="tag gray">임시 저장</span>
+    <span class="tag indigo">사전 협의</span>
+    <span class="tag purple">과심위</span>
+    <span class="tag pink">입찰/계약</span>
+    <span class="tag orange">정실협</span>
+    <span class="tag cyan">예산배정</span>
+    <span class="tag slate">요건 상세화</span>
+    <span class="tag teal">대금지급</span>
+    <span class="tag rose">소요예산 산정</span>
+  </div>
+</div>
+</body>
+</html>

@@ -96,6 +96,16 @@ const goDetail = (docMngNo: string): void => {
 const goList = (): void => {
     navigateTo('/info/documents/list');
 };
+
+/** V4 세그먼트 바: 전체 문서 대비 각 상태 비율 (%) */
+const segments = computed(() => {
+    const total = data.value?.totalCount ?? 0;
+    if (!total) return { reviewing: 0, completed: 0, overdue: 0 };
+    const reviewing = Math.round((data.value?.reviewingCount ?? 0) / total * 100);
+    const completed = Math.round((data.value?.completedCount ?? 0) / total * 100);
+    const overdue = Math.round((data.value?.overdueCount ?? 0) / total * 100);
+    return { reviewing, completed, overdue };
+});
 </script>
 
 <template>
@@ -115,170 +125,208 @@ const goList = (): void => {
             />
         </div>
 
-        <!-- KPI 카드 4종 -->
+        <!-- KPI 카드 4종 (V4: 아이콘 배지 + 내러티브 + 세그먼트 분해) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- 총 문서 수 -->
-            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-600">
-                    <i class="pi pi-file text-xl" />
+
+            <!-- 총 문서 수 (3-세그먼트 바) -->
+            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#f4f4f5; color:#52525b">
+                        <i class="pi pi-file" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">총 문서 수</span>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-medium text-zinc-500">총 문서 수</div>
-                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
-                    <div v-else class="text-2xl font-bold text-zinc-900 mt-0.5">
-                        {{ data?.totalCount ?? 0 }}
-                    </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.totalCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 전체 등록</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full" :style="`width:${segments.reviewing}%; background:#f59e0b`" />
+                    <span class="h-full" :style="`width:${segments.completed}%; background:#10b981`" />
+                    <span class="h-full" :style="`width:${segments.overdue}%; background:#ef4444`" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums flex-wrap">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#f59e0b" />검토 중 {{ data?.reviewingCount ?? 0 }}</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#10b981" />완료 {{ data?.completedCount ?? 0 }}</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#ef4444" />기한초과 {{ data?.overdueCount ?? 0 }}</span>
                 </div>
             </div>
 
             <!-- 검토 진행 중 -->
-            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600">
-                    <i class="pi pi-clock text-xl" />
+            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fef3c7; color:#b45309">
+                        <i class="pi pi-clock" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">검토 진행 중</span>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-medium text-zinc-500">검토 진행 중</div>
-                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
-                    <div v-else class="text-2xl font-bold text-orange-600 mt-0.5">
-                        {{ data?.reviewingCount ?? 0 }}
-                    </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.reviewingCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · SLA 5영업일</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full" :style="`width:${segments.reviewing}%; background:#f59e0b`" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#f59e0b" />전체 대비 {{ segments.reviewing }}%</span>
                 </div>
             </div>
 
             <!-- 협의 완료 -->
-            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
-                    <i class="pi pi-check-circle text-xl" />
+            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#d1fae5; color:#047857">
+                        <i class="pi pi-check-circle" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">협의 완료</span>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-medium text-zinc-500">협의 완료</div>
-                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
-                    <div v-else class="text-2xl font-bold text-green-600 mt-0.5">
-                        {{ data?.completedCount ?? 0 }}
-                    </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.completedCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 연간 누적</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full" :style="`width:${segments.completed}%; background:#10b981`" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#10b981" />전체 대비 {{ segments.completed }}%</span>
                 </div>
             </div>
 
             <!-- 기한 초과 -->
-            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
-                    <i class="pi pi-exclamation-triangle text-xl" />
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-medium text-zinc-500">기한 초과</div>
-                    <Skeleton v-if="pending" width="4rem" height="1.75rem" class="mt-1" />
-                    <div v-else class="text-2xl font-bold text-red-600 mt-0.5">
-                        {{ data?.overdueCount ?? 0 }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 월별 등록 추이 (순수 CSS 막대 차트) -->
-        <div class="bg-white rounded-xl border border-zinc-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-900">월별 등록 추이</h2>
-                <span class="text-xs text-zinc-400">최근 6개월</span>
-            </div>
-
-            <!-- 로딩 스켈레톤 -->
-            <div v-if="pending" class="flex items-end justify-around gap-3 h-40">
-                <Skeleton v-for="n in 6" :key="n" width="2.5rem" :height="`${40 + n * 10}px`" />
-            </div>
-
-            <!-- 실제 차트 -->
-            <div v-else-if="data && data.monthlyTrend.length > 0" class="flex items-end justify-around gap-3 pt-4">
-                <div
-                    v-for="m in data.monthlyTrend"
-                    :key="m.month"
-                    class="flex flex-col items-center flex-1 min-w-0"
-                >
-                    <!-- 막대 위 건수 표시 -->
-                    <div class="text-xs font-medium text-zinc-700 mb-1">{{ m.count }}</div>
-                    <!-- CSS 막대: 높이는 최대값 대비 비율로 계산 -->
-                    <div
-                        class="w-full max-w-[48px] rounded-t-md bg-gradient-to-b from-blue-500 to-blue-700 transition-all hover:from-blue-600 hover:to-blue-800"
-                        :style="{ height: barHeight(m.count) }"
-                        :title="`${m.month}: ${m.count}건`"
-                    />
-                    <!-- 월 레이블 -->
-                    <div class="text-xs text-zinc-500 mt-2 whitespace-nowrap">{{ m.month }}</div>
-                </div>
-            </div>
-
-            <!-- 빈 상태 -->
-            <div v-else class="h-40 flex items-center justify-center text-sm text-zinc-400">
-                <i class="pi pi-chart-bar mr-2" />
-                표시할 월별 데이터가 없습니다.
-            </div>
-        </div>
-
-        <!-- 검토 중인 요청사항 (최대 3건) -->
-        <div class="bg-white rounded-xl border border-zinc-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-900">검토 중인 요청사항</h2>
-                <span class="text-xs text-zinc-400">최대 3건</span>
-            </div>
-
-            <!-- 로딩 스켈레톤 3행 -->
-            <div v-if="pending" class="space-y-3">
-                <div
-                    v-for="n in 3"
-                    :key="n"
-                    class="flex items-center gap-4 p-3 border border-zinc-100 rounded-lg"
-                >
-                    <Skeleton shape="circle" size="2.5rem" />
-                    <div class="flex-1 space-y-2">
-                        <Skeleton width="60%" height="1rem" />
-                        <Skeleton width="40%" height="0.75rem" />
-                    </div>
-                    <Skeleton width="4rem" height="1.5rem" />
-                </div>
-            </div>
-
-            <!-- 실제 목록 -->
-            <ul v-else-if="topReviewing.length > 0" class="divide-y divide-zinc-100">
-                <li
-                    v-for="item in topReviewing"
-                    :key="item.docMngNo"
-                    class="py-3 flex items-center gap-4 cursor-pointer hover:bg-zinc-50 rounded-lg px-3 -mx-3 transition-colors"
-                    @click="goDetail(item.docMngNo)"
-                >
-                    <!-- 문서 아이콘 -->
-                    <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <i class="pi pi-file-edit" />
-                    </div>
-
-                    <!-- 본문 영역 -->
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-mono text-zinc-400">{{ item.docMngNo }}</span>
-                        </div>
-                        <div class="text-sm font-medium text-zinc-900 truncate">{{ item.title }}</div>
-                        <div class="text-xs text-zinc-500 mt-0.5">
-                            <i class="pi pi-user text-[10px] mr-1" />{{ item.authorName }}
-                            <span class="mx-1.5 text-zinc-300">·</span>
-                            <i class="pi pi-calendar text-[10px] mr-1" />{{ formatDate(item.createdAt) }}
-                        </div>
-                    </div>
-
-                    <!-- 상태 배지 -->
-                    <span
-                        class="px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
-                        :class="statusBadgeClass(item.status)"
-                    >
-                        {{ statusLabel(item.status) }}
+            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fee2e2; color:#b91c1c">
+                        <i class="pi pi-exclamation-circle" />
                     </span>
-
-                    <i class="pi pi-angle-right text-zinc-300 shrink-0" />
-                </li>
-            </ul>
-
-            <!-- 빈 상태 -->
-            <div v-else class="py-10 flex flex-col items-center justify-center text-zinc-400">
-                <i class="pi pi-inbox text-3xl mb-2" />
-                <span class="text-sm">검토 중인 요청사항이 없습니다</span>
+                    <span class="text-[13px] font-medium text-zinc-600">기한 초과</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.overdueCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 즉시 처리 필요</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full" :style="`width:${segments.overdue}%; background:#ef4444`" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#ef4444" />전체 대비 {{ segments.overdue }}%</span>
+                </div>
             </div>
+        </div>
+
+        <!-- 월별 등록 추이 + 검토 중인 요청사항 (같은 Row) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <!-- 월별 등록 추이 (순수 CSS 막대 차트) -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-zinc-900">월별 등록 추이</h2>
+                    <span class="text-xs text-zinc-400">최근 6개월</span>
+                </div>
+
+                <!-- 로딩 스켈레톤 -->
+                <div v-if="pending" class="flex items-end justify-around gap-3 h-40">
+                    <Skeleton v-for="n in 6" :key="n" width="2.5rem" :height="`${40 + n * 10}px`" />
+                </div>
+
+                <!-- 실제 차트 -->
+                <div v-else-if="data && data.monthlyTrend.length > 0" class="flex items-end justify-around gap-3 pt-4">
+                    <div
+                        v-for="m in data.monthlyTrend"
+                        :key="m.month"
+                        class="flex flex-col items-center flex-1 min-w-0"
+                    >
+                        <!-- 막대 위 건수 표시 -->
+                        <div class="text-xs font-medium text-zinc-700 mb-1">{{ m.count }}</div>
+                        <!-- CSS 막대: 높이는 최대값 대비 비율로 계산 -->
+                        <div
+                            class="w-full max-w-[48px] rounded-t-md bg-gradient-to-b from-blue-500 to-blue-700 transition-all hover:from-blue-600 hover:to-blue-800"
+                            :style="{ height: barHeight(m.count) }"
+                            :title="`${m.month}: ${m.count}건`"
+                        />
+                        <!-- 월 레이블 -->
+                        <div class="text-xs text-zinc-500 mt-2 whitespace-nowrap">{{ m.month }}</div>
+                    </div>
+                </div>
+
+                <!-- 빈 상태 -->
+                <div v-else class="h-40 flex items-center justify-center text-sm text-zinc-400">
+                    <i class="pi pi-chart-bar mr-2" />
+                    표시할 월별 데이터가 없습니다.
+                </div>
+            </div>
+
+            <!-- 검토 중인 요청사항 (최대 3건) -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-zinc-900">검토 중인 요청사항</h2>
+                    <span class="text-xs text-zinc-400">최대 3건</span>
+                </div>
+
+                <!-- 로딩 스켈레톤 3행 -->
+                <div v-if="pending" class="space-y-3">
+                    <div
+                        v-for="n in 3"
+                        :key="n"
+                        class="flex items-center gap-4 p-3 border border-zinc-100 rounded-lg"
+                    >
+                        <Skeleton shape="circle" size="2.5rem" />
+                        <div class="flex-1 space-y-2">
+                            <Skeleton width="60%" height="1rem" />
+                            <Skeleton width="40%" height="0.75rem" />
+                        </div>
+                        <Skeleton width="4rem" height="1.5rem" />
+                    </div>
+                </div>
+
+                <!-- 실제 목록 -->
+                <ul v-else-if="topReviewing.length > 0" class="divide-y divide-zinc-100">
+                    <li
+                        v-for="item in topReviewing"
+                        :key="item.docMngNo"
+                        class="py-3 flex items-center gap-4 cursor-pointer hover:bg-zinc-50 rounded-lg px-3 -mx-3 transition-colors"
+                        @click="goDetail(item.docMngNo)"
+                    >
+                        <!-- 문서 아이콘 -->
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                            <i class="pi pi-file-edit" />
+                        </div>
+
+                        <!-- 본문 영역 -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-mono text-zinc-400">{{ item.docMngNo }}</span>
+                            </div>
+                            <div class="text-sm font-medium text-zinc-900 truncate">{{ item.title }}</div>
+                            <div class="text-xs text-zinc-500 mt-0.5">
+                                <i class="pi pi-user text-[10px] mr-1" />{{ item.authorName }}
+                                <span class="mx-1.5 text-zinc-300">·</span>
+                                <i class="pi pi-calendar text-[10px] mr-1" />{{ formatDate(item.createdAt) }}
+                            </div>
+                        </div>
+
+                        <!-- 상태 배지 -->
+                        <span
+                            class="px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
+                            :class="statusBadgeClass(item.status)"
+                        >
+                            {{ statusLabel(item.status) }}
+                        </span>
+
+                        <i class="pi pi-angle-right text-zinc-300 shrink-0" />
+                    </li>
+                </ul>
+
+                <!-- 빈 상태 -->
+                <div v-else class="py-10 flex flex-col items-center justify-center text-zinc-400">
+                    <i class="pi pi-inbox text-3xl mb-2" />
+                    <span class="text-sm">검토 중인 요청사항이 없습니다</span>
+                </div>
+            </div>
+
         </div>
 
         <!-- 하단 전체 목록 보기 버튼 -->

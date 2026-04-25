@@ -23,6 +23,7 @@ import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
 import InlineEditCell from '~/components/common/InlineEditCell.vue';
 import TerminalFormDialog from '~/components/cost/TerminalFormDialog.vue';
 import { exportRowsToExcel } from '~/utils/excel';
@@ -1284,10 +1285,11 @@ const applyContinuation = async () => {
                 <div class="flex items-center gap-2">
                     <Select v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value"
                         class="shrink-0" />
-                    <IconField>
-                        <InputIcon class="pi pi-search" />
-                        <InputText v-model="searchKeyword" placeholder="통합 검색" class="w-64" />
-                    </IconField>
+                    <TableSearchInput
+                        v-model="searchKeyword"
+                        placeholder="통합 검색"
+                        width="16rem"
+                    />
                 </div>
                 <div class="flex items-center gap-2">
                     <!-- 편집용 액션: 수정 모드에서만 표시 -->

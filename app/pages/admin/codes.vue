@@ -22,6 +22,7 @@ import { useAdminApi, type AdminCodeResponse, type AdminCodeRequest } from '~/co
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
 import ExcelJS from 'exceljs';
 import { exportRowsToExcel } from '~/utils/excel';
 
@@ -362,10 +363,11 @@ const saveNewRow = async () => {
 
         <!-- 통합검색 -->
         <div class="mb-4">
-            <IconField>
-                <InputIcon class="pi pi-search" />
-                <InputText v-model="globalSearch" placeholder="통합검색 (코드ID, 코드명, 코드값, 코드설명, 구분...)" class="w-full" />
-            </IconField>
+            <TableSearchInput
+                v-model="globalSearch"
+                placeholder="통합검색 (코드ID, 코드명, 코드값, 코드설명, 구분...)"
+                width="100%"
+            />
         </div>
 
         <!-- 필터 적용 중 표시 -->

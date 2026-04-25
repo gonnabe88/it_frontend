@@ -21,6 +21,7 @@
 import { ref, computed, onBeforeUnmount, onActivated  } from 'vue';
 import { exportRowsToExcel } from '~/utils/excel';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { useAuth } from '~/composables/useAuth';
@@ -489,10 +490,12 @@ v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value=
 
                 <!-- 우측: 통합검색 + 액션 버튼 -->
                 <div class="flex items-center gap-2 px-3 py-2 shrink-0">
-                    <IconField class="w-[30rem] shrink-0">
-                        <InputIcon class="pi pi-search" />
-                        <InputText v-model="search" placeholder="사업명/계약명, 담당부서, 담당자 검색..." class="w-full" />
-                    </IconField>
+                    <TableSearchInput
+                        v-model="search"
+                        placeholder="사업명/계약명, 담당부서, 담당자 검색..."
+                        width="30rem"
+                        class="shrink-0"
+                    />
                     <BudgetTableActions
 :report-loading="reportLoading" :has-filters="hasFilters" @excel="downloadExcel"
                         @pdf="downloadPdf" @filter="visibleDrawer = true" />

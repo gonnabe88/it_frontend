@@ -1,6 +1,6 @@
 # 프로젝트 백로그 (Project Backlog)
 
-> 마지막 갱신일: 2026-04-10
+> 마지막 갱신일: 2026-04-25
 
 ## 🔴 우선순위 높음
 
@@ -18,6 +18,7 @@
 - [x] `pages/info/cost/index.vue` — `filteredCosts` 실제 검색 기능 구현 (5개 필드 통합)
 - [ ] `stores/review.ts` — 사전협의 세션/코멘트 서버 API 연동 (현재 메모리 전용, 새로고침 시 초기화)
 - [ ] `stores/review.ts` — `defaultReviewers` 하드코딩 모의 데이터를 프로젝트별 동적 검토자 API 조회로 전환
+- [ ] `pages/info/index.vue` — 정보화사업 홈 KPI(12사업·8.4억 등) 하드코딩 임시 데이터를 API 실시간 연동으로 전환 (`/api/projects/summary` 신규 엔드포인트 필요)
 
 ### 코드 품질
 - [x] `pages/approval/index.vue` — 컴포넌트 분리 완료 (`ApprovalTimeline.vue`)
@@ -25,7 +26,9 @@
 - [ ] `composables/usePdfReport.ts` (638줄) — PDF 빌더 패턴 도입 또는 모듈 분리 검토
 - [ ] `pages/budget/list.vue` (560줄) — 탭별 콘텐츠를 별도 컴포넌트로 분리 검토
 - [x] `components/TiptapEditor.vue` — 툴바 섹션, 표 조작 로직 분리 및 최적화
-- [ ] `components/extensions/tiptap-extensions.ts` — Excalidraw 디버그 `console.log` 제거 (상용 배포 전, 117행)
+- [x] `components/extensions/tiptap-extensions.ts` — Excalidraw 디버그 `console.log` 제거 (완료 확인)
+- [x] `composables/usePdfReport.ts` — 디버그 `console.log` 7개 제거 (캐시·폰트 로딩·generateReport 단계 로그)
+- [x] `pages/info/projects/report.vue` — PDF 생성 단계 디버그 `console.log` 4개 제거
 - [x] `pages/info/projects/form.vue` — 타입 안전한 방식으로 리팩토링 완료
 - [ ] `composables/useAdminApi.ts` — CRUD 함수에 공통 에러 핸들링/Toast 알림 추가 검토
 
@@ -46,10 +49,16 @@
 
 ---
 
-## ✅ 완료 항목 (2026-04-10)
+## ✅ 완료 항목 (2026-04-25)
 
 | 항목 | 완료일 |
 |------|--------|
+| 전체 프로젝트 문서/주석 리프레시 (Task1~4 기반 전수 점검) | 2026-04-25 |
+| `composables/usePdfReport.ts` — 디버그 console.log 7개 제거 | 2026-04-25 |
+| `pages/info/projects/report.vue` — PDF 생성 단계 console.log 4개 제거 | 2026-04-25 |
+| `composables/useApprovalDashboard.ts` — 전자결재 홈 대시보드 Composable 신규 구현 | 2026-04-24 |
+| `composables/useDocumentDashboard.ts` — 사전협의 홈 대시보드 Composable 신규 구현 | 2026-04-24 |
+| 대시보드 홈 카드 스타일 개선 (/info/documents, /info, /approval, /admin/dashboard) | 2026-04-24 |
 | 전체 프로젝트 문서/주석 리프레시 (Task1~4 기반 전수 점검) | 2026-04-10 |
 | 전체 소스 코드 주석 리프레시 (E2E 테스트 포함) | 2026-04-09 |
 | README.md / TASK.md 최신 정보 업데이트 | 2026-04-09 |

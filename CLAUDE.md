@@ -93,6 +93,8 @@ import DOMPurify from 'isomorphic-dompurify';
 > - `budget/cost` — 전산업무비 (CostController, CostService)
 > - `budget/plan` — 정보기술부문 계획 (PlanController, PlanService)
 > - `budget/work` — 예산 작업 (BudgetWorkController, BudgetWorkService)
+> - `budget/status` — 예산현황 3탭 조회 (BudgetStatusService)
+> - `budget/document` — 검토의견 (Brivgm 엔티티, ReviewCommentService)
 > - `council` — 정보화실무협의회 (CouncilController, 8개 서비스)
 > - `infra/file` — 파일 (FileController, FileService)
 > - `infra/ai` — Gemini AI (GeminiController, GeminiService)
@@ -130,8 +132,10 @@ it_frontend/
 - `composables/useAdminApi.ts` - 관리자 전용 API (24개 CRUD 함수)
 - `composables/useApiFetch.ts` - 인증 GET 요청 (useFetch 래핑)
 - `composables/useAuth.ts` - 인증 store 노출
+- `composables/useApprovalDashboard.ts` - 전자결재 홈 대시보드 KPI/월별통계(`useApprovalDashboard`) + 사이드바 배지(`useApprovalBadgeCount`)
 - `composables/useApprovals.ts` - 전자결재 조회
 - `composables/useCost.ts` - 전산업무비 조회
+- `composables/useDocumentDashboard.ts` - 사전협의 홈 대시보드 KPI/월별통계(`useDocumentDashboard`) + 사이드바 배지(`useDocumentBadgeCount`)
 - `composables/useCurrencyRates.ts` - 환율 조회
 - `composables/useDateRangeValidation.ts` - 날짜 범위 유효성 검사
 - `composables/useDocuments.ts` - 요구사항 정의서 CRUD

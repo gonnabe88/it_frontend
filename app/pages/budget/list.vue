@@ -22,6 +22,7 @@ import { ref, computed } from 'vue';
 import { exportRowsToExcel } from '~/utils/excel';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
 import ApprovalTimeline from '~/components/approval/ApprovalTimeline.vue';
 import { useProjects, type Project, type ProjectDetail } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
@@ -748,10 +749,12 @@ v-model="allPageSize" :options="pageSizeOptions" option-label="label" option-val
                     class="shrink-0" />
                 <div class="flex-1"/>
                 <!-- 통합 검색 -->
-                <IconField class="w-[30rem] shrink-0">
-                    <InputIcon class="pi pi-search" />
-                    <InputText v-model="allSearch" placeholder="사업명, 담당부서, 담당자 검색..." class="w-full" />
-                </IconField>
+                <TableSearchInput
+                    v-model="allSearch"
+                    placeholder="사업명, 담당부서, 담당자 검색..."
+                    width="30rem"
+                    class="shrink-0"
+                />
                 <!-- 엑셀/보고서/필터 액션 -->
                 <BudgetTableActions
 class="shrink-0" :report-loading="reportLoading" :has-filters="hasAllFilters"

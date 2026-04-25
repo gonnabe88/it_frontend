@@ -55,6 +55,8 @@ app/
 │   ├── useCost.ts       # 전산업무비 CRUD
 │   ├── useCurrencyRates.ts  # 환율 조회 + 원화 환산
 │   ├── useDateRangeValidation.ts  # 날짜 범위 유효성 검사
+│   ├── useApprovalDashboard.ts  # 전자결재 대시보드 KPI + 월별 통계 + 배지 카운트
+│   ├── useDocumentDashboard.ts  # 사전협의 대시보드 KPI + 월별 통계 + 배지 카운트
 │   ├── useDocuments.ts  # 요구사항 정의서 CRUD
 │   ├── useEmployeeSearch.ts  # 직원 검색 (AutoComplete + 다이얼로그)
 │   ├── useExcalidrawDialog.ts  # Excalidraw 편집 다이얼로그 상태
@@ -260,6 +262,9 @@ npm run dev
 # 전체 단위 테스트 실행 (1.4초 내 완료)
 npm test
 
+# 전체 단위 테스트 실행 (UI 모드)
+npm run test:ui
+
 # 파일 변경 감지 + 자동 재실행 (개발 중 사용)
 npm run test:watch
 
@@ -322,6 +327,8 @@ Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테
 | 전산업무비 | `budget/cost` | `/api/costs/**`, `/api/guide-documents/**` |
 | 정보기술부문 계획 | `budget/plan` | `/api/plans/**` |
 | 예산 작업 | `budget/work` | `/api/budget/work/**` |
+| 예산현황 | `budget/status` | `/api/budget/status/**` |
+| 검토의견 | `budget/document` | `/api/documents/{id}/review-comments/**` |
 | 정보화실무협의회 | `council` | `/api/council/**` |
 | 파일 관리 | `infra/file` | `/api/files/**` |
 | Gemini AI | `infra/ai` | `/api/gemini/generate` |
@@ -341,6 +348,10 @@ Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테
 
 | 날짜 | 항목 | 비고 |
 |------|------|------|
+| 2026-04-25 | 전체 프로젝트 문서/주석 리프레시 | console.log 제거(usePdfReport, report.vue), README/CLAUDE/TASK.md 최신화 |
+| 2026-04-24 | 대시보드 홈 카드 스타일 개선 | /info/documents, /info, /approval, /admin/dashboard — Narrative·Segmented 스타일 적용 |
+| 2026-04-24 | 대시보드 Composable 신규 구현 | `useApprovalDashboard`, `useDocumentDashboard` (KPI + 월별 통계 + 배지 카운트) |
+| 2026-04-24 | 예산현황·검토의견 백엔드 도메인 추가 | `budget/status` (BudgetStatusService 3탭), `budget/document` (Brivgm 엔티티, ReviewCommentService) |
 | 2026-04-10 | 전체 프로젝트 문서/주석 리프레시 | Task 1~4 기반 전수 점검: 주석 보강(11개 파일), README/CLAUDE/TASK.md 최신화 |
 | 2026-04-09 | 프로젝트 문서 및 주석 리프레시 | 워크플로우 기반 전체 소스 코드 주석 보강 및 문서 최신화 |
 | 2026-04-05 | 정보화실무협의회 모듈 구현 | 15개 컴포넌트, CouncilController(23 엔드포인트), 8개 서비스 |

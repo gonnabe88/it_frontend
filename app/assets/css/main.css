@@ -429,3 +429,709 @@ body {
 .animate-float {
     animation: floatY 3s ease-in-out infinite;
 }
+
+/* ============================================================================
+   V1 통합조회 검색바 — components.html "Integrated Search · V1 Header default"
+   TableSearchInput.vue 컴포넌트에서 사용하는 .gsearch 전역 스타일
+   ============================================================================ */
+
+.gsearch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--zinc-100);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--fg3);
+    transition: background 150ms var(--ease-standard), box-shadow 150ms var(--ease-standard);
+}
+
+.gsearch:hover { background: #f3f4f6; }
+
+.gsearch.is-focus {
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--indigo-500), 0 8px 24px -8px rgba(79, 70, 229, 0.25);
+}
+
+.gsearch .pi-search { font-size: 14px; }
+
+.gsearch .gsearch-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: var(--fg1);
+    min-width: 0;
+}
+
+.gsearch .gsearch-input::placeholder { color: var(--fg4); }
+
+.gsearch .gs-clear {
+    width: 18px;
+    height: 18px;
+    border: none;
+    cursor: pointer;
+    background: var(--zinc-300);
+    color: #fff;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    font-size: 9px;
+}
+
+.gsearch .gs-clear:hover { background: var(--fg3); }
+.gsearch .gs-clear .pi { font-size: 9px; }
+
+/* 키보드 단축키 뱃지 (⌘K / esc) */
+.gsearch .gs-kbd {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid var(--border-1);
+    color: var(--fg3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+}
+
+/* ── V2 드롭다운 래퍼 ── */
+.gsearch-stack { position: relative; }
+
+.gs-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--border-1);
+    border-radius: 10px;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    z-index: 200;
+    min-width: 360px;
+    /* 드롭다운 내 모든 요소의 기준 폰트 — 일부 요소가 모노스페이스 상속하는 것 방지 */
+    font-family: 'NotoSansKR', sans-serif;
+}
+
+/* 스코프 칩 행 */
+.gs-scopes {
+    display: flex;
+    gap: 6px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-1);
+    background: #fafafa;
+    flex-wrap: wrap;
+}
+
+.gs-scope {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-1);
+    background: #fff;
+    color: var(--fg2);
+    cursor: pointer;
+    transition: all 120ms;
+}
+
+.gs-scope:hover { background: var(--zinc-50); }
+
+.gs-scope.on {
+    background: var(--indigo-600);
+    color: #fff;
+    border-color: var(--indigo-600);
+}
+
+.gs-scope .ct {
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 0 5px;
+    border-radius: 4px;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+}
+
+.gs-scope.on .ct { background: rgba(255, 255, 255, 0.2); }
+
+/* 결과 섹션 */
+.gs-section { padding: 6px 0; }
+.gs-section + .gs-section { border-top: 1px solid var(--border-1); }
+
+.gs-shead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 14px;
+    font-size: 10px;
+    font-family: 'NotoSansKR', sans-serif;
+    color: var(--fg4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.gs-shead .more {
+    color: var(--indigo-600);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: 'NotoSansKR', sans-serif;
+    font-size: 11px;
+}
+
+/* 결과 행 */
+.gs-result {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background 100ms;
+    /* button 기본값 text-align:center, width:auto 해제 */
+    width: 100%;
+    text-align: left;
+}
+
+.gs-result:hover, .gs-result.hi { background: var(--indigo-50); }
+
+.gsr-ic {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.gs-result.proj .gsr-ic { background: var(--indigo-100); color: var(--indigo-600); }
+.gs-result.cost .gsr-ic { background: #d1fae5; color: #059669; }
+
+.gsr-body { flex: 1; min-width: 0; }
+
+.gsr-title { font-size: 13px; color: var(--fg1); font-weight: 500; }
+
+.gsr-title mark {
+    background: rgba(79, 70, 229, 0.18);
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+.gsr-meta {
+    font-size: 11px;
+    color: var(--fg3);
+    margin-top: 1px;
+    display: flex;
+    gap: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gsr-meta .mono {
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+}
+
+.gsr-trail {
+    font-size: 10px;
+    color: var(--fg4);
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* 빈 결과 */
+.gs-empty {
+    padding: 16px 14px;
+    font-size: 12px;
+    color: var(--fg3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 하단 바 */
+.gs-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-top: 1px solid var(--border-1);
+    background: #fafafa;
+    font-size: 11px;
+    color: var(--fg3);
+}
+
+.gs-foot .keys { display: flex; gap: 8px; }
+.gs-foot .keys span { display: inline-flex; align-items: center; gap: 4px; }
+
+.gs-foot kbd {
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    background: #fff;
+    border: 1px solid var(--border-1);
+    border-radius: 3px;
+    color: var(--fg2);
+}
+
+/* ── 다크 모드 V2 ── */
+html.dark .gs-dropdown {
+    background: var(--bg-surface);
+    border-color: var(--border-1);
+}
+
+html.dark .gs-scopes,
+html.dark .gs-foot { background: var(--bg-muted); }
+
+html.dark .gs-scope {
+    background: var(--zinc-800);
+    border-color: var(--border-1);
+    color: var(--fg2);
+}
+
+html.dark .gs-scope:hover { background: var(--zinc-700); }
+
+html.dark .gs-scope.on {
+    background: var(--indigo-600);
+    color: #fff;
+    border-color: var(--indigo-600);
+}
+
+html.dark .gs-result:hover,
+html.dark .gs-result.hi { background: rgba(79, 70, 229, 0.12); }
+
+html.dark .gsr-title { color: var(--fg1); }
+html.dark .gsr-title mark { background: rgba(99, 102, 241, 0.25); }
+
+html.dark .gs-foot kbd {
+    background: var(--zinc-800);
+    border-color: var(--border-1);
+    color: var(--fg2);
+}
+
+html.dark .gsearch .gs-kbd {
+    background: var(--zinc-800);
+    border-color: var(--border-1);
+    color: var(--fg3);
+}
+
+html.dark .gsearch { background: var(--zinc-800); }
+html.dark .gsearch:hover { background: var(--zinc-700); }
+html.dark .gsearch.is-focus {
+    background: var(--bg-surface);
+    box-shadow: 0 0 0 2px var(--indigo-500), 0 8px 24px -8px rgba(99, 102, 241, 0.3);
+}
+html.dark .gsearch .gsearch-input { color: var(--fg1); }
+html.dark .gsearch .gs-clear { background: var(--zinc-600); }
+html.dark .gsearch .gs-clear:hover { background: var(--zinc-400); }
+
+/* ============================================================================
+   V1 버튼 — components.html "Buttons" 전역 스타일
+   PrimeVue <Button> 컴포넌트 전체 오버라이드 (Aura 테마 기본값 교체)
+
+   매핑:
+     <Button>                         → primary  (indigo-600 채움)
+     <Button severity="secondary">    → secondary (흰 배경 + 테두리)
+     <Button outlined>                → outlined-primary (indigo 테두리 + 투명 배경)
+     <Button outlined severity="secondary"> → secondary 동일
+     <Button text>                    → ghost/text (투명 + indigo 텍스트)
+     <Button text severity="secondary">    → ghost-secondary
+     <Button severity="danger">       → danger (빨강 채움)
+     <Button text severity="danger">  → ghost-danger
+     <Button size="small">            → sm (12px, 4px 10px)
+     <Button size="large">            → lg (15px, 12px 20px)
+   ============================================================================ */
+
+/* ── 1. 구조 공통 + Primary 기본색 ── */
+.p-button {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    gap: 6px !important;
+    line-height: 1.4 !important;
+    white-space: nowrap !important;
+    transition: background 150ms var(--ease-standard),
+                color 150ms var(--ease-standard),
+                border-color 150ms var(--ease-standard),
+                opacity 150ms var(--ease-standard) !important;
+    /* Primary 색상 — 아래 severity 규칙이 덮어씁니다 */
+    background: var(--indigo-600) !important;
+    color: #fff !important;
+    border-color: var(--indigo-600) !important;
+}
+
+.p-button .p-button-label {
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+}
+
+.p-button .p-button-icon {
+    font-size: 13px !important;
+    line-height: 1 !important;
+}
+
+/* ── 2. Primary hover ── */
+.p-button:not(:disabled):hover {
+    background: var(--indigo-700) !important;
+    border-color: var(--indigo-700) !important;
+    color: #fff !important;
+}
+
+/* ── 3. Secondary: 흰 배경 + 테두리
+   primary hover보다 뒤에 선언되어 !important 순서에서 이김 ── */
+.p-button-secondary,
+.p-button-outlined.p-button-secondary {
+    background: var(--bg-surface) !important;
+    color: var(--fg2) !important;
+    border-color: var(--border-1) !important;
+}
+
+.p-button-secondary:not(:disabled):hover,
+.p-button-outlined.p-button-secondary:not(:disabled):hover {
+    background: var(--zinc-50) !important;
+    border-color: var(--zinc-300) !important;
+    color: var(--fg1) !important;
+}
+
+/* ── 4. Outlined primary (secondary·danger 제외) ── */
+.p-button-outlined:not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-info):not(.p-button-warn) {
+    background: transparent !important;
+    border-color: var(--indigo-600) !important;
+    color: var(--indigo-600) !important;
+}
+
+.p-button-outlined:not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(:disabled):hover {
+    background: var(--indigo-50) !important;
+    border-color: var(--indigo-600) !important;
+    color: var(--indigo-600) !important;
+}
+
+/* ── 5. Text / Ghost — Primary (indigo 텍스트) ── */
+.p-button-text:not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-info):not(.p-button-warn) {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--indigo-600) !important;
+}
+
+.p-button-text:not(.p-button-secondary):not(.p-button-danger):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(:disabled):hover {
+    background: var(--indigo-50) !important;
+    border-color: transparent !important;
+    color: var(--indigo-600) !important;
+}
+
+/* ── 6. Text / Ghost — Secondary ── */
+.p-button-text.p-button-secondary {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--fg2) !important;
+}
+
+.p-button-text.p-button-secondary:not(:disabled):hover {
+    background: var(--zinc-100) !important;
+    border-color: transparent !important;
+    color: var(--fg1) !important;
+}
+
+/* ── 7. Danger 채움 ── */
+.p-button-danger:not(.p-button-text):not(.p-button-outlined) {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #fff !important;
+}
+
+.p-button-danger:not(.p-button-text):not(.p-button-outlined):not(:disabled):hover {
+    background: #b91c1c !important;
+    border-color: #b91c1c !important;
+    color: #fff !important;
+}
+
+/* ── 8. Text Danger (휴지통 아이콘 등) ── */
+.p-button-text.p-button-danger {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #dc2626 !important;
+}
+
+.p-button-text.p-button-danger:not(:disabled):hover {
+    background: #fef2f2 !important;
+    border-color: transparent !important;
+    color: #b91c1c !important;
+}
+
+/* ── 9. Outlined Danger ── */
+.p-button-outlined.p-button-danger {
+    background: transparent !important;
+    border-color: #dc2626 !important;
+    color: #dc2626 !important;
+}
+
+.p-button-outlined.p-button-danger:not(:disabled):hover {
+    background: #fef2f2 !important;
+    border-color: #b91c1c !important;
+    color: #b91c1c !important;
+}
+
+/* ── 10. Small (size="small") ── */
+.p-button-sm {
+    padding: 4px 10px !important;
+    font-size: 12px !important;
+}
+
+.p-button-sm .p-button-icon {
+    font-size: 12px !important;
+}
+
+/* ── 11. Large (size="large") ── */
+.p-button-lg {
+    padding: 12px 20px !important;
+    font-size: 15px !important;
+}
+
+.p-button-lg .p-button-icon {
+    font-size: 14px !important;
+}
+
+/* ── 12. Icon-only: 정사각형 고정 크기 ──
+   padding 기반은 line-height 영향으로 height > width가 되어 홀쭉해짐.
+   rounded와 동일하게 명시적 width/height로 고정하고 padding:0 처리. */
+.p-button-icon-only {
+    gap: 0 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+}
+
+.p-button-icon-only:not(.p-button-rounded) {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+.p-button-icon-only.p-button-sm:not(.p-button-rounded) {
+    width: 26px !important;
+    height: 26px !important;
+}
+
+.p-button-icon-only.p-button-lg:not(.p-button-rounded) {
+    width: 40px !important;
+    height: 40px !important;
+}
+
+/* ── 13. Rounded (dialog 닫기 버튼 등) ── */
+.p-button-rounded {
+    border-radius: 50% !important;
+}
+
+.p-button-icon-only.p-button-rounded {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+.p-button-icon-only.p-button-rounded.p-button-sm {
+    width: 26px !important;
+    height: 26px !important;
+}
+
+.p-button-icon-only.p-button-rounded.p-button-sm {
+    width: 26px !important;
+    height: 26px !important;
+}
+
+/* ── 14. Disabled ── */
+.p-button:disabled,
+.p-button[disabled] {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
+/* ── 15. Focus ring ── */
+.p-button:focus-visible {
+    outline: 2px solid var(--indigo-400) !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+}
+
+/* ── 16. 다크 모드 보정 ── */
+html.dark .p-button-secondary,
+html.dark .p-button-outlined.p-button-secondary {
+    background: var(--bg-surface) !important;
+    color: var(--fg2) !important;
+    border-color: var(--border-1) !important;
+}
+
+html.dark .p-button-secondary:not(:disabled):hover,
+html.dark .p-button-outlined.p-button-secondary:not(:disabled):hover {
+    background: var(--zinc-800) !important;
+    border-color: var(--zinc-600) !important;
+    color: var(--fg1) !important;
+}
+
+html.dark .p-button-text:not(.p-button-danger):not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(:disabled):hover {
+    background: rgba(79, 70, 229, 0.15) !important; /* indigo-600/15 */
+}
+
+html.dark .p-button-text.p-button-secondary:not(:disabled):hover {
+    background: var(--zinc-800) !important;
+}
+
+html.dark .p-button-text.p-button-danger:not(:disabled):hover {
+    background: rgba(220, 38, 38, 0.1) !important;
+}
+
+/* ============================================================================
+   V1 페이지네이션 — components.html "V1 Numbered · 테이블 기본형" 전역 스타일
+   DataTable embedded paginator + standalone Paginator 컴포넌트 모두 적용
+   ============================================================================ */
+
+/* 1. 컨테이너: flex-start 정렬 (PrimeVue 기본값 justify-content:center 오버라이드) */
+.p-paginator {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 14px 24px !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* 2. 내부 content 래퍼 (PrimeVue 4 구조): 꽉 채워 좌우 레이아웃 활성화
+   PrimeVue 4는 모든 템플릿 아이템을 .p-paginator-content 안에 렌더링함 */
+.p-paginator .p-paginator-content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex: 1 1 0% !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+}
+
+/* 3. 현재 페이지 리포트(좌측 메타) — flex:1로 나머지 공간 채워 네비를 우측으로 밀어냄 */
+.p-paginator .p-paginator-current {
+    flex: 1 1 0% !important;
+    font-size: 12px !important;
+    color: var(--fg3) !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+}
+
+/* 4. 페이지 번호 그룹 */
+.p-paginator .p-paginator-pages {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+/* 5. 모든 버튼 공통 스타일 (번호 버튼 + 화살표 버튼)
+   PrimeVue 기본: line-height:1, height:2.5rem, border-radius:50% 모두 오버라이드 */
+.p-paginator .p-paginator-page,
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-last {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: normal !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border-1) !important;
+    background: var(--bg-surface) !important;
+    color: var(--fg2) !important;
+    cursor: pointer !important;
+    font-variant-numeric: tabular-nums !important;
+    transition: all 150ms var(--ease-standard) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: unset !important;
+    min-height: unset !important;
+    margin: 0 !important;
+}
+
+/* 6. 번호 버튼 패딩 */
+.p-paginator .p-paginator-page {
+    padding: 4px 10px !important;
+    min-width: 30px !important;
+}
+
+/* 6. 화살표 버튼 패딩 + 아이콘 크기 */
+.p-paginator .p-paginator-prev,
+.p-paginator .p-paginator-next,
+.p-paginator .p-paginator-first,
+.p-paginator .p-paginator-last {
+    padding: 4px 8px !important;
+}
+
+.p-paginator .p-paginator-prev .pi,
+.p-paginator .p-paginator-next .pi,
+.p-paginator .p-paginator-first .pi,
+.p-paginator .p-paginator-last .pi {
+    font-size: 12px !important;
+}
+
+/* 7. Hover (비활성 버튼) */
+.p-paginator .p-paginator-page:hover:not([data-p-active="true"]):not(.p-paginator-page-selected),
+.p-paginator .p-paginator-prev:hover:not([data-p-disabled="true"]):not(:disabled),
+.p-paginator .p-paginator-next:hover:not([data-p-disabled="true"]):not(:disabled),
+.p-paginator .p-paginator-first:hover:not([data-p-disabled="true"]):not(:disabled),
+.p-paginator .p-paginator-last:hover:not([data-p-disabled="true"]):not(:disabled) {
+    background: var(--zinc-100) !important;
+    color: var(--fg1) !important;
+    border-color: var(--border-1) !important;
+}
+
+/* 8. 활성(선택된) 페이지 — indigo-600 */
+.p-paginator .p-paginator-page[data-p-active="true"],
+.p-paginator .p-paginator-page.p-paginator-page-selected {
+    background: var(--indigo-600) !important;
+    color: #fff !important;
+    border-color: var(--indigo-600) !important;
+}
+
+.p-paginator .p-paginator-page[data-p-active="true"]:hover,
+.p-paginator .p-paginator-page.p-paginator-page-selected:hover {
+    background: var(--indigo-700) !important;
+    border-color: var(--indigo-700) !important;
+    color: #fff !important;
+}
+
+/* 9. 비활성화된 화살표 버튼 */
+.p-paginator .p-paginator-prev[data-p-disabled="true"],
+.p-paginator .p-paginator-next[data-p-disabled="true"],
+.p-paginator .p-paginator-first[data-p-disabled="true"],
+.p-paginator .p-paginator-last[data-p-disabled="true"],
+.p-paginator .p-paginator-prev:disabled,
+.p-paginator .p-paginator-next:disabled,
+.p-paginator .p-paginator-first:disabled,
+.p-paginator .p-paginator-last:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    background: var(--bg-surface) !important;
+}
+
+/* 다크 모드 hover */
+html.dark .p-paginator .p-paginator-page:hover:not([data-p-active="true"]):not(.p-paginator-page-selected),
+html.dark .p-paginator .p-paginator-prev:hover:not([data-p-disabled="true"]):not(:disabled),
+html.dark .p-paginator .p-paginator-next:hover:not([data-p-disabled="true"]):not(:disabled),
+html.dark .p-paginator .p-paginator-first:hover:not([data-p-disabled="true"]):not(:disabled),
+html.dark .p-paginator .p-paginator-last:hover:not([data-p-disabled="true"]):not(:disabled) {
+    background: var(--zinc-800) !important;
+    color: var(--fg1) !important;
+}
