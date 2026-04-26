@@ -113,17 +113,17 @@ const saveNewRow = async () => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">역할 관리</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">TAAABB_CROLEI — 사용자↔자격등급 매핑 조회·추가·수정·삭제</p>
-            </div>
-            <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
-        </div>
+        <PageHeader title="역할 관리" subtitle="TAAABB_CROLEI — 사용자↔자격등급 매핑 조회·추가·수정·삭제">
+            <template #actions>
+                <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
+            </template>
+        </PageHeader>
 
         <!-- 역할 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             v-model:editing-rows="editingRows"
             :value="roles ?? []"
@@ -131,7 +131,7 @@ const saveNewRow = async () => {
             edit-mode="row"
             data-key="athId"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows
             @row-edit-save="onRowEditSave">
@@ -141,7 +141,7 @@ const saveNewRow = async () => {
             <Column header="사용자" :style="{ width: '130px' }">
                 <template #body="{ data }">
                     <span
-class="cursor-pointer text-blue-500 hover:underline"
+class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.usrNm || data.eno }}
                     </span>
@@ -169,7 +169,7 @@ v-model="data[field]"
                 <template #body="{ data }">
                     <span
 v-if="data.fstEnrUsid"
-                          class="cursor-pointer text-blue-500 hover:underline"
+                          class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
                     </span>
@@ -186,7 +186,7 @@ v-if="data.fstEnrUsid"
                 <template #body="{ data }">
                     <span
 v-if="data.lstChgUsid"
-                          class="cursor-pointer text-blue-500 hover:underline"
+                          class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.lstChgUsid)">
                         {{ data.lstChgUsNm || data.lstChgUsid }}
                     </span>
@@ -209,20 +209,22 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 신규 행 추가 다이얼로그 -->
-        <Dialog v-model:visible="newRowVisible" header="역할 추가" :style="{ width: '400px' }" modal>
+        <Dialog v-model:visible="newRowVisible" header="역할 추가" :style="{ width: 'var(--dialog-sm)' }" modal>
             <div class="flex flex-col gap-4 mt-2">
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">자격등급ID <span class="text-red-500">*</span></label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">자격등급ID <span class="text-red-500">*</span></label>
                     <InputText v-model="newRow.athId" placeholder="예: ITPAD001" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">사원번호 <span class="text-red-500">*</span></label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사원번호 <span class="text-red-500">*</span></label>
                     <InputText v-model="newRow.eno" placeholder="예: 12345678" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">사용여부</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사용여부</label>
                     <Select
 v-model="newRow.useYn"
                             :options="[{ label: '사용', value: 'Y' }, { label: '미사용', value: 'N' }]"
@@ -230,8 +232,10 @@ v-model="newRow.useYn"
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" @click="newRowVisible = false" />
-                <Button label="추가" @click="saveNewRow" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="newRowVisible = false" />
+                    <Button label="추가" @click="saveNewRow" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 

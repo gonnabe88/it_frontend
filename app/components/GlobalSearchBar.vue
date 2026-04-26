@@ -137,9 +137,9 @@ const gsTagClass = (status: string, type: '정보화사업' | '전산업무비')
         '예산배정':     'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
         '대금지급':     'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
         '성과평가':     'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
-        '완료':         'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+        '완료':         'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
     };
-    return map[status] ?? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    return map[status] ?? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400';
 };
 
 /* ── 전역 단축키 ────────────────────────────────────────────── */

@@ -1254,31 +1254,30 @@ const applyContinuation = async () => {
     <!-- 페이지 루트: 메인 스크롤 영역 전체 높이를 차지하도록 flex 컬럼으로 구성.
          내부 테이블 카드가 남은 영역을 채우며, 페이지네이션은 카드 하단에 고정됩니다. -->
     <div class="flex flex-col h-full gap-6">
-        <!-- 페이지 헤더 -->
-        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-
-        <!-- 예산연도 필터 + 수정 모드 토글 버튼 -->
-        <div class="flex items-center justify-between gap-2">
-            <Select v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
-                class="w-36" />
-            <!-- 조회 모드: [수정] 버튼 단일 / 수정 모드: [취소] + [저장] 버튼 쌍
-                 저장 버튼은 /info/projects/form 저장 버튼과 동일한 인디고 스타일로 통일 -->
-            <div class="flex items-center gap-2">
-                <Button v-if="viewMode === 'view'" label="수정" severity="primary"
-                    class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20"
-                    @click="enterEditMode" />
-                <template v-else>
-                    <Button label="취소" severity="secondary" outlined class="!px-5 !rounded-lg" @click="cancelEdit" />
-                    <Button label="저장" severity="primary"
+        <!-- 페이지 헤더: gap-6 flex 컨테이너 내 이중 여백 방지를 위해 !mb-0 적용 -->
+        <PageHeader :title="title" class="!mb-0">
+            <template #actions>
+                <!-- 예산연도 필터 -->
+                <Select v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
+                    class="w-36" />
+                <!-- 조회 모드: [수정] 버튼 단일 / 수정 모드: [취소] + [저장] 버튼 쌍 -->
+                <div class="flex items-center gap-2">
+                    <Button v-if="viewMode === 'view'" label="수정" severity="primary"
                         class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20"
-                        @click="saveAndExitEdit" />
-                </template>
-            </div>
-        </div>
+                        @click="enterEditMode" />
+                    <template v-else>
+                        <Button label="취소" severity="secondary" outlined class="!px-5 !rounded-lg" @click="cancelEdit" />
+                        <Button label="저장" severity="primary"
+                            class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20"
+                            @click="saveAndExitEdit" />
+                    </template>
+                </div>
+            </template>
+        </PageHeader>
 
         <!-- 데이터 테이블 영역: flex-1로 남은 공간을 모두 차지, 내부는 flex col로 상단바/테이블/페이지네이터 수직 정렬 -->
         <div
-            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden p-4">
+            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
             <!-- 상단 바: 페이지크기 + 검색(좌) + 액션 버튼(우). shrink-0으로 높이 고정 -->
             <div class="flex items-center justify-between mb-3 gap-3 shrink-0">
@@ -1563,7 +1562,7 @@ const applyContinuation = async () => {
         </div>
 
         <!-- 계속 계약 전년도 데이터 불러오기 확인 다이얼로그 -->
-        <Dialog v-model:visible="continuationDialogVisible" modal header="전년도 계약 불러오기" :style="{ width: '440px' }"
+        <Dialog v-model:visible="continuationDialogVisible" modal header="전년도 계약 불러오기" :style="{ width: 'var(--dialog-sm)' }"
             :closable="false">
             <div class="space-y-4 py-2">
                 <p class="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
@@ -1593,9 +1592,11 @@ const applyContinuation = async () => {
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" outlined
-                    @click="continuationDialogVisible = false; continuationPending = null" />
-                <Button label="불러오기" icon="pi pi-download" @click="applyContinuation" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined
+                        @click="continuationDialogVisible = false; continuationPending = null" />
+                    <Button label="불러오기" icon="pi pi-download" @click="applyContinuation" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 

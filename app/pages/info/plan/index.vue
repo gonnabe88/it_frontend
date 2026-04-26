@@ -65,21 +65,17 @@ const onRowClick = (event: { data: Plan }) => {
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="flex flex-col h-full gap-6">
 
-        <!-- 페이지 헤더: 제목 + 예산 단위 선택 + 액션 버튼 -->
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-3 flex-wrap">
-                <!-- 예산 표시 단위 선택 (원/천원/백만원/억원) -->
+        <PageHeader :title="title">
+            <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-select" />
-                <!-- 계획 등록 이동 -->
                 <Button label="계획 등록" icon="pi pi-plus" @click="navigateTo('/info/plan/form')" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 데이터 테이블 영역 -->
-        <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <TableCard fill>
 
             <!-- API 오류 표시 -->
             <div v-if="error" class="p-4 text-red-500">
@@ -87,8 +83,10 @@ const onRowClick = (event: { data: Plan }) => {
             </div>
 
             <!-- 계획 목록 테이블 -->
+            <div v-else class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable
-                v-else
+                scrollable
+                scroll-height="flex"
                 :value="plans"
                 paginator
                 :rows="10"
@@ -157,6 +155,7 @@ const onRowClick = (event: { data: Plan }) => {
                     </div>
                 </template>
             </StyledDataTable>
-        </div>
+            </div>
+        </TableCard>
     </div>
 </template>

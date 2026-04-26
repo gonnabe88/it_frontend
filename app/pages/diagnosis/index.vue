@@ -307,10 +307,10 @@ const restart = () => {
 </script>
 
 <template>
-    <div class="max-w-3xl mx-auto py-10 px-4">
+    <div class="max-w-3xl mx-auto space-y-6">
 
         <!-- 설문 진행 중 화면 -->
-        <div v-if="!showResult" class="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8">
+        <div v-if="!showResult" class="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-6">
 
             <!-- 진행률 표시 영역 -->
             <div class="mb-8">
@@ -374,7 +374,7 @@ const restart = () => {
         </div>
 
         <!-- 설문 결과 화면 (설문 완료 후 표시) -->
-        <div v-else class="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8 text-center animate-fade-in">
+        <div v-else class="bg-white dark:bg-zinc-900 rounded-xl shadow-sm p-6 text-center animate-fade-in">
             <!-- 완료 아이콘 -->
             <div class="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="pi pi-check-circle text-4xl text-indigo-600 dark:text-indigo-400"/>

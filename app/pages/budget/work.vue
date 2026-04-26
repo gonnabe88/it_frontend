@@ -536,31 +536,25 @@ const fmt = (amount: number | null | undefined): string => {
 <template>
     <div class="space-y-6">
 
-        <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">예산 작업</h1>
-
-            <!-- 예산 단위 선택 -->
-            <SelectButton v-model="budgetUnit" :options="unitOptions" :allow-empty="false" />
-        </div>
+        <PageHeader title="예산 작업">
+            <template #actions>
+                <SelectButton v-model="budgetUnit" :options="unitOptions" :allow-empty="false" />
+            </template>
+        </PageHeader>
 
         <!-- 예산년도 선택 -->
         <div class="flex items-center gap-3">
-            <label class="font-semibold text-zinc-700 dark:text-zinc-300">예산년도</label>
+            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">예산년도</label>
             <Select
 v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
                 class="w-40" />
         </div>
 
         <!-- 대상 목록 (결재완료 정보화사업 + 전산업무비) -->
-        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-                    대상 목록
-                    <span class="text-sm font-normal text-zinc-500 ml-2">결재완료된 정보화사업 · 전산업무비</span>
-                </h2>
+        <TableCard title="대상 목록" subtitle="결재완료된 정보화사업 · 전산업무비">
+            <template #actions>
                 <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
-            </div>
+            </template>
 
             <StyledDataTable :value="targetItems" :loading="targetLoading" striped-rows data-key="_id">
 
@@ -648,21 +642,18 @@ v-model="data.costDupRt" :min="0" :max="100" suffix=" %"
             </StyledDataTable>
 
             <!-- 저장 버튼 -->
-            <div class="flex justify-end mt-4">
+            <div class="flex justify-end px-6 py-4">
                 <Button
 label="저장" severity="primary" icon="pi pi-save" :loading="saving"
                     :disabled="targetItems.length === 0" @click="onSave" />
             </div>
-        </div>
+        </TableCard>
 
         <!-- 비목별 편성 결과 테이블 (계층 구조: 자본예산/일반관리비 → 비목그룹 → 세부비목) -->
-        <div
-v-if="summaryData"
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">비목별 편성 결과</h2>
+        <TableCard v-if="summaryData" title="비목별 편성 결과">
+            <template #actions>
                 <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
-            </div>
+            </template>
 
             <StyledDataTable :value="summaryRows" data-key="id" :row-class="summaryRowClass">
 
@@ -824,16 +815,13 @@ v-else-if="data.rowType === 'subtotal' || data.rowType === 'total'"
                     </template>
                 </Column>
             </StyledDataTable>
-        </div>
+        </TableCard>
 
         <!-- 사업별 편성 결과 테이블 (비목별 편성률 동적 컬럼) -->
-        <div
-v-if="projectSummaryData && projectSummaryData.data.length > 0"
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">사업별 편성 결과</h2>
+        <TableCard v-if="projectSummaryData && projectSummaryData.data.length > 0" title="사업별 편성 결과">
+            <template #actions>
                 <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
-            </div>
+            </template>
 
             <StyledDataTable
 :value="projectSummaryData.data" striped-rows data-key="orcPkVl" scrollable
@@ -935,7 +923,7 @@ v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix" :header="cat.c
                     </template>
                 </Column>
             </StyledDataTable>
-        </div>
+        </TableCard>
     </div>
 </template>
 

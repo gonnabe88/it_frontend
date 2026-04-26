@@ -43,24 +43,19 @@ const flDttSeverity = (flDtt: string): string => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">첨부파일</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    TAAABB_CFILEM — 시스템 전체 첨부파일 현황 (조회 전용)
-                </p>
-            </div>
-        </div>
+        <PageHeader title="첨부파일" subtitle="TAAABB_CFILEM — 시스템 전체 첨부파일 현황 (조회 전용)" />
 
         <!-- 첨부파일 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             :value="files ?? []"
             :loading="pending"
             data-key="flMngNo"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows>
 
@@ -89,7 +84,7 @@ const flDttSeverity = (flDtt: string): string => {
                 <template #body="{ data }">
                     <span
 v-if="data.fstEnrUsid"
-                          class="cursor-pointer text-blue-500 hover:underline"
+                          class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
                     </span>
@@ -102,6 +97,8 @@ v-if="data.fstEnrUsid"
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 직원정보 팝업 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" />

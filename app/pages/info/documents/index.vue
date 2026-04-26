@@ -76,7 +76,7 @@ const statusBadgeClass = (status: 'reviewing' | 'delayed'): string => {
     if (status === 'delayed') {
         return 'bg-red-100 text-red-700 border border-red-200';
     }
-    return 'bg-blue-100 text-blue-700 border border-blue-200';
+    return 'bg-indigo-100 text-indigo-700 border border-indigo-200';
 };
 
 const statusLabel = (status: 'reviewing' | 'delayed'): string => {
@@ -109,29 +109,20 @@ const segments = computed(() => {
 </script>
 
 <template>
-    <div class="p-6 space-y-6">
-        <!-- 헤더: 페이지 타이틀 + 우측 전체 목록 버튼 -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-semibold text-zinc-900">사전협의 현황</h1>
-                <p class="mt-1 text-sm text-zinc-500">우리 부서의 요구사항 정의서 검토 현황을 확인합니다.</p>
-            </div>
-            <Button
-                icon="pi pi-list"
-                label="전체 목록"
-                severity="secondary"
-                outlined
-                @click="goList"
-            />
-        </div>
+    <div class="space-y-6">
+        <PageHeader title="사전협의 현황" subtitle="우리 부서의 요구사항 정의서 검토 현황을 확인합니다.">
+            <template #actions>
+                <Button icon="pi pi-list" label="전체 목록" severity="secondary" outlined @click="goList" />
+            </template>
+        </PageHeader>
 
         <!-- KPI 카드 4종 (V4: 아이콘 배지 + 내러티브 + 세그먼트 분해) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             <!-- 총 문서 수 (3-세그먼트 바) -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white rounded-xl border border-zinc-200 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#f4f4f5; color:#52525b">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-zinc-100 text-zinc-600">
                         <i class="pi pi-file" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">총 문서 수</span>
@@ -142,21 +133,21 @@ const segments = computed(() => {
                     <span class="text-xs text-zinc-400">건 · 전체 등록</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${segments.reviewing}%; background:#f59e0b`" />
-                    <span class="h-full" :style="`width:${segments.completed}%; background:#10b981`" />
-                    <span class="h-full" :style="`width:${segments.overdue}%; background:#ef4444`" />
+                    <span class="h-full bg-amber-500" :style="`width:${segments.reviewing}%`" />
+                    <span class="h-full bg-emerald-500" :style="`width:${segments.completed}%`" />
+                    <span class="h-full bg-red-500" :style="`width:${segments.overdue}%`" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums flex-wrap">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#f59e0b" />검토 중 {{ data?.reviewingCount ?? 0 }}</span>
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#10b981" />완료 {{ data?.completedCount ?? 0 }}</span>
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#ef4444" />기한초과 {{ data?.overdueCount ?? 0 }}</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />검토 중 {{ data?.reviewingCount ?? 0 }}</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />완료 {{ data?.completedCount ?? 0 }}</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-red-500" />기한초과 {{ data?.overdueCount ?? 0 }}</span>
                 </div>
             </div>
 
             <!-- 검토 진행 중 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white rounded-xl border border-zinc-200 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fef3c7; color:#b45309">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-amber-100 text-amber-700">
                         <i class="pi pi-clock" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">검토 진행 중</span>
@@ -167,17 +158,17 @@ const segments = computed(() => {
                     <span class="text-xs text-zinc-400">건 · SLA 5영업일</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${segments.reviewing}%; background:#f59e0b`" />
+                    <span class="h-full bg-amber-500" :style="`width:${segments.reviewing}%`" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#f59e0b" />전체 대비 {{ segments.reviewing }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />전체 대비 {{ segments.reviewing }}%</span>
                 </div>
             </div>
 
             <!-- 협의 완료 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white rounded-xl border border-zinc-200 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#d1fae5; color:#047857">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-emerald-100 text-emerald-700">
                         <i class="pi pi-check-circle" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">협의 완료</span>
@@ -188,17 +179,17 @@ const segments = computed(() => {
                     <span class="text-xs text-zinc-400">건 · 연간 누적</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${segments.completed}%; background:#10b981`" />
+                    <span class="h-full bg-emerald-500" :style="`width:${segments.completed}%`" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#10b981" />전체 대비 {{ segments.completed }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />전체 대비 {{ segments.completed }}%</span>
                 </div>
             </div>
 
             <!-- 기한 초과 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white rounded-xl border border-zinc-200 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fee2e2; color:#b91c1c">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-red-100 text-red-700">
                         <i class="pi pi-exclamation-circle" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">기한 초과</span>
@@ -209,10 +200,10 @@ const segments = computed(() => {
                     <span class="text-xs text-zinc-400">건 · 즉시 처리 필요</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${segments.overdue}%; background:#ef4444`" />
+                    <span class="h-full bg-red-500" :style="`width:${segments.overdue}%`" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#ef4444" />전체 대비 {{ segments.overdue }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-red-500" />전체 대비 {{ segments.overdue }}%</span>
                 </div>
             </div>
         </div>
@@ -243,7 +234,7 @@ const segments = computed(() => {
                         <div class="text-xs font-medium text-zinc-700 mb-1">{{ m.count }}</div>
                         <!-- CSS 막대: 높이는 최대값 대비 비율로 계산 -->
                         <div
-                            class="w-full max-w-[48px] rounded-t-md bg-gradient-to-b from-blue-500 to-blue-700 transition-all hover:from-blue-600 hover:to-blue-800"
+                            class="w-full max-w-[48px] rounded-t-md bg-gradient-to-b from-indigo-500 to-indigo-700 transition-all hover:from-indigo-600 hover:to-indigo-800"
                             :style="{ height: barHeight(m.count) }"
                             :title="`${m.month}: ${m.count}건`"
                         />
@@ -291,7 +282,7 @@ const segments = computed(() => {
                         @click="goDetail(item.docMngNo)"
                     >
                         <!-- 문서 아이콘 -->
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                        <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                             <i class="pi pi-file-edit" />
                         </div>
 

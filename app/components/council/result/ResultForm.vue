@@ -23,6 +23,7 @@ IT관리자가 협의회 결과서를 작성합니다.
 <script setup lang="ts">
 import type { CouncilDetail, FeasibilityData, ResultData, CheckItemAvgScore } from '~/types/council';
 import { useToast } from 'primevue/usetoast';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 interface Props {
     asctId: string;
@@ -147,32 +148,14 @@ const formatDate = (dt: string | null): string => {
                 <h3 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">2. 타당성 검토 결과</h3>
 
                 <!-- 항목별 평균점수 -->
-                <div v-if="avgScores.length > 0" class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                                <th class="text-left px-3 py-2 font-medium">평가 항목</th>
-                                <th class="text-center px-3 py-2 font-medium w-28">평균점수</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="score in avgScores"
-                                :key="score.ckgItmC"
-                                class="border-t border-zinc-100 dark:border-zinc-700"
-                            >
-                                <td class="px-3 py-2">{{ score.ckgItmNm }}</td>
-                                <td class="px-3 py-2 text-center">
-                                    <Tag
-                                        :value="`${score.avgScore.toFixed(1)}점`"
-                                        :severity="score.avgScore >= 3 ? 'success' : 'warn'"
-                                        class="text-xs"
-                                    />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <StyledDataTable v-if="avgScores.length > 0" :value="avgScores" data-key="ckgItmC">
+                    <Column field="ckgItmNm" header="평가 항목" />
+                    <Column field="avgScore" header="평균점수" style="width: 120px; text-align: center">
+                        <template #body="{ data }">
+                            <Tag :value="`${data.avgScore.toFixed(1)}점`" :severity="data.avgScore >= 3 ? 'success' : 'warn'" class="text-xs" />
+                        </template>
+                    </Column>
+                </StyledDataTable>
 
                 <Message v-else severity="info" :closable="false">
                     <span class="text-sm">평가위원 의견이 아직 없습니다.</span>

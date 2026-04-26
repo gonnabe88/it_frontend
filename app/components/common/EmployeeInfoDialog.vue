@@ -72,7 +72,7 @@ watch(() => [props.visible, props.eno], async ([visible, eno]) => {
 </script>
 
 <template>
-    <Dialog v-model:visible="isVisible" header="직원 정보" modal :style="{ width: '480px' }">
+    <Dialog v-model:visible="isVisible" header="직원 정보" modal :style="{ width: 'var(--dialog-md)' }">
         <!-- 로딩 -->
         <div v-if="loading" class="flex justify-center py-8">
             <ProgressSpinner style="width: 40px; height: 40px" />
@@ -87,8 +87,8 @@ watch(() => [props.visible, props.eno], async ([visible, eno]) => {
         <div v-else-if="employee" class="space-y-4">
             <!-- 이름 + 직책 헤더 -->
             <div class="flex items-center gap-3 pb-3 border-b border-zinc-200 dark:border-zinc-700">
-                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900">
-                    <i class="pi pi-user text-blue-600 dark:text-blue-300 text-xl" />
+                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900">
+                    <i class="pi pi-user text-indigo-600 dark:text-indigo-300 text-xl" />
                 </div>
                 <div>
                     <div class="text-lg font-bold text-zinc-900 dark:text-zinc-100">
@@ -138,7 +138,9 @@ watch(() => [props.visible, props.eno], async ([visible, eno]) => {
         </div>
 
         <template #footer>
-            <Button label="닫기" @click="isVisible = false" />
+            <AppDialogFooter>
+                <Button label="닫기" severity="secondary" outlined @click="isVisible = false" />
+            </AppDialogFooter>
         </template>
     </Dialog>
 </template>

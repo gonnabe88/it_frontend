@@ -201,7 +201,7 @@ const grandCount = computed(() =>
             <div
                 class="relative z-10 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 grid grid-cols-2 gap-4">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-1.5 h-8 rounded-full bg-blue-500"/>
+                    <div class="w-1.5 h-8 rounded-full bg-indigo-500"/>
                     <div>
                         <div class="text-[11px] text-zinc-400 font-medium">자본예산</div>
                         <div class="text-sm font-bold text-zinc-900 dark:text-zinc-100">

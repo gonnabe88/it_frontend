@@ -103,19 +103,16 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="flex flex-col h-full gap-6">
 
-        <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">IT 사전협의 문서를 작성하고 관리합니다.</p>
-            </div>
-            <Button label="신규 작성" icon="pi pi-plus" @click="navigateTo('/info/documents/form')" />
-        </div>
+        <PageHeader :title="title" subtitle="IT 사전협의 문서를 작성하고 관리합니다.">
+            <template #actions>
+                <Button label="신규 작성" icon="pi pi-plus" @click="navigateTo('/info/documents/form')" />
+            </template>
+        </PageHeader>
 
         <!-- 검색 + 테이블 카드 -->
-        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
+        <div class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
             <!-- 검색 영역 -->
             <div class="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
@@ -137,9 +134,11 @@ v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :l
             </div>
 
             <!-- DataTable -->
+            <div v-else class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable
-v-else :value="filteredDocuments" :loading="pending" paginator :rows="10"
+:value="filteredDocuments" :loading="pending" paginator :rows="10"
                 :rows-per-page-options="[10, 20, 50]" data-key="docMngNo" sort-field="fstEnrDtm" :sort-order="-1"
+                scrollable scroll-height="flex"
                 >
 
                 <!-- 문서번호 -->
@@ -236,6 +235,7 @@ label="첫 문서 작성하기" icon="pi pi-plus" class="mt-3" size="small"
                     </div>
                 </template>
             </StyledDataTable>
+            </div>
         </div>
     <ConfirmPopup />
     <EmployeeInfoDialog v-model:visible="showEmployeeInfo" :eno="selectedEno" />

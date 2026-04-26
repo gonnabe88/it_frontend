@@ -229,7 +229,7 @@ const handleSaveReply = async (qtnId: string) => {
                     <Button
                         label="취소"
                         severity="secondary"
-                        text
+                        outlined
                         size="small"
                         @click="closeAskForm"
                     />

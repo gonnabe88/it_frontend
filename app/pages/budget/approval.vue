@@ -439,26 +439,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="flex flex-col h-full gap-6">
 
-        <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <!-- 좌측: 제목 + 선택 현황 칩 -->
-            <div class="flex items-end gap-3">
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">결재 상신</h1>
-                <h5 class="text-zinc-500 dark:text-zinc-400">
-                    <i class="pi pi-info-circle text-zinc-400 me-1"/>
-                    <span>조회된 전체 미상신 목록이 일괄 상신됩니다.</span>
-                </h5>
-            </div>
-            <!-- 우측: 예산 단위 선택 + 결재 상신 버튼 -->
-            <div class="flex items-center gap-4">
+        <PageHeader title="결재 상신" subtitle="조회된 전체 미상신 목록이 일괄 상신됩니다.">
+            <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-selector" />
-                <Button
-label="결재 상신" icon="pi pi-send" severity="help" :disabled="!hasItems"
+                <Button label="결재 상신" icon="pi pi-send" severity="help" :disabled="!hasItems"
                     :badge="hasItems ? String(totalCount) : undefined" @click="requestApproval" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 데이터 로딩 중 표시 -->
         <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -474,7 +463,7 @@ v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards
         <!-- 통합 DataTable -->
         <div
 v-if="!isLoading"
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
+            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
             <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
             <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
@@ -503,9 +492,10 @@ v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value=
             </div>
 
             <!-- 통합 DataTable (StyledDataTable: 파란 헤더, gridlines 자동 적용) -->
+            <div class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable
 :value="filteredItems" paginator :rows="pageSize" data-key="_id" sort-field="lstChgDtm"
-                :sort-order="-1">
+                :sort-order="-1" scrollable scroll-height="flex">
 
                 <!-- 구분: 사업 / 비용 / 경상 태그 -->
                 <Column field="_type" header="구분" sortable style="width: 100px; text-align: center">
@@ -599,6 +589,7 @@ v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value=
                 </template>
 
             </StyledDataTable>
+            </div>
         </div>
 
         <!-- 조회 필터 Drawer -->
@@ -607,13 +598,13 @@ v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value=
 
                 <!-- 예산연도 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">예산연도</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">예산연도</label>
                     <SelectButton v-model="filters.bgYy" :options="bgYyOptions" :allow-empty="true" />
                 </div>
 
                 <!-- 구분 필터 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">구분</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">구분</label>
                     <div class="flex gap-2 flex-wrap">
                         <Button
 v-for="opt in typeOptions" :key="opt" :label="opt" size="small" outlined
@@ -625,7 +616,7 @@ v-for="opt in typeOptions" :key="opt" :label="opt" size="small" outlined
 
                 <!-- 신규/계속 필터 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">신규/계속</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">신규/계속</label>
                     <div class="flex gap-2 flex-wrap">
                         <Button
 v-for="opt in categoryOptions" :key="opt" :label="getPulDttName(opt)" size="small" outlined
@@ -637,7 +628,7 @@ v-for="opt in categoryOptions" :key="opt" :label="getPulDttName(opt)" size="smal
 
                 <!-- 총예산 범위 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">총예산 (원)</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">총예산 (원)</label>
                     <div class="flex gap-2">
                         <InputNumber
 v-model="filters.totalBgMin" placeholder="최소" mode="currency" currency="KRW"
@@ -651,7 +642,7 @@ v-model="filters.totalBgMax" placeholder="최대" mode="currency" currency="KRW"
 
                 <!-- 자본예산 범위 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">자본예산 (원)</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">자본예산 (원)</label>
                     <div class="flex gap-2">
                         <InputNumber
 v-model="filters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
@@ -665,7 +656,7 @@ v-model="filters.assetBgMax" placeholder="최대" mode="currency" currency="KRW"
 
                 <!-- 일반관리비 범위 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">일반관리비 (원)</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">일반관리비 (원)</label>
                     <div class="flex gap-2">
                         <InputNumber
 v-model="filters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
@@ -679,7 +670,7 @@ v-model="filters.costBgMax" placeholder="최대" mode="currency" currency="KRW"
 
                 <!-- 담당부서 필터 -->
                 <div class="flex flex-col gap-2">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">담당부서</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">담당부서</label>
                     <AutoComplete
 v-model="filters.deptNm" :suggestions="deptSuggestions" multiple fluid
                         placeholder="부서명 검색..." @complete="searchDept($event.query)" />
@@ -689,10 +680,10 @@ v-model="filters.deptNm" :suggestions="deptSuggestions" multiple fluid
 
             <!-- Drawer 푸터: 초기화 -->
             <template #footer>
-                <div class="flex justify-end gap-2">
+                <AppDialogFooter>
                     <Button label="초기화" icon="pi pi-refresh" severity="secondary" outlined @click="resetFilters" />
-                    <Button label="닫기" icon="pi pi-times" @click="visibleDrawer = false" />
-                </div>
+                    <Button label="닫기" icon="pi pi-times" severity="secondary" outlined @click="visibleDrawer = false" />
+                </AppDialogFooter>
             </template>
         </Drawer>
 

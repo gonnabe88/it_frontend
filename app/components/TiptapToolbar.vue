@@ -792,10 +792,10 @@ v-if="fileUploadFn"
         </div>
 
         <!-- ── 링크 삽입 다이얼로그 ── -->
-        <Dialog v-model:visible="linkDialogVisible" modal header="링크 삽입" :style="{ width: '420px' }">
+        <Dialog v-model:visible="linkDialogVisible" modal header="링크 삽입" :style="{ width: 'var(--dialog-sm)' }">
             <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-1.5">
-                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">URL</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">URL</label>
                     <InputText v-model="linkUrl" placeholder="https://example.com" @keydown.enter="applyLink" />
                 </div>
                 <div class="flex items-center gap-2">
@@ -804,13 +804,15 @@ v-if="fileUploadFn"
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" @click="linkDialogVisible = false" />
-                <Button label="적용" icon="pi pi-check" @click="applyLink" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="linkDialogVisible = false" />
+                    <Button label="적용" icon="pi pi-check" @click="applyLink" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 
         <!-- ── 이미지 삽입 다이얼로그 ── -->
-        <Dialog v-model:visible="imageDialogVisible" modal header="이미지 삽입" :style="{ width: '480px' }">
+        <Dialog v-model:visible="imageDialogVisible" modal header="이미지 삽입" :style="{ width: 'var(--dialog-md)' }">
             <div class="flex flex-col gap-4">
                 <div class="flex border-b border-zinc-200 dark:border-zinc-700">
                     <button
@@ -825,20 +827,20 @@ class="px-4 py-2 text-sm font-medium transition-colors"
 
                 <template v-if="imageTab === 'url'">
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">이미지 URL</label>
+                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">이미지 URL</label>
                         <InputText
 v-model="imageUrl" placeholder="https://example.com/image.png"
                             @keydown.enter="applyImageUrl" />
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">대체 텍스트 (선택)</label>
+                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">대체 텍스트 (선택)</label>
                         <InputText v-model="imageAlt" placeholder="이미지 설명" />
                     </div>
                 </template>
 
                 <template v-else>
                     <div class="flex flex-col gap-2">
-                        <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">이미지 파일 선택</label>
+                        <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">이미지 파일 선택</label>
                         <div
 v-if="isUploadingImage"
                             class="flex items-center gap-2 text-sm text-zinc-500 py-4 justify-center border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg">
@@ -857,10 +859,12 @@ v-else ref="imageFileInput" type="file" accept="image/*"
                 </template>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" @click="imageDialogVisible = false" />
-                <Button
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="imageDialogVisible = false" />
+                    <Button
 v-if="imageTab === 'url'" label="삽입" icon="pi pi-image" :disabled="!imageUrl"
-                    @click="applyImageUrl" />
+                        @click="applyImageUrl" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 
@@ -887,13 +891,15 @@ v-if="isExcalidrawOpen" ref="excalidrawWrapperRef"
                 </ClientOnly>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" icon="pi pi-times" @click="closeExcalidraw" />
-                <Button label="다이어그램 저장" icon="pi pi-check" :loading="isExcalidrawSaving" @click="handleExcalidrawSave" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined icon="pi pi-times" @click="closeExcalidraw" />
+                    <Button label="다이어그램 저장" icon="pi pi-check" :loading="isExcalidrawSaving" @click="handleExcalidrawSave" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 
         <!-- ── 첨부파일 관리 다이얼로그 (FR-05) ── -->
-        <Dialog v-model:visible="fileAttachDialogVisible" modal header="첨부파일 관리" :style="{ width: '720px' }">
+        <Dialog v-model:visible="fileAttachDialogVisible" modal header="첨부파일 관리" :style="{ width: 'var(--dialog-lg)' }">
             <div class="flex flex-col gap-4">
                 <!-- 상단: 신규 업로드 버튼 -->
                 <div
@@ -955,7 +961,9 @@ v-else
                 </div>
             </div>
             <template #footer>
-                <Button label="닫기" severity="secondary" @click="fileAttachDialogVisible = false" />
+                <AppDialogFooter>
+                    <Button label="닫기" severity="secondary" @click="fileAttachDialogVisible = false" />
+                </AppDialogFooter>
             </template>
         </Dialog>
     </template>

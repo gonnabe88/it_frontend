@@ -174,7 +174,7 @@ const navigateIfAllowed = (path: string) => {
         <!-- REQ-6: 예산 신청 기간 외 안내 다이얼로그 -->
         <Dialog
 v-model:visible="showPeriodDialog" modal header="예산 신청 기간 안내"
-            :style="{ width: '28rem' }" :closable="true" :draggable="false">
+            :style="{ width: 'var(--dialog-sm)' }" :closable="true" :draggable="false">
             <div class="flex flex-col items-center gap-4 py-2">
                 <i class="pi pi-calendar-times text-4xl text-orange-500"/>
                 <p class="text-center text-zinc-700 dark:text-zinc-300">
@@ -185,7 +185,9 @@ v-model:visible="showPeriodDialog" modal header="예산 신청 기간 안내"
                 </p>
             </div>
             <template #footer>
-                <Button label="확인" autofocus @click="showPeriodDialog = false" />
+                <AppDialogFooter>
+                    <Button label="확인" autofocus @click="showPeriodDialog = false" />
+                </AppDialogFooter>
             </template>
         </Dialog>
     </div>

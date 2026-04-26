@@ -384,35 +384,31 @@ const exportExcel = async () => {
 </script>
 
 <template>
-    <div class="space-y-6">
-        <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">예산 현황</h1>
-            <div class="flex items-center gap-2">
-                <!-- 연도 선택 -->
+    <div class="flex flex-col h-full gap-6">
+        <PageHeader title="예산 현황">
+            <template #actions>
                 <Select v-model="bgYy" :options="yearOptions" option-label="label" option-value="value" class="w-32" />
-                <!-- 금액 단위 -->
                 <SelectButton v-model="unit" :options="unitOptions" :allow-empty="false" />
-                <!-- 컬럼 설정 -->
                 <Button label="컬럼 설정" icon="pi pi-cog" severity="secondary" outlined @click="showColSettings = true" />
-                <!-- 엑셀 다운로드 -->
                 <Button label="엑셀" icon="pi pi-file-excel" severity="success" outlined @click="exportExcel" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 탭 -->
-        <Tabs v-model:value="activeTab">
-            <TabList class="mb-4">
+        <Tabs v-model:value="activeTab" class="flex-1 min-h-0 flex flex-col">
+            <TabList class="mb-4 shrink-0">
                 <Tab value="0">정보화사업</Tab>
                 <Tab value="1">전산업무비</Tab>
                 <Tab value="2">경상사업</Tab>
             </TabList>
+            <TabPanels class="flex-1 min-h-0 flex flex-col p-0">
 
             <!-- 정보화사업 탭 -->
-            <TabPanel value="0">
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+            <TabPanel value="0" class="flex-1 min-h-0 flex flex-col p-0">
+                <TableCard fill>
+                <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
-                        :value="projects" :loading="projectsPending" scrollable scroll-height="70vh"
+                        :value="projects" :loading="projectsPending" scrollable scroll-height="flex"
                         data-key="prjMngNo" striped-rows>
                         <!-- 2단 헤더 그룹 -->
                         <ColumnGroup type="header">
@@ -437,7 +433,7 @@ const exportExcel = async () => {
                             <template #body="{ data }">
                                 <NuxtLink
                                     :to="`/info/projects/${(data as ProjectStatusItem).prjMngNo}`"
-                                    class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+                                    class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300">
                                     {{ (data as ProjectStatusItem).prjNm }}
                                 </NuxtLink>
                             </template>
@@ -469,7 +465,7 @@ v-for="col in filteredProjectCols" :key="col.field" :field="col.field"
                                 <template v-else-if="isEmployeeField(col.field)">
                                     <a
 v-if="(data as any)[col.field]"
-                                        class="text-blue-600 dark:text-blue-400 underline cursor-pointer hover:text-blue-800 dark:hover:text-blue-300"
+                                        class="text-indigo-600 dark:text-indigo-400 underline cursor-pointer hover:text-indigo-800 dark:hover:text-indigo-300"
                                         @click="openEmployeeInfo(data, col.field)">
                                         {{ (data as any)[col.field] }}
                                     </a>
@@ -485,13 +481,15 @@ v-if="(data as any)[col.field]"
                         </Column>
                     </StyledDataTable>
                 </div>
+                </TableCard>
             </TabPanel>
 
             <!-- 전산업무비 탭 -->
-            <TabPanel value="1">
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+            <TabPanel value="1" class="flex-1 min-h-0 flex flex-col p-0">
+                <TableCard fill>
+                <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
-                        :value="costs" :loading="costsPending" scrollable scroll-height="70vh"
+                        :value="costs" :loading="costsPending" scrollable scroll-height="flex"
                         data-key="itMngcNo" striped-rows>
                         <!-- 2단 헤더 그룹 -->
                         <ColumnGroup type="header">
@@ -516,7 +514,7 @@ v-if="(data as any)[col.field]"
                             <template #body="{ data }">
                                 <NuxtLink
                                     :to="`/info/cost/${(data as CostStatusItem).itMngcNo}`"
-                                    class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+                                    class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300">
                                     {{ (data as CostStatusItem).cttNm }}
                                 </NuxtLink>
                             </template>
@@ -538,13 +536,15 @@ v-if="(data as any)[col.field]"
                         </Column>
                     </StyledDataTable>
                 </div>
+                </TableCard>
             </TabPanel>
 
             <!-- 경상사업 탭 -->
-            <TabPanel value="2">
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-4">
+            <TabPanel value="2" class="flex-1 min-h-0 flex flex-col p-0">
+                <TableCard fill>
+                <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
-                        :value="ordinary" :loading="ordinaryPending" scrollable scroll-height="70vh"
+                        :value="ordinary" :loading="ordinaryPending" scrollable scroll-height="flex"
                         data-key="prjMngNo" striped-rows>
                         <!-- 2단 헤더 그룹 -->
                         <ColumnGroup type="header">
@@ -569,7 +569,7 @@ v-if="(data as any)[col.field]"
                             <template #body="{ data }">
                                 <NuxtLink
                                     :to="`/info/projects/${(data as OrdinaryStatusItem).prjMngNo}`"
-                                    class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300">
+                                    class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300">
                                     {{ (data as OrdinaryStatusItem).prjNm }}
                                 </NuxtLink>
                             </template>
@@ -594,7 +594,9 @@ v-if="(data as any)[col.field]"
                         </Column>
                     </StyledDataTable>
                 </div>
+                </TableCard>
             </TabPanel>
+            </TabPanels>
         </Tabs>
 
         <!-- 컬럼 설정 Drawer (우측) -->

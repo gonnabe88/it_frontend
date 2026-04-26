@@ -83,19 +83,19 @@ const handleKeyPress = (event: KeyboardEvent) => {
 <template>
     <!-- 전체 화면 중앙 정렬 컨테이너 (그라데이션 배경) -->
     <div
-        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-zinc-900 dark:to-zinc-800 p-4">
         <div class="w-full max-w-md">
 
             <!-- 로그인 카드 -->
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
+            <div class="bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl p-8">
 
                 <!-- 로고 및 시스템명 -->
                 <div class="text-center mb-8">
                     <div class="inline-flex items-center justify-center w-20 h-20 rounded mb-4">
                         <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" >
                     </div>
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">IT 정보화 포탈</h1>
-                    <p class="text-gray-600 dark:text-gray-400">정보화 사업·예산·인력</p>
+                    <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">IT 정보화 포탈</h1>
+                    <p class="text-zinc-600 dark:text-zinc-400">정보화 사업·예산·인력</p>
                 </div>
 
                 <!-- 로그인 폼 영역 -->
@@ -103,7 +103,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
 
                     <!-- 사원번호 입력 -->
                     <div>
-                        <label for="eno" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <label for="eno" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                             행번
                         </label>
                         <InputText
@@ -113,7 +113,7 @@ id="eno" v-model="eno" placeholder="사원번호를 입력하세요" class="w-fu
 
                     <!-- 비밀번호 입력 (toggleMask: 비밀번호 표시/숨김 토글) -->
                     <div>
-                        <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        <label for="password" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                             ESSO 비밀번호
                         </label>
                         <Password
@@ -137,13 +137,13 @@ v-if="errorMessage"
                 </div>
 
                 <!-- 안내 문구 -->
-                <div class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+                <div class="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
                     <p>문의사항은 IT기획부 IT기획팀에 연락해주세요.</p>
                 </div>
             </div>
 
             <!-- 저작권 푸터 -->
-            <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div class="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
                 <p>&copy; 2026 IT기획부. All rights reserved.</p>
             </div>
         </div>

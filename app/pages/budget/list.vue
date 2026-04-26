@@ -703,26 +703,18 @@ const openTimeline = (data: any) => {
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="flex flex-col h-full gap-6">
 
-        <!-- 페이지 헤더: 제목 + 예산 단위 선택 -->
-        <div class="flex items-center justify-between">
-            <!-- 좌측: 제목 -->
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            </div>
-            <!-- 우측: 요약 카드 토글 버튼 + 예산 단위 선택 -->
-            <div class="flex items-center gap-4">
-                <!-- 예산 현황 요약 카드 접기/펼치기 토글 버튼 -->
+        <PageHeader :title="title">
+            <template #actions>
                 <Button
-v-tooltip="summaryCollapsed ? '예산 현황 요약 펼치기' : '예산 현황 요약 접기'"
+                    v-tooltip="summaryCollapsed ? '예산 현황 요약 펼치기' : '예산 현황 요약 접기'"
                     :icon="summaryCollapsed ? 'pi pi-chevron-down' : 'pi pi-chevron-up'" :label="summaryCollapsed ? '예산 현황' : '예산 현황'" severity="secondary" outlined
                     size="small"
                     @click="summaryCollapsed = !summaryCollapsed" />
-                <!-- 예산 단위 SelectButton (원/천원/백만원/억원) -->
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-selector" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 예산 현황 요약 카드 (접기/펼치기) -->
         <Transition
@@ -739,7 +731,7 @@ enter-active-class="transition-all duration-300 ease-out overflow-hidden"
 
         <!-- 통합 목록 영역 -->
         <div
-            class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-4">
+            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
             <!-- ── 툴바: 페이지크기 | 건수 | 검색 | 액션 ── -->
             <div class="flex items-center gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
@@ -762,9 +754,10 @@ class="shrink-0" :report-loading="reportLoading" :has-filters="hasAllFilters"
             </div>
 
             <!-- ── 통합 DataTable ── -->
+            <div class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable
 :value="filteredAll" paginator :rows="allPageSize" data-key="_id" sort-field="lstChgDtm"
-                :sort-order="-1">
+                :sort-order="-1" scrollable scroll-height="flex">
                     <!-- 구분: 정보화사업/전산업무비/경상사업 태그 -->
                     <Column
 field="_type" header="구분" sortable style="width: 100px"
@@ -875,6 +868,7 @@ v-if="slotProps.data.applicationInfo?.apfMngNo" v-tooltip="'신청서 조회'"
                         </template>
                     </Column>
                 </StyledDataTable>
+            </div>
 
         </div>
 
@@ -883,21 +877,21 @@ v-if="slotProps.data.applicationInfo?.apfMngNo" v-tooltip="'신청서 조회'"
         <div class="flex flex-col gap-6">
             <!-- 구분 (사업/비용/경상) -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold">구분</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">구분</label>
                 <AutoComplete
 v-model="allFilters.type" :suggestions="filteredAllTypes" multiple
                     dropdown placeholder="사업 / 비용 / 경상 선택 (다중)" fluid @complete="searchAllType" />
             </div>
             <!-- 담당부서 -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold">담당부서</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">담당부서</label>
                 <AutoComplete
 v-model="allFilters.deptNm" :suggestions="filteredAllDeptNms"
                     multiple dropdown placeholder="담당부서 선택 (다중)" fluid @complete="searchAllDeptNm" />
             </div>
             <!-- 총 예산 범위 -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold">총 예산 (원)</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">총 예산 (원)</label>
                 <InputNumber
 v-model="allFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
                     locale="ko-KR" :min-fraction-digits="0" class="w-full" />
@@ -907,7 +901,7 @@ v-model="allFilters.budgetMax" placeholder="최대" mode="currency" currency="KR
             </div>
             <!-- 자본예산 범위 -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold">자본예산 (원)</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">자본예산 (원)</label>
                 <InputNumber
 v-model="allFilters.assetBgMin" placeholder="최소" mode="currency" currency="KRW"
                     locale="ko-KR" :min-fraction-digits="0" class="w-full" />
@@ -917,7 +911,7 @@ v-model="allFilters.assetBgMax" placeholder="최대" mode="currency" currency="K
             </div>
             <!-- 일반관리비 범위 -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold">일반관리비 (원)</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">일반관리비 (원)</label>
                 <InputNumber
 v-model="allFilters.costBgMin" placeholder="최소" mode="currency" currency="KRW"
                     locale="ko-KR" :min-fraction-digits="0" class="w-full" />
@@ -927,7 +921,7 @@ v-model="allFilters.costBgMax" placeholder="최대" mode="currency" currency="KR
             </div>
             <!-- 결재현황 -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold">결재현황</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">결재현황</label>
                 <AutoComplete
 v-model="allFilters.apfSts" :suggestions="filteredAllApfSts"
                     multiple dropdown placeholder="결재현황 선택 (다중)" fluid @complete="searchAllApfSts" />

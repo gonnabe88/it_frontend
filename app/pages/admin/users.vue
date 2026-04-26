@@ -22,6 +22,8 @@ import { useAdminApi, type AdminUserResponse, type AdminUserRequest } from '~/co
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import PageHeader from '~/components/PageHeader.vue';
+import TableCard from '~/components/TableCard.vue';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -121,17 +123,17 @@ const saveNewRow = async () => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">사용자 관리</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">TAAABB_CUSERI — 사용자 조회·추가·수정·삭제</p>
-            </div>
-            <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
-        </div>
+        <PageHeader title="사용자 관리" subtitle="TAAABB_CUSERI — 사용자 조회·추가·수정·삭제">
+            <template #actions>
+                <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
+            </template>
+        </PageHeader>
 
         <!-- 사용자 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             v-model:editing-rows="editingRows"
             :value="users ?? []"
@@ -139,7 +141,7 @@ const saveNewRow = async () => {
             edit-mode="row"
             data-key="eno"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows
             @row-edit-save="onRowEditSave">
@@ -148,7 +150,7 @@ const saveNewRow = async () => {
             <Column field="eno" header="사원번호" :style="{ width: '120px' }" frozen>
                 <template #body="{ data }">
                     <span
-class="cursor-pointer text-blue-500 hover:underline"
+class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.eno }}
                     </span>
@@ -212,38 +214,42 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 신규 사용자 추가 다이얼로그 -->
-        <Dialog v-model:visible="newRowVisible" header="사용자 추가" :style="{ width: '500px' }" modal>
+        <Dialog v-model:visible="newRowVisible" header="사용자 추가" :style="{ width: 'var(--dialog-md)' }" modal>
             <div class="flex flex-col gap-4 mt-2">
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">사원번호 <span class="text-red-500">*</span></label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사원번호 <span class="text-red-500">*</span></label>
                     <InputText v-model="newRow.eno" placeholder="예: 12345678" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">사용자명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사용자명</label>
                     <InputText v-model="newRow.usrNm" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">직위</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">직위</label>
                     <InputText v-model="newRow.ptCNm" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">부서코드</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">부서코드</label>
                     <InputText v-model="newRow.bbrC" placeholder="예: 001" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">이메일</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">이메일</label>
                     <InputText v-model="newRow.etrMilAddrNm" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">초기 비밀번호</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">초기 비밀번호</label>
                     <InputText v-model="newRow.password" type="password" placeholder="미입력 시 기본값 적용" class="w-full" />
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" @click="newRowVisible = false" />
-                <Button label="추가" @click="saveNewRow" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="newRowVisible = false" />
+                    <Button label="추가" @click="saveNewRow" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 

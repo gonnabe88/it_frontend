@@ -248,28 +248,21 @@ const statusGuide = computed(() => {
     <div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
         <!-- 상단 헤더 -->
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <NuxtLink
-                        to="/info/council-request"
-                        class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-                    >
+        <PageHeader title="협의회 개최준비" :subtitle="feasibilityData?.prjNm">
+            <template #leading>
+                <div class="flex items-center gap-1">
+                    <NuxtLink to="/info/council-request"
+                        class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
                         협의회 목록
                     </NuxtLink>
                     <span class="text-zinc-300 dark:text-zinc-600 text-xs">/</span>
                     <span class="text-xs text-zinc-500">개최준비</span>
                 </div>
-                <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">협의회 개최준비</h1>
-                <p v-if="feasibilityData?.prjNm" class="text-sm text-zinc-500 mt-1">
-                    {{ feasibilityData.prjNm }}
-                </p>
-            </div>
-
-            <div class="flex items-center gap-2 shrink-0">
+            </template>
+            <template #actions>
                 <CouncilStatusBadge v-if="councilStatus" :status="councilStatus" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 안내 메시지 -->
         <Message v-if="statusGuide" severity="info" :closable="false">

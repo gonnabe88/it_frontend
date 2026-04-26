@@ -45,24 +45,19 @@ const isExpired = (endDtm: string): boolean => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">JWT 갱신토큰</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    TAAABB_CRTOKM — 사용자별 Refresh Token 현황 (조회 전용)
-                </p>
-            </div>
-        </div>
+        <PageHeader title="JWT 갱신토큰" subtitle="TAAABB_CRTOKM — 사용자별 Refresh Token 현황 (조회 전용)" />
 
         <!-- 토큰 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             :value="tokens ?? []"
             :loading="pending"
             data-key="tokMasked"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows>
 
@@ -70,7 +65,7 @@ const isExpired = (endDtm: string): boolean => {
             <Column header="사용자" :style="{ width: '130px' }">
                 <template #body="{ data }">
                     <span
-class="cursor-pointer text-blue-500 hover:underline"
+class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.usrNm || data.eno }}
                     </span>
@@ -107,6 +102,8 @@ class="cursor-pointer text-blue-500 hover:underline"
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 직원정보 팝업 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" />

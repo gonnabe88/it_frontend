@@ -600,51 +600,40 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
             </Message>
 
             <!-- 페이지 헤더 -->
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <Button
-icon="pi pi-arrow-left" severity="secondary" text rounded
+            <PageHeader>
+                <template #leading>
+                    <Button icon="pi pi-arrow-left" severity="secondary" text rounded
                         @click="navigateTo('/info/documents/list')" />
-                    <div>
-                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center">
-                            {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
-                            <!-- 현재 조회 중인 문서의 버전 배지 (클릭 시 버전 목록 다이얼로그) -->
-                            <Tag
-                                :value="`v${doc.docVrs.toFixed(2)}`"
-                                severity="info"
-                                class="ml-2 cursor-pointer hover:opacity-80 transition-opacity"
-                                title="버전 목록 보기"
-                                @click="versionDialogVisible = true" />
-                        </h1>
-                        <p class="text-xs text-zinc-400 mt-0.5 font-mono">{{ docMngNo }}</p>
-                    </div>
-                </div>
-
-                <div class="flex gap-2">
+                </template>
+                <template #title>
+                    <!-- version Tag inline 클릭을 유지하기 위해 #title 슬롯 사용 -->
+                    <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                        {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
+                        <Tag :value="`v${doc.docVrs.toFixed(2)}`" severity="info"
+                            class="cursor-pointer hover:opacity-80 transition-opacity"
+                            title="버전 목록 보기" @click="versionDialogVisible = true" />
+                    </h1>
+                    <p class="text-xs text-zinc-400 mt-0.5 font-mono">{{ docMngNo }}</p>
+                </template>
+                <template #actions>
                     <!-- 읽기 모드 액션 -->
                     <template v-if="!isEditing">
-                        <Button
-label="사전협의" icon="pi pi-comments" severity="info" outlined
+                        <Button label="사전협의" icon="pi pi-comments" severity="info" outlined
                             @click="navigateTo(`/info/documents/${docMngNo}/review`)" />
-                        <Button
-label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
+                        <Button label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm, { authorEno: doc.fstEnrUsid })" />
-                        <!-- 편집/삭제는 최신 버전에서만 허용 -->
-                        <Button
-v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
-                        <Button
-v-if="!isHistoricalVersion"
-                            label="삭제" icon="pi pi-trash" severity="danger" outlined :loading="isDeleting"
-                            @click="onDelete" />
+                        <Button v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
+                        <Button v-if="!isHistoricalVersion" label="삭제" icon="pi pi-trash" severity="danger"
+                            outlined :loading="isDeleting" @click="onDelete" />
                     </template>
                     <!-- 편집 모드 액션 -->
                     <template v-else>
-                        <Button label="취소" severity="secondary" @click="cancelEdit" />
+                        <Button label="취소" severity="secondary" outlined @click="cancelEdit" />
                         <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="openSaveDialog" />
                     </template>
-                </div>
-            </div>
+                </template>
+            </PageHeader>
 
             <!-- 레이아웃: 2단 분할 그리드 구조 도입 -->
             <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -756,7 +745,7 @@ v-if="attachedFiles.length === 0"
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <!-- 요구사항명 -->
                                 <div class="md:col-span-2 flex flex-col gap-1.5">
-                                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                         요구사항명 <span class="text-red-500">*</span>
                                     </label>
                                     <InputText
@@ -765,7 +754,7 @@ v-model="form.reqNm" placeholder="요구사항명을 입력하세요" class="w-f
                                 </div>
                                 <!-- 요청구분 -->
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                         요청구분 <span class="text-red-500">*</span>
                                     </label>
                                     <Textarea
@@ -774,14 +763,14 @@ v-model="form.reqDtt" placeholder="요청구분을 입력하세요" rows="3"
                                 </div>
                                 <!-- 업무구분 -->
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">업무구분</label>
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">업무구분</label>
                                     <Textarea
 v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
                                         class="w-full resize-none" />
                                 </div>
                                 <!-- 완료기한 -->
                                 <div class="flex flex-col gap-1.5">
-                                    <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">완료기한</label>
+                                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">완료기한</label>
                                     <DatePicker
 v-model="fsgTlmDate" placeholder="YYYY-MM-DD" show-icon fluid
                                         date-format="yy-mm-dd" />
@@ -792,7 +781,7 @@ v-model="fsgTlmDate" placeholder="YYYY-MM-DD" show-icon fluid
                                     class="md:col-span-2 flex flex-col gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-1">
                                     <div class="flex items-center justify-between">
                                         <label
-                                            class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                            class="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                                             <i class="pi pi-paperclip text-zinc-400"/> 첨부파일
                                         </label>
                                         <Button
@@ -916,7 +905,7 @@ v-else :model-value="doc.reqCone || ''" :readonly="true"
 
                     <!-- 하단 편집 모드 액션 -->
                     <div v-if="isEditing" class="flex justify-end gap-3 pb-4">
-                        <Button label="취소" severity="secondary" @click="cancelEdit" />
+                        <Button label="취소" severity="secondary" outlined @click="cancelEdit" />
                         <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="openSaveDialog" />
                     </div>
 
@@ -976,7 +965,7 @@ class="relative flex items-center py-1 pr-4 cursor-pointer transition-colors dur
         header="저장 방식 선택"
         :modal="true"
         :closable="true"
-        :style="{ width: '360px' }">
+        :style="{ width: 'var(--dialog-sm)' }">
         <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
             이 문서를 어떻게 저장하시겠습니까?
         </p>

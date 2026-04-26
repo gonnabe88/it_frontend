@@ -12,6 +12,8 @@
 ================================================================================
 -->
 <script setup lang="ts">
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
+
 interface Props {
     asctId: string;
 }
@@ -62,40 +64,21 @@ const scoreSeverity = (score: number | null) => {
             <!-- 위원별 의견 -->
             <div v-if="summary.evaluations.length > 0">
                 <h4 class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">위원별 평가의견</h4>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                                <th class="text-left px-3 py-2 font-medium">위원</th>
-                                <th class="text-left px-3 py-2 font-medium">항목</th>
-                                <th class="text-center px-3 py-2 font-medium w-16">점수</th>
-                                <th class="text-left px-3 py-2 font-medium">의견</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="item in summary.evaluations"
-                                :key="`${item.eno}-${item.ckgItmC}`"
-                                class="border-t border-zinc-100 dark:border-zinc-700"
-                            >
-                                <td class="px-3 py-2 font-medium text-xs">{{ item.usrNm ?? item.eno }}</td>
-                                <td class="px-3 py-2 text-xs text-zinc-500">{{ item.ckgItmNm }}</td>
-                                <td class="px-3 py-2 text-center">
-                                    <Tag
-                                        v-if="item.ckgRcrd"
-                                        :value="`${item.ckgRcrd}`"
-                                        :severity="scoreSeverity(item.ckgRcrd)"
-                                        class="text-xs"
-                                    />
-                                    <span v-else class="text-zinc-300">—</span>
-                                </td>
-                                <td class="px-3 py-2 text-xs text-zinc-500">
-                                    {{ item.ckgOpnn || '—' }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <StyledDataTable :value="summary.evaluations">
+                    <Column header="위원">
+                        <template #body="{ data }">{{ data.usrNm ?? data.eno }}</template>
+                    </Column>
+                    <Column field="ckgItmNm" header="항목" />
+                    <Column field="ckgRcrd" header="점수" style="width: 72px; text-align: center">
+                        <template #body="{ data }">
+                            <Tag v-if="data.ckgRcrd" :value="`${data.ckgRcrd}`" :severity="scoreSeverity(data.ckgRcrd)" class="text-xs" />
+                            <span v-else class="text-zinc-300">—</span>
+                        </template>
+                    </Column>
+                    <Column header="의견">
+                        <template #body="{ data }">{{ data.ckgOpnn || '—' }}</template>
+                    </Column>
+                </StyledDataTable>
             </div>
 
             <div v-else class="text-sm text-zinc-400 text-center py-4">

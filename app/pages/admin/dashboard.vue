@@ -87,9 +87,9 @@ const todayLoginPct = computed(() => {
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
             <!-- 전체 사용자 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#dbeafe; color:#1d4ed8">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-blue-100 text-blue-700">
                         <i class="pi pi-users" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">전체 사용자</span>
@@ -99,17 +99,17 @@ const todayLoginPct = computed(() => {
                     <span class="text-xs text-zinc-400">명 · 등록 사용자</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" style="width:100%; background:#3b82f6" />
+                    <span class="h-full bg-blue-500" style="width:100%" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#3b82f6" />전체 현황</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-blue-500" />전체 현황</span>
                 </div>
             </div>
 
             <!-- 오늘 로그인 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#d1fae5; color:#047857">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-emerald-100 text-emerald-700">
                         <i class="pi pi-sign-in" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">오늘 로그인</span>
@@ -119,17 +119,17 @@ const todayLoginPct = computed(() => {
                     <span class="text-xs text-zinc-400">건 · 금일 누적</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${todayLoginPct}%; background:#10b981`" />
+                    <span class="h-full bg-emerald-500" :style="`width:${todayLoginPct}%`" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#10b981" />전체 사용자 대비 {{ todayLoginPct }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />전체 사용자 대비 {{ todayLoginPct }}%</span>
                 </div>
             </div>
 
             <!-- 최근 30일 로그인 추이 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md col-span-2">
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md col-span-2">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fef3c7; color:#b45309">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-amber-100 text-amber-700">
                         <i class="pi pi-chart-line" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">최근 30일 로그인 추이</span>
@@ -139,10 +139,10 @@ const todayLoginPct = computed(() => {
                     <span class="text-xs text-zinc-400">일 · 아래 차트 참조</span>
                 </div>
                 <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" style="width:100%; background:#f59e0b" />
+                    <span class="h-full bg-amber-500" style="width:100%" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#f59e0b" />로그인 성공 기준</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />로그인 성공 기준</span>
                 </div>
             </div>
         </div>

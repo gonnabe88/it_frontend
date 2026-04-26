@@ -328,7 +328,7 @@ const submitApproval = async () => {
 
 <template>
     <!-- 보고서 페이지 전체 컨테이너 -->
-    <div class="h-full flex flex-col p-4 rounded shadow-sm bg-gray-50 dark:bg-zinc-900">
+    <div class="h-full flex flex-col p-4 rounded shadow-sm bg-zinc-50 dark:bg-zinc-900">
 
         <!-- 툴바: 목록으로 버튼 + 선택 요약 + 결재자 지정 + 상신 버튼 -->
         <div class="flex justify-end gap-2 mb-4 shrink-0">
@@ -339,10 +339,10 @@ label="목록으로" icon="pi pi-arrow-left" severity="secondary" outlined
             <!-- 선택 항목 요약 안내 -->
             <div
 v-if="!loading"
-                class="flex items-center gap-2 px-3 py-1 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300">
+                class="flex items-center gap-2 px-3 py-1 bg-white dark:bg-zinc-800 rounded border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-600 dark:text-zinc-300">
                 <i class="pi pi-list text-indigo-500"/>
                 <span v-if="projects.length > 0">정보화사업 {{ projects.length }}건</span>
-                <span v-if="projects.length > 0 && costs.length > 0" class="text-gray-300">+</span>
+                <span v-if="projects.length > 0 && costs.length > 0" class="text-zinc-300">+</span>
                 <span v-if="costs.length > 0">전산업무비 {{ costs.length }}건</span>
             </div>
 
@@ -350,18 +350,18 @@ v-if="!loading"
 
             <!-- 결재자 지정 인라인 컨트롤 -->
             <div
-                class="flex gap-2 mr-4 items-center bg-white dark:bg-gray-800 px-3 py-1 rounded shadow-sm border border-gray-200 dark:border-gray-700">
-                <span class="text-sm font-bold text-gray-700 dark:text-gray-200 mr-2">결재자 지정</span>
+                class="flex gap-2 mr-4 items-center bg-white dark:bg-zinc-800 px-3 py-1 rounded shadow-sm border border-zinc-200 dark:border-zinc-700">
+                <span class="text-sm font-bold text-zinc-700 dark:text-zinc-200 mr-2">결재자 지정</span>
                 <!-- 팀장 선택 버튼 (미선택 시 파란색 강조) -->
                 <Button
 :label="approvalLine.teamLead.name ? `${approvalLine.teamLead.name} (팀장)` : '팀장 선택'"
-                    size="small" severity="secondary" text :class="!approvalLine.teamLead.name ? 'text-blue-600' : ''"
+                    size="small" severity="secondary" text :class="!approvalLine.teamLead.name ? 'text-indigo-600' : ''"
                     @click="openEmployeeSearch('teamLead')" />
-                <span class="text-gray-300 dark:text-gray-600">|</span>
+                <span class="text-zinc-300 dark:text-zinc-600">|</span>
                 <!-- 부서장 선택 버튼 (미선택 시 파란색 강조) -->
                 <Button
 :label="approvalLine.deptHead.name ? `${approvalLine.deptHead.name} (부서장)` : '부서장 선택'"
-                    size="small" severity="secondary" text :class="!approvalLine.deptHead.name ? 'text-blue-600' : ''"
+                    size="small" severity="secondary" text :class="!approvalLine.deptHead.name ? 'text-indigo-600' : ''"
                     @click="openEmployeeSearch('deptHead')" />
             </div>
 
@@ -371,19 +371,19 @@ v-if="!loading"
 
         <!-- PDF 뷰어 영역 -->
         <div
-            class="h-[75vh] bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden relative shadow-inner border border-gray-300 dark:border-gray-700 flex justify-center items-center">
+            class="h-[75vh] bg-zinc-200 dark:bg-zinc-800 rounded-lg overflow-hidden relative shadow-inner border border-zinc-300 dark:border-zinc-700 flex justify-center items-center">
 
             <!-- 데이터 로딩 중 스피너 -->
             <div v-if="loading" class="flex flex-col items-center">
                 <ProgressSpinner />
-                <p class="mt-4 text-gray-500 dark:text-gray-400">데이터를 불러오는 중입니다...</p>
+                <p class="mt-4 text-zinc-500 dark:text-zinc-400">데이터를 불러오는 중입니다...</p>
             </div>
 
             <!-- PDF iframe 뷰어 -->
             <iframe v-else-if="pdfUrl" :src="pdfUrl" class="w-full h-full border-none"/>
 
             <!-- PDF 생성 실패 상태 -->
-            <div v-else class="flex flex-col items-center text-gray-500 dark:text-gray-400">
+            <div v-else class="flex flex-col items-center text-zinc-500 dark:text-zinc-400">
                 <i class="pi pi-exclamation-circle text-2xl mb-2"/>
                 <p>PDF를 생성할 수 없습니다.</p>
             </div>
@@ -396,13 +396,15 @@ v-if="!loading"
         <!-- 상신 완료 다이얼로그 -->
         <Dialog
 v-model:visible="showSubmitComplete" header="상신 완료" modal :closable="false"
-            :style="{ width: '400px' }">
+            :style="{ width: 'var(--dialog-sm)' }">
             <div class="flex items-center gap-3">
                 <i class="pi pi-check-circle text-green-500 text-2xl"/>
                 <span>{{ submitCompleteMessage }}</span>
             </div>
             <template #footer>
-                <Button label="확인" icon="pi pi-check" @click="showSubmitComplete = false; removeTab('/budget/report')" />
+                <AppDialogFooter>
+                    <Button label="확인" icon="pi pi-check" @click="showSubmitComplete = false; removeTab('/budget/report')" />
+                </AppDialogFooter>
             </template>
         </Dialog>
     </div>

@@ -974,7 +974,7 @@ const cancel = () => {
         <!-- 상단 고정(Sticky) 헤더 영역 -->
         <div
             class="sticky -top-6 z-20 -mt-6 -mx-6 px-6 py-2 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 {{ isEditMode ? '정보화사업 예산 수정' : '정보화사업 예산 작성' }}
                 <!-- 수정 모드에서만 상태 변경 드롭다운을 헤더 영역에 노출 -->
                 <div v-if="isEditMode" class="flex items-center gap-2 text-base font-normal">
@@ -987,7 +987,7 @@ v-model="form.prjSts" :options="statusOptions" placeholder="상태 변경" class
 
             <!-- 우측 상단 액션 버튼 그룹 -->
             <div class="flex items-center gap-2">
-                <Button label="취소" severity="secondary" class="!px-5 !rounded-lg" @click="cancel" />
+                <Button label="취소" severity="secondary" outlined class="!px-5 !rounded-lg" @click="cancel" />
                 <Button
 label="저장" severity="primary" class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20"
                     @click="saveProject" />

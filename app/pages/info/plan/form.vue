@@ -329,15 +329,12 @@ const handleSave = async () => {
     <div class="space-y-6">
 
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-3">
-                <!-- 예산 표시 단위 선택 -->
+        <PageHeader :title="title">
+            <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" />
-                <!-- 뒤로가기 -->
                 <Button label="목록" icon="pi pi-list" severity="secondary" outlined @click="router.push('/info/plan')" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- ① 기본 정보 입력 -->
         <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">

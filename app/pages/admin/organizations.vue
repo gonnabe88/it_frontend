@@ -117,17 +117,17 @@ const saveNewRow = async () => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">조직 관리</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">TAAABB_CORGNI — 조직(부점) 조회·추가·수정·삭제</p>
-            </div>
-            <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
-        </div>
+        <PageHeader title="조직 관리" subtitle="TAAABB_CORGNI — 조직(부점) 조회·추가·수정·삭제">
+            <template #actions>
+                <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
+            </template>
+        </PageHeader>
 
         <!-- 조직 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             v-model:editing-rows="editingRows"
             :value="organizations ?? []"
@@ -135,7 +135,7 @@ const saveNewRow = async () => {
             edit-mode="row"
             data-key="prlmOgzCCone"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows
             @row-edit-save="onRowEditSave">
@@ -171,7 +171,7 @@ const saveNewRow = async () => {
                 <template #body="{ data }">
                     <span
 v-if="data.fstEnrUsid"
-                          class="cursor-pointer text-blue-500 hover:underline"
+                          class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
                     </span>
@@ -188,7 +188,7 @@ v-if="data.fstEnrUsid"
                 <template #body="{ data }">
                     <span
 v-if="data.lstChgUsid"
-                          class="cursor-pointer text-blue-500 hover:underline"
+                          class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.lstChgUsid)">
                         {{ data.lstChgUsNm || data.lstChgUsid }}
                     </span>
@@ -211,34 +211,38 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 신규 행 추가 다이얼로그 -->
-        <Dialog v-model:visible="newRowVisible" header="조직 추가" :style="{ width: '480px' }" modal>
+        <Dialog v-model:visible="newRowVisible" header="조직 추가" :style="{ width: 'var(--dialog-md)' }" modal>
             <div class="flex flex-col gap-4 mt-2">
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">조직코드 <span class="text-red-500">*</span></label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">조직코드 <span class="text-red-500">*</span></label>
                     <InputText v-model="newRow.prlmOgzCCone" placeholder="예: 001" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">부점명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">부점명</label>
                     <InputText v-model="newRow.bbrNm" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">부점영문명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">부점영문명</label>
                     <InputText v-model="newRow.bbrWrenNm" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">순서</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">순서</label>
                     <InputText v-model="newRow.itmSqnSno" placeholder="예: 001" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">상위조직코드</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">상위조직코드</label>
                     <InputText v-model="newRow.prlmHrkOgzCCone" placeholder="예: 000 (최상위이면 공란)" class="w-full" />
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" @click="newRowVisible = false" />
-                <Button label="추가" @click="saveNewRow" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="newRowVisible = false" />
+                    <Button label="추가" @click="saveNewRow" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 

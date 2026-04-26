@@ -258,16 +258,14 @@ const cancel = () => {
 
 <template>
     <div class="space-y-6">
-        <!-- 페이지 헤더: 제목 + 액션 버튼 그룹 -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex gap-2">
-                <!-- 인라인 행 추가 버튼 -->
+        <!-- 페이지 헤더 -->
+        <PageHeader :title="title">
+            <template #actions>
                 <Button label="행 추가" icon="pi pi-plus" severity="secondary" @click="addCostRow" />
-                <Button label="취소" severity="secondary" @click="cancel" />
+                <Button label="취소" severity="secondary" outlined @click="cancel" />
                 <Button label="저장" icon="pi pi-save" @click="saveCosts" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 인라인 편집 DataTable (CostFormTableSection 컴포넌트) -->
         <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">

@@ -18,6 +18,7 @@
 -->
 <script setup lang="ts">
 import { useToast } from 'primevue/usetoast';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 interface Props {
     asctId: string;
@@ -173,6 +174,10 @@ const commonSlotKeys = computed<Set<string>>(() => {
 /** 해당 슬롯이 공통 선택 슬롯인지 여부 */
 const isCommonSlot = (dsdDt: string, dsdTm: string) =>
     commonSlotKeys.value.has(`${dsdDt}|${dsdTm}`);
+
+/** 미응답 위원 행 배경 강조 */
+const rowClass = (data: { responded: boolean }) =>
+    !data.responded ? 'bg-amber-50 dark:bg-amber-900/10' : '';
 </script>
 
 <template>
@@ -250,85 +255,59 @@ const isCommonSlot = (dsdDt: string, dsdTm: string) =>
         </Message>
 
         <!-- 위원별 응답 현황 테이블 -->
-        <div v-if="loadingStatus" class="space-y-2">
-            <Skeleton v-for="i in 4" :key="i" height="2.5rem" class="w-full" />
-        </div>
-
-        <div v-else-if="statusData && statusData.memberStatuses.length > 0" class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead>
-                    <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wide">
-                        <th class="text-left px-3 py-2.5 font-medium w-16">구분</th>
-                        <th class="text-left px-3 py-2.5 font-medium">위원</th>
-                        <th class="text-center px-3 py-2.5 font-medium w-24">응답여부</th>
-                        <th class="text-left px-3 py-2.5 font-medium">선택 일정 (가능 날짜·시간대)</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-100 dark:divide-zinc-700">
-                    <tr
-                        v-for="member in statusData.memberStatuses"
-                        :key="member.eno"
-                        :class="!member.responded
-                            ? 'bg-amber-50/50 dark:bg-amber-900/10'
-                            : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30'"
-                    >
-                        <!-- 위원 구분 (당연/소집/간사) -->
-                        <td class="px-3 py-3">
-                            <Tag
-                                :value="typeLabel(member.vlrTp)"
-                                :severity="member.vlrTp === 'MAND' ? 'info' : member.vlrTp === 'CALL' ? 'success' : 'warn'"
-                                class="text-xs"
-                            />
-                        </td>
-
-                        <!-- 위원 정보: 성명 + 부서 + 직책 -->
-                        <td class="px-3 py-3">
-                            <div class="font-semibold text-zinc-800 dark:text-zinc-200">
-                                {{ member.usrNm ?? member.eno }}
-                            </div>
-                            <div class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
-                                <span v-if="member.bbrNm">{{ member.bbrNm }}</span>
-                                <span v-if="member.bbrNm && member.ptCNm" class="mx-1">·</span>
-                                <span v-if="member.ptCNm">{{ member.ptCNm }}</span>
-                            </div>
-                        </td>
-
-                        <!-- 응답 여부 -->
-                        <td class="px-3 py-3 text-center">
-                            <Tag
-                                :value="member.responded ? '완료' : '미응답'"
-                                :severity="member.responded ? 'success' : 'warn'"
-                                class="text-xs"
-                            />
-                        </td>
-
-                        <!-- 선택 일정: psbYn='Y'인 슬롯을 뱃지로 표출 -->
-                        <td class="px-3 py-3">
-                            <template v-if="member.responded && availableSlots(member.slots).length > 0">
-                                <div class="flex flex-wrap gap-1">
-                                    <span
-                                        v-for="slot in availableSlots(member.slots)"
-                                        :key="`${slot.dsdDt}-${slot.dsdTm}`"
-                                        class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
-                                        :class="isCommonSlot(slot.dsdDt, slot.dsdTm)
-                                            ? 'bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700'
-                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'"
-                                    >
-                                        {{ slot.dsdDt.slice(5) }} {{ slot.dsdTm }}
-                                    </span>
-                                </div>
-                            </template>
-                            <span v-else-if="member.responded" class="text-xs text-zinc-400">
-                                가능 일정 없음
+        <StyledDataTable
+            v-if="statusData && statusData.memberStatuses.length > 0"
+            :value="statusData.memberStatuses"
+            :loading="loadingStatus"
+            :row-class="rowClass"
+            data-key="eno"
+        >
+            <template #empty>
+                <span class="text-sm text-zinc-400">등록된 위원이 없습니다.</span>
+            </template>
+            <Column field="vlrTp" header="구분" style="width: 80px">
+                <template #body="{ data }">
+                    <Tag :value="typeLabel(data.vlrTp)" :severity="data.vlrTp === 'MAND' ? 'info' : data.vlrTp === 'CALL' ? 'success' : 'warn'" class="text-xs" />
+                </template>
+            </Column>
+            <Column header="위원">
+                <template #body="{ data }">
+                    <div class="font-semibold text-zinc-800 dark:text-zinc-200">{{ data.usrNm ?? data.eno }}</div>
+                    <div class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                        <span v-if="data.bbrNm">{{ data.bbrNm }}</span>
+                        <span v-if="data.bbrNm && data.ptCNm" class="mx-1">·</span>
+                        <span v-if="data.ptCNm">{{ data.ptCNm }}</span>
+                    </div>
+                </template>
+            </Column>
+            <Column field="responded" header="응답여부" style="width: 100px; text-align: center">
+                <template #body="{ data }">
+                    <Tag :value="data.responded ? '완료' : '미응답'" :severity="data.responded ? 'success' : 'warn'" class="text-xs" />
+                </template>
+            </Column>
+            <Column header="선택 일정 (가능 날짜·시간대)">
+                <template #body="{ data }">
+                    <template v-if="data.responded && availableSlots(data.slots).length > 0">
+                        <div class="flex flex-wrap gap-1">
+                            <span
+                                v-for="slot in availableSlots(data.slots)"
+                                :key="`${slot.dsdDt}-${slot.dsdTm}`"
+                                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                                :class="isCommonSlot(slot.dsdDt, slot.dsdTm)
+                                    ? 'bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-700'
+                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'"
+                            >
+                                {{ slot.dsdDt.slice(5) }} {{ slot.dsdTm }}
                             </span>
-                            <span v-else class="text-xs text-zinc-300 dark:text-zinc-600">—</span>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </template>
+                    <span v-else-if="data.responded" class="text-xs text-zinc-400">가능 일정 없음</span>
+                    <span v-else class="text-xs text-zinc-300 dark:text-zinc-600">—</span>
+                </template>
+            </Column>
+        </StyledDataTable>
 
-        <div v-else class="text-sm text-zinc-400 py-6 text-center">
+        <div v-else-if="!loadingStatus" class="text-sm text-zinc-400 py-6 text-center">
             등록된 위원이 없습니다.
         </div>
 
@@ -393,10 +372,10 @@ const isCommonSlot = (dsdDt: string, dsdTm: string) =>
             </div>
 
             <template #footer>
-                <div class="flex justify-end gap-2">
-                    <Button label="취소" severity="secondary" text @click="confirmDialogVisible = false" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="confirmDialogVisible = false" />
                     <Button label="확정" icon="pi pi-check" :loading="confirming" @click="handleConfirm" />
-                </div>
+                </AppDialogFooter>
             </template>
         </Dialog>
 

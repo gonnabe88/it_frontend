@@ -131,6 +131,12 @@
     --header-h:            76px;
     --tabbar-h:            50px;
 
+    /* ── 다이얼로그 너비 토큰 (Dialog :style="{ width: 'var(--dialog-md)' }") */
+    --dialog-sm:  min(420px,  90vw); /* 단순 confirm */
+    --dialog-md:  min(640px,  90vw); /* 일반 폼 */
+    --dialog-lg:  min(960px,  90vw); /* 트리/테이블 (EmployeeSearch 등) */
+    --dialog-xl:  min(1100px, 90vw); /* 결재 상세, 사업비 상세 */
+
     /* ── 전역 커서 및 텍스트 선택 정책 (REQ-6: 폼 외부 I-빔 방지) ─────── */
     cursor: default;
     user-select: none;
@@ -485,6 +491,11 @@ body {
 
 .gsearch .gs-clear:hover { background: var(--fg3); }
 .gsearch .gs-clear .pi { font-size: 9px; }
+
+/* sm 크기 변형 (EmployeeSearchDialog 등 좁은 공간용) */
+.gsearch.gsearch-sm { padding: 5px 10px; border-radius: 8px; gap: 7px; }
+.gsearch.gsearch-sm .gsearch-input { font-size: 12px; }
+.gsearch.gsearch-sm .pi-search { font-size: 12px; }
 
 /* 키보드 단축키 뱃지 (⌘K / esc) */
 .gsearch .gs-kbd {

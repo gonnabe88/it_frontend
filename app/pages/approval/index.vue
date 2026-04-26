@@ -111,106 +111,97 @@ const toPct = (n: number): number => {
 </script>
 
 <template>
-    <div class="p-6 space-y-6">
-        <!-- 헤더: 페이지 타이틀 + 우측 전체 목록 버튼 -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-semibold text-zinc-900">전자결재 현황</h1>
-                <p class="mt-1 text-sm text-zinc-500">내 결재 대기 목록과 부서 결재 처리 현황을 확인합니다.</p>
-            </div>
-            <Button
-                icon="pi pi-list"
-                label="전체 목록"
-                severity="secondary"
-                outlined
-                @click="goList"
-            />
-        </div>
+    <div class="space-y-6">
+        <PageHeader title="전자결재 현황" subtitle="내 결재 대기 목록과 부서 결재 처리 현황을 확인합니다.">
+            <template #actions>
+                <Button icon="pi pi-list" label="전체 목록" severity="secondary" outlined @click="goList" />
+            </template>
+        </PageHeader>
 
         <!-- KPI 카드 4종 (V4: 아이콘 배지 + 내러티브 + 세그먼트 분해) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             <!-- 결재 대기 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fef3c7; color:#b45309">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-amber-100 text-amber-700">
                         <i class="pi pi-inbox" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">결재 대기</span>
                 </div>
                 <div class="flex items-baseline gap-2">
                     <Skeleton v-if="pending" width="4rem" height="2.25rem" />
-                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.pendingCount ?? 0 }}</span>
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.pendingCount ?? 0 }}</span>
                     <span class="text-xs text-zinc-400">건 · 즉시 처리 필요</span>
                 </div>
-                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${toPct(data?.pendingCount ?? 0)}%; background:#f59e0b`" />
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-amber-500" :style="{ width: `${toPct(data?.pendingCount ?? 0)}%` }" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#f59e0b" />전체 대비 {{ toPct(data?.pendingCount ?? 0) }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />전체 대비 {{ toPct(data?.pendingCount ?? 0) }}%</span>
                 </div>
             </div>
 
             <!-- 결재 진행 중 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#dbeafe; color:#1d4ed8">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-blue-100 text-blue-700">
                         <i class="pi pi-spinner" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">결재 진행 중</span>
                 </div>
                 <div class="flex items-baseline gap-2">
                     <Skeleton v-if="pending" width="4rem" height="2.25rem" />
-                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.inProgressCount ?? 0 }}</span>
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.inProgressCount ?? 0 }}</span>
                     <span class="text-xs text-zinc-400">건 · 결재 단계 처리</span>
                 </div>
-                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${toPct(data?.inProgressCount ?? 0)}%; background:#3b82f6`" />
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-blue-500" :style="{ width: `${toPct(data?.inProgressCount ?? 0)}%` }" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#3b82f6" />전체 대비 {{ toPct(data?.inProgressCount ?? 0) }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-blue-500" />전체 대비 {{ toPct(data?.inProgressCount ?? 0) }}%</span>
                 </div>
             </div>
 
             <!-- 당월 완료 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#d1fae5; color:#047857">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-emerald-100 text-emerald-700">
                         <i class="pi pi-check-circle" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">당월 완료</span>
                 </div>
                 <div class="flex items-baseline gap-2">
                     <Skeleton v-if="pending" width="4rem" height="2.25rem" />
-                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.monthlyCompletedCount ?? 0 }}</span>
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.monthlyCompletedCount ?? 0 }}</span>
                     <span class="text-xs text-zinc-400">건 · 이번 달 누적</span>
                 </div>
-                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${toPct(data?.monthlyCompletedCount ?? 0)}%; background:#10b981`" />
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-emerald-500" :style="{ width: `${toPct(data?.monthlyCompletedCount ?? 0)}%` }" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#10b981" />전체 대비 {{ toPct(data?.monthlyCompletedCount ?? 0) }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />전체 대비 {{ toPct(data?.monthlyCompletedCount ?? 0) }}%</span>
                 </div>
             </div>
 
             <!-- 반려 -->
-            <div class="bg-white rounded-[14px] border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none" style="background:#fee2e2; color:#b91c1c">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-red-100 text-red-700">
                         <i class="pi pi-times-circle" />
                     </span>
                     <span class="text-[13px] font-medium text-zinc-600">반려</span>
                 </div>
                 <div class="flex items-baseline gap-2">
                     <Skeleton v-if="pending" width="4rem" height="2.25rem" />
-                    <span v-else class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ data?.rejectedCount ?? 0 }}</span>
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.rejectedCount ?? 0 }}</span>
                     <span class="text-xs text-zinc-400">건 · 당월 누적</span>
                 </div>
-                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
-                    <span class="h-full" :style="`width:${toPct(data?.rejectedCount ?? 0)}%; background:#ef4444`" />
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-red-500" :style="{ width: `${toPct(data?.rejectedCount ?? 0)}%` }" />
                 </div>
                 <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
-                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm" style="background:#ef4444" />전체 대비 {{ toPct(data?.rejectedCount ?? 0) }}%</span>
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-red-500" />전체 대비 {{ toPct(data?.rejectedCount ?? 0) }}%</span>
                 </div>
             </div>
         </div>

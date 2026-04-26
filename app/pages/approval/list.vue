@@ -253,30 +253,21 @@ definePageMeta({
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="flex flex-col h-full gap-6">
 
-        <!-- 페이지 헤더: 제목 + 설명 + 액션 버튼 그룹 -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">전자결재 목록</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    신청한 결재 내역을 조회합니다.
-                </p>
-            </div>
-            <div class="flex gap-2">
-                <!-- 직원 검색 다이얼로그 열기 -->
+        <PageHeader title="전자결재 목록" subtitle="신청한 결재 내역을 조회합니다.">
+            <template #actions>
                 <Button label="직원 조회" icon="pi pi-search" outlined @click="showEmployeeSearch = true" />
-                <!-- 선택된 항목이 있을 때만 일괄 결재 버튼 표시 -->
                 <Button v-if="selectedApprovals.length > 0" label="일괄 결재" icon="pi pi-check-square" severity="success"
                     @click="openApprovalDialog" />
-                <!-- 목록 새로고침 -->
                 <Button icon="pi pi-refresh" outlined rounded @click="refresh()" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 전자결재 목록 DataTable -->
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <StyledDataTable :value="approvals || []" dataKey="apfMngNo" v-model:selection="selectedApprovals"
+        <TableCard fill>
+            <div class="flex-1 min-h-0 flex flex-col">
+            <StyledDataTable scrollable scroll-height="flex" :value="approvals || []" dataKey="apfMngNo" v-model:selection="selectedApprovals"
                 :isDataSelectable="isRowSelectable" :rowClass="rowClass" sortField="apfMngNo" :sortOrder="-1"
                 stripedRows paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]">
                 <template #empty>
@@ -291,7 +282,7 @@ definePageMeta({
                 <!-- 신청서명: 클릭 시 PDF 보고서 뷰어 열기 -->
                 <Column field="apfNm" header="신청서명" sortable class="font-medium">
                     <template #body="{ data }">
-                        <span @click="openReport(data)" class="text-blue-600 hover:underline cursor-pointer">
+                        <span @click="openReport(data)" class="text-indigo-600 hover:underline cursor-pointer">
                             {{ data.apfNm }}
                         </span>
                     </template>
@@ -322,7 +313,8 @@ definePageMeta({
                     </template>
                 </Column>
             </StyledDataTable>
-        </div>
+            </div>
+        </TableCard>
 
         <!-- 직원 검색 다이얼로그 -->
         <EmployeeSearchDialog v-model:visible="showEmployeeSearch" @select="onEmployeeSelect" />
@@ -330,28 +322,26 @@ definePageMeta({
         <!-- 결재 처리 다이얼로그 (승인/반려 의견 입력) -->
         <Dialog v-model:visible="showApprovalDialog"
             :header="targetApprovalStatus ? `${targetApprovalStatus} 처리` : '일괄 결재 처리'" modal
-            :style="{ width: '400px' }">
+            :style="{ width: 'var(--dialog-sm)' }">
             <div class="flex flex-col gap-4">
                 <p class="text-zinc-600 dark:text-zinc-300">
                     선택한 <span class="font-bold">{{ selectedApprovals.length }}</span>건에 대해 결재를 진행합니다.
                 </p>
                 <div class="flex flex-col gap-2">
-                    <label for="opinion" class="font-medium">결재 의견</label>
+                    <label for="opinion" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">결재 의견</label>
                     <Textarea id="opinion" v-model="approvalOpinion" rows="4" placeholder="의견을 입력하세요" class="w-full" />
                 </div>
             </div>
             <template #footer>
-                <div class="flex justify-end gap-2">
-                    <Button label="취소" severity="secondary" text @click="showApprovalDialog = false" />
-
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="showApprovalDialog = false" />
                     <!-- 승인 버튼: 일괄 처리 또는 승인 개별 처리 시 표시 -->
                     <Button v-if="!targetApprovalStatus || targetApprovalStatus === '승인'" label="승인" severity="success"
                         icon="pi pi-check" :loading="isSubmitting" @click="processApproval('승인')" />
-
                     <!-- 반려 버튼: 일괄 처리 또는 반려 개별 처리 시 표시 -->
                     <Button v-if="!targetApprovalStatus || targetApprovalStatus === '반려'" label="반려" severity="danger"
                         icon="pi pi-times" :loading="isSubmitting" @click="processApproval('반려')" />
-                </div>
+                </AppDialogFooter>
             </template>
         </Dialog>
 
@@ -362,13 +352,15 @@ definePageMeta({
 
         <!-- 결재 완료 다이얼로그 -->
         <Dialog v-model:visible="showResultDialog" header="결재 처리 완료" modal :closable="false"
-            :style="{ width: '400px' }">
+            :style="{ width: 'var(--dialog-sm)' }">
             <div class="flex items-center gap-3">
                 <i class="pi pi-check-circle text-green-500 text-2xl"></i>
                 <span>{{ resultMessage }}</span>
             </div>
             <template #footer>
-                <Button label="확인" icon="pi pi-check" @click="showResultDialog = false" />
+                <AppDialogFooter>
+                    <Button label="확인" icon="pi pi-check" @click="showResultDialog = false" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 

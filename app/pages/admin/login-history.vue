@@ -86,24 +86,19 @@ const lgnTpLabel = (lgnTp: string): string => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">로그인 이력</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    TAAABB_CLOGNH — 전체 로그인·실패·로그아웃 이력 (최신순)
-                </p>
-            </div>
-        </div>
+        <PageHeader title="로그인 이력" subtitle="TAAABB_CLOGNH — 전체 로그인·실패·로그아웃 이력 (최신순)" />
 
         <!-- 로그인 이력 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             :value="historyData?.content ?? []"
             :loading="pending"
             data-key="fstEnrDtm"
             scrollable
-            scroll-height="calc(100vh - 360px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows>
 
@@ -111,7 +106,7 @@ const lgnTpLabel = (lgnTp: string): string => {
             <Column header="사용자" :style="{ width: '130px' }">
                 <template #body="{ data }">
                     <span
-class="cursor-pointer text-blue-500 hover:underline"
+class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.eno)">
                         {{ data.usrNm || data.eno }}
                     </span>
@@ -152,9 +147,10 @@ class="text-xs text-zinc-400 truncate block max-w-[240px]"
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
 
         <!-- 페이지네이션 (V1 Numbered 스타일) -->
-        <div class="mt-2">
+        <div class="shrink-0 px-4 py-2">
             <Paginator
                 :rows="PAGE_SIZE"
                 :total-records="historyData?.totalElements ?? 0"
@@ -163,6 +159,7 @@ class="text-xs text-zinc-400 truncate block max-w-[240px]"
                 current-page-report-template="총 {totalRecords}건 중 {first}–{last} 표시"
                 @page="onPageChange" />
         </div>
+        </TableCard>
 
         <!-- 직원정보 팝업 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" />

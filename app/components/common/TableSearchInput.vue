@@ -21,9 +21,11 @@ const props = withDefaults(defineProps<{
     modelValue: string;
     placeholder?: string;
     width?: string;
+    size?: 'sm' | 'md';
 }>(), {
     placeholder: '검색...',
     width: 'auto',
+    size: 'md',
 });
 
 const emit = defineEmits<{
@@ -47,7 +49,7 @@ const clearValue = () => {
 <template>
     <div
         class="gsearch"
-        :class="{ 'is-focus': focused }"
+        :class="{ 'is-focus': focused, 'gsearch-sm': size === 'sm' }"
         :style="width !== 'auto' ? { width } : {}"
     >
         <!-- 검색 아이콘 -->

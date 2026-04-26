@@ -283,19 +283,11 @@ const getPrjTpLabel = (prjTp: string | null) => {
 <template>
     <div class="space-y-6">
 
-        <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <!-- 새로고침 -->
-            <Button
-                v-tooltip.top="'새로고침'"
-                icon="pi pi-refresh"
-                severity="secondary"
-                outlined
-                :loading="pending"
-                @click="() => refresh()"
-            />
-        </div>
+        <PageHeader :title="title">
+            <template #actions>
+                <Button v-tooltip.top="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :loading="pending" @click="() => refresh()" />
+            </template>
+        </PageHeader>
 
         <!-- 필터 영역 -->
         <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
@@ -521,7 +513,7 @@ const getPrjTpLabel = (prjTp: string | null) => {
             <div class="flex flex-col gap-5 pt-2">
                 <!-- 심의유형 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold text-sm">
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                         심의유형
                         <span class="text-red-500">*</span>
                     </label>
@@ -536,7 +528,7 @@ const getPrjTpLabel = (prjTp: string | null) => {
                 </div>
 
                 <!-- 안내 문구 -->
-                <div class="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+                <div class="flex items-start gap-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg text-sm text-indigo-700 dark:text-indigo-300">
                     <i class="pi pi-info-circle mt-0.5 flex-shrink-0" />
                     <span>타당성검토표를 작성하시겠습니까?</span>
                 </div>
@@ -544,19 +536,21 @@ const getPrjTpLabel = (prjTp: string | null) => {
 
             <!-- Dialog 버튼 -->
             <template #footer>
-                <Button
-                    label="취소"
-                    severity="secondary"
-                    outlined
-                    @click="closeCreateDialog"
-                />
-                <Button
-                    label="확인"
-                    icon="pi pi-check"
-                    :loading="createPending"
-                    :disabled="!createForm.dbrTp"
-                    @click="submitCreate"
-                />
+                <AppDialogFooter>
+                    <Button
+                        label="취소"
+                        severity="secondary"
+                        outlined
+                        @click="closeCreateDialog"
+                    />
+                    <Button
+                        label="확인"
+                        icon="pi pi-check"
+                        :loading="createPending"
+                        :disabled="!createForm.dbrTp"
+                        @click="submitCreate"
+                    />
+                </AppDialogFooter>
             </template>
         </Dialog>
 

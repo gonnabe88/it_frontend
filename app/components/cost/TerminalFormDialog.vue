@@ -235,8 +235,10 @@ const handleClose = () => emit('update:visible', false);
         </div>
 
         <template #footer>
-            <Button label="취소" severity="secondary" outlined @click="handleClose" />
-            <Button label="저장" icon="pi pi-save" :disabled="!cost || loading" @click="handleSave" />
+            <AppDialogFooter>
+                <Button label="취소" severity="secondary" outlined @click="handleClose" />
+                <Button label="저장" icon="pi pi-save" :disabled="!cost || loading" @click="handleSave" />
+            </AppDialogFooter>
         </template>
     </Dialog>
 </template>

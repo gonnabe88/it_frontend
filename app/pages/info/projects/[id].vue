@@ -394,27 +394,25 @@ onUnmounted(() => {
     <div v-if="project" class="space-y-8 pb-20">
 
         <!-- 상단 헤더: 사업명 + 상태 태그 + 액션 버튼 -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-start gap-4">
-                <!-- 뒤로 가기 버튼 -->
-                <Button
-icon="pi pi-arrow-left" text rounded aria-label="Back" class="mt-1 w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+        <PageHeader>
+            <template #leading>
+                <Button icon="pi pi-arrow-left" text rounded aria-label="Back"
+                    class="w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
                     @click="router.back()" />
-                <div class="space-y-2">
+            </template>
+            <template #title>
+                <div class="space-y-1">
                     <!-- 사업 유형 태그 + 관리번호 + 기간 -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-                        <Tag
-v-if="isOrdinary" value="경상사업"
+                        <Tag v-if="isOrdinary" value="경상사업"
                             class="bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
-                        <Tag
-                            :value="getPrjTpName(project.prjTp)"
+                        <Tag :value="getPrjTpName(project.prjTp)"
                             class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <span class="font-mono text-zinc-400">#{{ project.prjMngNo }}</span>
                         <span class="text-zinc-300 dark:text-zinc-700">|</span>
-                        <div
-                            v-if="!isOrdinary"
+                        <div v-if="!isOrdinary"
                             class="flex items-center gap-1.5 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs font-medium">
                             <i class="pi pi-calendar text-zinc-400"/>
                             <span>{{ project.sttDt }} ~ {{ project.endDt }}</span>
@@ -423,33 +421,26 @@ v-if="isOrdinary" value="경상사업"
                     </div>
                     <!-- 사업명 + 진행 상태 태그 -->
                     <div class="flex flex-wrap items-center gap-3">
-                        <h1 class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">{{
-                            project.prjNm }}</h1>
-                        <Tag
-                            :value="project.prjSts" :class="getProjectTagClass(project.prjSts || '')"
+                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ project.prjNm }}</h1>
+                        <Tag :value="project.prjSts" :class="getProjectTagClass(project.prjSts || '')"
                             class="text-sm px-3 py-1 font-bold shadow-sm" rounded />
                     </div>
                 </div>
-            </div>
-
-            <!-- 액션 버튼: 목록 / 삭제(조건부) / 수정 -->
-            <div class="flex gap-2 self-end md:self-center">
-                <Button
-label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
-                    @click="router.back()" />
+            </template>
+            <template #actions>
+                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined
+                    class="bg-white dark:bg-zinc-900" @click="router.back()" />
                 <!-- 결재 중이거나 완료된 경우, 또는 수정 권한이 없는 경우 삭제 버튼 숨김 -->
                 <Button
-v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)
-                    && canModify(project.fstEnrUsid, project.svnDpm)" label="삭제"
-                    icon="pi pi-trash" severity="danger" outlined class="bg-white dark:bg-zinc-900"
-                    @click="handleDelete" />
+                    v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts) && canModify(project.fstEnrUsid, project.svnDpm)"
+                    label="삭제" icon="pi pi-trash" severity="danger" outlined
+                    class="bg-white dark:bg-zinc-900" @click="handleDelete" />
                 <!-- 수정 권한이 있는 경우에만 수정 버튼 표시 -->
-                <Button
-v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-pencil"
-                    class="shadow-lg shadow-indigo-500/20"
+                <Button v-if="canModify(project.fstEnrUsid, project.svnDpm)"
+                    label="수정" icon="pi pi-pencil" class="shadow-lg shadow-indigo-500/20"
                     @click="navigateTo(`/info/projects/form?id=${project.prjMngNo}${isOrdinary ? '&ordinary=true' : ''}`)" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 본문 영역: col1(상세 내용) / col2(바로가기 목차) -->
         <div class="grid grid-cols-1 xl:grid-cols-4 gap-8 items-stretch relative">
@@ -460,7 +451,7 @@ v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-
                 <!-- 섹션 1: 사업 진행 현황 타임라인 -->
                 <section
 id="section-progress"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md overflow-visible">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-visible">
                     <div class="flex items-center justify-between mb-8">
                         <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                             <i class="pi pi-step-forward-alt text-indigo-500"/>
@@ -540,11 +531,11 @@ v-if="getCurrentStageIndex(project.prjSts) === Number(index)"
                 <!-- 섹션 2: 사업 개요 -->
                 <section
 id="section-overview"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
 
                     <div id="sub-overview-desc" class="scroll-mt-6">
                         <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4">
-                            <i class="pi pi-info-circle text-blue-500"/>
+                            <i class="pi pi-info-circle text-indigo-500"/>
                             사업 개요
                         </h3>
                         <!-- 사업 주요내용 (Rich Text - XSS 방어 적용) -->
@@ -588,16 +579,16 @@ class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dar
                         </div>
                         <!-- 기대효과 (경상사업 숨김) -->
                         <div v-if="!isOrdinary" id="sub-overview-expect" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-50 dark:bg-blue-900/20"/>
+                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-indigo-50 dark:bg-indigo-900/20"/>
                             <div class="relative pl-10">
                                 <div
-                                    class="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500">
+                                    class="absolute left-0 top-0 w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-500">
                                     <i class="pi pi-star text-sm"/>
                                 </div>
                                 <label
-                                    class="font-bold text-blue-900 dark:text-blue-100 text-md mb-3 block">기대효과</label>
+                                    class="font-bold text-indigo-900 dark:text-indigo-100 text-md mb-3 block">기대효과</label>
                                 <div
-                                    class="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 h-[100px] overflow-y-auto text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+                                    class="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30 h-[100px] overflow-y-auto text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
                                     {{ project.xptEff || '-' }}
                                 </div>
                             </div>
@@ -624,7 +615,7 @@ class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dar
                 <!-- 섹션 3 & 4: 사업 범위 및 일정 + 진행 상황 + 추진시기 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-scope"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
 
                     <!-- 사업 범위 및 일정 -->
                     <div id="sub-scope-range" class="scroll-mt-6">
@@ -735,7 +726,7 @@ class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dar
                 <!-- 섹션 5: 사업 구분 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-category"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-tags text-purple-500"/>
                         사업 구분
@@ -763,7 +754,7 @@ v-if="!isOrdinary" id="section-category"
                 <!-- 섹션 6: 편성 기준 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-criteria"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-check-circle text-teal-500"/>
                         편성 기준
@@ -785,7 +776,7 @@ v-if="!isOrdinary" id="section-criteria"
                 <!-- 섹션 7: 담당 조직 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-org"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-users text-cyan-500"/>
                         담당 조직
@@ -794,17 +785,17 @@ v-if="!isOrdinary" id="section-org"
                         <!-- 주관부서 정보 카드 (Business Owner) -->
                         <div
 id="sub-org-business"
-                            class="scroll-mt-6 flex flex-col gap-4 p-6 bg-gradient-to-br from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-blue-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
+                            class="scroll-mt-6 flex flex-col gap-4 p-6 bg-gradient-to-br from-indigo-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-indigo-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
                             <div
-                                class="absolute right-0 top-0 w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"/>
+                                class="absolute right-0 top-0 w-24 h-24 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"/>
                             <!-- 부서 아이콘 + 이름 -->
                             <div class="flex items-center gap-3 z-10">
                                 <div
-                                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-50 dark:border-zinc-700 shrink-0">
+                                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-50 dark:border-zinc-700 shrink-0">
                                     <i class="pi pi-briefcase text-lg"/>
                                 </div>
                                 <div>
-                                    <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">주관부서</div>
+                                    <div class="text-xs font-bold text-indigo-500 uppercase tracking-wider">주관부서</div>
                                     <div
                                         class="font-extrabold text-base text-zinc-900 dark:text-zinc-100 leading-tight">
                                         {{
@@ -813,7 +804,7 @@ id="sub-org-business"
                                 </div>
                             </div>
                             <!-- 담당팀장 / 담당자 -->
-                            <div class="flex flex-col gap-2 pt-3 border-t border-blue-100 dark:border-zinc-700 z-10">
+                            <div class="flex flex-col gap-2 pt-3 border-t border-indigo-100 dark:border-zinc-700 z-10">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs text-zinc-400 font-medium">담당팀장</span>
                                     <span class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{
@@ -872,7 +863,7 @@ id="sub-org-it"
                 <!-- 섹션 8: 추진시기 및 소요예산 -->
                 <section
 id="section-budget"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-wallet text-yellow-500"/>
                         소요예산
@@ -909,18 +900,18 @@ id="sub-budget-total"
                         <!-- 전결권 카드 -->
                         <div
 id="sub-budget-auth"
-                            class="scroll-mt-6 flex flex-col justify-between p-6 bg-blue-50/[0.6] dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden">
+                            class="scroll-mt-6 flex flex-col justify-between p-6 bg-indigo-50/[0.6] dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/20 text-center relative overflow-hidden">
                             <div
-                                class="absolute -right-4 -top-4 w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl"/>
+                                class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full blur-xl"/>
                             <div class="z-10">
                                 <div
-                                    class="text-sm font-bold text-blue-600 dark:text-blue-500 uppercase tracking-wide mb-2">
+                                    class="text-sm font-bold text-indigo-600 dark:text-indigo-500 uppercase tracking-wide mb-2">
                                     전결권</div>
                                 <div class="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">{{
                                     project.edrt || '-' }}</div>
                             </div>
                             <!-- 전결권 결정 근거 -->
-                            <div class="mt-4 pt-3 border-t border-blue-100 dark:border-blue-900/30 z-10">
+                            <div class="mt-4 pt-3 border-t border-indigo-100 dark:border-indigo-900/30 z-10">
                                 <p class="text-xs text-zinc-400 leading-relaxed">
                                     {{ approvalBasisText }}
                                 </p>
@@ -952,13 +943,13 @@ v-if="!isOrdinary" id="sub-budget-report"
                 <!-- 섹션 9: 소요자원 상세내용 DataTable -->
                 <section
 id="section-resource"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md"
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
                     style="height: 1000px;">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-box text-pink-500"/>
                         소요자원 상세내용
                     </h3>
-                    <div class="rounded-xl overflow-hidden">
+                    <div class="overflow-hidden">
                         <StyledDataTable
                             :value="project.items || []" size="small"
                             striped-rows class="resource-table-modern">

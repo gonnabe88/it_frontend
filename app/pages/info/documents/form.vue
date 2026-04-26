@@ -361,19 +361,15 @@ onUnmounted(() => {
     <div class="space-y-6">
 
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <PageHeader :title="title" subtitle="새로운 요구사항 정의서를 작성합니다.">
+            <template #leading>
                 <Button icon="pi pi-arrow-left" severity="secondary" text rounded @click="onCancel" />
-                <div>
-                    <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">새로운 요구사항 정의서를 작성합니다.</p>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <Button label="취소" severity="secondary" @click="onCancel" />
+            </template>
+            <template #actions>
+                <Button label="취소" severity="secondary" outlined @click="onCancel" />
                 <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 레이아웃: 2단 분할 그리드 구조 도입 -->
         <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -393,7 +389,7 @@ onUnmounted(() => {
 
                         <!-- 요구사항명 (전체 폭) -->
                         <div class="md:col-span-2 flex flex-col gap-1.5">
-                            <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                 요구사항명 <span class="text-red-500">*</span>
                             </label>
                             <InputText v-model="form.reqNm" placeholder="요구사항명을 입력하세요" class="w-full" maxlength="200" />
@@ -401,7 +397,7 @@ onUnmounted(() => {
 
                         <!-- 요청구분 -->
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                                 요청구분 <span class="text-red-500">*</span>
                             </label>
                             <Textarea
@@ -411,7 +407,7 @@ v-model="form.reqDtt" placeholder="요청구분을 입력하세요" rows="3"
 
                         <!-- 업무구분 -->
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">업무구분</label>
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">업무구분</label>
                             <Textarea
 v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
                                 class="w-full resize-none" />
@@ -419,7 +415,7 @@ v-model="form.bzDtt" placeholder="업무구분을 입력하세요" rows="3"
 
                         <!-- 완료기한 -->
                         <div class="flex flex-col gap-1.5">
-                            <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">완료기한</label>
+                            <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">완료기한</label>
                             <DatePicker
 v-model="fsgTlmDate" placeholder="YYYY-MM-DD" show-icon fluid
                                 date-format="yy-mm-dd" />
@@ -428,7 +424,7 @@ v-model="fsgTlmDate" placeholder="YYYY-MM-DD" show-icon fluid
                         <!-- 첨부파일 영역 -->
                         <div class="md:col-span-2 flex flex-col gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800 mt-1">
                             <div class="flex items-center justify-between">
-                                <label class="text-sm font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                                     <i class="pi pi-paperclip text-zinc-400"/> 첨부파일
                                 </label>
                                 <Button
@@ -497,7 +493,7 @@ v-model="form.reqCone" placeholder="요구사항 상세 내용을 입력하세�
 
                 <!-- 하단 액션 버튼 -->
                 <div class="flex justify-end gap-3 pb-4">
-                    <Button label="취소" severity="secondary" @click="onCancel" />
+                    <Button label="취소" severity="secondary" outlined @click="onCancel" />
                     <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
                 </div>
             </div> <!-- // 좌측(3/4) 영역 종료 -->

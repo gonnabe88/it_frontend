@@ -26,6 +26,7 @@
  */
 import { ref, computed, watch } from 'vue';
 import { useOrganization, type Organization, type OrgUser } from '~/composables/useOrganization';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
 
 const props = defineProps({
     visible: { type: Boolean, default: false },
@@ -247,7 +248,7 @@ const onCancel = () => { isVisible.value = false; };
         v-model:visible="isVisible"
         modal
         :show-header="false"
-        :style="{ width: '1100px', maxWidth: '96vw' }"
+        :style="{ width: 'var(--dialog-xl)' }"
         :breakpoints="{ '960px': '90vw', '641px': '98vw' }"
         :pt="{
             root:    { style: 'border-radius: 12px; overflow: hidden;' },
@@ -277,9 +278,8 @@ const onCancel = () => { isVisible.value = false; };
                             <i class="pi pi-angle-double-up" style="font-size:10px;" />모두 접기
                         </button>
                     </div>
-                    <div class="esd-tree-search">
-                        <i class="pi pi-search" />
-                        <input v-model="treeFilter" placeholder="부서 검색" />
+                    <div class="px-2 pb-2">
+                        <TableSearchInput v-model="treeFilter" size="sm" placeholder="부서 검색" width="100%" />
                     </div>
                     <div class="esd-tree-list">
                         <div
@@ -316,11 +316,7 @@ const onCancel = () => { isVisible.value = false; };
                             </template>
                             <span v-else class="esd-no-sel">부서를 선택하세요</span>
                         </div>
-                        <div class="esd-table-search">
-                            <i class="pi pi-search" />
-                            <input v-model="tableFilter" placeholder="이름/사번 검색" />
-                            <span class="esd-kbd">/</span>
-                        </div>
+                        <TableSearchInput v-model="tableFilter" size="sm" placeholder="이름/사번 검색" />
                     </div>
 
                     <!-- 직원 목록 스크롤 영역 -->
@@ -439,24 +435,6 @@ const onCancel = () => { isVisible.value = false; };
 }
 .esd-tree-btn:hover { background: #f4f4f5; color: #18181b; }
 
-.esd-tree-search {
-    margin: 0 8px 8px; flex-shrink: 0;
-    display: flex; align-items: center; gap: 8px;
-    background: #f4f4f5; border-radius: 10px;
-    padding: 7px 12px; border: 1px solid transparent;
-    transition: background 150ms, box-shadow 150ms;
-}
-.esd-tree-search:hover { background: #f0f0f0; }
-.esd-tree-search:focus-within {
-    background: #fff;
-    box-shadow: 0 0 0 2px #6366f1, 0 8px 24px -8px rgba(79, 70, 229, 0.25);
-}
-.esd-tree-search .pi-search { font-size: 13px; color: #71717a; flex-shrink: 0; }
-.esd-tree-search input {
-    flex: 1; border: none; outline: none; background: transparent;
-    font-family: inherit; font-size: 13px; color: #18181b; min-width: 0;
-}
-.esd-tree-search input::placeholder { color: #a1a1aa; }
 
 .esd-tree-list { flex: 1; overflow: auto; }
 
@@ -512,29 +490,6 @@ const onCancel = () => { isVisible.value = false; };
     white-space: nowrap; flex-shrink: 0;
 }
 
-.esd-table-search {
-    flex-shrink: 0;
-    display: flex; align-items: center; gap: 8px;
-    background: #f4f4f5; border-radius: 10px;
-    padding: 7px 12px; border: 1px solid transparent;
-    min-width: 200px;
-    transition: background 150ms, box-shadow 150ms;
-}
-.esd-table-search:hover { background: #f0f0f0; }
-.esd-table-search:focus-within {
-    background: #fff;
-    box-shadow: 0 0 0 2px #6366f1, 0 8px 24px -8px rgba(79, 70, 229, 0.25);
-}
-.esd-table-search .pi-search { font-size: 13px; color: #71717a; flex-shrink: 0; }
-.esd-table-search input {
-    flex: 1; border: none; outline: none; background: transparent;
-    font-family: inherit; font-size: 13px; color: #18181b; min-width: 0;
-}
-.esd-table-search input::placeholder { color: #a1a1aa; }
-.esd-kbd {
-    font-family: monospace; font-size: 11px; padding: 1px 6px; border-radius: 4px;
-    background: rgba(0, 0, 0, 0.06); color: #71717a; line-height: 1.4;
-}
 
 .esd-table-scroll { flex: 1; overflow: auto; }
 

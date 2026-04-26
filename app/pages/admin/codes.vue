@@ -309,14 +309,10 @@ const saveNewRow = async () => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">공통코드 관리</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">TAAABB_CCODEM — 공통코드 조회·추가·수정·삭제</p>
-            </div>
-            <div class="flex items-center gap-2">
+        <PageHeader title="공통코드 관리" subtitle="TAAABB_CCODEM — 공통코드 조회·추가·수정·삭제">
+            <template #actions>
                 <!-- hidden file input (업로드) -->
                 <input
                     ref="uploadInput"
@@ -358,11 +354,11 @@ const saveNewRow = async () => {
                     @click="uploadInput?.click()"
                 />
                 <Button label="행 추가" icon="pi pi-plus" @click="openNewRowDialog" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 통합검색 -->
-        <div class="mb-4">
+        <div>
             <TableSearchInput
                 v-model="globalSearch"
                 placeholder="통합검색 (코드ID, 코드명, 코드값, 코드설명, 구분...)"
@@ -371,7 +367,7 @@ const saveNewRow = async () => {
         </div>
 
         <!-- 필터 적용 중 표시 -->
-        <div v-if="activeFilterCount > 0" class="flex items-center gap-2 mb-3 flex-wrap">
+        <div v-if="activeFilterCount > 0" class="flex items-center gap-2 flex-wrap">
             <span class="text-sm text-zinc-500 dark:text-zinc-400">적용된 필터:</span>
             <Chip v-if="searchFilters.cdId"         :label="`코드ID: ${searchFilters.cdId}`"         removable @remove="searchFilters.cdId = ''" />
             <Chip v-if="searchFilters.cdNm"         :label="`코드명: ${searchFilters.cdNm}`"         removable @remove="searchFilters.cdNm = ''" />
@@ -384,6 +380,8 @@ const saveNewRow = async () => {
         </div>
 
         <!-- 공통코드 DataTable -->
+        <TableCard fill>
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
             v-model:editing-rows="editingRows"
             :value="filteredCodes"
@@ -391,7 +389,7 @@ const saveNewRow = async () => {
             edit-mode="row"
             data-key="cdId"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             paginator
             :rows="50"
             :rows-per-page-options="[50, 100, 200]"
@@ -489,7 +487,7 @@ header="최초생성자" :style="{ width: '120px' }"
                 <template #body="{ data }">
                     <span
 v-if="data.fstEnrUsid"
-                          class="block truncate cursor-pointer text-blue-500 hover:underline"
+                          class="block truncate cursor-pointer text-indigo-600 hover:underline"
                           :title="data.fstEnrUsNm || data.fstEnrUsid"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
@@ -513,7 +511,7 @@ header="마지막수정자" :style="{ width: '120px' }"
                 <template #body="{ data }">
                     <span
 v-if="data.lstChgUsid"
-                          class="block truncate cursor-pointer text-blue-500 hover:underline"
+                          class="block truncate cursor-pointer text-indigo-600 hover:underline"
                           :title="data.lstChgUsNm || data.lstChgUsid"
                           @click="showEmployeeDialog(data.lstChgUsid)">
                         {{ data.lstChgUsNm || data.lstChgUsid }}
@@ -543,38 +541,42 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 신규 행 추가 다이얼로그 -->
-        <Dialog v-model:visible="newRowVisible" header="공통코드 추가" :style="{ width: '500px' }" modal>
+        <Dialog v-model:visible="newRowVisible" header="공통코드 추가" :style="{ width: 'var(--dialog-md)' }" modal>
             <div class="flex flex-col gap-4 mt-2">
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">코드ID <span class="text-red-500">*</span></label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드ID <span class="text-red-500">*</span></label>
                     <InputText v-model="newRow.cdId" placeholder="예: CD001" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">코드명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드명</label>
                     <InputText v-model="newRow.cdNm" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">코드값</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드값</label>
                     <InputText v-model="newRow.cdva" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">코드설명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드설명</label>
                     <InputText v-model="newRow.cdDes" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">코드값구분</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드값구분</label>
                     <InputText v-model="newRow.cttTp" class="w-full" />
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-sm font-medium">코드순서</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드순서</label>
                     <InputNumber v-model="newRow.cdSqn" class="w-full" />
                 </div>
             </div>
             <template #footer>
-                <Button label="취소" severity="secondary" @click="newRowVisible = false" />
-                <Button label="추가" @click="saveNewRow" />
+                <AppDialogFooter>
+                    <Button label="취소" severity="secondary" outlined @click="newRowVisible = false" />
+                    <Button label="추가" @click="saveNewRow" />
+                </AppDialogFooter>
             </template>
         </Dialog>
 
@@ -584,31 +586,31 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
 
                 <!-- 코드ID -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">코드ID</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드ID</label>
                     <InputText v-model="searchFilters.cdId" placeholder="포함 문자열" fluid />
                 </div>
 
                 <!-- 코드명 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">코드명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드명</label>
                     <InputText v-model="searchFilters.cdNm" placeholder="포함 문자열" fluid />
                 </div>
 
                 <!-- 코드값 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">코드값</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드값</label>
                     <InputText v-model="searchFilters.cdva" placeholder="포함 문자열" fluid />
                 </div>
 
                 <!-- 코드설명 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">코드설명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드설명</label>
                     <InputText v-model="searchFilters.cdDes" placeholder="포함 문자열" fluid />
                 </div>
 
                 <!-- 코드값구분 — AutoComplete 다중 선택 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">코드값구분</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">코드값구분</label>
                     <AutoComplete
                         v-model="searchFilters.cttTp"
                         :suggestions="filteredCttTp"
@@ -622,7 +624,7 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
 
                 <!-- 구분설명 — AutoComplete 다중 선택 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">구분설명</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">구분설명</label>
                     <AutoComplete
                         v-model="searchFilters.cttTpDes"
                         :suggestions="filteredCttTpDes"
@@ -636,7 +638,7 @@ v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
 
                 <!-- 기준일자 — sttDt ≤ 기준일 ≤ endDt -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">기준일자</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">기준일자</label>
                     <p class="text-xs text-zinc-400 dark:text-zinc-500 -mt-1">시작일자 ≤ 기준일자 ≤ 종료일자 범위의 코드를 조회합니다.</p>
                     <DatePicker
                         v-model="searchFilters.baseDate"
