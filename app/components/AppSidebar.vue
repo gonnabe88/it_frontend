@@ -265,7 +265,7 @@ id="sidebar-header"
                 <Transition name="fade">
                     <span
 v-if="!collapsed"
-                        class="font-bold text-xl tracking-wider text-primary-600 dark:text-primary-400">정보화
+                        class="font-bold text-xl tracking-wider text-zinc-900 dark:text-zinc-100">정보화
                         Portal</span>
                 </Transition>
             </div>

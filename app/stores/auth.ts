@@ -12,21 +12,21 @@
  *  - 프론트엔드는 사용자 정보(user)만 관리하며, 토큰은 관리하지 않습니다.
  *
  * [관리 상태]
- *  - user            : 현재 로그인한 사용자 정보 (eno, empNm)
+ *  - user            : 현재 로그인한 사용자 정보 (eno, empNm 등) — useCookie로 관리
  *  - isAuthenticated : 로그인 여부 (user 존재 시 true)
  *
  * [인증 흐름]
- *  1. 로그인   → login()          → 서버가 쿠키 세팅 + user 정보 localStorage 저장
- *  2. 새로고침 → restoreSession() → localStorage에서 user 정보 복원
- *  3. 토큰 만료→ 401 핸들러       → refresh() → 서버가 새 쿠키 세팅
- *  4. 로그아웃 → logout()         → 서버가 쿠키 삭제 + localStorage 초기화
+ *  1. 로그인   → login()        → 서버가 JWT 쿠키 세팅 + user 정보 쿠키('it-portal-user') 저장
+ *  2. 새로고침 → useCookie 자동 → SSR/클라이언트 모두 쿠키에서 즉시 복원 (플래시 없음)
+ *  3. 토큰 만료→ 401 핸들러     → refresh() → 서버가 새 JWT 쿠키 세팅
+ *  4. 로그아웃 → logout()       → 서버가 JWT 쿠키 삭제 + user 쿠키 초기화
  *
  * [순환 참조 방지]
  *  - 이 스토어에서는 $apiFetch(plugins/auth.ts 제공) 대신
  *    Nuxt 내장 $fetch를 직접 사용합니다.
  *
- * [localStorage 키]
- *  - 'user' : User 객체 JSON 직렬화 문자열 (세션 복원 전용)
+ * [쿠키 키]
+ *  - 'it-portal-user' : User 객체 (SSR·클라이언트 공유, useCookie가 JSON 자동 직렬화)
  * ============================================================================
  */
 import { defineStore } from 'pinia';
@@ -41,8 +41,17 @@ export const useAuthStore = defineStore('auth', () => {
     // State: 반응형 상태 변수
     // =========================================================================
 
-    /** 현재 로그인한 사용자 정보. 비로그인 시 null */
-    const user = ref<User | null>(null);
+    /**
+     * 현재 로그인한 사용자 정보. 비로그인 시 null.
+     * useCookie를 사용하므로 SSR 요청 시 서버에서도 쿠키를 읽어 즉시 복원됩니다.
+     * → 새로고침 시 "로그인 풀림" 플래시 없음
+     */
+    const user = useCookie<User | null>('it-portal-user', {
+        default: () => null,
+        maxAge: 60 * 60 * 24 * 7, // 7일 (refreshToken 수명과 일치)
+        sameSite: 'lax',
+        path: '/'
+    });
 
     // =========================================================================
     // Getters: 계산된 상태
@@ -95,13 +104,9 @@ export const useAuthStore = defineStore('auth', () => {
                 credentials: 'include' // 쿠키 송수신 활성화
             });
 
-            // 응답에서 사용자 정보만 Pinia 상태에 반영 (토큰은 쿠키에 자동 저장됨)
+            // 응답에서 사용자 정보만 Pinia 상태에 반영 (토큰은 JWT 쿠키에 자동 저장됨)
+            // useCookie 기반이므로 별도 저장 호출 불필요 — user.value 할당만으로 쿠키 갱신
             setAuth(response);
-
-            // 클라이언트 환경에서만 localStorage에 저장 (SSR 환경 분기)
-            if (import.meta.client) {
-                saveToStorage();
-            }
         } catch (error) {
             console.error('Login failed:', error);
             throw error; // 로그인 페이지 컴포넌트에서 에러 메시지 처리
@@ -171,30 +176,25 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     /**
-     * 페이지 새로고침 후 세션 복원
-     * localStorage에 저장된 사용자 정보를 읽어 Pinia 상태를 복원합니다.
-     * middleware/auth.global.ts에서 매 라우트 네비게이션마다 호출됩니다.
+     * 구버전 localStorage 데이터 → 쿠키 마이그레이션
+     * useCookie 전환 전에 localStorage에 저장된 user 정보를 쿠키로 옮깁니다.
+     * middleware/auth.global.ts에서 클라이언트 최초 진입 시 호출됩니다.
      *
-     * [httpOnly 쿠키 전환 후]
-     *  - JWT 토큰은 httpOnly 쿠키에 저장되어 브라우저가 관리합니다.
-     *  - localStorage에는 user 정보만 저장하며, 이를 복원합니다.
-     *  - 실제 토큰 유효성은 다음 API 호출 시 서버에서 검증합니다.
-     *
-     * [예외 처리]
-     * - JSON.parse 실패(데이터 손상) 시 clearAuth()로 초기화합니다.
+     * [동작 원리]
+     *  - 이미 쿠키에 user가 있으면(정상 케이스) 아무것도 하지 않습니다.
+     *  - 쿠키가 없고 localStorage에 데이터가 있으면 쿠키로 이전합니다.
+     *  - 이전 후 localStorage 항목은 삭제합니다.
      */
     const restoreSession = (): void => {
-        if (import.meta.client) {
-            const storedUser = localStorage.getItem('user');
-
-            if (storedUser) {
+        if (import.meta.client && !user.value) {
+            const stored = localStorage.getItem('user');
+            if (stored) {
                 try {
-                    // user 정보 복원 (토큰은 httpOnly 쿠키에 이미 저장됨)
-                    user.value = JSON.parse(storedUser); // 손상된 JSON 대비 try/catch
+                    user.value = JSON.parse(stored);
                 } catch {
-                    // JSON 파싱 실패 시 손상된 데이터를 제거하고 초기 상태로 복원
-                    clearAuth();
+                    // 손상된 데이터는 무시
                 }
+                localStorage.removeItem('user');
             }
         }
     };
@@ -220,27 +220,17 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     /**
-     * 현재 Pinia 상태(user)를 localStorage에 저장
-     * 브라우저 새로고침 후 restoreSession()이 이 값을 읽어 상태를 복원합니다.
-     * 클라이언트 환경 체크는 호출부(login 등)에서 처리합니다.
-     */
-    const saveToStorage = () => {
-        if (user.value) localStorage.setItem('user', JSON.stringify(user.value));
-    };
-
-    /**
-     * Pinia 상태 및 localStorage 인증 데이터를 모두 초기화
+     * Pinia 상태(user 쿠키) 및 구버전 localStorage 데이터를 모두 초기화합니다.
      * 로그아웃, 토큰 갱신 실패, 세션 데이터 손상 시 호출됩니다.
      *
-     * [참고] httpOnly 쿠키(accessToken, refreshToken)는 서버가 삭제합니다.
-     * 프론트엔드에서는 user 정보만 초기화하면 됩니다.
+     * [참고] JWT 쿠키(accessToken, refreshToken)는 서버가 삭제합니다.
+     * 프론트엔드에서는 user 쿠키만 초기화하면 됩니다.
      */
     const clearAuth = () => {
         user.value = null;
 
         if (import.meta.client) {
-            // localStorage에서 user 정보 제거
-            localStorage.removeItem('user');
+            localStorage.removeItem('user'); // 구버전 localStorage 잔존 데이터 정리
         }
     };
 

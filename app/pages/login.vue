@@ -28,6 +28,30 @@ definePageMeta({
 const { login } = useAuth();
 const router = useRouter();
 
+/* ── 다크모드 상태 (AppHeader와 동일한 쿠키 키 공유) ── */
+const isDark = useCookie<boolean>('theme-dark', { default: () => false });
+
+/** 테마 DOM 적용 및 쿠키 갱신 */
+const applyTheme = () => {
+    isDark.value = !isDark.value;
+    document.documentElement.classList.toggle('dark', isDark.value);
+    document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
+};
+
+/** 다크모드 전환 — View Transition API로 부드러운 크로스페이드 */
+const toggleTheme = () => {
+    if (!document.startViewTransition) {
+        applyTheme();
+        return;
+    }
+    document.startViewTransition(() => applyTheme());
+};
+
+onMounted(() => {
+    document.documentElement.classList.toggle('dark', isDark.value);
+    document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
+});
+
 /* ── 폼 입력 상태 ── */
 const eno = ref('');           // 사원번호 입력값
 const password = ref('');      // 비밀번호 입력값
@@ -83,7 +107,15 @@ const handleKeyPress = (event: KeyboardEvent) => {
 <template>
     <!-- 전체 화면 중앙 정렬 컨테이너 (그라데이션 배경) -->
     <div
-        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-zinc-900 dark:to-zinc-800 p-4">
+        class="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-zinc-900 dark:to-zinc-800 p-4">
+
+        <!-- 다크모드 토글 버튼 (우측 상단 고정) -->
+        <button
+            class="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-white/60 dark:hover:bg-zinc-700/60 transition-colors"
+            :title="isDark ? '라이트 모드로 전환' : '다크 모드로 전환'"
+            @click="toggleTheme">
+            <i :class="['pi text-lg', isDark ? 'pi-sun' : 'pi-moon']" />
+        </button>
         <div class="w-full max-w-md">
 
             <!-- 로그인 카드 -->

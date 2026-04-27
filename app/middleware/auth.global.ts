@@ -26,21 +26,13 @@
  * ============================================================================
  */
 export default defineNuxtRouteMiddleware((to, _from) => {
-    /**
-     * SSR 환경 분기
-     * localStorage는 브라우저에서만 사용 가능합니다.
-     * 서버 사이드 렌더링 시에는 세션 복원 및 인증 체크를 건너뜁니다.
-     */
-    if (import.meta.server) return;
-
     // useAuth composable에서 인증 상태 및 세션 복원 함수 가져오기
     const { isAuthenticated, restoreSession } = useAuth();
 
     /**
-     * 세션 복원 시도
-     * 페이지 새로고침 후 Pinia 상태가 초기화된 경우,
-     * localStorage에 저장된 토큰과 사용자 정보로 상태를 복원합니다.
-     * 이미 로그인된 상태라면 아무 동작도 하지 않습니다.
+     * 구버전 localStorage 데이터 마이그레이션 (클라이언트 전용, 무시 가능)
+     * user가 useCookie로 전환된 이후 기존 localStorage 데이터를 쿠키로 이전합니다.
+     * SSR에서는 useCookie가 요청 쿠키를 자동으로 읽어 인증 상태를 복원합니다.
      */
     restoreSession();
 

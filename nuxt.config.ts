@@ -175,23 +175,25 @@ export default defineNuxtConfig({
         {
           /**
            * FOUC(Flash of Unstyled Content) 방지용 인라인 스크립트
-           * Nuxt 하이드레이션 전에 실행되어 다크 모드 클래스를 즉시 적용합니다.
-           * 쿠키 'theme-dark' 값 또는 시스템 다크 모드 설정을 기준으로 판단합니다.
-           * (localStorage 대신 쿠키 사용 — SSR 하이드레이션 불일치 방지)
+           * Nuxt 하이드레이션 전에 실행되어 다크 모드 클래스와 color-scheme을 즉시 적용합니다.
+           * colorScheme 설정: 브라우저가 CSS 로드 전 네이티브 다크 배경을 칠하는 문제 방지
            */
           innerHTML: `
             (function() {
               var m = document.cookie.match('(^|;\\s*)theme-dark=([^;]*)');
               var saved = m ? decodeURIComponent(m[2]) : null;
-              var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-              if (saved === 'true' || (!saved && systemDark)) {
+              var dark = saved === 'true';
+              if (dark) {
                 document.documentElement.classList.add('dark');
+                document.documentElement.style.colorScheme = 'dark';
               } else {
                 document.documentElement.classList.remove('dark');
+                document.documentElement.style.colorScheme = 'light';
               }
             })()
           `,
-          type: 'text/javascript'
+          type: 'text/javascript',
+          tagPriority: 0
         }
       ]
     }

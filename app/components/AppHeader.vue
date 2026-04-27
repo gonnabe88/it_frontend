@@ -18,7 +18,6 @@
 -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-import logo from '@/assets/logo.png';
 import IconCrown from '~/components/icons/IconCrown.vue';
 import GlobalSearchBar from '~/components/GlobalSearchBar.vue';
 import { useAuth } from '~/composables/useAuth';
@@ -68,6 +67,7 @@ const isDark = useCookie<boolean>('theme-dark', { default: () => false });
 const applyTheme = () => {
     isDark.value = !isDark.value;
     document.documentElement.classList.toggle('dark', isDark.value);
+    document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
 };
 
 /**
@@ -89,13 +89,8 @@ const handleLogout = async () => {
 };
 
 onMounted(() => {
-    // 쿠키 미설정(최초 방문) 시 시스템 다크모드 설정을 초기값으로 사용
-    const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('theme-dark='));
-    if (!hasCookie) {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        isDark.value = systemDark;
-    }
     document.documentElement.classList.toggle('dark', isDark.value);
+    document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
 });
 
 const { tabs, addTab, removeTab, closeAll } = useTabs();
