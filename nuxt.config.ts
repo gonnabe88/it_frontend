@@ -43,21 +43,6 @@ export default defineNuxtConfig({
       enabled: false
     }
   },
-  hooks: {
-    ready() { // 'modules:done'보다 더 이른 시점인 'ready' 권장
-      /* 파워쉘에서 다음의 명령어로 심볼릭 링크를 생성해야 함
-      New-Item -ItemType SymbolicLink -Path "$env:LocalAppData\Programs\Antigravity\code.exe" -Target "$env:LocalAppData\Programs\Antigravity\Antigravity.exe"
-      */
-      const editorPath = '%LocalAppData%\\Programs\\Antigravity\\code.exe';
-
-      // launch-editor가 참조하는 기본 변수들
-      process.env.LAUNCH_EDITOR = editorPath;
-      process.env.EDITOR = editorPath;
-
-      // VS Code 기반임을 속이기 위해 환경 변수에 속성 부여 (일부 라이브러리 대응)
-      process.env.NODE_ENV_EDITOR = 'code';
-    }
-  },
   /* ── Vue 컴파일러: Web Component 등록 ── */
   vue: {
     compilerOptions: {
