@@ -21,7 +21,11 @@
      (부모 컨테이너는 flex-1 min-h-0 flex flex-col 체인을 유지해야 합니다)
   2) Paginator: 하단에 고정되며 좌/우/하단 보더는 제거하고 상단 보더만 남겨
      카드 테두리와 자연스럽게 이어지도록 합니다.
-  3) 삭제 표시 행 규약: row-class 함수가 'row-deleted'를 반환하는 행은
+  3) Excel 스타일 셀 선택/복사: 조회형 표준 테이블에서 셀 클릭, 드래그,
+     Shift+Click으로 범위를 선택하고 Ctrl/Cmd+C로 TSV 복사할 수 있습니다.
+     기본 활성화이며, 입력/버튼/체크박스 등 인터랙티브 요소는 자동 제외됩니다.
+     편집 모드처럼 셀 선택이 방해가 되는 화면은 :cell-selectable="false"로 끕니다.
+  4) 삭제 표시 행 규약: row-class 함수가 'row-deleted'를 반환하는 행은
      회색 배경 + 취소선 + 포인터 차단 스타일이 자동 적용됩니다.
      첫 번째 셀(선택 체크박스)과 마지막 셀(액션 버튼)은 조작 가능합니다.
 
@@ -36,7 +40,20 @@
 ================================================================================
 -->
 <script setup lang="ts">
+import { ref, computed } from 'vue';
+import { useTableCellSelection } from '~/composables/useTableCellSelection';
+
 defineOptions({ inheritAttrs: false });
+
+const props = withDefaults(defineProps<{
+    /** false로 설정하면 셀 선택/복사 기능을 비활성화합니다. (기본값: true) */
+    cellSelectable?: boolean;
+}>(), {
+    cellSelectable: true,
+});
+
+const tableRef = ref<HTMLElement | null>(null);
+useTableCellSelection(tableRef, computed(() => props.cellSelectable !== false));
 
 // V1 페이지네이션 기본값 — 사용자가 명시적으로 전달하면 덮어씌워짐
 const DEFAULT_PAGINATOR_TEMPLATE = 'CurrentPageReport PrevPageLink PageLinks NextPageLink';
@@ -44,8 +61,8 @@ const DEFAULT_PAGE_REPORT_TEMPLATE = '총 {totalRecords}건 중 {first}–{last}
 </script>
 
 <template>
-    <!-- kdb-it-table: 비스코프 CSS 타겟팅 기준 래퍼 -->
-    <div class="kdb-it-table">
+    <!-- kdb-it-table: 비스코프 CSS 타겟팅 기준 래퍼 + 셀 선택 컨테이너 -->
+    <div ref="tableRef" class="kdb-it-table">
         <!--
             paginator-template / current-page-report-template: V1 기본값 (먼저 선언)
             v-bind="$attrs": 사용처에서 동일 prop 전달 시 덮어씌워짐
@@ -172,6 +189,23 @@ const DEFAULT_PAGE_REPORT_TEMPLATE = '총 {totalRecords}건 중 {first}–{last}
     opacity: 1;
     text-decoration: none;
     color: inherit !important;
+}
+
+/* ============================================================================
+   [공통 표준] 엑셀 스타일 셀 선택 · 드래그 · 복사
+   cellSelectable prop이 true(기본값)일 때 useTableCellSelection이 자동 활성화됩니다.
+   ============================================================================ */
+.kdb-it-table td.cell-selected {
+    background-color: rgba(59, 130, 246, 0.18) !important;
+}
+
+.kdb-it-table td.cell-anchor {
+    outline: 2px solid rgb(59, 130, 246);
+    outline-offset: -2px;
+}
+
+.kdb-it-table.selecting {
+    user-select: none;
 }
 
 /* 다크 모드 */

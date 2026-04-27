@@ -255,17 +255,16 @@ definePageMeta({
 <template>
     <div class="flex flex-col h-full gap-6">
 
-        <PageHeader title="전자결재 목록" subtitle="신청한 결재 내역을 조회합니다.">
+        <PageHeader title="전자결재 목록" subtitle="신청한 결재 내역을 조회합니다." />
+
+        <!-- 전자결재 목록 DataTable -->
+        <TableCard fill icon="pi-check-square" title="전자결재 목록" :count="approvals?.length">
             <template #actions>
                 <Button label="직원 조회" icon="pi pi-search" outlined @click="showEmployeeSearch = true" />
                 <Button v-if="selectedApprovals.length > 0" label="일괄 결재" icon="pi pi-check-square" severity="success"
                     @click="openApprovalDialog" />
-                <Button icon="pi pi-refresh" outlined rounded @click="refresh()" />
+                <Button v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined @click="refresh()" />
             </template>
-        </PageHeader>
-
-        <!-- 전자결재 목록 DataTable -->
-        <TableCard fill>
             <div class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable scrollable scroll-height="flex" :value="approvals || []" dataKey="apfMngNo" v-model:selection="selectedApprovals"
                 :isDataSelectable="isRowSelectable" :rowClass="rowClass" sortField="apfMngNo" :sortOrder="-1"

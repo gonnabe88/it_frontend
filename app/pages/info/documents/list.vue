@@ -98,6 +98,14 @@ const openEmployeeInfo = (eno: string) => {
     showEmployeeInfo.value = true;
 };
 
+/* ── 페이지당 행 수 ── */
+const rowsPerPage = ref(10);
+const rowsOptions = [
+    { label: '10건', value: 10 },
+    { label: '20건', value: 20 },
+    { label: '50건', value: 50 },
+];
+
 /* ── 날짜 포맷 ── */
 const formatDate = (str: string) => str?.substring(0, 10) || '-';
 </script>
@@ -111,19 +119,39 @@ const formatDate = (str: string) => str?.substring(0, 10) || '-';
             </template>
         </PageHeader>
 
-        <!-- 검색 + 테이블 카드 -->
+        <!-- 테이블 카드 -->
         <div class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
 
-            <!-- 검색 영역 -->
-            <div class="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+            <!-- 카드 헤더: 타이틀(좌) -->
+            <div class="flex items-center px-6 py-4 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
+                        <i class="pi pi-file-check text-indigo-600 dark:text-indigo-400 text-base"/>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-semibold text-zinc-800 dark:text-zinc-200">사전협의 내역</h2>
+                        <span class="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
+                            {{ filteredDocuments.length }}건
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 컨트롤 툴바: 페이지수 + 검색 + 새로고침 -->
+            <div class="flex items-center gap-3 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+                <Select
+                    v-model="rowsPerPage"
+                    :options="rowsOptions"
+                    option-label="label"
+                    option-value="value"
+                    class="!text-sm w-auto"
+                />
                 <TableSearchInput
                     v-model="searchText"
                     placeholder="문서 제목 검색..."
                     width="24rem"
                 />
-                <Button
-v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :loading="pending"
-                    @click="() => refresh()" />
+                <Button v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :loading="pending" @click="() => refresh()" />
             </div>
 
             <!-- 오류 표시 -->
@@ -136,8 +164,8 @@ v-tooltip="'새로고침'" icon="pi pi-refresh" severity="secondary" outlined :l
             <!-- DataTable -->
             <div v-else class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable
-:value="filteredDocuments" :loading="pending" paginator :rows="10"
-                :rows-per-page-options="[10, 20, 50]" data-key="docMngNo" sort-field="fstEnrDtm" :sort-order="-1"
+:value="filteredDocuments" :loading="pending" paginator :rows="rowsPerPage"
+                data-key="docMngNo" sort-field="fstEnrDtm" :sort-order="-1"
                 scrollable scroll-height="flex"
                 >
 

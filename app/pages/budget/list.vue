@@ -730,28 +730,14 @@ enter-active-class="transition-all duration-300 ease-out overflow-hidden"
         </Transition>
 
         <!-- 통합 목록 영역 -->
-        <div
-            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <TableCard fill icon="pi-list" title="통합 예산 목록" :count="filteredAll.length">
 
-            <!-- ── 툴바: 페이지크기 | 건수 | 검색 | 액션 ── -->
-            <div class="flex items-center gap-2 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800">
-                <!-- 페이지당 표시 건수 Select -->
-                <Select
-v-model="allPageSize" :options="pageSizeOptions" option-label="label" option-value="value"
-                    class="shrink-0" />
-                <div class="flex-1"/>
-                <!-- 통합 검색 -->
-                <TableSearchInput
-                    v-model="allSearch"
-                    placeholder="사업명, 담당부서, 담당자 검색..."
-                    width="30rem"
-                    class="shrink-0"
-                />
-                <!-- 엑셀/보고서/필터 액션 -->
-                <BudgetTableActions
-class="shrink-0" :report-loading="reportLoading" :has-filters="hasAllFilters"
-                    @excel="downloadAllExcel" @pdf="downloadReport()" @filter="visibleDrawer = true" />
-            </div>
+            <template #toolbar>
+                <Select v-model="allPageSize" :options="pageSizeOptions" option-label="label" option-value="value" class="!text-sm w-auto" />
+                <TableSearchInput v-model="allSearch" placeholder="사업명, 담당부서, 담당자 검색..." width="30rem" />
+                <div class="flex-1" />
+                <BudgetTableActions :report-loading="reportLoading" :has-filters="hasAllFilters" @excel="downloadAllExcel" @pdf="downloadReport()" @filter="visibleDrawer = true" />
+            </template>
 
             <!-- ── 통합 DataTable ── -->
             <div class="flex-1 min-h-0 flex flex-col">
@@ -870,7 +856,7 @@ v-if="slotProps.data.applicationInfo?.apfMngNo" v-tooltip="'신청서 조회'"
                 </StyledDataTable>
             </div>
 
-        </div>
+        </TableCard>
 
     <!-- 상세 조회 Drawer (오른쪽 슬라이드) -->
     <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[600px]">

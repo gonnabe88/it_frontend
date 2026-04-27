@@ -6,7 +6,7 @@
 각 메뉴 클릭 시 해당 경로로 이동하며 드롭다운 없이 동작합니다.
 
 [메뉴 구성]
-  - 사업·예산   : /info/projects
+  - 사업·예산   : /info
   - IT·AI CDP   : /cdp
   - IT자체감사  : /audit
   - 전자결재    : /approval
@@ -41,7 +41,7 @@ interface NavItem {
 /** 단순 네비게이션 메뉴 목록 */
 const navItems = computed<NavItem[]>(() => [
     { label: '사전협의', route: '/info/documents', activePrefix: '/info/documents' },
-    { label: '사업·예산', route: '/info/projects', activePrefix: '/info', excludePrefix: '/info/documents' },
+    { label: '사업·예산', route: '/info', activePrefix: '/info', excludePrefix: '/info/documents' },
     { label: 'IT·AI CDP', route: '/cdp', activePrefix: '/cdp' },
     { label: 'IT자체감사', route: '/audit', activePrefix: '/audit' },
     { label: '전자결재', route: '/approval', activePrefix: '/approval' },

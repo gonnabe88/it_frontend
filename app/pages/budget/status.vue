@@ -405,7 +405,7 @@ const exportExcel = async () => {
 
             <!-- 정보화사업 탭 -->
             <TabPanel value="0" class="flex-1 min-h-0 flex flex-col p-0">
-                <TableCard fill>
+                <TableCard fill icon="pi-briefcase" title="정보화사업" :count="projects.length">
                 <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
                         :value="projects" :loading="projectsPending" scrollable scroll-height="flex"
@@ -486,7 +486,7 @@ v-if="(data as any)[col.field]"
 
             <!-- 전산업무비 탭 -->
             <TabPanel value="1" class="flex-1 min-h-0 flex flex-col p-0">
-                <TableCard fill>
+                <TableCard fill icon="pi-credit-card" title="전산업무비" :count="costs.length">
                 <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
                         :value="costs" :loading="costsPending" scrollable scroll-height="flex"
@@ -541,7 +541,7 @@ v-if="(data as any)[col.field]"
 
             <!-- 경상사업 탭 -->
             <TabPanel value="2" class="flex-1 min-h-0 flex flex-col p-0">
-                <TableCard fill>
+                <TableCard fill icon="pi-wallet" title="경상사업" :count="ordinary.length">
                 <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
                         :value="ordinary" :loading="ordinaryPending" scrollable scroll-height="flex"

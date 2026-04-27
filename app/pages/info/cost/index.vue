@@ -27,7 +27,6 @@ import TableSearchInput from '~/components/common/TableSearchInput.vue';
 import InlineEditCell from '~/components/common/InlineEditCell.vue';
 import TerminalFormDialog from '~/components/cost/TerminalFormDialog.vue';
 import { exportRowsToExcel } from '~/utils/excel';
-import { useTableCellSelection } from '~/composables/useTableCellSelection';
 
 
 const title = '전산업무비 목록';
@@ -698,13 +697,6 @@ const cancelEdit = async () => {
     viewMode.value = 'view';
 };
 
-/* ── 엑셀 스타일 셀 선택/드래그/복사 ───────────────────────── */
-/** DataTable을 감싸는 컨테이너 ref — useTableCellSelection이 내부 tbody를 스캔함 */
-const tableContainerRef = ref<HTMLElement | null>(null);
-/** 셀 선택 활성화 조건: 조회 모드에서만 사용 (수정 모드에서는 모든 셀이 이미 편집 가능) */
-const cellSelectionEnabled = computed(() => viewMode.value === 'view');
-useTableCellSelection(tableContainerRef, cellSelectionEnabled);
-
 /* ── 행삭제 (체크박스 선택) ──────────────────────────────── */
 
 /** 체크박스로 선택된 행 목록 */
@@ -1254,8 +1246,7 @@ const applyContinuation = async () => {
     <!-- 페이지 루트: 메인 스크롤 영역 전체 높이를 차지하도록 flex 컬럼으로 구성.
          내부 테이블 카드가 남은 영역을 채우며, 페이지네이션은 카드 하단에 고정됩니다. -->
     <div class="flex flex-col h-full gap-6">
-        <!-- 페이지 헤더: gap-6 flex 컨테이너 내 이중 여백 방지를 위해 !mb-0 적용 -->
-        <PageHeader :title="title" class="!mb-0">
+        <PageHeader :title="title">
             <template #actions>
                 <!-- 예산연도 필터 -->
                 <Select v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
@@ -1275,49 +1266,41 @@ const applyContinuation = async () => {
             </template>
         </PageHeader>
 
-        <!-- 데이터 테이블 영역: flex-1로 남은 공간을 모두 차지, 내부는 flex col로 상단바/테이블/페이지네이터 수직 정렬 -->
-        <div
-            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-
-            <!-- 상단 바: 페이지크기 + 검색(좌) + 액션 버튼(우). shrink-0으로 높이 고정 -->
-            <div class="flex items-center justify-between mb-3 gap-3 shrink-0">
-                <div class="flex items-center gap-2">
-                    <Select v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value"
-                        class="shrink-0" />
-                    <TableSearchInput
-                        v-model="searchKeyword"
-                        placeholder="통합 검색"
-                        width="16rem"
-                    />
-                </div>
-                <div class="flex items-center gap-2">
-                    <!-- 편집용 액션: 수정 모드에서만 표시 -->
-                    <template v-if="viewMode === 'edit'">
-                        <Button label="행추가" icon="pi pi-plus" severity="secondary" outlined size="small"
-                            @click="addRow" />
-                        <Button label="행삭제" icon="pi pi-trash" severity="danger" outlined size="small"
-                            :disabled="!selectedRows.length" @click="deleteSelectedRows" />
-                        <Button label="일괄업로드" icon="pi pi-upload" severity="secondary" outlined size="small"
-                            @click="triggerUpload" />
-                        <input ref="uploadInputRef" type="file" accept=".xlsx,.xls" class="hidden"
-                            @change="handleUpload">
-                    </template>
-                    <!-- 일괄다운로드: 조회/수정 모드 모두 표시 (읽기 전용 작업) -->
-                    <Button label="일괄다운로드" icon="pi pi-download" severity="secondary" outlined size="small"
-                        @click="downloadExcel" />
-                </div>
-            </div>
+        <TableCard fill icon="pi-desktop" title="전산업무비 목록" :count="filteredCosts.length">
+            <template #toolbar>
+                <Select v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value"
+                    class="shrink-0" />
+                <TableSearchInput
+                    v-model="searchKeyword"
+                    placeholder="통합 검색"
+                    width="16rem"
+                />
+                <div class="flex-1" />
+                <!-- 편집용 액션: 수정 모드에서만 표시 -->
+                <template v-if="viewMode === 'edit'">
+                    <Button label="행추가" icon="pi pi-plus" severity="secondary" outlined size="small"
+                        @click="addRow" />
+                    <Button label="행삭제" icon="pi pi-trash" severity="danger" outlined size="small"
+                        :disabled="!selectedRows.length" @click="deleteSelectedRows" />
+                    <Button label="일괄업로드" icon="pi pi-upload" severity="secondary" outlined size="small"
+                        @click="triggerUpload" />
+                    <input ref="uploadInputRef" type="file" accept=".xlsx,.xls" class="hidden"
+                        @change="handleUpload">
+                </template>
+                <!-- 일괄다운로드: 조회/수정 모드 모두 표시 (읽기 전용 작업) -->
+                <Button label="일괄다운로드" icon="pi pi-download" severity="secondary" outlined size="small"
+                    @click="downloadExcel" />
+            </template>
 
             <div v-if="error" class="p-4 text-red-500">
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
 
-            <!-- 엑셀 스타일 셀 선택/드래그/복사 호스트: useTableCellSelection이 이 div 내부를 스캔합니다.
-                 수정 모드에서는 mode-edit 클래스를 부여해 셀 내 입력 폼 테두리를 숨깁니다.
+            <!-- 수정 모드에서는 mode-edit 클래스로 셀 내 입력 폼 테두리를 숨깁니다.
                  flex-1 + min-h-0으로 남은 영역을 모두 차지하고, DataTable이 내부에서 scroll-height="flex"로 본문만 스크롤 -->
-            <div v-else ref="tableContainerRef"
-                :class="['cell-select-host flex-1 min-h-0 flex flex-col', { 'mode-edit': viewMode === 'edit' }]">
+            <div v-else class="cost-table flex-1 min-h-0 flex flex-col" :class="{ 'mode-edit': viewMode === 'edit' }">
                 <StyledDataTable v-model:selection="selectedRows" :value="filteredCosts" paginator :rows="pageSize"
+                    :cell-selectable="viewMode === 'view'"
                     scrollable scroll-height="flex" :sort-field="currentSortField" :sort-order="currentSortOrder"
                     removable-sort :row-class="rowClass"
                     :data-key="(row: ItCost & { _localId?: string }) => row.itMngcNo || row._localId">
@@ -1559,7 +1542,7 @@ const applyContinuation = async () => {
                     </Column>
                 </StyledDataTable>
             </div>
-        </div>
+        </TableCard>
 
         <!-- 계속 계약 전년도 데이터 불러오기 확인 다이얼로그 -->
         <Dialog v-model:visible="continuationDialogVisible" modal header="전년도 계약 불러오기" :style="{ width: 'var(--dialog-sm)' }"
@@ -1682,21 +1665,7 @@ const applyContinuation = async () => {
     ================================================================================
 -->
 <style>
-/* 드래그 범위에 포함된 셀 — 연한 파랑 오버레이 */
-.cell-select-host td.cell-selected {
-    background-color: rgba(59, 130, 246, 0.18) !important;
-}
-
-/* 드래그 시작 셀(anchor) — 진한 파랑 테두리로 강조 */
-.cell-select-host td.cell-anchor {
-    outline: 2px solid rgb(59, 130, 246);
-    outline-offset: -2px;
-}
-
-/* 드래그 중에는 브라우저 텍스트 선택을 차단해 시각 잡음 제거 */
-.cell-select-host.selecting {
-    user-select: none;
-}
+/* 셀 선택/드래그/복사 스타일은 StyledDataTable.vue의 .kdb-it-table 규칙으로 이관됨 */
 
 /* ────────────────────────────────────────────────────────────────
    수정 모드 (mode-edit): 셀 내부의 모든 PrimeVue 입력 폼 테두리를 숨겨
@@ -1704,7 +1673,7 @@ const applyContinuation = async () => {
    - 아웃라인/박스섀도우/링도 함께 제거해 포커스 시에도 깔끔하게 유지
    - 배경색은 건드리지 않아 invalid/hover 등 기존 상태 표시는 보존
    ──────────────────────────────────────────────────────────────── */
-.cell-select-host.mode-edit :is(.p-inputtext,
+.mode-edit :is(.p-inputtext,
     .p-inputnumber,
     .p-inputnumber-input,
     .p-select,
@@ -1718,11 +1687,11 @@ const applyContinuation = async () => {
     outline: none !important;
 }
 
-.cell-select-host.mode-edit :is(.p-inputtext,
+.mode-edit :is(.p-inputtext,
     .p-inputnumber-input,
     .p-datepicker-input,
     .p-autocomplete-input):focus,
-.cell-select-host.mode-edit :is(.p-select,
+.mode-edit :is(.p-select,
     .p-datepicker,
     .p-autocomplete,
     .p-cascadeselect).p-focus {
@@ -1732,8 +1701,8 @@ const applyContinuation = async () => {
 }
 
 /* DatePicker 달력 아이콘 버튼: 배경/보더 제거하여 주변 입력 폼과 톤 일치 */
-.cell-select-host.mode-edit .p-datepicker-button,
-.cell-select-host.mode-edit .p-datepicker-dropdown {
+.mode-edit .p-datepicker-button,
+.mode-edit .p-datepicker-dropdown {
     background: transparent !important;
     background-color: transparent !important;
     border-color: transparent !important;
@@ -1741,8 +1710,8 @@ const applyContinuation = async () => {
     outline: none !important;
 }
 
-.cell-select-host.mode-edit .p-datepicker-button:hover,
-.cell-select-host.mode-edit .p-datepicker-dropdown:hover {
+.mode-edit .p-datepicker-button:hover,
+.mode-edit .p-datepicker-dropdown:hover {
     background: transparent !important;
     background-color: transparent !important;
     border-color: transparent !important;
@@ -1760,34 +1729,34 @@ const applyContinuation = async () => {
    형태로 CSS 변수를 통해 padding을 주입하므로, 클래스 selector로는 override가 안 된다.
    CSS 변수 자체를 덮어쓰는 방식으로 패딩을 축소한다.
    ※ 공통 flex 레이아웃(화면 채움) + paginator 스타일은 StyledDataTable 내부로 이관됨 */
-.cell-select-host .kdb-it-table {
+.cost-table .kdb-it-table {
     --p-datatable-body-cell-padding: 0.05rem 0.2rem;
     --p-datatable-header-cell-padding: 0.2rem 0.3rem;
 }
 
-.cell-select-host .kdb-it-table .p-datatable-tbody>tr>td {
+.cost-table .kdb-it-table .p-datatable-tbody>tr>td {
     padding: 0.4rem 0.4rem !important;
 }
 
-.cell-select-host .kdb-it-table .p-datatable-thead>tr>th {
+.cost-table .kdb-it-table .p-datatable-thead>tr>th {
     padding: 0.4rem 0.4rem !important;
 }
 
 /* 예산 셀: InputNumber 내부 <input>의 text-align을 오른쪽으로 강제
    (InlineEditCell 래퍼에 text-right를 걸어도 PrimeVue 내부 input까지는 전파되지 않음) */
-.cell-select-host .inline-edit-cell.budget-cell .p-inputnumber-input,
-.cell-select-host .inline-edit-cell.budget-cell input {
+.cost-table .inline-edit-cell.budget-cell .p-inputnumber-input,
+.cost-table .inline-edit-cell.budget-cell input {
     text-align: right !important;
 }
 
 /* 선택 컬럼 체크박스: td 내부에서 체크박스 래퍼를 가운데 배치 */
-.cell-select-host .kdb-it-table .p-datatable-tbody>tr>td .p-checkbox {
+.cost-table .kdb-it-table .p-datatable-tbody>tr>td .p-checkbox {
     margin-left: auto;
     margin-right: auto;
 }
 
 /* 입력 폼 내부 패딩/높이 축소 */
-.cell-select-host :is(.p-inputtext,
+.cost-table :is(.p-inputtext,
     .p-inputnumber-input,
     .p-datepicker-input,
     .p-autocomplete-input,
@@ -1802,27 +1771,27 @@ const applyContinuation = async () => {
 }
 
 /* Select / CascadeSelect 드롭다운 아이콘 영역 폭 축소 */
-.cell-select-host :is(.p-select-dropdown, .p-cascadeselect-dropdown) {
+.cost-table :is(.p-select-dropdown, .p-cascadeselect-dropdown) {
     width: 1.6rem !important;
 }
 
 /* DatePicker 아이콘 버튼 폭/패딩 축소 */
-.cell-select-host .p-datepicker-button,
-.cell-select-host .p-datepicker-dropdown {
+.cost-table .p-datepicker-button,
+.cost-table .p-datepicker-dropdown {
     width: 1.6rem !important;
     padding: 0 !important;
     min-width: 1.6rem !important;
 }
 
 /* InlineEditCell 조회 모드 span 여백 축소 (px-2 py-1 min-h-[2rem] 오버라이드) */
-.cell-select-host .inline-edit-cell>span {
+.cost-table .inline-edit-cell>span {
     padding: 0.15rem 0.4rem !important;
     min-height: 1.6rem !important;
     line-height: 1.25 !important;
 }
 
 /* Checkbox 셀 내부 여백 축소 */
-.cell-select-host .terminal-checkbox-cell .p-1 {
+.cost-table .terminal-checkbox-cell .p-1 {
     padding: 0.1rem !important;
 }
 

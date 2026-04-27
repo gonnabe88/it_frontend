@@ -24,6 +24,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { formatBudget } from '~/utils/common'
+import { exportRowsToExcel, downloadWorkbook, applyHeaderStyle } from '~/utils/excel'
 import type { SummaryResponse, SummaryItem, ApplyResponse, ProjectSummaryResponse } from '~/types/budget-work'
 import type { Project } from '~/composables/useProjects'
 import type { ItCost } from '~/composables/useCost'
@@ -409,7 +410,7 @@ const saving = ref(false)
  */
 const { data: summaryData, refresh: refreshSummary } = useApiFetch<SummaryResponse>(
     `${config.public.apiBase}/api/budget/work/summary`,
-    { query: { bgYy: selectedYear } }
+    { query: { bgYy: selectedYear }, key: 'budget-work-summary-current' }
 )
 
 /**
@@ -427,7 +428,7 @@ const prevYear = computed(() => selectedYear.value - 1)
 /** 전년도 비목별 편성 결과 조회 */
 const { data: prevSummaryData } = useApiFetch<SummaryResponse>(
     `${config.public.apiBase}/api/budget/work/summary`,
-    { query: { bgYy: prevYear } }
+    { query: { bgYy: prevYear }, key: 'budget-work-summary-prev' }
 )
 
 /**
@@ -531,6 +532,168 @@ const fmt = (amount: number | null | undefined): string => {
     if (amount == null) return '0'
     return formatBudget(amount, budgetUnit.value)
 }
+
+/* ── Excel 내보내기 ── */
+
+/** 대상 목록 Excel 내보내기 */
+const exportTargetExcel = async () => {
+    const { default: ExcelJS } = await import('exceljs')
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('대상 목록')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(ws as any).columns = [
+        { header: '구분', key: 'a', width: 8 },
+        { header: '사업명/계약명', key: 'b', width: 30 },
+        { header: '총예산', key: 'c', width: 14 },
+        { header: '자본예산', key: 'd', width: 14 },
+        { header: '일반관리비', key: 'e', width: 14 },
+        { header: '자본예산 편성률(%)', key: 'f', width: 14 },
+        { header: '일반관리비 편성률(%)', key: 'g', width: 14 },
+        { header: '담당부서', key: 'h', width: 14 },
+    ]
+    for (const item of targetItems.value) {
+        ws.addRow([item._type, item.name, item.totalBg, item.assetBg, item.costBg, item.assetDupRt ?? '-', item.costDupRt, item.deptNm])
+    }
+    applyHeaderStyle(ws)
+    ;[3, 4, 5].forEach(c => { ws.getColumn(c).numFmt = '#,##0' })
+    await downloadWorkbook(wb, `대상목록_${selectedYear.value}.xlsx`)
+}
+
+/** 비목별 편성 결과 Excel 내보내기 (bigNm/midNm 세로병합 + capItem 가로병합 + 2행 헤더) */
+const exportSummaryExcel = async () => {
+    if (!summaryData.value) return
+    const { default: ExcelJS } = await import('exceljs')
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('비목별 편성 결과')
+
+    const BG = 'FF1E3A8A', FG = 'FFFFFFFF'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const styleCell = (cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG } }
+        cell.font = { name: 'Malgun Gothic', color: { argb: FG }, bold: true, size: 11 }
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+        cell.border = { top: { style: 'thin', color: { argb: FG } }, bottom: { style: 'thin', color: { argb: FG } }, left: { style: 'thin', color: { argb: FG } }, right: { style: 'thin', color: { argb: FG } } }
+    }
+
+    // ── 2행 헤더 ──
+    ws.addRow(['비목', '', '', '요청금액', '', '', '편성금액', '', ''])
+    ws.addRow(['', '', '', String(prevYear.value), String(selectedYear.value), '증감율', String(prevYear.value), String(selectedYear.value), '증감율'])
+    ws.mergeCells(1, 1, 2, 3) // 비목 A1:C2
+    ws.mergeCells(1, 4, 1, 6) // 요청금액 D1:F1
+    ws.mergeCells(1, 7, 1, 9) // 편성금액 G1:I1
+    for (let r = 1; r <= 2; r++) {
+        const hRow = ws.getRow(r)
+        hRow.height = 22
+        hRow.eachCell({ includeEmpty: true }, styleCell)
+        hRow.commit()
+    }
+
+    // ── 데이터 행 ──
+    const DATA_START = 3
+    const rows = summaryRows.value
+    for (const row of rows) {
+        ws.addRow([
+            row.bigNm, row.midNm, row.dtlNm,
+            row.prevRequestAmount, row.requestAmount, calcChangeRate(row.requestAmount, row.prevRequestAmount),
+            row.prevDupAmount, row.dupAmount, calcChangeRate(row.dupAmount, row.prevDupAmount),
+        ])
+    }
+
+    // ── 셀 병합: bigNm 세로, midNm 세로, capItem(자본예산 개별비목) B+C 가로 ──
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]!
+        const r = DATA_START + i
+        if (row.bigNmRowspan > 1) ws.mergeCells(r, 1, r + row.bigNmRowspan - 1, 1)
+        if (row.midNmRowspan > 1) ws.mergeCells(r, 2, r + row.midNmRowspan - 1, 2)
+        if (row.capItem)          ws.mergeCells(r, 2, r, 3)
+    }
+
+    // ── 컬럼 너비 ──
+    ;[12, 14, 16, 12, 12, 10, 12, 12, 10].forEach((w, i) => { ws.getColumn(i + 1).width = w })
+    ;[4, 5, 7, 8].forEach(c => { ws.getColumn(c).numFmt = '#,##0' })
+
+    await downloadWorkbook(wb, `비목별편성결과_${selectedYear.value}.xlsx`)
+}
+
+/** 사업별 편성 결과 Excel 내보내기 (동적 비목 colspan=2 + 구분/사업명 rowspan=2 헤더) */
+const exportProjectSummaryExcel = async () => {
+    if (!projectSummaryData.value) return
+    const { default: ExcelJS } = await import('exceljs')
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('사업별 편성 결과')
+    const categories = projectSummaryData.value.categories
+    const numCats = categories.length
+
+    const BG = 'FF1E3A8A', FG = 'FFFFFFFF'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const styleCell = (cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG } }
+        cell.font = { name: 'Malgun Gothic', color: { argb: FG }, bold: true, size: 11 }
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+        cell.border = { top: { style: 'thin', color: { argb: FG } }, bottom: { style: 'thin', color: { argb: FG } }, left: { style: 'thin', color: { argb: FG } }, right: { style: 'thin', color: { argb: FG } } }
+    }
+
+    // ── 헤더 Row 1: 구분, 사업명, [cdNm colspan=2], 합계 colspan=2 ──
+    const h1: (string | number)[] = ['구분', '사업명/계약명']
+    for (const cat of categories) h1.push(cat.cdNm, '')
+    h1.push('합계', '')
+    ws.addRow(h1)
+
+    // ── 헤더 Row 2: 비목별 요청/편성 ──
+    const h2: string[] = ['', '']
+    for (let i = 0; i < numCats; i++) h2.push('요청', '편성')
+    h2.push('요청', '편성')
+    ws.addRow(h2)
+
+    // ── 헤더 병합 ──
+    ws.mergeCells(1, 1, 2, 1) // 구분 rowspan=2
+    ws.mergeCells(1, 2, 2, 2) // 사업명 rowspan=2
+    for (let i = 0; i < numCats; i++) {
+        const c = 3 + i * 2
+        ws.mergeCells(1, c, 1, c + 1) // 비목명 colspan=2
+    }
+    const totC = 3 + numCats * 2
+    ws.mergeCells(1, totC, 1, totC + 1) // 합계 colspan=2
+
+    for (let r = 1; r <= 2; r++) {
+        const hRow = ws.getRow(r)
+        hRow.height = 22
+        hRow.eachCell({ includeEmpty: true }, styleCell)
+        hRow.commit()
+    }
+
+    // ── 데이터 행 ──
+    for (const item of projectSummaryData.value.data) {
+        const row: (string | number)[] = [item.orcTb === 'BPROJM' ? '사업' : '비용', item.name]
+        for (const cat of categories) {
+            row.push(item.categoryAmounts[cat.ioePrefix]?.requestAmount ?? 0)
+            row.push(item.categoryAmounts[cat.ioePrefix]?.dupAmount ?? 0)
+        }
+        row.push(item.requestAmount, item.dupAmount)
+        ws.addRow(row)
+    }
+
+    // ── 합계 행 ──
+    const totRow: (string | number)[] = ['', '합계']
+    for (const cat of categories) {
+        totRow.push(
+            projectSummaryData.value.data.reduce((s, d) => s + (d.categoryAmounts[cat.ioePrefix]?.requestAmount ?? 0), 0),
+            projectSummaryData.value.data.reduce((s, d) => s + (d.categoryAmounts[cat.ioePrefix]?.dupAmount ?? 0), 0),
+        )
+    }
+    totRow.push(projectSummaryData.value.totals.requestAmount, projectSummaryData.value.totals.dupAmount)
+    ws.addRow(totRow)
+
+    // ── 컬럼 너비 ──
+    ws.getColumn(1).width = 8
+    ws.getColumn(2).width = 30
+    for (let i = 0; i < numCats * 2 + 2; i++) {
+        ws.getColumn(3 + i).width = 12
+        ws.getColumn(3 + i).numFmt = '#,##0'
+    }
+
+    await downloadWorkbook(wb, `사업별편성결과_${selectedYear.value}.xlsx`)
+}
 </script>
 
 <template>
@@ -551,9 +714,15 @@ v-model="selectedYear" :options="yearOptions" option-label="label" option-value=
         </div>
 
         <!-- 대상 목록 (결재완료 정보화사업 + 전산업무비) -->
-        <TableCard title="대상 목록" subtitle="결재완료된 정보화사업 · 전산업무비">
+        <TableCard icon="pi-table" title="대상 목록" subtitle="결재완료된 정보화사업 · 전산업무비">
             <template #actions>
-                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-xs text-zinc-400 mb-3">(기준 : {{ budgetUnit }})</span>
+                    <button class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors" @click="exportTargetExcel">
+                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                        Excel 내보내기
+                    </button>
+                </div>
             </template>
 
             <StyledDataTable :value="targetItems" :loading="targetLoading" striped-rows data-key="_id">
@@ -650,20 +819,25 @@ label="저장" severity="primary" icon="pi pi-save" :loading="saving"
         </TableCard>
 
         <!-- 비목별 편성 결과 테이블 (계층 구조: 자본예산/일반관리비 → 비목그룹 → 세부비목) -->
-        <TableCard v-if="summaryData" title="비목별 편성 결과">
+        <TableCard v-if="summaryData" icon="pi-calculator" title="비목별 편성 결과">
             <template #actions>
-                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-xs text-zinc-400 mb-3">(기준 : {{ budgetUnit }})</span>
+                    <button class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors" @click="exportSummaryExcel">
+                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                        Excel 내보내기
+                    </button>
+                </div>
             </template>
 
             <StyledDataTable :value="summaryRows" data-key="id" :row-class="summaryRowClass">
 
-                <!-- 2단 헤더 그룹: 비목(3컬럼) + 요청금액(3컬럼) + 편성금액(3컬럼) + 편성률 -->
+                <!-- 2단 헤더 그룹: 비목(3컬럼) + 요청금액(3컬럼) + 편성금액(3컬럼) -->
                 <ColumnGroup type="header">
                     <Row>
                         <Column header="비목" :colspan="3" :rowspan="2" />
                         <Column header="요청금액" :colspan="3" />
                         <Column header="편성금액" :colspan="3" />
-                        <Column header="편성률(%)" :rowspan="2" style="width: 7rem" />
                     </Row>
                     <Row>
                         <!-- 요청금액 서브헤더 -->
@@ -801,26 +975,19 @@ class="text-right block font-bold" :class="{
                     </template>
                 </Column>
 
-                <!-- 편성률 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span v-if="data.rowType === 'data'" class="text-right block">{{ data.dupRt != null ?
-                            `${data.dupRt}%` : '-' }}</span>
-                        <span
-v-else-if="data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block">-</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block">-</span>
-                    </template>
-                </Column>
             </StyledDataTable>
         </TableCard>
 
         <!-- 사업별 편성 결과 테이블 (비목별 편성률 동적 컬럼) -->
-        <TableCard v-if="projectSummaryData && projectSummaryData.data.length > 0" title="사업별 편성 결과">
+        <TableCard v-if="projectSummaryData && projectSummaryData.data.length > 0" icon="pi-briefcase" title="사업별 편성 결과">
             <template #actions>
-                <span class="text-sm text-zinc-500">(기준 : {{ budgetUnit }})</span>
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-xs text-zinc-400 mb-3">(기준 : {{ budgetUnit }})</span>
+                    <button class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors" @click="exportProjectSummaryExcel">
+                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                        Excel 내보내기
+                    </button>
+                </div>
             </template>
 
             <StyledDataTable
@@ -838,10 +1005,10 @@ v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix" :header="cat.c
                         <Column header="합계" :colspan="2" />
                     </Row>
                     <Row>
-                        <!-- 비목별 서브 헤더 (편성률 표시) -->
+                        <!-- 비목별 서브 헤더 -->
                         <template v-for="cat in projectSummaryData.categories" :key="'sub-' + cat.ioePrefix">
                             <Column header="요청" style="min-width: 7rem" />
-                            <Column :header="`편성(${cat.dupRt}%)`" style="min-width: 7rem" />
+                            <Column header="편성" style="min-width: 7rem" />
                         </template>
                         <!-- 합계 서브 헤더 -->
                         <Column header="요청" style="min-width: 8rem" />

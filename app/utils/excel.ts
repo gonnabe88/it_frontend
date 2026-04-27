@@ -92,7 +92,8 @@ export const exportRowsToExcel = async (
 
     if (rows.length > 0) {
         const keys = headerKeys ?? Object.keys(rows[0]!);
-        ws.columns = keys.map(k => ({ header: k, key: k }));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (ws as any).columns = keys.map(k => ({ header: k, key: k }));
         rows.forEach(row => ws.addRow(row));
         applyHeaderStyle(ws);
     }

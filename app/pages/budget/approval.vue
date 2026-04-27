@@ -461,35 +461,14 @@ v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards
             :selected-unit="selectedUnit" />
 
         <!-- 통합 DataTable -->
-        <div
-v-if="!isLoading"
-            class="flex-1 min-h-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <TableCard v-if="!isLoading" fill icon="pi-send" title="결재 상신 목록" :count="filteredItems.length">
 
-            <!-- 검색 바 (list.vue 동일 구조: 좌-구분선-중앙-구분선-우) -->
-            <div class="flex items-stretch border-b border-zinc-200 dark:border-zinc-800">
-                <!-- 좌측: 페이지당 표시 건수 -->
-                <div class="flex items-center px-3 shrink-0">
-                    <Select
-v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value"
-                        class="shrink-0" />
-                </div>
-
-                <!-- 여백 (flex-1) -->
-                <div class="flex-1"/>
-
-                <!-- 우측: 통합검색 + 액션 버튼 -->
-                <div class="flex items-center gap-2 px-3 py-2 shrink-0">
-                    <TableSearchInput
-                        v-model="search"
-                        placeholder="사업명/계약명, 담당부서, 담당자 검색..."
-                        width="30rem"
-                        class="shrink-0"
-                    />
-                    <BudgetTableActions
-:report-loading="reportLoading" :has-filters="hasFilters" @excel="downloadExcel"
-                        @pdf="downloadPdf" @filter="visibleDrawer = true" />
-                </div>
-            </div>
+            <template #toolbar>
+                <Select v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value" class="!text-sm w-auto" />
+                <TableSearchInput v-model="search" placeholder="사업명/계약명, 담당부서, 담당자 검색..." width="30rem" />
+                <div class="flex-1" />
+                <BudgetTableActions :report-loading="reportLoading" :has-filters="hasFilters" @excel="downloadExcel" @pdf="downloadPdf" @filter="visibleDrawer = true" />
+            </template>
 
             <!-- 통합 DataTable (StyledDataTable: 파란 헤더, gridlines 자동 적용) -->
             <div class="flex-1 min-h-0 flex flex-col">
@@ -590,7 +569,7 @@ v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value=
 
             </StyledDataTable>
             </div>
-        </div>
+        </TableCard>
 
         <!-- 조회 필터 Drawer -->
         <Drawer v-if="!isLoading" v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[480px]">
