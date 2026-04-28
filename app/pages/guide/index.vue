@@ -418,6 +418,13 @@ const handleKeydown = (e: KeyboardEvent) => {
     }
 };
 
+// keepalive로 캐시된 페이지가 다시 활성화될 때 편집 모드 초기화
+onActivated(() => {
+    if (isEditing.value) {
+        cancelEdit();
+    }
+});
+
 onMounted(() => {
     observer = new IntersectionObserver(
         (entries) => {

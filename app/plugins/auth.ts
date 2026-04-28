@@ -48,7 +48,7 @@ export default defineNuxtPlugin(() => {
      * 인증이 적용된 $fetch 인스턴스 생성
      * $fetch.create()로 기본 $fetch에 인터셉터를 추가한 새 인스턴스를 만듭니다.
      */
-    const apiFetch = $fetch.create({
+    const apiFetch: typeof $fetch = $fetch.create({
         /**
          * 요청 인터셉터: 모든 요청 전에 실행
          * httpOnly 쿠키가 자동 전송되도록 credentials를 설정합니다.
@@ -82,7 +82,7 @@ export default defineNuxtPlugin(() => {
          *  변경: 갱신 성공 후 원래 요청 재시도 → 호출자는 정상 응답을 받음
          */
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        async onResponseError({ response, request, options }: any) {
+        async onResponseError({ response, request, options }: any): Promise<void> {
             if (response.status === 401) {
                 const url = request.toString();
 
@@ -105,7 +105,7 @@ export default defineNuxtPlugin(() => {
 
                     if (refreshed) {
                         // 갱신 성공 → 원래 요청을 새 쿠키로 재시도하여 호출자에게 정상 응답 반환
-                        return apiFetch(request, options);
+                        await apiFetch(request, options);
                     } else {
                         // refreshToken도 만료되었거나 갱신 실패 → 강제 로그아웃
                         await logout();

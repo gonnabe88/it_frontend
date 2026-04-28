@@ -410,6 +410,20 @@ const insertBlockMath = () => {
     props.editor?.chain().focus().insertBlockMath('').run();
 };
 
+// ── Windows 네이티브 스크린샷 캡처 ──
+/** Windows Snipping Tool을 열어 빠른 화면 캡처를 시작합니다. */
+const captureScreenshot = (pasteTarget = '에디터') => {
+    if (!import.meta.client) return;
+
+    window.location.href = 'ms-screenclip:?source=ITPortal&clippingMode=Rectangle';
+    toast.add({
+        severity: 'info',
+        summary: '스크린샷 캡처',
+        detail: `영역을 캡처한 뒤 ${pasteTarget}에서 Ctrl+V로 붙여넣으세요.`,
+        life: 3000,
+    });
+};
+
 // ── Excalidraw 다이어그램 삽입 ──
 const { isOpen: isExcalidrawOpen, initialSceneData, open: openExcalidraw, close: closeExcalidraw, confirm: confirmExcalidraw } = useExcalidrawDialog();
 const isExcalidrawSaving = ref(false);
@@ -444,7 +458,7 @@ const handleExcalidrawSave = async () => {
             sceneData: data.sceneData,
             attachmentId
         });
-    } catch (e) {
+    } catch {
         toast.add({ severity: 'error', summary: '저장 실패', detail: 'Excalidraw 다이어그램 저장 중 오류가 발생했습니다.', life: 3000 });
     } finally {
         isExcalidrawSaving.value = false;
@@ -748,6 +762,15 @@ class="tbar-btn" :disabled="!editor.can().redo()" title="다시 실행 (Ctrl+Y)"
                 <span class="text-xs">다이어그램</span>
             </button>
 
+            <!-- 스크린샷 캡처 버튼 -->
+            <button
+                class="tbar-btn bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-700 flex items-center gap-1.5 px-2"
+                title="화면 캡처 후 에디터에 삽입"
+                @click="() => captureScreenshot()">
+                <i class="pi pi-desktop text-xs"/>
+                <span class="text-xs">스크린샷</span>
+            </button>
+
             <!-- FR-07: LaTeX 수식 삽입 버튼 -->
             <div class="relative">
                 <button
@@ -892,6 +915,7 @@ v-if="isExcalidrawOpen" ref="excalidrawWrapperRef"
             </div>
             <template #footer>
                 <AppDialogFooter>
+                    <Button label="스크린샷" icon="pi pi-desktop" severity="secondary" outlined @click="captureScreenshot('다이어그램 캔버스')" />
                     <Button label="취소" severity="secondary" outlined icon="pi pi-times" @click="closeExcalidraw" />
                     <Button label="다이어그램 저장" icon="pi pi-check" :loading="isExcalidrawSaving" @click="handleExcalidrawSave" />
                 </AppDialogFooter>
@@ -967,6 +991,7 @@ v-else
             </template>
         </Dialog>
     </template>
+
 </template>
 
 <style scoped lang="postcss">

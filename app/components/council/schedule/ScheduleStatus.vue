@@ -95,7 +95,7 @@ const confirming = ref(false);
 const openConfirmDialog = () => {
     if (selectedCommonSlot.value) {
         /* yyyy-MM-dd → Date 변환 */
-        const [y, m, d] = selectedCommonSlot.value.dsdDt.split('-').map(Number);
+        const [y = 0, m = 0, d = 0] = selectedCommonSlot.value.dsdDt.split('-').map(Number);
         confirmForm.cnrcDt = new Date(y, m - 1, d);
         confirmForm.cnrcTm = selectedCommonSlot.value.dsdTm;
     } else {

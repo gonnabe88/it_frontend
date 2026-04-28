@@ -264,8 +264,8 @@ export const useReviewStore = defineStore('review', () => {
           const { $apiFetch } = useNuxtApp();
           const config = useRuntimeConfig();
           const base = `${config.public.apiBase}/api/documents`;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const doc = await ($apiFetch as any)<{ reqCone: string }>(
+          type SimpleFetch = (url: string) => Promise<{ reqCone: string }>;
+          const doc = await ($apiFetch as unknown as SimpleFetch)(
             `${base}/${session.value.docMngNo}?version=${parseFloat(version)}`,
           );
           ver.content = doc.reqCone ?? '';

@@ -47,6 +47,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import { TableRow } from '@tiptap/extension-table';
 import { TableMap } from '@tiptap/pm/tables';
+import type { EditorView } from '@tiptap/pm/view';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import CharacterCount from '@tiptap/extension-character-count';
@@ -177,6 +178,68 @@ const fileToBase64 = (file: File): Promise<string> =>
         reader.readAsDataURL(file);
     });
 
+/**
+ * 에디터 문서에서 특정 이미지 src를 찾아 새 src로 교체합니다.
+ * 클립보드/드롭 이미지를 임시 URL로 먼저 보여준 뒤 서버 URL로 바꿀 때 사용합니다.
+ */
+const replaceImageSrc = (view: EditorView, fromSrc: string, toSrc: string): boolean => {
+    let imagePos: number | null = null;
+
+    view.state.doc.descendants((node, pos) => {
+        if (imagePos !== null) return false;
+        if (node.type.name === 'image' && node.attrs.src === fromSrc) {
+            imagePos = pos;
+            return false;
+        }
+        return true;
+    });
+
+    if (imagePos === null) return false;
+
+    const imageNode = view.state.doc.nodeAt(imagePos);
+    if (!imageNode) return false;
+
+    view.dispatch(view.state.tr.setNodeMarkup(imagePos, undefined, {
+        ...imageNode.attrs,
+        src: toSrc,
+    }));
+
+    return true;
+};
+
+/**
+ * 이미지를 에디터에 삽입합니다.
+ * 업로드 모드에서는 blob URL을 먼저 삽입하여 체감 지연을 줄이고,
+ * 업로드 완료 후 서버 미리보기 URL로 교체합니다.
+ */
+const insertImageFile = async (view: EditorView, file: File, insertPos: number): Promise<number> => {
+    const imageType = view.state.schema.nodes.image;
+    if (!imageType) return 0;
+
+    if (props.imageUploadFn) {
+        const tempUrl = URL.createObjectURL(file);
+        const imageNode = imageType.create({ src: tempUrl, alt: file.name || '스크린샷' });
+        view.dispatch(view.state.tr.insert(insertPos, imageNode));
+
+        props.imageUploadFn(file)
+            .then((url) => {
+                if (replaceImageSrc(view, tempUrl, url)) {
+                    URL.revokeObjectURL(tempUrl);
+                }
+            })
+            .catch((e: unknown) => {
+                console.error('[TiptapEditor] 붙여넣기 이미지 업로드 실패:', e);
+            });
+
+        return imageNode.nodeSize;
+    }
+
+    const src = await fileToBase64(file);
+    const imageNode = imageType.create({ src, alt: file.name || '스크린샷' });
+    view.dispatch(view.state.tr.insert(insertPos, imageNode));
+    return imageNode.nodeSize;
+};
+
 // ── 첨부파일 Suggestion 팝업 상태 (FR-05-3) ──
 /**
  * AttachmentSuggestion의 팝업 상태를 Vue로 제어합니다.
@@ -298,6 +361,32 @@ const editor = useEditor({
             }
         },
         /**
+         * 클립보드 이미지 붙여넣기 처리
+         * - Shift+Win+S 후 Ctrl+V로 들어오는 이미지 파일을 즉시 본문에 삽입
+         * - imageUploadFn 제공 시 임시 URL 먼저 표시 후 백그라운드 업로드 URL로 교체
+         */
+        handlePaste: (view, event) => {
+            const files = Array.from(event.clipboardData?.files ?? [])
+                .filter(f => f.type.startsWith('image/'));
+
+            if (files.length === 0) return false;
+
+            event.preventDefault();
+
+            let insertPos = view.state.selection.from;
+            files.reduce(
+                (chain, file) => chain.then(async () => {
+                    const insertedSize = await insertImageFile(view, file, insertPos);
+                    insertPos += insertedSize;
+                }),
+                Promise.resolve()
+            ).catch((e: unknown) => {
+                console.error('[TiptapEditor] 붙여넣기 이미지 처리 실패:', e);
+            });
+
+            return true;
+        },
+        /**
          * 이미지 파일 드롭 처리
          * - moved=true(에디터 내부 노드 이동)는 Tiptap 기본 동작에 위임
          * - 외부에서 드롭된 이미지 파일만 처리
@@ -321,31 +410,15 @@ const editor = useEditor({
             });
             const insertPos = dropCoords?.pos ?? view.state.doc.content.size;
 
-            // 각 이미지 파일을 순서대로 삽입
-            files.forEach(async (file, index) => {
-                try {
-                    let src: string;
-                    if (props.imageUploadFn) {
-                        // API 업로드 모드
-                        src = await props.imageUploadFn(file);
-                    } else {
-                        // base64 변환 모드
-                        src = await fileToBase64(file);
-                    }
-
-                    const { schema } = view.state;
-                    const imageNode = schema.nodes.image?.create({
-                        src,
-                        alt: file.name
-                    });
-                    if (!imageNode) return;
-
-                    // 여러 파일 드롭 시 순서대로 뒤에 삽입
-                    const tr = view.state.tr.insert(insertPos + index, imageNode);
-                    view.dispatch(tr);
-                } catch (e) {
-                    console.error('[TiptapEditor] 드래그&드롭 이미지 처리 실패:', e);
-                }
+            let currentInsertPos = insertPos;
+            files.reduce(
+                (chain, file) => chain.then(async () => {
+                    const insertedSize = await insertImageFile(view, file, currentInsertPos);
+                    currentInsertPos += insertedSize;
+                }),
+                Promise.resolve()
+            ).catch((e: unknown) => {
+                console.error('[TiptapEditor] 드래그&드롭 이미지 처리 실패:', e);
             });
 
             return true;
