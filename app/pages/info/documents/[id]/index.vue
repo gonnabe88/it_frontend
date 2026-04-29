@@ -34,8 +34,8 @@ const versionQuery = computed(() => {
         ? route.query.version[0]
         : route.query.version;
     if (!raw) return undefined;
-    const parsed = parseFloat(raw);
-    return isNaN(parsed) ? undefined : parsed;
+    const parsed = Number.parseFloat(raw);
+    return Number.isNaN(parsed) ? undefined : parsed;
 });
 
 const title = '요구사항 정의서 상세';

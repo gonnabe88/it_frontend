@@ -11,6 +11,7 @@
  * [Design Ref: §3.5 — composables/useAdminApi.ts]
  * ============================================================================
  */
+import { isRef, ref, unref, type Ref } from 'vue';
 
 // ============================================================================
 // 공통코드 타입 정의 (TAAABB_CCODEM)
@@ -215,6 +216,47 @@ export interface AdminLoginStatResponse {
 }
 
 // ============================================================================
+// 상세 로그 타입 정의 (TAAABB_*L)
+// ============================================================================
+
+/** 상세 로그 테이블 메타 응답 */
+export interface AdminLogTableResponse {
+    key: string;        // 화면/URL에서 사용하는 로그 키
+    title: string;      // 화면 표시명
+    tableName: string;  // 물리 테이블명
+    entityName: string; // 백엔드 엔티티명
+}
+
+/** 상세 로그 컬럼 메타 응답 */
+export interface AdminLogColumnResponse {
+    field: string;      // camelCase 필드명
+    columnName: string; // DB 컬럼명
+    header: string;     // 화면 헤더
+    userField: boolean; // 사용자 사번 컬럼 여부
+    primary: boolean;   // 로그 번호 컬럼 여부
+}
+
+/** 상세 로그 목록 응답 */
+export interface AdminLogPageResponse {
+    table: AdminLogTableResponse;
+    columns: AdminLogColumnResponse[];
+    content: Record<string, unknown>[];
+    userNames: Record<string, string>;
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+}
+
+/** 상세 로그 단건 응답 */
+export interface AdminLogDetailResponse {
+    table: AdminLogTableResponse;
+    columns: AdminLogColumnResponse[];
+    row: Record<string, unknown>;
+    userNames: Record<string, string>;
+}
+
+// ============================================================================
 // 페이지네이션 공통 타입 (Spring Page 응답)
 // ============================================================================
 
@@ -394,6 +436,30 @@ export const useAdminApi = () => {
     const fetchLoginStats = () =>
         useApiFetch<AdminLoginStatResponse[]>(`${BASE}/dashboard/login-stats`);
 
+    // ==========================================================================
+    // 상세 로그 (TAAABB_*L)
+    // ==========================================================================
+
+    /** 상세 로그 테이블 목록 조회 */
+    const fetchLogTables = () =>
+        useApiFetch<AdminLogTableResponse[]>(`${BASE}/logs/tables`);
+
+    /**
+     * 상세 로그 목록 조회
+     * @param logKey - 로그 테이블 키
+     * @param page - 페이지 번호 (0-based)
+     * @param size - 페이지 크기
+     */
+    const fetchLogs = (logKey: string | Ref<string>, page: Ref<number>, size: Ref<number>) =>
+        useApiFetch<AdminLogPageResponse>(() => `${BASE}/logs/${unref(logKey)}`, {
+            query: { page, size },
+            watch: [page, size, isRef(logKey) ? logKey : ref(logKey)]
+        });
+
+    /** 상세 로그 단건 조회 */
+    const fetchLogDetail = (logKey: string, logSno: string) =>
+        $apiFetch<AdminLogDetailResponse>(`${BASE}/logs/${logKey}/${encodeURIComponent(logSno)}`);
+
     return {
         // 공통코드
         fetchCodes, createCode, updateCode, deleteCode, bulkUpsertCodes,
@@ -409,5 +475,7 @@ export const useAdminApi = () => {
         fetchLoginHistory, fetchTokens, fetchFiles,
         // 대시보드
         fetchLoginStats,
+        // 상세 로그
+        fetchLogTables, fetchLogs, fetchLogDetail,
     };
 };

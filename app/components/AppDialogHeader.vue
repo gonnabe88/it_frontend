@@ -16,7 +16,7 @@ blue-900 배경 + 흰 글씨 + 좌측 타이틀 + 우측 닫기 버튼을 표준
       <template #header>
           <AppDialogHeader title="다이얼로그 제목" @close="visible = false">
               <template #actions>
-                  <!-- 헤더 우측 추가 버튼 (옵션) -->
+                  헤더 우측 추가 버튼 (옵션)
               </template>
           </AppDialogHeader>
       </template>

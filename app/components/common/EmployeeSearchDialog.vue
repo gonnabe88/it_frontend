@@ -34,6 +34,13 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:visible', 'select']);
 
+interface OrgTreeNode {
+    key: string;
+    label?: string;
+    data?: Organization;
+    children?: OrgTreeNode[];
+}
+
 const isVisible = computed({
     get: () => props.visible,
     set: (v) => emit('update:visible', v)
@@ -43,8 +50,7 @@ const { buildOrgTree } = useOrganization();
 const config = useRuntimeConfig();
 const { $apiFetch } = useNuxtApp();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodes           = ref<any[]>([]);
+const nodes           = ref<OrgTreeNode[]>([]);
 const expandedSet     = ref<Set<string>>(new Set());
 const selectedKey     = ref<string | null>(null);
 const users           = ref<OrgUser[]>([]);
@@ -60,7 +66,7 @@ watch(() => props.visible, async (open) => {
         try {
             const data = await $apiFetch<Organization[]>(`${config.public.apiBase}/api/organizations`);
             if (data) {
-                nodes.value = buildOrgTree(data);
+                nodes.value = buildOrgTree(data) as OrgTreeNode[];
                 expandAll();
             }
         } catch (e) {
@@ -74,11 +80,10 @@ watch(() => props.visible, async (open) => {
 });
 
 /** 트리 노드 재귀 펼치기 키 수집 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const collectExpandable = (node: any, set: Set<string>) => {
+const collectExpandable = (node: OrgTreeNode, set: Set<string>) => {
     if (node.children?.length) {
         set.add(node.key);
-        node.children.forEach((c: any) => collectExpandable(c, set));
+        node.children.forEach((c) => collectExpandable(c, set));
     }
 };
 const expandAll = () => {
@@ -89,10 +94,8 @@ const expandAll = () => {
 const collapseAll = () => { expandedSet.value = new Set(); };
 
 /** 트리 노드 레이블 필터링 — 검색어를 포함하는 경로는 유지 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const filterNodes = (list: any[], q: string): any[] => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any[] = [];
+const filterNodes = (list: OrgTreeNode[], q: string): OrgTreeNode[] => {
+    const result: OrgTreeNode[] = [];
     for (const n of list) {
         if (n.label?.toLowerCase().includes(q)) {
             result.push(n);

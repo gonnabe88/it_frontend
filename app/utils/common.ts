@@ -241,7 +241,7 @@ export const formatFileSize = (bytes: number | null | undefined): string => {
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 // ============================================================================
@@ -305,7 +305,7 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
  */
 export const formatApiError = (message: string): string => {
     // Oracle 에러 코드 패턴 추출 (ORA-XXXXX: 설명 부분만 반환)
-    const oraMatch = message.match(/ORA-\d+:\s*([^\n\r\[]+)/);
+    const oraMatch = message.match(/ORA-\d+:\s*([^\n\r[]+)/);
     if (oraMatch) return oraMatch[0].trim();
     // 일반 메시지는 200자로 제한
     return message.length > 200 ? message.slice(0, 200) + '...' : message;

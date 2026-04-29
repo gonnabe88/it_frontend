@@ -11,6 +11,8 @@ node_modules
 
 # Logs
 logs
+!app/pages/admin/logs/
+!app/pages/admin/logs/**
 *.log
 
 # Misc

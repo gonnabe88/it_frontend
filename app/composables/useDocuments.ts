@@ -144,7 +144,7 @@ export const useDocuments = () => {
     const deleteDocument = async (docMngNo: string, version?: number): Promise<void> => {
         // version 파라미터가 존재할 때만 query 객체를 포함시킨다
         const query = version !== undefined ? { version } : undefined;
-        await $apiFetch<void>(`${API_BASE_URL}/${docMngNo}`, {
+        await $apiFetch<unknown>(`${API_BASE_URL}/${docMngNo}`, {
             method: 'DELETE',
             ...(query && { query })
         });

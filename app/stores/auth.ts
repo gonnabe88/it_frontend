@@ -87,7 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
      * 로그인 처리
      * 사원번호(eno)와 비밀번호로 서버에 인증을 요청합니다.
      * 성공 시 서버가 httpOnly 쿠키로 토큰을 세팅하고,
-     * 응답 body의 사용자 정보를 Pinia 상태 및 localStorage에 저장합니다.
+     * 응답 body의 사용자 정보를 Pinia 상태 및 user 쿠키에 저장합니다.
      *
      * [주의] $apiFetch 대신 $fetch를 사용합니다.
      * 로그인 시에는 아직 쿠키가 없으므로 인터셉터 없이 직접 호출합니다.

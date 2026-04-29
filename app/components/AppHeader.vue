@@ -215,8 +215,8 @@ const navigateToTab = async (path: string) => {
 </script>
 
 <template>
-    <!-- data-allow-mismatch: SSR(user=null)과 클라이언트(localStorage 복원 user) 간
-         isAdmin 값 차이로 user 정보가 달라 hydration mismatch 발생.
+    <!-- data-allow-mismatch: SSR 초기 user 상태와 클라이언트 쿠키 복원 후 user 상태 간
+         isAdmin 값 차이로 헤더 표시가 달라질 수 있습니다.
          기능적 문제 없으므로 헤더 전체에서 mismatch 경고를 억제합니다. -->
     <div class="card" data-allow-mismatch>
         <!-- 네비게이션 바 -->

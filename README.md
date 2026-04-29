@@ -5,7 +5,9 @@
 IT Portal (IT 정보화 포탈)은 정보화 예산, 사업, 인력을 관리하는 내부 업무 시스템입니다.  
 
 ### 디자인 시스템
-https://claude.ai/design/p/0bb78ad5-3af2-4e1e-ac74-cb56b3efa3ba?via=share
+- 외부 디자인 시안: https://claude.ai/design/p/0bb78ad5-3af2-4e1e-ac74-cb56b3efa3ba?via=share
+- 로컬 구현 기준: `CLAUDE.md`의 PrimeVue/Tailwind 규칙, `app/assets/css/main.css`, `components/common/StyledDataTable.vue`
+- 외부 링크는 권한 또는 공유 상태가 바뀔 수 있으므로, 실제 구현 규칙은 로컬 문서를 우선합니다.
 
 ## 2. 기술 스택
 
@@ -50,32 +52,44 @@ app/
 ├── composables/         # 비즈니스 로직 (API 호출 + 상태)
 │   ├── useAdminApi.ts   # 관리자 전용 API (공통코드/사용자/역할/조직/파일 CRUD)
 │   ├── useApiFetch.ts   # 인증된 GET 요청 래퍼 (httpOnly 쿠키 자동 전송)
+│   ├── useApprovalDashboard.ts  # 전자결재 대시보드 KPI + 월별 통계 + 배지 카운트
 │   ├── useApprovals.ts  # 전자결재 CRUD
 │   ├── useAuth.ts       # 인증 상태 접근 (Pinia 래퍼)
+│   ├── useBudgetPeriod.ts # 예산 기준연도/기간 미들웨어 보조
+│   ├── useBudgetStatus.ts # 예산현황 3탭 조회
+│   ├── useCodeOptions.ts  # 공통코드 옵션 조회
 │   ├── useCost.ts       # 전산업무비 CRUD
+│   ├── useCouncil.ts    # 정보화실무협의회 CRUD/상태 전이
+│   ├── useCouncilCodes.ts # 협의회 상태/심의유형 코드 조회
 │   ├── useCurrencyRates.ts  # 환율 조회 + 원화 환산
 │   ├── useDateRangeValidation.ts  # 날짜 범위 유효성 검사
-│   ├── useApprovalDashboard.ts  # 전자결재 대시보드 KPI + 월별 통계 + 배지 카운트
 │   ├── useDocumentDashboard.ts  # 사전협의 대시보드 KPI + 월별 통계 + 배지 카운트
 │   ├── useDocuments.ts  # 요구사항 정의서 CRUD
 │   ├── useEmployeeSearch.ts  # 직원 검색 (AutoComplete + 다이얼로그)
+│   ├── useExcalidrawAttachment.ts # Excalidraw 첨부파일 임시 ID 추적
 │   ├── useExcalidrawDialog.ts  # Excalidraw 편집 다이얼로그 상태
 │   ├── useFiles.ts      # 첨부파일 업로드/다운로드/미리보기
+│   ├── useGlobalSearch.ts # 전역 검색 상태 및 API
 │   ├── useGuideDocuments.ts  # 가이드 문서 CRUD
 │   ├── useHwpxExport.ts # HWPX(한글) 파일 내보내기
 │   ├── useOrganization.ts   # 조직도 + 사용자 조회
+│   ├── usePendingApprovalCount.ts # 대기 결재 배지 카운트 조회
 │   ├── usePdfReport.ts  # PDF 보고서 생성
 │   ├── usePlan.ts       # 정보기술부문 계획 CRUD
 │   ├── useProjectOptions.ts  # 프로젝트 옵션 (연도/분류/상태 코드)
 │   ├── useProjects.ts   # 정보화사업 CRUD
 │   ├── useReview.ts     # 사전협의(문서 검토) 세션 관리
+│   ├── useReviewCommentApi.ts # 사전협의 코멘트 서버 동기화
+│   ├── useTableCellSelection.ts # 엑셀 스타일 셀 선택/복사
 │   └── useTabs.ts       # 멀티탭 네비게이션 관리
 ├── layouts/
 │   ├── default.vue      # 기본 레이아웃 (사이드바+헤더+콘텐츠)
-│   └── admin.vue        # 관리자 전용 레이아웃 (동일 구조, /admin 경로용)
+│   ├── admin.vue        # 관리자 전용 레이아웃 (동일 구조, /admin 경로용)
+│   └── login.vue        # 로그인 전용 레이아웃
 ├── middleware/
 │   ├── auth.global.ts   # 전역 인증 미들웨어
-│   └── admin.ts         # 관리자 접근 제어 (ITPAD001 역할 검증)
+│   ├── admin.ts         # 관리자 접근 제어 (ITPAD001 역할 검증)
+│   └── budget-period.ts # 예산 기준기간 라우트 가드
 ├── pages/               # 파일 기반 라우팅
 │   ├── admin/           # 시스템 관리 (대시보드, 코드/사용자/역할/조직/파일/토큰/이력 관리)
 │   ├── approval/        # 전자결재 목록 + 결재 처리
@@ -97,10 +111,13 @@ app/
 ├── types/
 │   ├── auth.ts          # 인증 타입 + ROLE 상수 정의
 │   ├── budget-work.ts   # 예산 작업 타입 (편성비목/편성결과)
+│   ├── budgetStatus.ts  # 예산현황 조회 타입
+│   ├── council.ts       # 정보화실무협의회 타입
 │   └── review.ts        # 사전협의 타입 (세션/코멘트/검토자/버전)
 └── utils/
     ├── common.ts        # 공통 유틸리티 (예산 포맷, 커스텀 태그 클래스, 전결권 자동 계산)
-    └── hwpx.ts          # HTML→HWPX 변환 (635줄, HWP 파일 구조 분석 기반)
+    ├── excel.ts         # Excel 내보내기 유틸리티
+    └── hwpx.ts          # HTML→HWPX 변환 대형 유틸리티 (HWP 파일 구조 분석 기반)
 ```
 
 ## 4. 핵심 아키텍처 설계 결정
@@ -133,7 +150,8 @@ CLAUDE.md 규칙에 따라 **모든 v-html 사용 시 DOMPurify 적용이 필수
 ### 4.5 다크모드 FOUC 방지
 
 `nuxt.config.ts`의 인라인 스크립트가 Nuxt 하이드레이션 **이전**에 실행되어  
-`localStorage('theme')` 또는 시스템 설정 기반으로 `<html class="dark">`를 즉시 적용합니다.
+`theme-dark` 쿠키 값을 읽고 `<html class="dark">` 및 `color-scheme`을 즉시 적용합니다.
+테마 상태는 쿠키 기반으로 SSR과 클라이언트 초기 렌더링의 색상 차이를 줄입니다.
 
 ### 4.6 직원 검색 다이얼로그 공유 패턴
 
@@ -227,11 +245,12 @@ JavaScript에서 직접 접근할 수 없어 XSS 공격 시 토큰 탈취를 방
 ## 5. 인증 흐름
 
 ```
-1. 로그인   → stores/auth.ts login()  → 서버가 httpOnly 쿠키로 토큰 세팅 + user 정보 localStorage 저장
+1. 로그인   → stores/auth.ts login()  → 서버가 httpOnly JWT 쿠키 세팅 + user 정보는 it-portal-user 쿠키 저장
 2. API 요청 → useApiFetch / $apiFetch → credentials:'include'로 httpOnly 쿠키 자동 전송
 3. 401 응답 → onResponseError         → refresh() 호출 → 서버가 새 쿠키 세팅 → tokenRefreshSignal++로 재요청
-4. 갱신 실패 → logout()                → 상태/localStorage 초기화 → /login 리다이렉트
-5. 새로고침  → auth.global.ts          → restoreSession() → localStorage에서 user 정보 복원
+4. 갱신 실패 → logout()                → user 쿠키 및 구버전 localStorage 잔존 데이터 정리 → /login 리다이렉트
+5. 새로고침  → useCookie               → SSR/클라이언트에서 it-portal-user 쿠키 기반 인증 상태 복원
+6. 구버전 데이터 → restoreSession()     → localStorage user가 남아 있으면 user 쿠키로 1회 마이그레이션
 ```
 
 ## 6. 환경변수
@@ -259,7 +278,7 @@ npm run dev
 ### 단위 테스트 (Vitest)
 
 ```bash
-# 전체 단위 테스트 실행 (1.4초 내 완료)
+# 전체 단위 테스트 실행
 npm test
 
 # 전체 단위 테스트 실행 (UI 모드)
@@ -289,11 +308,12 @@ npx playwright install
 
 ```
 tests/
-├── unit/                            # Vitest 단위 테스트 (68개 케이스)
-│   ├── utils/common.test.ts         # formatBudget, getApprovalTagClass 등 유틸 함수
+├── unit/                            # Vitest 단위 테스트 (2026-04-29 기준 12파일, 248개 케이스)
+│   ├── utils/common.test.ts         # formatBudget, 상태 태그, API 오류 메시지 정제 등 유틸 함수
 │   ├── stores/auth.test.ts          # useAuthStore (login, logout, restoreSession, refresh)
-│   └── composables/useApiFetch.test.ts  # watch 병합, credentials, 옵션 전달 검증
-└── e2e/                             # Playwright E2E 테스트 (10개 시나리오)
+│   ├── stores/review.test.ts        # 사전협의 세션/버전/코멘트 상태
+│   └── composables/                 # useApiFetch, useAuth, useCost, useProjects, 대시보드/검증 composable
+└── e2e/                             # Playwright E2E 테스트 (주요 화면 시나리오)
     ├── helpers/mockApi.ts           # 공통 Mock 헬퍼 (mockLoginApi, mockApi, setLoggedIn)
     ├── auth.spec.ts                 # 로그인 성공/실패 플로우
     ├── projects.spec.ts             # 정보화사업 목록 조회
@@ -304,17 +324,17 @@ tests/
 ### Mock 전략
 
 - **단위 테스트**: `vi.stubGlobal('$fetch', mockFetch)`로 API 호출 대체, `Object.assign(process, { client: true })`로 클라이언트 환경 시뮬레이션
-- **E2E 테스트**: `page.route()`로 API 응답 Mock, `page.addInitScript()`로 localStorage user 주입 (백엔드 없이 실행 가능)
+- **E2E 테스트**: `page.route()`로 API 응답 Mock, `page.addInitScript()`로 user 쿠키 또는 구버전 localStorage user를 주입해 백엔드 없이 실행 가능
 
 ### Nuxt auto-import 관련 주의사항
 
 Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테스트 파일에서 `ref`, `computed`, `defineStore` 등을 명시적으로 import합니다.
 `useRuntimeConfig`, `navigateTo` 등 Nuxt 전용 API는 `vi.stubGlobal()`로 Mock 처리합니다.
 
-## 7.2 백엔드 연동 패키지 구조 (2026-03-27 기준)
+## 7.2 백엔드 연동 패키지 구조 (2026-04-29 기준)
 
-백엔드(`it_backend`)는 domain-refactor를 통해 도메인 기반 레이어드 아키텍처로 전환되었습니다.
-**API 경로는 모두 유지**되었으므로 프론트엔드 API 호출 코드는 변경 불필요합니다.
+백엔드(`it_backend`)는 도메인 기반 레이어드 아키텍처를 사용합니다.
+프론트엔드는 아래 API 경로를 기준으로 composable을 분리합니다.
 
 | 백엔드 도메인 | 패키지 | 주요 API |
 |------------|--------|---------|
@@ -324,11 +344,12 @@ Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테
 | 공통코드 | `common/code` | `/api/ccodem/**` |
 | 관리자 | `common/admin` | `/api/admin/**` |
 | 정보화사업 | `budget/project` | `/api/projects/**` |
-| 전산업무비 | `budget/cost` | `/api/costs/**`, `/api/guide-documents/**` |
+| 전산업무비 | `budget/cost` | `/api/costs/**` |
+| 가이드 문서 | `budget/document` | `/api/guide-documents/**` |
 | 정보기술부문 계획 | `budget/plan` | `/api/plans/**` |
 | 예산 작업 | `budget/work` | `/api/budget/work/**` |
 | 예산현황 | `budget/status` | `/api/budget/status/**` |
-| 검토의견 | `budget/document` | `/api/documents/{id}/review-comments/**` |
+| 요구사항 정의서/검토의견 | `budget/document` | `/api/documents/**`, `/api/documents/{id}/review-comments/**` |
 | 정보화실무협의회 | `council` | `/api/council/**` |
 | 파일 관리 | `infra/file` | `/api/files/**` |
 | Gemini AI | `infra/ai` | `/api/gemini/generate` |
@@ -348,6 +369,7 @@ Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테
 
 | 날짜 | 항목 | 비고 |
 |------|------|------|
+| 2026-04-29 | README 최신화 | 인증 흐름(useCookie/httpOnly), 다크모드 쿠키, 테스트 현황, 모듈 목록, 백엔드 API 기준일 보정 |
 | 2026-04-25 | 전체 프로젝트 문서/주석 리프레시 | console.log 제거(usePdfReport, report.vue), README/CLAUDE/TASK.md 최신화 |
 | 2026-04-24 | 대시보드 홈 카드 스타일 개선 | /info/documents, /info, /approval, /admin/dashboard — Narrative·Segmented 스타일 적용 |
 | 2026-04-24 | 대시보드 Composable 신규 구현 | `useApprovalDashboard`, `useDocumentDashboard` (KPI + 월별 통계 + 배지 카운트) |
@@ -365,6 +387,6 @@ Vitest는 Nuxt auto-import(`#app`, `#imports`)를 지원하지 않으므로, 테
 | 2026-03-27 | 백엔드 domain-refactor TypeScript 동기화 | 백엔드 패키지 구조 domain 기반 전환에 따른 타입 정의 확인 |
 | 2026-03-25 | 전체 프로젝트 문서화 리프레시 | 소스 코드 주석 전수 점검(60개 파일), README.md 최신화 |
 | 2026-03-09 | httpOnly 쿠키 인증 전환 | `stores/auth.ts`, `plugins/auth.ts`, `useApiFetch.ts` 전면 개편 |
-| 2026-03-08 | 프론트엔드 테스트 환경 구축 | Vitest(단위 68개) + Playwright(E2E 10개) |
+| 2026-03-08 | 프론트엔드 테스트 환경 구축 | Vitest + Playwright 기반 테스트 환경 도입 |
 | 2026-03-04 | 직원 검색 다이얼로그 연동 | `form.vue` 6개 필드(주관/IT 부서·팀장·담당자) |
 | 2026-03-02 | 예산 통합 목록 "전체" 탭 | `budget/list.vue` UnifiedBudgetItem 구현 |

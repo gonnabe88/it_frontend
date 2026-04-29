@@ -388,7 +388,7 @@ const cssColorToHex = (css: string): string => {
     }
     const rgb = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
     if (rgb) {
-        const toHex2 = (n: string) => parseInt(n, 10).toString(16).padStart(2, '0').toUpperCase();
+        const toHex2 = (n: string) => Number.parseInt(n, 10).toString(16).padStart(2, '0').toUpperCase();
         return '#' + toHex2(rgb[1]!) + toHex2(rgb[2]!) + toHex2(rgb[3]!);
     }
     return s;
@@ -982,8 +982,8 @@ const collectImages = (html: string): { list: PendingImage[]; map: Map<string, P
         if (!src || map.has(src)) continue;
         // HTML width/height 속성을 HWPUNIT로 변환. 없으면 기본 크기.
         const px2hu = 75; // 1 px = 75 HWPUNIT (96dpi 기준)
-        const wAttr = parseInt(el.getAttribute('width') || '0', 10);
-        const hAttr = parseInt(el.getAttribute('height') || '0', 10);
+        const wAttr = Number.parseInt(el.getAttribute('width') || '0', 10);
+        const hAttr = Number.parseInt(el.getAttribute('height') || '0', 10);
         const width  = wAttr > 0 ? wAttr * px2hu : 12000;
         const height = hAttr > 0 ? hAttr * px2hu : 9000;
         const info: PendingImage = { src, binId: nextId++, width, height };
@@ -1139,11 +1139,12 @@ const resolveImages = async (
             let data: Uint8Array;
             let mime = '';
             if (p.src.startsWith('data:')) {
-                const match = p.src.match(/^data:([^;,]+)?[^,]*,(.*)$/);
+                const match = p.src.match(/^data:([^,]*),(.*)$/);
                 if (!match) continue;
-                mime = match[1] || '';
+                const header = match[1] || '';
+                mime = header.split(';')[0] || '';
                 const payload = match[2] || '';
-                const isBase64 = /;base64/i.test(p.src);
+                const isBase64 = /(?:^|;)base64(?:;|$)/i.test(header);
                 const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
                 const bytes = new Uint8Array(binary.length);
                 for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
