@@ -167,8 +167,9 @@ const onRowEditSave = async (event: DataTableRowEditSaveEvent) => {
 /**
  * 행 삭제 확인 → Soft Delete
  * @param cdId 코드ID
+ * @param sttDt 시작일자 (복합 PK 구성 요소)
  */
-const onDeleteConfirm = (cdId: string) => {
+const onDeleteConfirm = (cdId: string, sttDt: string) => {
     confirm.require({
         message: `코드 [${cdId}]를 삭제하시겠습니까?`,
         header: '삭제 확인',
@@ -178,7 +179,7 @@ const onDeleteConfirm = (cdId: string) => {
         rejectLabel: '취소',
         accept: async () => {
             try {
-                await deleteCode(cdId);
+                await deleteCode(cdId, sttDt);
                 await refresh();
                 toast.add({ severity: 'success', summary: '삭제 완료', detail: `코드 [${cdId}]가 삭제되었습니다.`, life: 3000 });
             } catch {
@@ -537,7 +538,7 @@ field="lstChgDtm" header="마지막수정시간" :style="{ width: '160px' }"
                     <Button
 v-tooltip.top="'삭제'" icon="pi pi-trash" severity="danger" text
                             rounded
-                            @click="onDeleteConfirm(data.cdId)" />
+                            @click="onDeleteConfirm(data.cdId, data.sttDt)" />
                 </template>
             </Column>
         </StyledDataTable>

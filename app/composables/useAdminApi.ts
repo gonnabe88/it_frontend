@@ -257,13 +257,13 @@ export const useAdminApi = () => {
     const createCode = (body: AdminCodeRequest) =>
         $apiFetch(`${BASE}/codes`, { method: 'POST', body });
 
-    /** 공통코드 수정 */
+    /** 공통코드 수정 — sttDt는 복합 PK이므로 쿼리 파라미터로 별도 전달 */
     const updateCode = (cdId: string, body: AdminCodeRequest) =>
-        $apiFetch(`${BASE}/codes/${cdId}`, { method: 'PUT', body });
+        $apiFetch(`${BASE}/codes/${cdId}?sttDt=${body.sttDt ?? ''}`, { method: 'PUT', body });
 
-    /** 공통코드 삭제 */
-    const deleteCode = (cdId: string) =>
-        $apiFetch(`${BASE}/codes/${cdId}`, { method: 'DELETE' });
+    /** 공통코드 삭제 — sttDt는 복합 PK이므로 쿼리 파라미터로 전달 */
+    const deleteCode = (cdId: string, sttDt: string) =>
+        $apiFetch(`${BASE}/codes/${cdId}?sttDt=${sttDt}`, { method: 'DELETE' });
 
     /**
      * 공통코드 일괄 생성/수정 (Upsert)

@@ -43,7 +43,7 @@ import { ref, reactive, onActivated, computed, watch } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useProjects } from '~/composables/useProjects';
 import type { Project } from '~/composables/useProjects';
-import { PROJECT_STAGES, getApprovalAuthority } from '~/utils/common';
+import { PROJECT_STAGES, getApprovalAuthority, formatApiError } from '~/utils/common';
 import { useCurrencyRates } from '~/composables/useCurrencyRates';
 import { useProjectOptions } from '~/composables/useProjectOptions';
 import { useDateRangeValidation } from '~/composables/useDateRangeValidation';
@@ -640,8 +640,13 @@ const autoFormatDateInput = (event: Event) => {
  * 2. 날짜 필드를 문자열로 변환하여 payload 구성
  * 3. isEditMode에 따라 updateProject 또는 createProject 호출
  * 4. 성공/실패 시 confirm 다이얼로그 표시
+ *
+ * isSubmitting 플래그로 중복 요청 방지 (더블클릭 또는 네트워크 지연 중 재클릭)
  */
+const isSubmitting = ref(false);
+
 const executeSave = async () => {
+    isSubmitting.value = true;
     /* 1. UI의 resourceItems를 API 스펙인 items로 역변환 */
     const items = form.value.resourceItems.map(item => ({
         gclDtt: item.category, // 공통코드 cdId (예: IOE-351-1100-1)
@@ -702,7 +707,8 @@ const executeSave = async () => {
     } catch (error: any) {
         console.error('Save failed', error);
         /* API 응답에서 오류 메시지 추출 (data.message → message → 기본 메시지 순으로 폴백) */
-        const apiMessage = error?.data?.message || error?.message || '저장 중 오류가 발생했습니다.';
+        const rawMessage = error?.data?.message || error?.message || '저장 중 오류가 발생했습니다.';
+        const apiMessage = formatApiError(rawMessage);
         confirm.require({
             message: apiMessage,
             header: '오류',
@@ -710,6 +716,8 @@ const executeSave = async () => {
             rejectProps: { class: 'hidden' },
             acceptLabel: '확인'
         });
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
@@ -794,6 +802,7 @@ watch(() => form.value.mnUsr, (v) => { if (v) formErrors.mnUsr = false; });
 watch(() => form.value.resourceItems, (v) => { if (v.length > 0) formErrors.resourceItems = false; });
 
 const saveProject = () => {
+    if (isSubmitting.value) return;
     const requiredOk = validateRequiredFields();
 
     // 날짜 형식/범위 유효성 검사 (인라인 에러 메시지로 표시됨)
@@ -990,6 +999,7 @@ v-model="form.prjSts" :options="statusOptions" placeholder="상태 변경" class
                 <Button label="취소" severity="secondary" outlined class="!px-5 !rounded-lg" @click="cancel" />
                 <Button
 label="저장" severity="primary" class="!px-5 !rounded-lg bg-indigo-600 hover:bg-indigo-700 border-none shadow-md shadow-indigo-500/20"
+                    :disabled="isSubmitting"
                     @click="saveProject" />
             </div>
         </div>
