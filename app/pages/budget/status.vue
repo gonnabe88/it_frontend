@@ -389,8 +389,6 @@ const exportExcel = async () => {
             <template #actions>
                 <Select v-model="bgYy" :options="yearOptions" option-label="label" option-value="value" class="w-32" />
                 <SelectButton v-model="unit" :options="unitOptions" :allow-empty="false" />
-                <Button label="컬럼 설정" icon="pi pi-cog" severity="secondary" outlined @click="showColSettings = true" />
-                <Button label="엑셀" icon="pi pi-file-excel" severity="success" outlined @click="exportExcel" />
             </template>
         </PageHeader>
 
@@ -406,6 +404,22 @@ const exportExcel = async () => {
             <!-- 정보화사업 탭 -->
             <TabPanel value="0" class="flex-1 min-h-0 flex flex-col p-0">
                 <TableCard fill icon="pi-briefcase" title="정보화사업" :count="projects.length">
+                <template #actions>
+                    <button
+                        class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                        @click="showColSettings = true"
+                    >
+                        <i class="pi pi-cog text-xs" />
+                        컬럼 설정
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                        @click="exportExcel"
+                    >
+                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                        Excel
+                    </button>
+                </template>
                 <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
                         :value="projects" :loading="projectsPending" scrollable scroll-height="flex"
@@ -487,6 +501,22 @@ v-if="(data as any)[col.field]"
             <!-- 전산업무비 탭 -->
             <TabPanel value="1" class="flex-1 min-h-0 flex flex-col p-0">
                 <TableCard fill icon="pi-credit-card" title="전산업무비" :count="costs.length">
+                <template #actions>
+                    <button
+                        class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                        @click="showColSettings = true"
+                    >
+                        <i class="pi pi-cog text-xs" />
+                        컬럼 설정
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                        @click="exportExcel"
+                    >
+                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                        Excel
+                    </button>
+                </template>
                 <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
                         :value="costs" :loading="costsPending" scrollable scroll-height="flex"
@@ -542,6 +572,22 @@ v-if="(data as any)[col.field]"
             <!-- 경상사업 탭 -->
             <TabPanel value="2" class="flex-1 min-h-0 flex flex-col p-0">
                 <TableCard fill icon="pi-wallet" title="경상사업" :count="ordinary.length">
+                <template #actions>
+                    <button
+                        class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                        @click="showColSettings = true"
+                    >
+                        <i class="pi pi-cog text-xs" />
+                        컬럼 설정
+                    </button>
+                    <button
+                        class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                        @click="exportExcel"
+                    >
+                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                        Excel
+                    </button>
+                </template>
                 <div class="flex-1 min-h-0 flex flex-col">
                     <StyledDataTable
                         :value="ordinary" :loading="ordinaryPending" scrollable scroll-height="flex"

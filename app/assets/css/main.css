@@ -904,7 +904,20 @@ html.dark .gsearch .gs-clear:hover { background: var(--zinc-400); }
     color: #b91c1c !important;
 }
 
-/* ── 10. Small (size="small") ── */
+/* ── 10. Outlined Success (Excel 버튼 등 초록색 윤곽선 버튼) ── */
+.p-button-outlined.p-button-success {
+    background: transparent !important;
+    border-color: #059669 !important;
+    color: #059669 !important;
+}
+
+.p-button-outlined.p-button-success:not(:disabled):hover {
+    background: #f0fdf4 !important;
+    border-color: #047857 !important;
+    color: #047857 !important;
+}
+
+/* ── 11. Small (size="small") ── */
 .p-button-sm {
     padding: 4px 10px !important;
     font-size: 12px !important;

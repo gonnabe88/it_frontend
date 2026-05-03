@@ -175,7 +175,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey));
                 @focus="focused = true"
                 @blur="focused = false"
                 @keydown="onKeyDown"
-            />
+            >
             <button v-if="query" type="button" class="gs-clear" @click="clearQuery">
                 <i class="pi pi-times" />
             </button>

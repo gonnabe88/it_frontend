@@ -166,7 +166,7 @@ export const useHwpxExport = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             // 실패 시 사용자에게 알림 — 기존에는 조용히 삼켜져 증상 파악이 어려웠음
-            // eslint-disable-next-line no-console
+             
             console.error('[useHwpxExport] HWPX 변환 실패', e);
             toast.add({
                 severity: 'error',

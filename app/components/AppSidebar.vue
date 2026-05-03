@@ -95,7 +95,7 @@ const adminLogMenuGroups = [
         items: ['bcostm', 'btermm'].map(getAdminLogMenuItem)
     },
     {
-        label: '사전협의·문서',
+        label: '사전협의',
         icon: 'pi pi-file-check',
         items: ['brdocm', 'brivgm', 'bgdocm'].map(getAdminLogMenuItem)
     },
@@ -117,13 +117,13 @@ const menuItems = computed(() => {
         return [
             { label: 'Home', icon: 'pi pi-home', to: '/info/documents' },
             {
-                label: '문서 관리', icon: 'pi pi-folder', items: [
-                    { label: '문서 목록', to: '/info/documents/list' },
+                label: '사전협의', icon: 'pi pi-folder', items: [
+                    { label: '요청 목록', to: '/info/documents/list' },
                     { label: '신규 작성', to: '/info/documents/form' }
                 ]
             },
             {
-                label: '협의 현황', icon: 'pi pi-chart-pie', items: [
+                label: '상태별 현황', icon: 'pi pi-chart-pie', items: [
                     { label: '검토 중', to: '/info/documents/list?status=reviewing', badge: 'docReviewing' },
                     { label: '협의 완료', to: '/info/documents/list?status=completed' },
                     { label: '지연', to: '/info/documents/list?status=overdue' }

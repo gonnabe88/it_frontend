@@ -1,44 +1,17 @@
-/**
- * ============================================================================
- * [utils/hwpx.ts] HTML → HWPX (한글 문서) 변환 유틸리티
- * ============================================================================
- * 실제 HWP가 생성한 HWPX 파일(변경.hwpx)을 직접 분석하여 동일한 구조를 구현합니다.
- *
- * [서식 기준: 변경.hwpx]
- *  - 폰트: 맑은 고딕 (font id=1)
- *  - 본문: 10pt, 줄간격 180%, 단락 전후 400
- *  - bold: <hh:bold/> 빈 요소 방식
- *  - 태그명: charProperties / paraProperties / styles / tabProperties
- *  - secPr 단락: paraPrIDRef=2, charPrIDRef=2 (15pt 맑은 고딕)
- *  - 추가 요소: tabProperties, compatibleDocument, docOption, trackchageConfig
- *  - style 속성: langID (langIDRef 아님)
- *
- * [charPr 매핑 (변경 파일 기준)]
- *  id=0: 한컴바탕 10pt (기존 호환, borderFillIDRef=1)
- *  id=1: 맑은 고딕 10pt         → 일반 본문 / 표 데이터 셀
- *  id=2: 맑은 고딕 15pt         → secPr 제어 단락
- *  id=3: 맑은 고딕 15pt + bold  → H1
- *  id=4: 맑은 고딕 10pt + bold  → H2~H4, inline bold, 표 헤더 셀
- *  id=5: 맑은 고딕 12pt         → H3
- *
- * [paraPr 매핑 (변경 파일 기준)]
- *  id=0: 기본 160%, 간격 없음        → 표 데이터 셀
- *  id=1: 가운데 160%                 → 표 헤더 셀
- *  id=2: 양쪽 180%, prev/next=400   → secPr + 일반 단락
- *  id=3: 양쪽 180%, indent=-5642    → (예비)
- *  id=4: 양쪽 180%, prev=1000       → 제목 단락
- *  id=5: 양쪽 180%, indent=-6138    → 목록 단락
- *
- * [표 구조 (변경 파일 기준)]
- *  - 표는 <hp:p><hp:run><hp:tbl>...</hp:tbl></hp:run></hp:p> (인라인 객체)
- *  - th 셀: borderFillIDRef=4(파란 배경) + paraPrIDRef=1(가운데) + charPrIDRef=4(bold)
- *  - td 셀: borderFillIDRef=3(흰 배경)  + paraPrIDRef=0(기본)   + charPrIDRef=1(본문)
- *  - 전체 표 너비: 41954 HWPUNIT (A4 텍스트 영역 - outMargin)
- *  - 행 높이: 1848 HWPUNIT (고정)
- * ============================================================================
- */
+/** [utils/hwpx.ts] 실제 HWPX 출력본 기준 HTML → HWPX 변환 유틸리티입니다. */
 
 import JSZip from 'jszip';
+import { collectImages, resolveImages } from './hwpx-images';
+import {
+    COMMON_XMLNS,
+    CONTAINER_RDF,
+    CONTAINER_XML,
+    MANIFEST_XML,
+    SETTINGS_XML,
+    VERSION_XML,
+    buildContentHpf
+} from './hwpx-package-xml';
+import type { HwpxImageFetch as HwpxImageFetchType, PendingImage, ResolvedImage } from './hwpx-images';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 상수
@@ -132,24 +105,6 @@ interface TextRun {
     color?: string;
 }
 
-/** 이미지 원본 메타 (fetch 전) */
-interface PendingImage {
-    src: string;       // 원본 URL (절대/상대/data:)
-    binId: number;     // 부여된 순번 (1부터)
-    width: number;     // HWPUNIT (기본 또는 HTML width에서 계산)
-    height: number;    // HWPUNIT
-}
-
-/** fetch 완료 후 */
-interface ResolvedImage extends PendingImage {
-    data: Uint8Array;
-    ext: string;       // 파일 확장자 (png/jpg/jpeg/gif)
-    /** 실제 이미지 픽셀 너비 (없으면 0 → fallback 사용) */
-    naturalWidth: number;
-    /** 실제 이미지 픽셀 높이 */
-    naturalHeight: number;
-}
-
 interface ParagraphNode {
     type: 'para';
     paraPrId: ParaPrId;
@@ -184,23 +139,6 @@ type DocNode = ParagraphNode | TableNode;
 const escXml = (s: string): string =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
      .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-
-/** 공통 xmlns 선언 (정상/변경 파일과 동일) */
-const COMMON_XMLNS =
-    'xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" ' +
-    'xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" ' +
-    'xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" ' +
-    'xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" ' +
-    'xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" ' +
-    'xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" ' +
-    'xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" ' +
-    'xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" ' +
-    'xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" ' +
-    'xmlns:dc="http://purl.org/dc/elements/1.1/" ' +
-    'xmlns:opf="http://www.idpf.org/2007/opf/" ' +
-    'xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" ' +
-    'xmlns:epub="http://www.idpf.org/2007/ops" ' +
-    'xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Contents/header.xml 생성 (변경 파일 구조 기반)
@@ -822,87 +760,6 @@ const buildSectionXml = (nodes: DocNode[], headerTable?: TableNode): string => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 보조 파일들
-// ─────────────────────────────────────────────────────────────────────────────
-
-// content.hpf — sample.hwpx 구조 기준
-// - manifest에 이미지(BinData/imageN.ext)를 `isEmbeded="1"`로 등록
-// - spine: header linear="yes", section0 linear="no" (sample 기준)
-// - 참고: Hangul은 "isEmbeded" 철자(오타)를 그대로 사용하므로 변경 불가
-const buildContentHpf = (title: string = '요구사항 정의서', images: ResolvedImage[] = []): string => {
-    const mimeOf = (ext: string): string => {
-        const e = ext.toLowerCase();
-        if (e === 'jpg' || e === 'jpeg') return 'image/jpeg';
-        if (e === 'gif')  return 'image/gif';
-        if (e === 'bmp')  return 'image/bmp';
-        if (e === 'webp') return 'image/webp';
-        return 'image/png';
-    };
-    // 이미지 manifest 엔트리 — id="image1", id="image2", ... (buildPicRunXml의 binaryItemIDRef와 매칭)
-    const imageItems = images.map(img =>
-        `<opf:item id="image${img.binId}" href="BinData/image${img.binId}.${img.ext}" media-type="${mimeOf(img.ext)}" isEmbeded="1"/>`
-    ).join('');
-
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
-    `<opf:package ${COMMON_XMLNS} version="" unique-identifier="" id="">` +
-    `<opf:metadata>` +
-    `<opf:title>${escXml(title)}</opf:title>` +
-    `<opf:language>ko</opf:language>` +
-    `</opf:metadata>` +
-    `<opf:manifest>` +
-    `<opf:item id="header" href="Contents/header.xml" media-type="application/xml"/>` +
-    imageItems +
-    `<opf:item id="section0" href="Contents/section0.xml" media-type="application/xml"/>` +
-    `<opf:item id="settings" href="settings.xml" media-type="application/xml"/>` +
-    `</opf:manifest>` +
-    `<opf:spine>` +
-    `<opf:itemref idref="header" linear="yes"/>` +
-    `<opf:itemref idref="section0" linear="no"/>` +
-    `</opf:spine>` +
-    `</opf:package>`;
-};
-
-// 주의: "tagetApplication"은 Hangul 실제 출력 포맷 (오타가 아니라 속성명 자체가 이 형태)
-const VERSION_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
-    `<hv:HCFVersion xmlns:hv="http://www.hancom.co.kr/hwpml/2011/version" ` +
-    `tagetApplication="WORDPROCESSOR" major="5" minor="1" micro="0" buildNumber="1" ` +
-    `os="1" xmlVersion="1.2" application="Hancom Office Hangul" appVersion="11, 0, 0, 2129 WIN32LEWindows_8"/>`;
-
-const SETTINGS_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<ha:HWPApplicationSetting xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0">` +
-    `<ha:CaretPosition listIDRef="0" paraIDRef="0" pos="0"/>` +
-    `</ha:HWPApplicationSetting>`;
-
-// container.xml — Hangul 실제 출력본 sample.hwpx와 동일하게 3개 rootfile 유지.
-// (OCF 일반 스펙과 다르지만 Hangul이 이 형태를 요구함)
-const CONTAINER_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
-    `<ocf:container xmlns:ocf="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf">` +
-    `<ocf:rootfiles>` +
-    `<ocf:rootfile full-path="Contents/content.hpf" media-type="application/hwpml-package+xml"/>` +
-    `<ocf:rootfile full-path="Preview/PrvText.txt" media-type="text/plain"/>` +
-    `<ocf:rootfile full-path="META-INF/container.rdf" media-type="application/rdf+xml"/>` +
-    `</ocf:rootfiles>` +
-    `</ocf:container>`;
-
-// META-INF/manifest.xml — sample.hwpx는 빈 매니페스트 사용
-const MANIFEST_XML =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>` +
-    `<odf:manifest xmlns:odf="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0"/>`;
-
-const CONTAINER_RDF =
-    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-    `<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">` +
-    `<rdf:Description rdf:about=""><ns0:hasPart xmlns:ns0="http://www.hancom.co.kr/hwpml/2016/meta/pkg#" rdf:resource="Contents/header.xml"/></rdf:Description>` +
-    `<rdf:Description rdf:about="Contents/header.xml"><rdf:type rdf:resource="http://www.hancom.co.kr/hwpml/2016/meta/pkg#HeaderFile"/></rdf:Description>` +
-    `<rdf:Description rdf:about=""><ns0:hasPart xmlns:ns0="http://www.hancom.co.kr/hwpml/2016/meta/pkg#" rdf:resource="Contents/section0.xml"/></rdf:Description>` +
-    `<rdf:Description rdf:about="Contents/section0.xml"><rdf:type rdf:resource="http://www.hancom.co.kr/hwpml/2016/meta/pkg#SectionFile"/></rdf:Description>` +
-    `<rdf:Description rdf:about=""><rdf:type rdf:resource="http://www.hancom.co.kr/hwpml/2016/meta/pkg#Document"/></rdf:Description>` +
-    `</rdf:RDF>`;
-
-// ─────────────────────────────────────────────────────────────────────────────
 // 공개 API
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -961,254 +818,13 @@ const defaultYearMonth = (): string => {
     return `${yy}.${mm}`;
 };
 
-/**
- * HTML 내 모든 <img src="..."> 태그를 수집하여 PendingImage 목록과 src→PendingImage 매핑을 만듭니다.
- * width/height 속성이 있으면 px 단위로 해석하고, 없으면 기본값(12000×9000 HWPUNIT ≈ 4.2×3.2cm)을 사용합니다.
- *
- * 1 px ≈ 9525 HWPUNIT (1/96 inch * 7200/in ÷ 100) 로 근사 — 정밀하게는 96dpi 기준 75 HWPUNIT/px
- * HWPX는 HWPUNIT = 1/7200 inch. 1 inch = 96 px (CSS 기본) → 1 px = 75 HWPUNIT.
- */
-const collectImages = (html: string): { list: PendingImage[]; map: Map<string, PendingImage> } => {
-    const list: PendingImage[] = [];
-    const map = new Map<string, PendingImage>();
-    if (typeof DOMParser === 'undefined') return { list, map };
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
-    const imgs = Array.from(doc.querySelectorAll('img')) as HTMLImageElement[];
-    let nextId = 1;
-    for (const el of imgs) {
-        const src = el.getAttribute('src');
-        if (!src || map.has(src)) continue;
-        // HTML width/height 속성을 HWPUNIT로 변환. 없으면 기본 크기.
-        const px2hu = 75; // 1 px = 75 HWPUNIT (96dpi 기준)
-        const wAttr = Number.parseInt(el.getAttribute('width') || '0', 10);
-        const hAttr = Number.parseInt(el.getAttribute('height') || '0', 10);
-        const width  = wAttr > 0 ? wAttr * px2hu : 12000;
-        const height = hAttr > 0 ? hAttr * px2hu : 9000;
-        const info: PendingImage = { src, binId: nextId++, width, height };
-        list.push(info);
-        map.set(src, info);
-    }
-    return { list, map };
-};
-
-/** MIME 타입 또는 URL 확장자로부터 이미지 확장자 추출 */
-const detectExt = (mime: string, url: string): string => {
-    const mt = mime.toLowerCase();
-    if (mt.includes('png'))  return 'png';
-    if (mt.includes('jpeg') || mt.includes('jpg')) return 'jpg';
-    if (mt.includes('gif'))  return 'gif';
-    if (mt.includes('bmp'))  return 'bmp';
-    if (mt.includes('webp')) return 'webp';
-    const urlExt = url.match(/\.(png|jpe?g|gif|bmp|webp)(\?|$)/i)?.[1];
-    return (urlExt || 'png').toLowerCase().replace('jpeg', 'jpg');
-};
-
-/** 이미지 fetch 콜백 타입 — 호출자가 인증/쿠키를 자동 처리하는 fetcher 주입 가능 */
-export type HwpxImageFetch = (src: string) => Promise<ArrayBuffer | null>;
-
-/**
- * PNG IHDR 청크에서 (width, height)를 읽어옵니다.
- * PNG 구조: 8-byte signature + 4-byte IHDR length + "IHDR" + 4-byte width + 4-byte height
- */
-const parsePngDims = (data: Uint8Array): { w: number; h: number } | null => {
-    if (data.length < 24) return null;
-    // PNG signature: 89 50 4E 47 0D 0A 1A 0A
-    if (data[0] !== 0x89 || data[1] !== 0x50 || data[2] !== 0x4E || data[3] !== 0x47) return null;
-    // IHDR at bytes 12-15
-    if (data[12] !== 0x49 || data[13] !== 0x48 || data[14] !== 0x44 || data[15] !== 0x52) return null;
-    const w = (data[16]! << 24) | (data[17]! << 16) | (data[18]! << 8) | data[19]!;
-    const h = (data[20]! << 24) | (data[21]! << 16) | (data[22]! << 8) | data[23]!;
-    return { w, h };
-};
-
-/** JPEG SOF 마커에서 (width, height)를 읽어옵니다. */
-const parseJpegDims = (data: Uint8Array): { w: number; h: number } | null => {
-    if (data.length < 4 || data[0] !== 0xFF || data[1] !== 0xD8) return null;
-    let i = 2;
-    while (i < data.length - 8) {
-        if (data[i] !== 0xFF) { i++; continue; }
-        const marker = data[i + 1]!;
-        // SOF0(C0)~SOF15(CF) 중 일부가 실제 frame header: C0~C3, C5~C7, C9~CB, CD~CF
-        if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2 || marker === 0xC3 ||
-            marker === 0xC5 || marker === 0xC6 || marker === 0xC7 ||
-            marker === 0xC9 || marker === 0xCA || marker === 0xCB ||
-            marker === 0xCD || marker === 0xCE || marker === 0xCF) {
-            // Marker payload: 2-byte length, 1-byte precision, 2-byte height, 2-byte width
-            const h = (data[i + 5]! << 8) | data[i + 6]!;
-            const w = (data[i + 7]! << 8) | data[i + 8]!;
-            return { w, h };
-        }
-        // Skip segment: 2-byte length
-        const segLen = (data[i + 2]! << 8) | data[i + 3]!;
-        i += 2 + segLen;
-    }
-    return null;
-};
-
-/** 브라우저 Image API로 자연 크기 조회 (PNG/JPEG 파싱이 실패한 경우 fallback) */
-const imageDimsViaBrowser = (data: Uint8Array, mime: string): Promise<{ w: number; h: number } | null> =>
-    new Promise(resolve => {
-        try {
-            const blob = new Blob([data as BlobPart], { type: mime || 'image/png' });
-            const url = URL.createObjectURL(blob);
-            const img = new Image();
-            img.onload = () => {
-                resolve({ w: img.naturalWidth, h: img.naturalHeight });
-                URL.revokeObjectURL(url);
-            };
-            img.onerror = () => {
-                resolve(null);
-                URL.revokeObjectURL(url);
-            };
-            img.src = url;
-        } catch {
-            resolve(null);
-        }
-    });
-
-/** 바이너리 데이터가 SVG인지 판별 (Excalidraw가 SVG로 저장됨) */
-const isSvgData = (data: Uint8Array): boolean => {
-    if (data.length < 5) return false;
-    // 첫 수십 바이트를 텍스트로 보고 <svg 또는 <?xml 검사
-    const head = new TextDecoder('utf-8', { fatal: false })
-        .decode(data.slice(0, Math.min(data.length, 256)))
-        .trim()
-        .toLowerCase();
-    return head.startsWith('<svg') || (head.startsWith('<?xml') && head.includes('<svg'));
-};
-
-/**
- * SVG 바이너리를 PNG로 래스터화합니다. Hangul은 SVG를 렌더링하지 못하므로
- * Excalidraw 같은 SVG 이미지는 PNG로 변환해 임베드해야 합니다.
- * 브라우저의 canvas API를 사용하며, 실패 시 null을 반환합니다.
- */
-const svgToPngData = (data: Uint8Array): Promise<{ data: Uint8Array; width: number; height: number } | null> =>
-    new Promise(resolve => {
-        try {
-            const blob = new Blob([data as BlobPart], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = async () => {
-                try {
-                    // SVG 원본의 viewBox 기준 크기 — 없으면 기본 800x600
-                    const W = img.naturalWidth  || 800;
-                    const H = img.naturalHeight || 600;
-                    const canvas = document.createElement('canvas');
-                    canvas.width  = W;
-                    canvas.height = H;
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) { resolve(null); URL.revokeObjectURL(url); return; }
-                    // 흰 배경 채움 — 투명 PNG는 Hangul에서 검게 표시되는 경우가 있음
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, W, H);
-                    ctx.drawImage(img, 0, 0, W, H);
-                    URL.revokeObjectURL(url);
-                    // canvas → PNG blob → Uint8Array
-                    canvas.toBlob(async (pngBlob) => {
-                        if (!pngBlob) { resolve(null); return; }
-                        const buf = await pngBlob.arrayBuffer();
-                        resolve({ data: new Uint8Array(buf), width: W, height: H });
-                    }, 'image/png');
-                } catch {
-                    resolve(null);
-                    URL.revokeObjectURL(url);
-                }
-            };
-            img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
-            img.src = url;
-        } catch {
-            resolve(null);
-        }
-    });
-
-/**
- * 이미지를 fetch하여 ResolvedImage 배열로 변환. 실패한 이미지는 제외됩니다.
- * data: URL은 인라인 디코딩, 나머지는 imageFetch(주입 시) 또는 fetch() 기본값을 사용합니다.
- * 실제 픽셀 크기도 함께 감지하여 크롭 없이 전체 이미지가 보이도록 합니다.
- */
-const resolveImages = async (
-    pending: PendingImage[],
-    imageFetch?: HwpxImageFetch,
-): Promise<ResolvedImage[]> => {
-    const results: ResolvedImage[] = [];
-    for (const p of pending) {
-        try {
-            let data: Uint8Array;
-            let mime = '';
-            if (p.src.startsWith('data:')) {
-                const match = p.src.match(/^data:([^,]*),(.*)$/);
-                if (!match) continue;
-                const header = match[1] || '';
-                mime = header.split(';')[0] || '';
-                const payload = match[2] || '';
-                const isBase64 = /(?:^|;)base64(?:;|$)/i.test(header);
-                const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                data = bytes;
-            } else if (imageFetch) {
-                const buf = await imageFetch(p.src);
-                if (!buf) continue;
-                data = new Uint8Array(buf);
-            } else {
-                const res = await fetch(p.src, { credentials: 'include' });
-                if (!res.ok) continue;
-                mime = res.headers.get('content-type') || '';
-                data = new Uint8Array(await res.arrayBuffer());
-            }
-            let ext = detectExt(mime, p.src);
-
-            // SVG 감지 → Hangul 호환을 위해 PNG로 래스터화
-            // (서버가 Excalidraw 첨부를 SVG로 반환하는 경우 대응)
-            if (isSvgData(data)) {
-                const png = await svgToPngData(data);
-                if (png) {
-                    data = png.data;
-                    ext = 'png';
-                    mime = 'image/png';
-                    results.push({
-                        ...p,
-                        data,
-                        ext,
-                        naturalWidth:  png.width,
-                        naturalHeight: png.height,
-                    });
-                    continue;
-                }
-                // 변환 실패 시 이미지 건너뜀 (Hangul은 SVG를 표시할 수 없음)
-                continue;
-            }
-
-            // 실제 픽셀 크기 감지: PNG/JPEG 파싱 → 실패 시 브라우저 Image API fallback
-            let dims: { w: number; h: number } | null = null;
-            if (ext === 'png') dims = parsePngDims(data);
-            else if (ext === 'jpg') dims = parseJpegDims(data);
-            if (!dims) dims = await imageDimsViaBrowser(data, mime);
-
-            results.push({
-                ...p,
-                data,
-                ext,
-                naturalWidth:  dims?.w || 0,
-                naturalHeight: dims?.h || 0,
-            });
-        } catch {
-            // 개별 이미지 실패는 무시하고 나머지 진행
-        }
-    }
-    return results;
-};
-
 /** htmlToHwpxBlob 옵션 */
 export interface HwpxBlobOptions {
     /**
      * 이미지 fetch 콜백 — 지정 시 cross-origin/인증 요청을 호출자가 처리.
      * 지정하지 않으면 기본 fetch()를 사용합니다 (credentials: 'include').
      */
-    imageFetch?: HwpxImageFetch;
+    imageFetch?: HwpxImageFetchType;
 }
 
 /**

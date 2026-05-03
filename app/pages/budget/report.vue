@@ -57,6 +57,7 @@ const { generateReport } = usePdfReport();
 const { createApplication } = useApprovals();
 const { user } = useAuth();
 const { removeTab } = useTabs();
+const route = useRoute();
 
 /** sessionStorage에서 로드한 정보화사업 관리번호 목록 */
 const projectIds = ref<string[]>([]);
@@ -403,7 +404,7 @@ v-model:visible="showSubmitComplete" header="상신 완료" modal :closable="fal
             </div>
             <template #footer>
                 <AppDialogFooter>
-                    <Button label="확인" icon="pi pi-check" @click="showSubmitComplete = false; removeTab('/budget/report')" />
+                    <Button label="확인" icon="pi pi-check" @click="showSubmitComplete = false; removeTab(route.fullPath)" />
                 </AppDialogFooter>
             </template>
         </Dialog>

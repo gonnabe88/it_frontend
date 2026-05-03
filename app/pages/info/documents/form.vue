@@ -15,8 +15,9 @@ import type { RequirementDocumentForm } from '~/composables/useDocuments';
 import { useFiles } from '~/composables/useFiles';
 import { useExcalidrawAttachment } from '~/composables/useExcalidrawAttachment';
 
-const title = '요구사항 정의서 작성';
-definePageMeta({ title });
+const title = '사전협의 요청';
+// key: fullPath 기준으로 KeepAlive 캐시 분리 → 쿼리 파라미터가 다른 탭마다 별개 인스턴스
+definePageMeta({ title, key: route => route.fullPath });
 
 const { createDocument } = useDocuments();
 const { uploadFile, uploadFilesBulk, updateFileMeta, deleteFile, getPreviewUrl } = useFiles();
@@ -26,6 +27,7 @@ const { getPendingFlMngNos, clearPendingFlMngNos } = useExcalidrawAttachment();
 // 신규 작성 페이지 진입 시 즉시 초기화
 clearPendingFlMngNos();
 const toast = useToast();
+const route = useRoute();
 const router = useRouter();
 const { removeTab } = useTabs();
 
@@ -223,7 +225,7 @@ const onSave = async () => {
                 await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (e: any) {
-                // eslint-disable-next-line no-console
+                 
                 console.warn(`[onSave] 파일 메타 업데이트 스킵: ${flMngNo}`, e?.data?.message ?? e);
             }
         };
@@ -243,7 +245,7 @@ const onSave = async () => {
         toast.add({ severity: 'success', summary: '저장 완료', detail: '요구사항 정의서가 등록되었습니다.', life: 3000 });
         /* 저장 후 상세 화면으로 이동 + form 탭 닫기 */
         await router.push(`/info/documents/${docMngNo}`);
-        removeTab('/info/documents/form');
+        removeTab(route.fullPath);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
         toast.add({ severity: 'error', summary: '저장 실패', detail: e?.data?.message || '저장 중 오류가 발생했습니다.', life: 4000 });
@@ -361,7 +363,7 @@ onUnmounted(() => {
     <div class="space-y-6">
 
         <!-- 페이지 헤더 -->
-        <PageHeader :title="title" subtitle="새로운 요구사항 정의서를 작성합니다.">
+        <PageHeader :title="title" subtitle="새로운 사전협의 요청을 작성합니다.">
             <template #leading>
                 <Button icon="pi pi-arrow-left" severity="secondary" text rounded @click="onCancel" />
             </template>

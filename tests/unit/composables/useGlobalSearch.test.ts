@@ -7,6 +7,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 
+import { useGlobalSearch } from '~/composables/useGlobalSearch';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -17,8 +19,6 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('ref', ref);
-
-import { useGlobalSearch } from '~/composables/useGlobalSearch';
 
 const mockProjects = [
     { prjMngNo: 'PRJ-001', prjNm: '로그인 개선', itDpmNm: 'IT기획팀', svnDpmNm: '', prjBg: 10000000, prjSts: '진행중' },

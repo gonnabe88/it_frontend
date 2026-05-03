@@ -7,6 +7,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref, computed } from 'vue';
 
+import { useApprovalDashboard, useApprovalBadgeCount } from '~/composables/useApprovalDashboard';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -19,8 +21,6 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('computed', computed);
-
-import { useApprovalDashboard, useApprovalBadgeCount } from '~/composables/useApprovalDashboard';
 
 describe('useApprovalDashboard (직접 import)', () => {
     beforeEach(() => {

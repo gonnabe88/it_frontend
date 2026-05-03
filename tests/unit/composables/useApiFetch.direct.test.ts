@@ -14,6 +14,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
 
+import { useApiFetch } from '~/composables/useApiFetch';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -44,8 +46,6 @@ vi.stubGlobal('useFetch', mockUseFetch);
 vi.mock('primevue/usetoast', () => ({
     useToast: () => ({ add: mockToastAdd }),
 }));
-
-import { useApiFetch } from '~/composables/useApiFetch';
 
 describe('useApiFetch (직접 import)', () => {
     beforeEach(() => {

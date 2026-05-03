@@ -51,27 +51,34 @@ export const useTabs = () => {
     const route = useRoute();
 
     /**
+     * fullPath에서 'id' 쿼리 파라미터 값을 추출합니다.
+     * 동일 경로의 탭이 여러 개일 때 제목을 구분하는 데 사용합니다.
+     */
+    const extractId = (fullPath: string): string | null => {
+        const query = fullPath.split('?')[1] ?? '';
+        return new URLSearchParams(query).get('id');
+    };
+
+    /**
      * 새 탭 추가
-     * 이미 열려있는 탭(같은 path)은 중복 추가하지 않습니다.
+     * 이미 열려있는 탭(같은 fullPath)은 중복 추가하지 않습니다.
+     * 동일 경로(path)의 탭이 이미 있으면 id 쿼리 파라미터로 탭 제목을 구분합니다.
      * 탭 제목은 다음 우선순위로 결정됩니다:
      *  1. route.meta.title (각 페이지에서 definePageMeta로 지정)
      *  2. 경로가 '/'인 경우 '홈'
      *  3. 경로의 마지막 세그먼트 (예: /info/projects → 'projects')
      *
-     * @param newRoute - 추가할 라우트 정보 (path, fullPath, meta 포함)
+     * @param newRoute - 추가할 라우트 정보 (path, fullPath, meta, query 포함)
      * @returns 항상 true (탭 추가 성공 또는 이미 존재)
      *
      * @example
-     * // router.afterEach 훅에서 호출
-     * router.afterEach((to) => {
-     *   const { addTab } = useTabs();
-     *   addTab(to);
-     * });
+     * // AppHeader.vue에서 route.fullPath watch로 호출
+     * watch(() => route.fullPath, () => addTab(route), { immediate: true });
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const addTab = (newRoute: any): boolean => {
-        // path 기준으로 중복 탭 여부 확인 (쿼리가 달라도 같은 path면 중복)
-        const existingTab = tabs.value.find(t => t.path === newRoute.path);
+        // fullPath 기준으로 중복 탭 여부 확인 (쿼리 파라미터까지 완전히 동일한 경우만 중복)
+        const existingTab = tabs.value.find(t => t.fullPath === newRoute.fullPath);
         if (existingTab) return true;
 
         // 탭 제목 결정 로직 (우선순위: meta.title > 홈('/') > 경로 마지막 세그먼트)
@@ -85,6 +92,21 @@ export const useTabs = () => {
             title = parts.length > 0 ? parts[parts.length - 1] : '홈';
         }
 
+        // 동일 경로(path)의 탭이 이미 있으면 id 쿼리 파라미터로 제목 구분
+        const samePathTabs = tabs.value.filter(t => t.path === newRoute.path);
+        if (samePathTabs.length > 0) {
+            const newId = newRoute.query?.id ?? extractId(newRoute.fullPath);
+            if (newId) title = `${title} (${newId})`;
+
+            // 기존 동일 경로 탭 중 ID 미표시 탭에 ID 추가
+            samePathTabs.forEach(t => {
+                if (!t.title.includes('(')) {
+                    const existingId = extractId(t.fullPath);
+                    if (existingId) t.title = `${t.title} (${existingId})`;
+                }
+            });
+        }
+
         tabs.value.push({
             title,
             path: newRoute.path,
@@ -95,25 +117,37 @@ export const useTabs = () => {
 
     /**
      * 탭 제거 (닫기)
-     * 지정된 path의 탭을 제거합니다.
+     * 지정된 fullPath의 탭을 제거합니다.
      * 현재 보고 있는 탭을 닫은 경우 다음 탭으로 자동 이동합니다:
      *  - 이전 탭이 있으면 이전 탭으로 이동 (index - 1)
      *  - 이전 탭이 없으면 남은 탭 중 첫 번째로 이동
      *  - 탭이 모두 없으면 홈('/')으로 이동
+     * 동일 경로(path)의 탭이 하나만 남으면 제목에서 ID 접미사를 제거합니다.
      *
-     * @param path - 닫을 탭의 라우트 경로 (Tab.path)
+     * @param fullPath - 닫을 탭의 전체 경로 (쿼리 포함, Tab.fullPath)
      *
      * @example
-     * // 특정 탭의 닫기 버튼 클릭 시
-     * removeTab('/info/projects');
+     * // 탭 닫기 버튼 클릭 시
+     * removeTab(tab.fullPath);
+     * // 폼 저장 완료 후 현재 탭 닫기
+     * removeTab(route.fullPath);
      */
-    const removeTab = (path: string) => {
-        const index = tabs.value.findIndex(t => t.path === path);
+    const removeTab = (fullPath: string) => {
+        const index = tabs.value.findIndex(t => t.fullPath === fullPath);
         if (index !== -1) {
+            const removedPath = tabs.value[index]!.path;
+            const isCurrentTab = route.fullPath === fullPath;
+
             tabs.value.splice(index, 1);
 
+            // 동일 경로 탭이 하나만 남으면 제목에서 ID 접미사 제거
+            const remaining = tabs.value.filter(t => t.path === removedPath);
+            if (remaining.length === 1 && remaining[0]) {
+                remaining[0].title = remaining[0].title.replace(/ \([^)]+\)$/, '');
+            }
+
             // 현재 활성화된 탭을 닫은 경우 자동으로 다른 탭으로 이동
-            if (route.path === path) {
+            if (isCurrentTab) {
                 if (tabs.value.length > 0) {
                     // 삭제된 탭의 이전 위치 또는 첫 번째 탭으로 이동
                     const nextTab = tabs.value[Math.max(0, index - 1)]!;
@@ -136,9 +170,9 @@ export const useTabs = () => {
      * closeAll();
      */
     const closeAll = () => {
-        const currentPath = route.path;
-        // 현재 경로와 일치하는 탭만 남기고 나머지 필터링
-        tabs.value = tabs.value.filter(t => t.path === currentPath);
+        const currentFullPath = route.fullPath;
+        // 현재 fullPath와 일치하는 탭만 남기고 나머지 필터링
+        tabs.value = tabs.value.filter(t => t.fullPath === currentFullPath);
     };
 
     return {

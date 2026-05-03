@@ -6,6 +6,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { usePendingApprovalCount } from '~/composables/usePendingApprovalCount';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -15,8 +17,6 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('useApiFetch', mockUseApiFetch);
-
-import { usePendingApprovalCount } from '~/composables/usePendingApprovalCount';
 
 describe('usePendingApprovalCount (직접 import)', () => {
     beforeEach(() => {

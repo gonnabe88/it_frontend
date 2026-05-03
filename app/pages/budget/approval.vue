@@ -18,7 +18,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onActivated  } from 'vue';
+import { ref, computed, watch, onBeforeUnmount, onActivated  } from 'vue';
 import { exportRowsToExcel } from '~/utils/excel';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import TableSearchInput from '~/components/common/TableSearchInput.vue';
@@ -54,6 +54,17 @@ const costs = computed(() => costsData.value || []);
 
 /** 데이터 로딩 중 여부 */
 const isLoading = computed(() => projectsPending.value || costsPending.value);
+
+/**
+ * 데이터 최초 로드 완료 여부
+ * keepalive 페이지 재방문 시 onActivated + navigateToTab의 refreshNuxtData()가
+ * 중복 호출되어 스피너가 두 번 깜박이는 문제를 방지합니다.
+ * 최초 로드 이후에는 갱신 중에도 기존 데이터를 그대로 표시합니다.
+ */
+const hasInitialData = ref(false);
+watch(isLoading, (val) => {
+    if (!val) hasInitialData.value = true;
+}, { immediate: true });
 
 /**
  * keepalive 페이지 재방문 시 데이터 갱신 (상신 후 돌아왔을 때 최신 상태 반영)
@@ -444,24 +455,25 @@ onBeforeUnmount(() => {
         <PageHeader title="결재 상신" subtitle="조회된 전체 미상신 목록이 일괄 상신됩니다.">
             <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="unit-selector" />
-                <Button label="결재 상신" icon="pi pi-send" severity="help" :disabled="!hasItems"
+                <Button
+label="결재 상신" icon="pi pi-send" severity="help" :disabled="!hasItems"
                     :badge="hasItems ? String(totalCount) : undefined" @click="requestApproval" />
             </template>
         </PageHeader>
 
-        <!-- 데이터 로딩 중 표시 -->
-        <div v-if="isLoading" class="flex items-center justify-center py-12">
+        <!-- 최초 로드 중 스피너 (탭 재방문 시에는 기존 데이터를 표시하므로 숨김) -->
+        <div v-if="!hasInitialData" class="flex items-center justify-center py-12">
             <ProgressSpinner style="width: 40px; height: 40px" stroke-width="4" />
             <span class="ml-3 text-zinc-500 dark:text-zinc-400">데이터를 불러오는 중...</span>
         </div>
 
         <!-- 예산 현황 요약 카드 -->
         <BudgetSummaryCards
-v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
+v-if="hasInitialData" :projects="categorizedCards.projects" :costs="categorizedCards.costs" :ordinary="categorizedCards.ordinary"
             :selected-unit="selectedUnit" />
 
         <!-- 통합 DataTable -->
-        <TableCard v-if="!isLoading" fill icon="pi-send" title="결재 상신 목록" :count="filteredItems.length">
+        <TableCard v-if="hasInitialData" fill icon="pi-send" title="결재 상신 목록" :count="filteredItems.length">
 
             <template #toolbar>
                 <Select v-model="pageSize" :options="pageSizeOptions" option-label="label" option-value="value" class="!text-sm w-auto" />
@@ -572,7 +584,7 @@ v-if="!isLoading" :projects="categorizedCards.projects" :costs="categorizedCards
         </TableCard>
 
         <!-- 조회 필터 Drawer -->
-        <Drawer v-if="!isLoading" v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[480px]">
+        <Drawer v-if="hasInitialData" v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[480px]">
             <div class="flex flex-col gap-6 py-2">
 
                 <!-- 예산연도 -->

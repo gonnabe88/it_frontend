@@ -65,7 +65,8 @@ const { removeTab } = useTabs();
 const { fetchProject, fetchProjectsOnce, fetchProjectDetailOnce, createProject, updateProject } = useProjects();
 const { exchangeRates, convertToKRW } = useCurrencyRates();
 
-definePageMeta({ title: '예산 작성', middleware: ['budget-period'] });
+// key: fullPath 기준으로 KeepAlive 캐시 분리 → 쿼리 파라미터가 다른 탭마다 별개 인스턴스
+definePageMeta({ title: '예산 작성', middleware: ['budget-period'], key: route => route.fullPath });
 
 /** 수정 모드의 사업 관리번호 (라우트 쿼리 변경에 반응하도록 computed로 선언) */
 const projectId = computed(() => route.query.id ? (route.query.id as string) : null);
@@ -491,6 +492,9 @@ onActivated(async () => {
                     if (userData.bbrC) form.value.svnDpm = userData.bbrC;
                     if (userData.bbrNm) form.value.svnDpmNm = userData.bbrNm;
                     if (userData.prlmHrkOgzCNm) form.value.svnHdq = userData.prlmHrkOgzCNm;
+                    /* 담당자: 작성자 본인으로 자동 세팅 */
+                    if (userData.eno) form.value.svnDpmCgpr = userData.eno;
+                    if (userData.usrNm) form.value.svnDpmCgprNm = userData.usrNm;
                 }
             } catch (e) {
                 console.error('작성자 소속 정보 조회 실패:', e);
@@ -528,15 +532,22 @@ onActivated(async () => {
                 });
 
                 /* API 응답을 폼에 병합 (날짜 필드는 Date 객체로 변환, bgYy는 숫자로 보정) */
+                const bgYy = Number(project.bgYy) || form.value.bgYy;
                 form.value = {
                     ...form.value,
                     ...project,
-                    bgYy: Number(project.bgYy) || form.value.bgYy,
+                    bgYy,
                     sttDt: project.sttDt ? new Date(project.sttDt) : null,
                     endDt: project.endDt ? new Date(project.endDt) : null,
                     lblFsgTlm: project.lblFsgTlm ? new Date(project.lblFsgTlm) : null,
                     resourceItems: mappedItems
                 };
+
+                /* 경상사업이고 시작일/종료일이 없으면 예산연도 기준으로 기본 설정 */
+                if (form.value.ornYn === 'Y') {
+                    if (!form.value.sttDt) form.value.sttDt = new Date(bgYy, 0, 1);
+                    if (!form.value.endDt) form.value.endDt = new Date(bgYy, 11, 31);
+                }
 
             } else if (error.value) {
                 console.error('Failed to load project', error.value);
@@ -552,8 +563,11 @@ onActivated(async () => {
             console.error(e);
         }
     } else if (route.query.ordinary === 'true') {
-        /* 신규 경상사업 등록: ornYn='Y' 설정 */
+        /* 신규 경상사업 등록: ornYn='Y' + 시작일/종료일 예산연도 기준 기본 설정 */
         form.value.ornYn = 'Y';
+        const bgYy = Number(form.value.bgYy);
+        form.value.sttDt = new Date(bgYy, 0, 1);
+        form.value.endDt = new Date(bgYy, 11, 31);
     }
 });
 
@@ -700,7 +714,7 @@ const executeSave = async () => {
             acceptLabel: '확인',
             accept: async () => {
                 await router.push(`/info/projects/${savedPrjMngNo}`);
-                removeTab('/info/projects/form');
+                removeTab(route.fullPath);
             }
         });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -772,16 +786,17 @@ const validateRequiredFields = (): boolean => {
     formErrors.prjNm = !form.value.prjNm;
     formErrors.svnDpmTlr = !form.value.svnDpmTlr;
     formErrors.svnDpmCgpr = !form.value.svnDpmCgpr;
-    // isItSameAsSvn 체크 시 주관부서 값을 그대로 복사하므로 무조건 검사
-    formErrors.itDpmTlr = !form.value.itDpmTlr;
-    formErrors.itDpmCgpr = !form.value.itDpmCgpr;
+    // 경상사업은 주관부서 데이터로 자동 동기화되므로, 정보화사업에서만 별도 검증
+    formErrors.itDpmTlr = !isOrdinary.value && !form.value.itDpmTlr;
+    formErrors.itDpmCgpr = !isOrdinary.value && !form.value.itDpmCgpr;
     formErrors.prjDes = !form.value.prjDes;
-    formErrors.sttDt = !form.value.sttDt;
-    formErrors.endDt = !form.value.endDt;
-    formErrors.prjRng = !form.value.prjRng;
-    formErrors.bzDtt = !form.value.bzDtt;
-    formErrors.tchnTp = !form.value.tchnTp;
-    formErrors.mnUsr = !form.value.mnUsr;
+    // 경상사업은 해당 항목 없음 — 정보화사업에서만 검증
+    formErrors.sttDt = !isOrdinary.value && !form.value.sttDt;
+    formErrors.endDt = !isOrdinary.value && !form.value.endDt;
+    formErrors.prjRng = !isOrdinary.value && !form.value.prjRng;
+    formErrors.bzDtt = !isOrdinary.value && !form.value.bzDtt;
+    formErrors.tchnTp = !isOrdinary.value && !form.value.tchnTp;
+    formErrors.mnUsr = !isOrdinary.value && !form.value.mnUsr;
     formErrors.resourceItems = form.value.resourceItems.length === 0;
     return !Object.values(formErrors).some(Boolean);
 };
@@ -925,16 +940,22 @@ watch(isContinueProject, (isContinue) => {
 
 /** 주관/IT 부서 동일 여부 제어 */
 const isItSameAsSvn = ref(false);
-watch([isItSameAsSvn, () => form.value.svnDpm, () => form.value.svnDpmTlr, () => form.value.svnDpmCgpr], ([checked]) => {
-    if (checked) {
-        form.value.itDpm = form.value.svnDpm;
-        form.value.itDpmNm = form.value.svnDpmNm;
-        form.value.itDpmTlr = form.value.svnDpmTlr;
-        form.value.itDpmTlrNm = form.value.svnDpmTlrNm;
-        form.value.itDpmCgpr = form.value.svnDpmCgpr;
-        form.value.itDpmCgprNm = form.value.svnDpmCgprNm;
+// 경상사업(isOrdinary) 또는 주관·IT 부서 동일 체크 시 IT부서 데이터를 주관부서와 동기화
+watch(
+    [isItSameAsSvn, isOrdinary, () => form.value.svnDpm, () => form.value.svnDpmNm,
+     () => form.value.svnDpmTlr, () => form.value.svnDpmTlrNm,
+     () => form.value.svnDpmCgpr, () => form.value.svnDpmCgprNm],
+    ([checked, ordinary]) => {
+        if (checked || ordinary) {
+            form.value.itDpm = form.value.svnDpm;
+            form.value.itDpmNm = form.value.svnDpmNm;
+            form.value.itDpmTlr = form.value.svnDpmTlr;
+            form.value.itDpmTlrNm = form.value.svnDpmTlrNm;
+            form.value.itDpmCgpr = form.value.svnDpmCgpr;
+            form.value.itDpmCgprNm = form.value.svnDpmCgprNm;
+        }
     }
-});
+);
 
 /**
  * 소요자원 단가 및 총 예산, 전결권 자동 계산 감시자
@@ -1195,10 +1216,10 @@ v-model="form.lblFsgTlm" show-icon fluid date-format="yy-mm-dd"
                 </div>
             </div>
 
-            <Divider v-if="!isOrdinary" />
+            <Divider />
 
-            <!-- 담당부서 섹션: 주관부문 → 주관부서(팀장/담당자) → IT부서(팀장/담당자) (경상사업 숨김) -->
-            <div v-if="!isOrdinary" class="space-y-3">
+            <!-- 담당부서 섹션: 경상사업/정보화사업 공통 표시 / IT부서 행은 정보화사업만 표시 -->
+            <div class="space-y-3">
                 <div class="flex items-end gap-2">
                     <span class="text-lg font-semibold text-zinc-800 dark:text-zinc-200">담당부서<span
                             class="text-red-500">*</span></span>
@@ -1212,7 +1233,8 @@ v-model="form.lblFsgTlm" show-icon fluid date-format="yy-mm-dd"
 v-model="form.svnHdq" placeholder="주관부서 담당팀장 선택 시 자동 입력" fluid readonly
                             class="w-80 bg-zinc-100 dark:bg-zinc-800" />
                     </div>
-                    <div class="flex items-center gap-2 pb-2">
+                    <!-- 주관·IT 부서 동일 체크박스: 정보화사업만 표시 -->
+                    <div v-if="!isOrdinary" class="flex items-center gap-2 pb-2">
                         <Checkbox v-model="isItSameAsSvn" input-id="isItSameAsSvn" :binary="true" />
                         <label
 for="isItSameAsSvn"
@@ -1256,8 +1278,8 @@ icon="pi pi-search" severity="secondary"
                     </div>
                 </div>
 
-                <!-- IT부서 + 팀장/담당자 (직원 검색 다이얼로그 연동) -->
-                <div class="flex gap-6">
+                <!-- IT부서 + 팀장/담당자: 정보화사업만 표시 (경상사업은 주관부서 데이터로 자동 동기화) -->
+                <div v-if="!isOrdinary" class="flex gap-6">
                     <!-- IT부서: 담당팀장 선택 시 자동 세팅 (readonly) -->
                     <div class="flex flex-col gap-2 w-80">
                         <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">IT부서</label>

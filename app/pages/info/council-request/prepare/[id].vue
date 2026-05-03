@@ -251,7 +251,8 @@ const statusGuide = computed(() => {
         <PageHeader title="협의회 개최준비" :subtitle="feasibilityData?.prjNm">
             <template #leading>
                 <div class="flex items-center gap-1">
-                    <NuxtLink to="/info/council-request"
+                    <NuxtLink
+to="/info/council-request"
                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
                         협의회 목록
                     </NuxtLink>

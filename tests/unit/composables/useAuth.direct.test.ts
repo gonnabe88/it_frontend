@@ -11,6 +11,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { ref } from 'vue';
 
+import { useAuth } from '~/composables/useAuth';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -47,8 +49,6 @@ vi.mock('pinia', async (importOriginal) => {
         },
     };
 });
-
-import { useAuth } from '~/composables/useAuth';
 
 describe('useAuth (직접 import)', () => {
     beforeEach(() => {

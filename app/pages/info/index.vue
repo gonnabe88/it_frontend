@@ -17,7 +17,7 @@
 -->
 <script setup lang="ts">
 /* 페이지 탭 제목 설정 (useTabs composable이 이 값을 읽어 탭 이름으로 사용) */
-const title = '정보화 홈';
+const title = '사업·예산 홈';
 definePageMeta({
     title
 });

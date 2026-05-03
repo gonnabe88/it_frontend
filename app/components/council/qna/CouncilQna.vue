@@ -319,11 +319,11 @@ const handleSaveReply = async (qtnId: string) => {
                     <!-- 질의 수정 버튼 (본인 질의이고, 수정/답변 모드가 아닐 때) -->
                     <Button
                         v-if="isMyQuestion(item.qtnEno) && editingId !== item.qtnId && replyingId !== item.qtnId"
+                        v-tooltip.top="'질의 수정'"
                         icon="pi pi-pencil"
                         size="small"
                         severity="secondary"
                         text
-                        v-tooltip.top="'질의 수정'"
                         @click="startEdit(item)"
                     />
                     <!-- 답변 버튼 (추진부서 담당자, 미답변 상태) -->

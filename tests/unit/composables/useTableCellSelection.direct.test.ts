@@ -20,9 +20,8 @@
  * ============================================================================
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, defineComponent  } from 'vue';
 import { mount } from '@vue/test-utils';
-import { defineComponent } from 'vue';
 
 import { useTableCellSelection } from '~/composables/useTableCellSelection';
 

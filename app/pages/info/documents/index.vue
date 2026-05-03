@@ -19,7 +19,11 @@
 import Button from 'primevue/button';
 import Skeleton from 'primevue/skeleton';
 
-definePageMeta({ layout: 'default' });
+/* 페이지 탭 제목 설정 (useTabs composable이 이 값을 읽어 탭 이름으로 사용) */
+const title = '사전협의 홈';
+definePageMeta({
+    title
+});
 
 // 대시보드 집계 데이터 조회 (bbrC는 composable 내부에서 자동 주입)
 const { data, pending } = useDocumentDashboard();

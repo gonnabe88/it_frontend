@@ -1,14 +1,4 @@
-<!--
-================================================================================
-[pages/info/documents/[id].vue] 사전협의 상세/편집 페이지
-================================================================================
-GET /api/documents/{id}로 문서를 조회하고,
-수정은 PUT, 삭제는 DELETE를 통해 처리합니다.
-
-[라우팅]
-  - 접근: /info/documents/{docMngNo}
-================================================================================
--->
+<!-- 사전협의 상세/편집 페이지: 문서 조회, 버전 관리, 첨부파일, HWPX 내보내기를 처리합니다. -->
 <script setup lang="ts">
 import { useDocuments } from '~/composables/useDocuments';
 import type { RequirementDocument, RequirementDocumentForm, VersionSummary } from '~/composables/useDocuments';
@@ -341,7 +331,7 @@ const onSave = async () => {
                 await updateFileMeta(flMngNo, { orcPkVl: docMngNo });
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (e: any) {
-                // eslint-disable-next-line no-console
+                 
                 console.warn(`[onSave] Excalidraw 파일 메타 업데이트 스킵: ${flMngNo}`, e?.data?.message ?? e);
             }
         }
@@ -602,14 +592,16 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
             <!-- 페이지 헤더 -->
             <PageHeader>
                 <template #leading>
-                    <Button icon="pi pi-arrow-left" severity="secondary" text rounded
+                    <Button
+icon="pi pi-arrow-left" severity="secondary" text rounded
                         @click="navigateTo('/info/documents/list')" />
                 </template>
                 <template #title>
                     <!-- version Tag inline 클릭을 유지하기 위해 #title 슬롯 사용 -->
                     <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                         {{ isEditing ? '요구사항 정의서 편집' : doc.reqNm }}
-                        <Tag :value="`v${doc.docVrs.toFixed(2)}`" severity="info"
+                        <Tag
+:value="`v${doc.docVrs.toFixed(2)}`" severity="info"
                             class="cursor-pointer hover:opacity-80 transition-opacity"
                             title="버전 목록 보기" @click="versionDialogVisible = true" />
                     </h1>
@@ -618,13 +610,16 @@ label="목록으로" icon="pi pi-arrow-left" class="mt-4" severity="secondary"
                 <template #actions>
                     <!-- 읽기 모드 액션 -->
                     <template v-if="!isEditing">
-                        <Button label="사전협의" icon="pi pi-comments" severity="info" outlined
+                        <Button
+label="사전협의" icon="pi pi-comments" severity="info" outlined
                             @click="navigateTo(`/info/documents/${docMngNo}/review`)" />
-                        <Button label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
+                        <Button
+label="한글 내보내기" icon="pi pi-download" severity="secondary" outlined
                             :loading="isExporting" :disabled="!doc.reqCone"
                             @click="exportToHwpx(doc.reqCone, doc.reqNm, { authorEno: doc.fstEnrUsid })" />
                         <Button v-if="!isHistoricalVersion" label="편집" icon="pi pi-pencil" @click="startEdit" />
-                        <Button v-if="!isHistoricalVersion" label="삭제" icon="pi pi-trash" severity="danger"
+                        <Button
+v-if="!isHistoricalVersion" label="삭제" icon="pi pi-trash" severity="danger"
                             outlined :loading="isDeleting" @click="onDelete" />
                     </template>
                     <!-- 편집 모드 액션 -->

@@ -5,6 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { useFiles } from '~/composables/useFiles';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -16,8 +18,6 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('useApiFetch', mockUseApiFetch);
-
-import { useFiles } from '~/composables/useFiles';
 
 const BASE = 'http://localhost:8080/api/files';
 

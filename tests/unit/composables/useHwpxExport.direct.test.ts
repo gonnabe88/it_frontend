@@ -15,6 +15,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { useHwpxExport } from '~/composables/useHwpxExport';
+
 // ============================================================================
 // vi.hoisted() — vi.mock 팩토리보다 먼저 초기화되어야 하는 mock 변수
 // ============================================================================
@@ -65,8 +67,6 @@ vi.mock('~/utils/hwpx', () => ({
 vi.mock('~/composables/useExcalidrawAttachment', () => ({
     useExcalidrawAttachment: () => ({ loadScene: mockLoadScene }),
 }));
-
-import { useHwpxExport } from '~/composables/useHwpxExport';
 
 describe('useHwpxExport (직접 import)', () => {
     beforeEach(() => {

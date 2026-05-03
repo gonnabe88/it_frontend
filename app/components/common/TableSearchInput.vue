@@ -63,7 +63,7 @@ const clearValue = () => {
             @input="onInput"
             @focus="focused = true"
             @blur="focused = false"
-        />
+        >
 
         <!-- 초기화 버튼 (입력값 있을 때만 표시) -->
         <button

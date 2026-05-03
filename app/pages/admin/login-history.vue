@@ -17,6 +17,8 @@ import type { AdminPageResponse, AdminLoginHistoryResponse } from '~/composables
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
+import { exportRowsToExcel } from '~/utils/excel';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -83,6 +85,33 @@ const lgnTpLabel = (lgnTp: string): string => {
     if (lgnTp === 'LOGOUT') return '로그아웃';
     return lgnTp;
 };
+
+// 통합검색어 (현재 페이지 내 클라이언트 필터링)
+const search = ref('');
+
+// 검색 필터링된 이력 목록
+const filteredHistory = computed(() => {
+    const list = historyData.value?.content ?? [];
+    const q = search.value.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(h =>
+        [h.eno, h.usrNm, h.ipAddr, lgnTpLabel(h.lgnTp)]
+            .some(v => v?.toLowerCase().includes(q))
+    );
+});
+
+// 엑셀 다운로드 (현재 페이지 데이터)
+const downloadExcel = async () => {
+    const rows = filteredHistory.value.map(h => ({
+        '사용자명': h.usrNm,
+        '사원번호': h.eno,
+        '유형': lgnTpLabel(h.lgnTp),
+        '발생시간': h.lgnDtm,
+        'IP 주소': h.ipAddr,
+        '실패사유': h.flurRsn ?? '',
+    }));
+    await exportRowsToExcel(rows, '로그인이력', `로그인이력_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
 </script>
 
 <template>
@@ -91,10 +120,22 @@ const lgnTpLabel = (lgnTp: string): string => {
         <PageHeader title="로그인 이력" subtitle="TAAABB_CLOGNH — 전체 로그인·실패·로그아웃 이력 (최신순)" />
 
         <!-- 로그인 이력 DataTable -->
-        <TableCard fill>
+        <TableCard fill icon="pi-history" title="로그인 이력" :count="historyData?.totalElements ?? 0">
+
+            <template #toolbar>
+                <TableSearchInput v-model="search" placeholder="사원번호, 이름, IP, 유형 검색..." width="30rem" />
+                <div class="flex-1" />
+                <button
+                    class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                    @click="downloadExcel">
+                    <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                    Excel
+                </button>
+            </template>
+
         <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
-            :value="historyData?.content ?? []"
+            :value="filteredHistory"
             :loading="pending"
             data-key="fstEnrDtm"
             scrollable

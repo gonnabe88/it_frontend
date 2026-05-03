@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { ref, computed } from 'vue';
 
+import { useReviewStore } from '~/stores/review';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -32,8 +34,6 @@ vi.stubGlobal('useNuxtApp', () => ({ $apiFetch: vi.fn() }));
 vi.stubGlobal('useRuntimeConfig', () => ({ public: { apiBase: 'http://localhost:8080' } }));
 vi.stubGlobal('ref', ref);
 vi.stubGlobal('computed', computed);
-
-import { useReviewStore } from '~/stores/review';
 
 describe('useReviewStore (직접 import)', () => {
     beforeEach(() => {

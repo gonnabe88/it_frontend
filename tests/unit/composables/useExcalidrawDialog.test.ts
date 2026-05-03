@@ -7,11 +7,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { computed, reactive } from 'vue';
 
+import { useExcalidrawDialog } from '~/composables/useExcalidrawDialog';
+
 // useExcalidrawDialog uses module-level reactive() and computed() from Nuxt auto-imports
 vi.stubGlobal('reactive', reactive);
 vi.stubGlobal('computed', computed);
-
-import { useExcalidrawDialog } from '~/composables/useExcalidrawDialog';
 
 describe('useExcalidrawDialog', () => {
     // Reset singleton state between tests by closing after each

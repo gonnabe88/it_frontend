@@ -569,18 +569,18 @@ v-else-if="!currentGuide"
                         <div class="shrink-0 ml-4">
                             <!-- 편집 모드 섹션 -->
                             <div v-if="isEditing" class="flex gap-2">
-                                <Button label="취소" severity="secondary" size="small" @click="cancelEdit" />
-                                <Button label="저장" icon="pi pi-save" size="small" :loading="isSaving" @click="onSave" />
+                                <Button label="취소" severity="secondary" @click="cancelEdit" />
+                                <Button label="저장" icon="pi pi-save" :loading="isSaving" @click="onSave" />
                             </div>
                             <!-- 조회 모드 섹션 -->
                             <div v-else class="flex gap-2">
                                 <Button
-:label="isFullscreen ? '일반 화면' : '전체 화면'"
-                                    :icon="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-expand'" severity="secondary"
-                                    outlined size="small" @click="toggleFullscreen" />
+                                    :label="isFullscreen ? '일반 화면' : '전체 화면'"
+                                    :icon="isFullscreen ? 'pi pi-window-minimize' : 'pi pi-expand'"
+                                    severity="secondary" outlined @click="toggleFullscreen" />
                                 <Button
-:label="currentGuide ? '편집' : '가이드 작성'"
-                                    :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'" size="small"
+                                    :label="currentGuide ? '편집' : '가이드 작성'"
+                                    :icon="currentGuide ? 'pi pi-pencil' : 'pi pi-plus'"
                                     @click="startEdit" />
                             </div>
                         </div>

@@ -7,6 +7,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref, computed } from 'vue';
 
+import { useDocumentDashboard, useDocumentBadgeCount } from '~/composables/useDocumentDashboard';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -19,8 +21,6 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('computed', computed);
-
-import { useDocumentDashboard, useDocumentBadgeCount } from '~/composables/useDocumentDashboard';
 
 describe('useDocumentDashboard (직접 import)', () => {
     beforeEach(() => {

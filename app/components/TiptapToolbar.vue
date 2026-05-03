@@ -21,6 +21,7 @@ Design Ref: §4 — TiptapToolbar 분리 (module-2 리팩토링)
 <script setup lang="ts">
 import type { Editor } from '@tiptap/core';
 import type { AttachmentItem } from './extensions/tiptap-extensions';
+import { COLOR_PALETTE, fontOptions, fontSizeOptions } from './extensions/tiptap-toolbar-options';
 import { formatFileSize } from '~/utils/common';
 
 const props = defineProps<{
@@ -51,20 +52,6 @@ const props = defineProps<{
 const colorPaletteVisible = ref(false);
 /** 배경색(형광펜) 팔레트 표시 여부 */
 const highlightPaletteVisible = ref(false);
-
-/**
- * 프리셋 색상 팔레트 (8열 × 6행 = 48색)
- * 열: 흑백/회색, 빨강, 주황, 노랑/녹색, 청록/파랑, 남색/보라, 분홍
- * 행: 짙은색 → 옅은색 순
- */
-const COLOR_PALETTE: string[][] = [
-    ['#000000', '#1F2937', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB', '#FFFFFF'],
-    ['#7F1D1D', '#B91C1C', '#EF4444', '#F97316', '#FB923C', '#FCA5A5', '#FED7AA', '#FFF7ED'],
-    ['#78350F', '#B45309', '#D97706', '#EAB308', '#FCD34D', '#FDE68A', '#FEF08A', '#FEFCE8'],
-    ['#14532D', '#15803D', '#16A34A', '#22C55E', '#4ADE80', '#86EFAC', '#BBF7D0', '#DCFCE7'],
-    ['#1E3A8A', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
-    ['#4C1D95', '#6D28D9', '#8B5CF6', '#A855F7', '#EC4899', '#F472B6', '#F9A8D4', '#FCE7F3'],
-];
 
 /** 현재 커서 위치의 글자 색상 (버튼 미리보기용) */
 const currentTextColor = computed(() =>
@@ -101,14 +88,6 @@ const removeHighlightColor = () => {
 };
 
 // ── 폰트 패밀리 ──
-const fontOptions = [
-    { label: '기본 폰트', value: '' },
-    { label: '나눔고딕', value: "'NanumGothic', sans-serif" },
-    { label: '맑은 고딕', value: "'Malgun Gothic', sans-serif" },
-    { label: 'Georgia', value: 'Georgia, serif' },
-    { label: 'Verdana', value: 'Verdana, sans-serif' },
-    { label: 'Courier New', value: "'Courier New', monospace" }
-];
 const selectedFont = ref('');
 
 const applyFontFamily = (font: string) => {
@@ -121,19 +100,6 @@ const applyFontFamily = (font: string) => {
 };
 
 // ── 글자 크기 (FR-04) ──
-const fontSizeOptions = [
-    { label: '기본', value: '' },
-    { label: '8px', value: '8px' },
-    { label: '10px', value: '10px' },
-    { label: '12px', value: '12px' },
-    { label: '14px', value: '14px' },
-    { label: '16px', value: '16px' },
-    { label: '18px', value: '18px' },
-    { label: '20px', value: '20px' },
-    { label: '24px', value: '24px' },
-    { label: '28px', value: '28px' },
-    { label: '32px', value: '32px' },
-];
 const selectedFontSize = ref('');
 
 /** 글자 크기 적용 (빈 값이면 fontSize 마크 제거) */

@@ -100,12 +100,13 @@ const navigateIfAllowed = (path: string) => {
                     </div>
 
                     <!-- 2. 전산업무비 카드 (에메랄드 테마) -->
+                    <!-- 목록 페이지(/info/cost)는 기간 무관 항상 접근 가능, 신규 등록 폼은 budget-period 미들웨어가 자체 보호 -->
                     <div
 :class="[
                             'stagger-2 group relative bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all duration-500 flex flex-col items-center text-center h-[460px]',
-                            isWithinPeriod ? 'hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                            'hover:shadow-xl hover:border-emerald-500 dark:hover:border-emerald-500 cursor-pointer'
                         ]"
-                        @click="navigateIfAllowed('/info/cost')">
+                        @click="navigateTo('/info/cost')">
                         <!-- 아이콘/제목 영역 (고정 높이로 하단 뱃지 라인 정렬) -->
                         <div class="flex flex-col items-center h-[240px] w-full pt-4">
                             <div class="p-6 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300">

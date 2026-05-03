@@ -9,6 +9,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 
+import { useReview } from '~/composables/useReview';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -45,8 +47,6 @@ vi.mock('~/stores/review', () => ({
         setActiveComment: mockSetActiveComment,
     }),
 }));
-
-import { useReview } from '~/composables/useReview';
 
 describe('useReview (직접 import)', () => {
     beforeEach(() => {
@@ -118,7 +118,7 @@ describe('useReview (직접 import)', () => {
                 quotedText: '인용 텍스트',
                 authorEno: 'E001',
                 authorName: '홍길동',
-                authorTeam: '개발팀' as any,
+                authorTeam: '개발/운영팀',
             });
             expect(mockAddComment).toHaveBeenCalledWith(
                 expect.objectContaining({ type: 'inline', text: '코멘트 내용', markId: 'MARK-001' })
@@ -133,7 +133,7 @@ describe('useReview (직접 import)', () => {
                 quotedText: '인용',
                 authorEno: 'E001',
                 authorName: '홍',
-                authorTeam: '팀' as any,
+                authorTeam: '개발/운영팀',
             });
             expect(mockAddComment).toHaveBeenCalledWith(
                 expect.objectContaining({ attachments: [] })
@@ -151,7 +151,7 @@ describe('useReview (직접 import)', () => {
                 text: '전반 코멘트',
                 authorEno: 'E001',
                 authorName: '홍길동',
-                authorTeam: '개발팀' as any,
+                authorTeam: '개발/운영팀',
             });
             expect(mockAddComment).toHaveBeenCalledWith(
                 expect.objectContaining({ type: 'general', text: '전반 코멘트' })

@@ -451,7 +451,8 @@ const submitApproval = async () => {
         <!-- ── 페이지 헤더 ── -->
         <PageHeader :title="title">
             <template #leading>
-                <Button v-tooltip.top="'목록으로'" icon="pi pi-arrow-left" severity="secondary" text
+                <Button
+v-tooltip.top="'목록으로'" icon="pi pi-arrow-left" severity="secondary" text
                     @click="navigateTo('/info/council-request')" />
             </template>
             <template #actions>

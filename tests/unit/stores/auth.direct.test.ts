@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { ref, computed } from 'vue';
 
+import { useAuthStore } from '~/stores/auth';
+
 // ============================================================================
 // Mock 설정 — stores/auth.ts가 사용하는 Nuxt auto-import를 대체
 // ============================================================================
@@ -31,18 +33,16 @@ const localStorageStore: Record<string, string> = {};
 vi.stubGlobal('localStorage', {
     getItem: (key: string) => localStorageStore[key] ?? null,
     setItem: (key: string, value: string) => { localStorageStore[key] = value; },
-    removeItem: (key: string) => { delete localStorageStore[key]; },
-    clear: () => { Object.keys(localStorageStore).forEach(k => delete localStorageStore[k]); },
+    removeItem: (key: string) => { Reflect.deleteProperty(localStorageStore, key); },
+    clear: () => { Object.keys(localStorageStore).forEach(k => Reflect.deleteProperty(localStorageStore, k)); },
 });
-
-import { useAuthStore } from '~/stores/auth';
 
 describe('useAuthStore (직접 import)', () => {
     beforeEach(() => {
         setActivePinia(createPinia());
         mockFetch.mockReset();
         mockUserCookieValue.value = null;
-        Object.keys(localStorageStore).forEach(k => delete localStorageStore[k]);
+        Object.keys(localStorageStore).forEach(k => Reflect.deleteProperty(localStorageStore, k));
     });
 
     // -------------------------------------------------------------------------

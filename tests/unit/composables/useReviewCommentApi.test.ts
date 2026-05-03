@@ -5,6 +5,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { useReviewCommentApi } from '~/composables/useReviewCommentApi';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -14,8 +16,6 @@ vi.stubGlobal('useNuxtApp', () => ({ $apiFetch: mockApiFetch }));
 vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
-
-import { useReviewCommentApi } from '~/composables/useReviewCommentApi';
 
 const BASE = 'http://localhost:8080/api/documents';
 

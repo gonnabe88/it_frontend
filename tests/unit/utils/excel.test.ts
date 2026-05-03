@@ -8,6 +8,13 @@
  * ============================================================================
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Workbook, Worksheet } from 'exceljs';
+
+// ============================================================================
+// Import
+// ============================================================================
+
+import { applyHeaderStyle, downloadWorkbook, exportRowsToExcel } from '~/utils/excel';
 
 // ============================================================================
 // ExcelJS Mock
@@ -96,12 +103,6 @@ vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
     return document.createElement(tag);
 });
 
-// ============================================================================
-// Import
-// ============================================================================
-
-import { applyHeaderStyle, downloadWorkbook, exportRowsToExcel } from '~/utils/excel';
-
 describe('utils/excel', () => {
     beforeEach(() => {
         mockCreateObjectURL.mockClear();
@@ -117,28 +118,28 @@ describe('utils/excel', () => {
     describe('applyHeaderStyle()', () => {
         it('1행 높이를 22로 설정한다', () => {
             const ws = createMockWs();
-            applyHeaderStyle(ws as any);
+            applyHeaderStyle(ws as unknown as Worksheet);
             const row = (ws.getRow as ReturnType<typeof vi.fn>).mock.results[0]?.value;
             expect(row.height).toBe(22);
         });
 
         it('각 셀에 eachCell 콜백을 실행한다', () => {
             const ws = createMockWs();
-            applyHeaderStyle(ws as any);
+            applyHeaderStyle(ws as unknown as Worksheet);
             const row = (ws.getRow as ReturnType<typeof vi.fn>).mock.results[0]?.value;
             expect(row.eachCell).toHaveBeenCalled();
         });
 
         it('헤더 행에 commit()을 호출한다', () => {
             const ws = createMockWs();
-            applyHeaderStyle(ws as any);
+            applyHeaderStyle(ws as unknown as Worksheet);
             const row = (ws.getRow as ReturnType<typeof vi.fn>).mock.results[0]?.value;
             expect(row.commit).toHaveBeenCalled();
         });
 
         it('셀에 fill 스타일을 적용한다', () => {
             const ws = createMockWs();
-            applyHeaderStyle(ws as any);
+            applyHeaderStyle(ws as unknown as Worksheet);
             const row = (ws.getRow as ReturnType<typeof vi.fn>).mock.results[0]?.value;
             // eachCell 콜백이 실행되어 셀에 값이 설정됨을 확인
             const cell = row._cells[0];
@@ -152,31 +153,31 @@ describe('utils/excel', () => {
     describe('downloadWorkbook()', () => {
         it('xlsx.writeBuffer를 호출한다', async () => {
             const wb = new MockWorkbook();
-            await downloadWorkbook(wb as any, 'test.xlsx');
+            await downloadWorkbook(wb as unknown as Workbook, 'test.xlsx');
             expect(wb.xlsx.writeBuffer).toHaveBeenCalled();
         });
 
         it('URL.createObjectURL을 호출한다', async () => {
             const wb = new MockWorkbook();
-            await downloadWorkbook(wb as any, 'test.xlsx');
+            await downloadWorkbook(wb as unknown as Workbook, 'test.xlsx');
             expect(mockCreateObjectURL).toHaveBeenCalled();
         });
 
         it('anchor.click()을 호출하여 파일을 다운로드한다', async () => {
             const wb = new MockWorkbook();
-            await downloadWorkbook(wb as any, 'test.xlsx');
+            await downloadWorkbook(wb as unknown as Workbook, 'test.xlsx');
             expect(mockClick).toHaveBeenCalled();
         });
 
         it('다운로드 후 URL.revokeObjectURL을 호출한다', async () => {
             const wb = new MockWorkbook();
-            await downloadWorkbook(wb as any, 'test.xlsx');
+            await downloadWorkbook(wb as unknown as Workbook, 'test.xlsx');
             expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
         });
 
         it('anchor.download에 파일명을 설정한다', async () => {
             const wb = new MockWorkbook();
-            await downloadWorkbook(wb as any, 'report.xlsx');
+            await downloadWorkbook(wb as unknown as Workbook, 'report.xlsx');
             expect(mockAnchor.download).toBe('report.xlsx');
         });
     });

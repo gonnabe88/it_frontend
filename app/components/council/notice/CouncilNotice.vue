@@ -263,7 +263,7 @@ const handleDelete = async (file: FileRecord) => {
                     multiple
                     class="hidden"
                     @change="handleFileChange"
-                />
+                >
             </div>
 
             <!-- 파일 목록 -->

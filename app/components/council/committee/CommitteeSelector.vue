@@ -260,7 +260,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                 빈 상태 안내: 아직 위원이 한 명도 없을 때 기본 위원 자동 배정 버튼 표출
                 '기본 위원 배정' 클릭 → 심의유형(dbrTp)별 당연위원 후보를 서버에서 불러옵니다.
             -->
-            <div v-if="isEmpty && !readonly"
+            <div
+v-if="isEmpty && !readonly"
                 class="flex flex-col items-center gap-3 py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl mb-4">
                 <i class="pi pi-users text-3xl text-zinc-300 dark:text-zinc-600" />
                 <p class="text-sm text-zinc-500 dark:text-zinc-400">등록된 평가위원이 없습니다.</p>

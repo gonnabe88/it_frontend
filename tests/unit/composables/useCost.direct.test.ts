@@ -6,6 +6,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+import { useCost } from '~/composables/useCost';
+
 // ============================================================================
 // Mock 설정
 // ============================================================================
@@ -17,8 +19,6 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('useApiFetch', mockUseApiFetch);
-
-import { useCost } from '~/composables/useCost';
 
 const BASE = 'http://localhost:8080/api/cost';
 

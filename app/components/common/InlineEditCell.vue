@@ -323,7 +323,8 @@ const onSearchClick = () => {
         @click.stop="startEdit">
 
         <!-- View Mode -->
-        <span v-if="!editing" :class="[
+        <span
+v-if="!editing" :class="[
             'inline-block w-full px-2 py-1 rounded min-h-[2rem] leading-[2rem]',
             readonly ? 'cursor-default' : (disabled ? 'text-zinc-400 cursor-not-allowed' : 'cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800'),
             invalid ? 'text-red-500' : ''
@@ -336,19 +337,22 @@ const onSearchClick = () => {
              남는 시각 이상 현상이 발생하므로, 입력 요소 자체에만 invalid 스타일을 적용합니다. -->
         <div v-else class="flex items-center gap-1 w-full">
             <!-- Edit Mode: text -->
-            <InputText v-if="type === 'text'" ref="inputRef" v-model="localValue" :invalid="invalid"
+            <InputText
+v-if="type === 'text'" ref="inputRef" v-model="localValue" :invalid="invalid"
                 class="w-full cursor-text" :placeholder="placeholder" @keydown.enter="save" @keydown.esc="cancel"
                 @blur="save" />
 
             <!-- Edit Mode: number
                  @blur: PrimeVue InputNumber는 blur 이벤트 emit 후 updateModel을 동기 호출하므로
                  nextTick 이후에 save()를 실행해야 localValue가 최신 값으로 반영됨. -->
-            <InputNumber v-else-if="type === 'number'" ref="inputRef" v-model="localValue" :invalid="invalid"
+            <InputNumber
+v-else-if="type === 'number'" ref="inputRef" v-model="localValue" :invalid="invalid"
                 class="w-full cursor-text" :placeholder="placeholder" :suffix="suffix ? ` ${suffix}` : undefined"
                 @keydown.enter="save" @keydown.esc="cancel" @blur="() => nextTick(save)" />
 
             <!-- Edit Mode: select -->
-            <Select v-else-if="type === 'select'" ref="inputRef" v-model="localValue" :invalid="invalid"
+            <Select
+v-else-if="type === 'select'" ref="inputRef" v-model="localValue" :invalid="invalid"
                 :options="options" option-label="label" option-value="value" class="w-full cursor-pointer"
                 :placeholder="placeholder" @change="onSelectChange" />
 
@@ -356,11 +360,13 @@ const onSearchClick = () => {
                  input+아이콘 버튼(form)은 fluid+w-full로 컬럼 너비 안에 제한됨.
                  달력 드롭다운 패널은 PrimeVue가 자동으로 teleport하여 컬럼 밖에 full-size로 표시됨.
                  @hide: 패널이 닫힐 때(날짜 선택 or 외부 클릭) 저장 처리 -->
-            <DatePicker v-else-if="type === 'date'" ref="inputRef" v-model="localValue" :invalid="invalid" :view="view"
+            <DatePicker
+v-else-if="type === 'date'" ref="inputRef" v-model="localValue" :invalid="invalid" :view="view"
                 :date-format="dateFormat" show-icon fluid class="w-full cursor-pointer" @hide="save" />
 
             <!-- Edit Mode: autocomplete -->
-            <AutoComplete v-else-if="type === 'autocomplete'" ref="inputRef" v-model="localValue" :invalid="invalid"
+            <AutoComplete
+v-else-if="type === 'autocomplete'" ref="inputRef" v-model="localValue" :invalid="invalid"
                 :suggestions="suggestions" :option-label="optionLabel" class="w-full min-w-0 cursor-text"
                 :placeholder="placeholder" @complete="emit('complete', $event)" @item-select="onSelectChange">
                 <template #option="{ option }">

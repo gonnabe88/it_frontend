@@ -6,6 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref, computed, isRef } from 'vue';
 
+import { useDocuments } from '~/composables/useDocuments';
+
 // ============================================================================
 // Mock 설정 — useDocuments.ts는 isRef/ref/computed를 Nuxt auto-import로 사용하므로
 // vi.stubGlobal로 Vue의 실제 구현체를 주입한다
@@ -21,8 +23,6 @@ vi.stubGlobal('useApiFetch', mockUseApiFetch);
 vi.stubGlobal('isRef', isRef);
 vi.stubGlobal('ref', ref);
 vi.stubGlobal('computed', computed);
-
-import { useDocuments } from '~/composables/useDocuments';
 
 const BASE = 'http://localhost:8080/api/documents';
 

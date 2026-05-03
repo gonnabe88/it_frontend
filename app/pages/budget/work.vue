@@ -24,11 +24,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { formatBudget } from '~/utils/common'
-import { exportRowsToExcel, downloadWorkbook, applyHeaderStyle } from '~/utils/excel'
-import type { SummaryResponse, SummaryItem, ApplyResponse, ProjectSummaryResponse } from '~/types/budget-work'
+import { downloadWorkbook, applyHeaderStyle } from '~/utils/excel'
+import type { SummaryResponse, ApplyResponse, ProjectSummaryResponse } from '~/types/budget-work'
 import type { Project } from '~/composables/useProjects'
 import type { ItCost } from '~/composables/useCost'
-import StyledDataTable from '~/components/common/StyledDataTable.vue'
+import BudgetTargetTable from '~/components/budget/BudgetTargetTable.vue'
+import BudgetSummaryResultTable from '~/components/budget/BudgetSummaryResultTable.vue'
+import BudgetProjectSummaryTable from '~/components/budget/BudgetProjectSummaryTable.vue'
 
 /** 페이지 메타 설정 */
 definePageMeta({
@@ -504,7 +506,7 @@ const onSave = async () => {
             detail: `${result.totalRecords}건이 처리되었습니다.`,
             life: 3000
         })
-    } catch (error) {
+    } catch {
         toast.add({
             severity: 'error',
             summary: '저장 실패',
@@ -698,7 +700,6 @@ const exportProjectSummaryExcel = async () => {
 
 <template>
     <div class="space-y-6">
-
         <PageHeader title="예산 작업">
             <template #actions>
                 <SelectButton v-model="budgetUnit" :options="unitOptions" :allow-empty="false" />
@@ -709,388 +710,46 @@ const exportProjectSummaryExcel = async () => {
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">예산년도</label>
             <Select
-v-model="selectedYear" :options="yearOptions" option-label="label" option-value="value"
-                class="w-40" />
+                v-model="selectedYear"
+                :options="yearOptions"
+                option-label="label"
+                option-value="value"
+                class="w-40"
+            />
         </div>
 
-        <!-- 대상 목록 (결재완료 정보화사업 + 전산업무비) -->
-        <TableCard icon="pi-table" title="대상 목록" subtitle="결재완료된 정보화사업 · 전산업무비">
-            <template #actions>
-                <div class="flex flex-col items-end gap-1">
-                    <span class="text-xs text-zinc-400 mb-3">(기준 : {{ budgetUnit }})</span>
-                    <button class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors" @click="exportTargetExcel">
-                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
-                        Excel 내보내기
-                    </button>
-                </div>
-            </template>
+        <BudgetTargetTable
+            :items="targetItems"
+            :loading="targetLoading"
+            :totals="targetTotals"
+            :unit="budgetUnit"
+            :saving="saving"
+            :fmt="fmt"
+            @export="exportTargetExcel"
+            @save="onSave"
+        />
 
-            <StyledDataTable :value="targetItems" :loading="targetLoading" striped-rows data-key="_id">
+        <BudgetSummaryResultTable
+            v-if="summaryData"
+            :rows="summaryRows"
+            :summary="summaryData"
+            :prev-summary="prevSummaryData"
+            :prev-year="prevYear"
+            :selected-year="selectedYear"
+            :unit="budgetUnit"
+            :row-class="summaryRowClass"
+            :fmt="fmt"
+            :calc-change-rate="calcChangeRate"
+            @export="exportSummaryExcel"
+        />
 
-                <!-- 구분 -->
-                <Column field="_type" header="구분" style="width: 5rem">
-                    <template #body="{ data }">
-                        <Tag
-:value="data._type" :class="data._type === '사업'
-                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
-                            class="border-0" rounded />
-                    </template>
-                </Column>
-
-                <!-- 사업명/계약명 -->
-                <Column field="name" header="사업명/계약명" style="min-width: 16rem">
-                    <template #body="{ data }">
-                        <NuxtLink
-:to="data._link"
-                            class="hover:underline hover:text-indigo-600 cursor-pointer font-bold transition-colors text-zinc-900 dark:text-zinc-100">
-                            {{ data.name }}
-                        </NuxtLink>
-                    </template>
-                </Column>
-
-                <!-- 총예산 -->
-                <Column field="totalBg" header="총예산" style="min-width: 8rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(data.totalBg) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(targetTotals.totalBg) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 자본예산 -->
-                <Column field="assetBg" header="자본예산" style="min-width: 8rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(data.assetBg) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(targetTotals.assetBg) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 일반관리비 -->
-                <Column field="costBg" header="일반관리비" style="min-width: 8rem">
-                    <template #body="{ data }">
-                        <span class="text-right block">{{ fmt(data.costBg) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(targetTotals.costBg) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 자본예산 편성률(%) — REQ-2 -->
-                <Column header="자본예산 편성률(%)" style="width: 10rem">
-                    <template #body="{ data }">
-                        <InputNumber
-v-if="data.assetDupRt != null"
-                            v-model="data.assetDupRt" :min="0" :max="100" suffix=" %"
-                            :show-buttons="true" :step="5" class="w-full" input-class="text-right" />
-                        <span v-else class="text-right block text-zinc-400">-</span>
-                    </template>
-                </Column>
-
-                <!-- 일반관리비 편성률(%) — REQ-2 -->
-                <Column header="일반관리비 편성률(%)" style="width: 10rem">
-                    <template #body="{ data }">
-                        <InputNumber
-v-model="data.costDupRt" :min="0" :max="100" suffix=" %"
-                            :show-buttons="true" :step="5" class="w-full" input-class="text-right" />
-                    </template>
-                </Column>
-
-                <!-- 담당부서 -->
-                <Column field="deptNm" header="담당부서" style="min-width: 8rem" />
-
-                <!-- 데이터 없음 -->
-                <template #empty>
-                    <div class="text-center py-8 text-zinc-500">
-                        결재완료된 항목이 없습니다.
-                    </div>
-                </template>
-            </StyledDataTable>
-
-            <!-- 저장 버튼 -->
-            <div class="flex justify-end px-6 py-4">
-                <Button
-label="저장" severity="primary" icon="pi pi-save" :loading="saving"
-                    :disabled="targetItems.length === 0" @click="onSave" />
-            </div>
-        </TableCard>
-
-        <!-- 비목별 편성 결과 테이블 (계층 구조: 자본예산/일반관리비 → 비목그룹 → 세부비목) -->
-        <TableCard v-if="summaryData" icon="pi-calculator" title="비목별 편성 결과">
-            <template #actions>
-                <div class="flex flex-col items-end gap-1">
-                    <span class="text-xs text-zinc-400 mb-3">(기준 : {{ budgetUnit }})</span>
-                    <button class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors" @click="exportSummaryExcel">
-                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
-                        Excel 내보내기
-                    </button>
-                </div>
-            </template>
-
-            <StyledDataTable :value="summaryRows" data-key="id" :row-class="summaryRowClass">
-
-                <!-- 2단 헤더 그룹: 비목(3컬럼) + 요청금액(3컬럼) + 편성금액(3컬럼) -->
-                <ColumnGroup type="header">
-                    <Row>
-                        <Column header="비목" :colspan="3" :rowspan="2" />
-                        <Column header="요청금액" :colspan="3" />
-                        <Column header="편성금액" :colspan="3" />
-                    </Row>
-                    <Row>
-                        <!-- 요청금액 서브헤더 -->
-                        <Column :header="`${prevYear}`" style="min-width: 8rem" />
-                        <Column :header="`${selectedYear}`" style="min-width: 8rem" />
-                        <Column header="증감율" style="width: 6rem" />
-                        <!-- 편성금액 서브헤더 -->
-                        <Column :header="`${prevYear}`" style="min-width: 8rem" />
-                        <Column :header="`${selectedYear}`" style="min-width: 8rem" />
-                        <Column header="증감율" style="width: 6rem" />
-                    </Row>
-                </ColumnGroup>
-
-                <!-- 대분류 비목 (자본예산/일반관리비 그룹 헤더 행) -->
-                <Column field="bigNm">
-                    <template #body="{ data }">
-                        <span v-if="data.bigNm" class="font-bold text-blue-900 dark:text-blue-300">{{ data.bigNm
-                        }}</span>
-                    </template>
-                    <template #footer/>
-                </Column>
-
-                <!-- 중분류 비목 (자본예산 세부비목 · 일반관리비 서브그룹명 · 합계) -->
-                <Column field="midNm">
-                    <template #body="{ data }">
-                        <span
-v-if="data.midNm" :class="{
-                            'font-semibold': data.rowType === 'data' && data.dtlNm,
-                            'font-bold': data.rowType === 'total',
-                        }">{{ data.midNm }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="font-bold">합계</span>
-                    </template>
-                </Column>
-
-                <!-- 세부비목 (일반관리비 데이터 항목 · 소계) -->
-                <Column field="dtlNm">
-                    <template #body="{ data }">
-                        <span
-v-if="data.dtlNm" :class="{
-                            'font-bold': data.rowType === 'subtotal',
-                        }">{{ data.dtlNm }}</span>
-                    </template>
-                    <template #footer/>
-                </Column>
-
-                <!-- 전년 요청금액 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span
-v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block text-zinc-500">{{ fmt(data.prevRequestAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold text-zinc-500">{{
-                            fmt(prevSummaryData?.totals.requestAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 당해 요청금액 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span
-v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block">{{ fmt(data.requestAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(summaryData!.totals.requestAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 요청금액 증감율 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span
-v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block" :class="{
-                                'text-red-600': data.requestAmount - data.prevRequestAmount > 0,
-                                'text-blue-600': data.requestAmount - data.prevRequestAmount < 0
-                            }">{{ calcChangeRate(data.requestAmount, data.prevRequestAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span
-class="text-right block font-bold" :class="{
-                            'text-red-600': (summaryData!.totals.requestAmount - (prevSummaryData?.totals.requestAmount || 0)) > 0,
-                            'text-blue-600': (summaryData!.totals.requestAmount - (prevSummaryData?.totals.requestAmount || 0)) < 0
-                        }">{{ calcChangeRate(summaryData!.totals.requestAmount, prevSummaryData?.totals.requestAmount
-                            || 0) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 전년 편성금액 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span
-v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block text-zinc-500">{{ fmt(data.prevDupAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold text-zinc-500">{{ fmt(prevSummaryData?.totals.dupAmount)
-                        }}</span>
-                    </template>
-                </Column>
-
-                <!-- 당해 편성금액 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span
-v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block">{{ fmt(data.dupAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(summaryData!.totals.dupAmount) }}</span>
-                    </template>
-                </Column>
-
-                <!-- 편성금액 증감율 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span
-v-if="data.rowType === 'data' || data.rowType === 'subtotal' || data.rowType === 'total'"
-                            class="text-right block" :class="{
-                                'text-red-600': data.dupAmount - data.prevDupAmount > 0,
-                                'text-blue-600': data.dupAmount - data.prevDupAmount < 0
-                            }">{{ calcChangeRate(data.dupAmount, data.prevDupAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span
-class="text-right block font-bold" :class="{
-                            'text-red-600': (summaryData!.totals.dupAmount - (prevSummaryData?.totals.dupAmount || 0)) > 0,
-                            'text-blue-600': (summaryData!.totals.dupAmount - (prevSummaryData?.totals.dupAmount || 0)) < 0
-                        }">{{ calcChangeRate(summaryData!.totals.dupAmount, prevSummaryData?.totals.dupAmount || 0)
-                        }}</span>
-                    </template>
-                </Column>
-
-            </StyledDataTable>
-        </TableCard>
-
-        <!-- 사업별 편성 결과 테이블 (비목별 편성률 동적 컬럼) -->
-        <TableCard v-if="projectSummaryData && projectSummaryData.data.length > 0" icon="pi-briefcase" title="사업별 편성 결과">
-            <template #actions>
-                <div class="flex flex-col items-end gap-1">
-                    <span class="text-xs text-zinc-400 mb-3">(기준 : {{ budgetUnit }})</span>
-                    <button class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors" @click="exportProjectSummaryExcel">
-                        <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
-                        Excel 내보내기
-                    </button>
-                </div>
-            </template>
-
-            <StyledDataTable
-:value="projectSummaryData.data" striped-rows data-key="orcPkVl" scrollable
-                scroll-height="flex">
-
-                <!-- 2단 헤더: 고정 컬럼 + 비목별 동적 컬럼 + 합계 -->
-                <ColumnGroup type="header">
-                    <Row>
-                        <Column header="구분" :rowspan="2" style="width: 5rem" />
-                        <Column header="사업명/계약명" :rowspan="2" style="min-width: 14rem" />
-                        <Column
-v-for="cat in projectSummaryData.categories" :key="cat.ioePrefix" :header="cat.cdNm"
-                            :colspan="2" />
-                        <Column header="합계" :colspan="2" />
-                    </Row>
-                    <Row>
-                        <!-- 비목별 서브 헤더 -->
-                        <template v-for="cat in projectSummaryData.categories" :key="'sub-' + cat.ioePrefix">
-                            <Column header="요청" style="min-width: 7rem" />
-                            <Column header="편성" style="min-width: 7rem" />
-                        </template>
-                        <!-- 합계 서브 헤더 -->
-                        <Column header="요청" style="min-width: 8rem" />
-                        <Column header="편성" style="min-width: 8rem" />
-                    </Row>
-                </ColumnGroup>
-
-                <!-- 구분 -->
-                <Column>
-                    <template #body="{ data }">
-                        <Tag
-:value="data.orcTb === 'BPROJM' ? '사업' : '비용'" :class="data.orcTb === 'BPROJM'
-                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
-                            class="border-0" rounded />
-                    </template>
-                </Column>
-
-                <!-- 사업명/계약명 -->
-                <Column field="name">
-                    <template #body="{ data }">
-                        <span class="font-medium">{{ data.name }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="font-bold">합계</span>
-                    </template>
-                </Column>
-
-                <!-- 비목별 동적 컬럼 (요청금액 + 편성금액) -->
-                <template v-for="cat in projectSummaryData.categories" :key="'col-' + cat.ioePrefix">
-                    <!-- 비목 요청금액 -->
-                    <Column>
-                        <template #body="{ data }">
-                            <span class="text-right block text-zinc-500">{{
-                                fmt(data.categoryAmounts[cat.ioePrefix]?.requestAmount)
-                            }}</span>
-                        </template>
-                        <template #footer>
-                            <span class="text-right block font-bold text-zinc-500">{{
-                                fmt(projectSummaryData!.data.reduce(
-                                    (s, d) => s + (d.categoryAmounts[cat.ioePrefix]?.requestAmount || 0), 0))
-                            }}</span>
-                        </template>
-                    </Column>
-                    <!-- 비목 편성금액 -->
-                    <Column>
-                        <template #body="{ data }">
-                            <span class="text-right block">{{
-                                fmt(data.categoryAmounts[cat.ioePrefix]?.dupAmount)
-                            }}</span>
-                        </template>
-                        <template #footer>
-                            <span class="text-right block font-bold">{{
-                                fmt(projectSummaryData!.data.reduce(
-                                    (s, d) => s + (d.categoryAmounts[cat.ioePrefix]?.dupAmount || 0), 0))
-                            }}</span>
-                        </template>
-                    </Column>
-                </template>
-
-                <!-- 합계 요청금액 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span class="text-right block font-semibold">{{ fmt(data.requestAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(projectSummaryData!.totals.requestAmount)
-                        }}</span>
-                    </template>
-                </Column>
-
-                <!-- 합계 편성금액 -->
-                <Column>
-                    <template #body="{ data }">
-                        <span class="text-right block font-semibold">{{ fmt(data.dupAmount) }}</span>
-                    </template>
-                    <template #footer>
-                        <span class="text-right block font-bold">{{ fmt(projectSummaryData!.totals.dupAmount) }}</span>
-                    </template>
-                </Column>
-            </StyledDataTable>
-        </TableCard>
+        <BudgetProjectSummaryTable
+            v-if="projectSummaryData && projectSummaryData.data.length > 0"
+            :summary="projectSummaryData"
+            :unit="budgetUnit"
+            :fmt="fmt"
+            @export="exportProjectSummaryExcel"
+        />
     </div>
 </template>
 

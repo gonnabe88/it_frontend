@@ -110,6 +110,7 @@ export interface AdminUserRequest {
     usrNm?: string;          // 사원명
     ptCNm?: string;          // 직위명 (예: 대리, 과장)
     temC?: string;           // 소속 팀코드
+    temNm?: string;          // 소속 팀명 (직접 수정 시)
     bbrC?: string;           // 소속 부서코드
     etrMilAddrNm?: string;   // 사내 이메일 주소
     inleNo?: string;         // 내선번호

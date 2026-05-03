@@ -15,6 +15,8 @@
 import { vi } from 'vitest';
 import { ref, computed, reactive, watch, watchEffect, nextTick } from 'vue';
 
+type NuxtMiddlewareFactory = (...args: unknown[]) => unknown;
+
 // ============================================================================
 // Vue 반응성 API (Nuxt auto-import 대응)
 // ============================================================================
@@ -28,7 +30,7 @@ vi.stubGlobal('nextTick', nextTick);
 // ============================================================================
 // Nuxt 라우터/미들웨어 API
 // ============================================================================
-vi.stubGlobal('defineNuxtRouteMiddleware', (fn: Function) => fn);
+vi.stubGlobal('defineNuxtRouteMiddleware', (fn: NuxtMiddlewareFactory) => fn);
 vi.stubGlobal('navigateTo', vi.fn());
 
 // ============================================================================

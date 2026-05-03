@@ -180,8 +180,8 @@ const onDragEnd = () => {
     dropTargetIndex.value = null;
 };
 
-// 라우트 변경 시 탭 추가
-watch(() => route.path, () => {
+// 라우트 변경 시 탭 추가 (fullPath 감시: 쿼리 파라미터만 변경되어도 탭 추가)
+watch(() => route.fullPath, () => {
     addTab(route);
     nextTick(() => updateScrollState());
 }, { immediate: true });
@@ -294,10 +294,10 @@ const navigateToTab = async (path: string) => {
                 class="flex items-end flex-1 overflow-x-auto scrollbar-hide h-full px-2 gap-1"
                 @scroll="updateScrollState">
                 <div
-                    v-for="(tab, index) in tabs" :key="tab.path" draggable="true"
+                    v-for="(tab, index) in tabs" :key="tab.fullPath" draggable="true"
                     class="flex items-center px-4 py-2 text-sm rounded-t-lg cursor-pointer transition-all whitespace-nowrap border-t border-x mb-[-1px] relative select-none"
                     :class="[
-                        route.path === tab.path
+                        route.fullPath === tab.fullPath
                             ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border-zinc-200 dark:border-zinc-800 border-b-transparent font-bold shadow-[0_-2px_5px_rgba(0,0,0,0.02)]'
                             : 'bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-500 border-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800',
                         dragIndex === index ? 'opacity-40' : '',
@@ -312,7 +312,7 @@ const navigateToTab = async (path: string) => {
                     <button
                         v-if="tabs.length > 1"
                         class="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-                        @click.stop="removeTab(tab.path)">
+                        @click.stop="removeTab(tab.fullPath)">
                         <i class="pi pi-times text-[10px]"/>
                     </button>
                 </div>

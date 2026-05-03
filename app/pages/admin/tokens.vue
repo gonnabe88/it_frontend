@@ -18,6 +18,8 @@ import { useAdminApi } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
+import { exportRowsToExcel } from '~/utils/excel';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -25,6 +27,32 @@ const { fetchTokens } = useAdminApi();
 
 // 토큰 목록 (반응형)
 const { data: tokens, pending } = await fetchTokens();
+
+// 통합검색어
+const search = ref('');
+
+// 검색 필터링된 토큰 목록
+const filteredTokens = computed(() => {
+    const q = search.value.trim().toLowerCase();
+    if (!q) return tokens.value ?? [];
+    return (tokens.value ?? []).filter(t =>
+        [t.eno, t.usrNm, t.tokMasked]
+            .some(v => v?.toLowerCase().includes(q))
+    );
+});
+
+// 엑셀 다운로드
+const downloadExcel = async () => {
+    const rows = filteredTokens.value.map(t => ({
+        '사용자명': t.usrNm,
+        '사원번호': t.eno,
+        '토큰(마스킹)': t.tokMasked,
+        '만료일시': t.endDtm,
+        '상태': isExpired(t.endDtm) ? '만료' : '유효',
+        '발급시간': t.fstEnrDtm,
+    }));
+    await exportRowsToExcel(rows, 'JWT갱신토큰', `JWT갱신토큰_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
 
 // 직원정보 팝업 상태
 const employeeDialogVisible = ref(false);
@@ -50,10 +78,22 @@ const isExpired = (endDtm: string): boolean => {
         <PageHeader title="JWT 갱신토큰" subtitle="TAAABB_CRTOKM — 사용자별 Refresh Token 현황 (조회 전용)" />
 
         <!-- 토큰 DataTable -->
-        <TableCard fill>
+        <TableCard fill icon="pi-key" title="JWT 갱신토큰 목록" :count="filteredTokens.length">
+
+            <template #toolbar>
+                <TableSearchInput v-model="search" placeholder="사원번호, 사용자명 검색..." width="30rem" />
+                <div class="flex-1" />
+                <button
+                    class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                    @click="downloadExcel">
+                    <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                    Excel
+                </button>
+            </template>
+
         <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
-            :value="tokens ?? []"
+            :value="filteredTokens"
             :loading="pending"
             data-key="tokMasked"
             scrollable
