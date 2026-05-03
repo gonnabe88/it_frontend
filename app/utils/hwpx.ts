@@ -22,16 +22,18 @@ import type { HwpxImageFetch as HwpxImageFetchType, PendingImage, ResolvedImage 
  * 0~5: 구조/헤더용. 6~9: 본문 인라인 서식용 (14pt 기반).
  */
 const CHAR_PR = {
-    COMPAT:    0,   // 10pt (바탕글 스타일 기본값)
-    NORMAL:    1,   // 14pt                → 본문
-    SEC:       2,   // 15pt                → secPr 제어 단락
-    TITLE:     3,   // 18pt + bold         → Title 표 가운데 셀
-    BOLD:      4,   // 15pt + bold         → H2/H3 텍스트, 표 헤더 셀
-    SYM:       5,   // 15pt                → H2/H3 기호, Title 양/우측 셀
-    B_BODY:    6,   // 14pt + bold         → 본문 인라인 굵게
-    I_BODY:    7,   // 14pt + italic       → 본문 인라인 기울임
-    U_BODY:    8,   // 14pt + underline    → 본문 인라인 밑줄
-    S_BODY:    9,   // 14pt + strike       → 본문 인라인 취소선
+    COMPAT:     0,   // 10pt (바탕글 스타일 기본값)
+    NORMAL:     1,   // 14pt                → 본문
+    SEC:        2,   // 15pt                → secPr 제어 단락
+    TITLE:      3,   // 18pt + bold         → Title 표 가운데 셀
+    BOLD:       4,   // 15pt + bold         → H2/H3 텍스트, Title 표 헤더
+    SYM:        5,   // 15pt                → H2/H3 기호, Title 양/우측 셀
+    B_BODY:     6,   // 14pt + bold         → 본문 인라인 굵게
+    I_BODY:     7,   // 14pt + italic       → 본문 인라인 기울임
+    U_BODY:     8,   // 14pt + underline    → 본문 인라인 밑줄
+    S_BODY:     9,   // 14pt + strike       → 본문 인라인 취소선
+    TBL_NORMAL: 10,  // 12pt                → 표 본문(td) 셀
+    TBL_BOLD:   11,  // 12pt + bold         → 표 헤더(th) 셀
 } as const;
 type CharPrId = (typeof CHAR_PR)[keyof typeof CHAR_PR];
 
@@ -40,12 +42,13 @@ type CharPrId = (typeof CHAR_PR)[keyof typeof CHAR_PR];
  * (모두 줄간격 160%)
  */
 const PARA_PR = {
-    BASE:   0,   // JUSTIFY, 여백 없음         → 표 데이터 셀
+    BASE:   0,   // JUSTIFY, 여백 없음         → 표 데이터 셀 기본
     CENTER: 1,   // CENTER,  여백 없음         → Title 표 셀 / 표 헤더 셀
     NORMAL: 2,   // JUSTIFY, 여백 없음         → secPr + 본문 단락
     H2:     3,   // JUSTIFY, next=1000         → H2 단락
     H3:     4,   // JUSTIFY, next=600          → H3 단락
     LIST:   5,   // JUSTIFY, indent=-6910      → 번호/글머리 목록
+    RIGHT:  6,   // RIGHT,   여백 없음         → 표 우측 정렬 셀
 } as const;
 type ParaPrId = (typeof PARA_PR)[keyof typeof PARA_PR];
 
@@ -119,6 +122,16 @@ interface CellData {
     borderFillId?: number;
     /** 셀 내부 단락 스타일 오버라이드 */
     paraPrId?: ParaPrId;
+    /** colspan — 기본값 1 */
+    colSpan?: number;
+    /** rowspan — 기본값 1 */
+    rowSpan?: number;
+    /** 논리 그리드 내 실제 열 주소 — 미설정 시 buildTableXml에서 배열 인덱스 사용 */
+    colAddr?: number;
+    /** HTML style의 background-color — 동적 borderFill 발급 후 borderFillId로 해결됨 */
+    bgColor?: string;
+    /** HTML style의 text-align — 미설정 시 isHeader 기본값(CENTER/BASE) 사용 */
+    textAlign?: 'left' | 'center' | 'right';
 }
 
 interface TableNode {
@@ -172,7 +185,7 @@ const makeCharPr = (
 const makeParaPr = (
     id: number,
     opts: {
-        align?: 'JUSTIFY' | 'CENTER';
+        align?: 'JUSTIFY' | 'LEFT' | 'CENTER' | 'RIGHT';
         lineSpacing?: number;
         prevMargin?: number;
         nextMargin?: number;
@@ -209,6 +222,18 @@ const makeParaPr = (
     );
 };
 
+/** 사용자 지정 배경색이 있는 표 셀용 borderFill XML 생성 (실선 테두리 + 지정 배경) */
+const makeDynamicBorderFill = (id: number, fillColor: string): string =>
+    `<hh:borderFill id="${id}" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">` +
+    `<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>` +
+    `<hh:leftBorder type="SOLID" width="0.12 mm" color="#000000"/>` +
+    `<hh:rightBorder type="SOLID" width="0.12 mm" color="#000000"/>` +
+    `<hh:topBorder type="SOLID" width="0.12 mm" color="#000000"/>` +
+    `<hh:bottomBorder type="SOLID" width="0.12 mm" color="#000000"/>` +
+    `<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>` +
+    `<hc:fillBrush><hc:winBrush faceColor="${fillColor}" hatchColor="#999999" alpha="0"/></hc:fillBrush>` +
+    `</hh:borderFill>`;
+
 // sample.hwpx와 동일하게 font id=0 = 맑은 고딕을 기본 폰트로 사용 (모든 charPr가 이를 참조)
 const makeFontface = (lang: string): string =>
     `<hh:fontface lang="${lang}" fontCnt="1">` +
@@ -222,7 +247,13 @@ const makeFontface = (lang: string): string =>
  * 참고: 이미지 BinData 등록은 header.xml의 binDataList가 아닌
  *       content.hpf의 <opf:manifest><opf:item>에 이루어짐 (sample.hwpx 기준)
  */
-const buildHeaderXml = (_images: ResolvedImage[] = [], extraCharPrXml = '', extraCharPrCount = 0): string => {
+const buildHeaderXml = (
+    _images: ResolvedImage[] = [],
+    extraCharPrXml = '',
+    extraCharPrCount = 0,
+    extraBorderFillXml = '',
+    extraBorderFillCount = 0,
+): string => {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
     `<hh:head ${COMMON_XMLNS} version="1.2" secCnt="1">` +
     `<hh:beginNum page="1" footnote="1" endnote="1" pic="1" tbl="1" equation="1"/>` +
@@ -230,8 +261,8 @@ const buildHeaderXml = (_images: ResolvedImage[] = [], extraCharPrXml = '', extr
     `<hh:fontfaces itemCnt="7">` +
     ['HANGUL','LATIN','HANJA','JAPANESE','OTHER','SYMBOL','USER'].map(makeFontface).join('') +
     `</hh:fontfaces>` +
-    // borderFills: 4개 (변경 파일 기준)
-    `<hh:borderFills itemCnt="4">` +
+    // borderFills: 4개 고정 + 사용자 지정 배경색 동적 항목
+    `<hh:borderFills itemCnt="${4 + extraBorderFillCount}">` +
     // id=1: 기본 (채우기 없음)
     `<hh:borderFill id="1" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">` +
     `<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>` +
@@ -262,33 +293,37 @@ const buildHeaderXml = (_images: ResolvedImage[] = [], extraCharPrXml = '', extr
     `<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>` +
     `<hc:fillBrush><hc:winBrush faceColor="#DFE6F7" hatchColor="#999999" alpha="0"/></hc:fillBrush>` +
     `</hh:borderFill>` +
+    extraBorderFillXml +
     `</hh:borderFills>` +
-    // charProperties (10 고정 + 동적 색상 charPr)
-    `<hh:charProperties itemCnt="${10 + extraCharPrCount}">` +
-    makeCharPr(CHAR_PR.COMPAT, 1000, 0, 1)                            +  // 10pt
-    makeCharPr(CHAR_PR.NORMAL, 1400, 0, 2)                            +  // 14pt 본문
-    makeCharPr(CHAR_PR.SEC,    1500, 0, 2)                            +  // 15pt secPr
-    makeCharPr(CHAR_PR.TITLE,  1800, 0, 2, { bold: true })            +  // 18pt B Title
-    makeCharPr(CHAR_PR.BOLD,   1500, 0, 2, { bold: true })            +  // 15pt B 헤더
-    makeCharPr(CHAR_PR.SYM,    1500, 0, 2)                            +  // 15pt 기호
-    makeCharPr(CHAR_PR.B_BODY, 1400, 0, 2, { bold: true })            +  // 14pt B 본문 굵게
-    makeCharPr(CHAR_PR.I_BODY, 1400, 0, 2, { italic: true })          +  // 14pt I 본문 기울임
-    makeCharPr(CHAR_PR.U_BODY, 1400, 0, 2, { underline: true })       +  // 14pt U 본문 밑줄
-    makeCharPr(CHAR_PR.S_BODY, 1400, 0, 2, { strike: true })          +  // 14pt S 본문 취소선
+    // charProperties (12 고정 + 동적 색상 charPr)
+    `<hh:charProperties itemCnt="${12 + extraCharPrCount}">` +
+    makeCharPr(CHAR_PR.COMPAT,      1000, 0, 1)                            +  // 10pt
+    makeCharPr(CHAR_PR.NORMAL,      1400, 0, 2)                            +  // 14pt 본문
+    makeCharPr(CHAR_PR.SEC,         1500, 0, 2)                            +  // 15pt secPr
+    makeCharPr(CHAR_PR.TITLE,       1800, 0, 2, { bold: true })            +  // 18pt B Title
+    makeCharPr(CHAR_PR.BOLD,        1500, 0, 2, { bold: true })            +  // 15pt B 헤더
+    makeCharPr(CHAR_PR.SYM,         1500, 0, 2)                            +  // 15pt 기호
+    makeCharPr(CHAR_PR.B_BODY,      1400, 0, 2, { bold: true })            +  // 14pt B 본문 굵게
+    makeCharPr(CHAR_PR.I_BODY,      1400, 0, 2, { italic: true })          +  // 14pt I 본문 기울임
+    makeCharPr(CHAR_PR.U_BODY,      1400, 0, 2, { underline: true })       +  // 14pt U 본문 밑줄
+    makeCharPr(CHAR_PR.S_BODY,      1400, 0, 2, { strike: true })          +  // 14pt S 본문 취소선
+    makeCharPr(CHAR_PR.TBL_NORMAL,  1200, 0, 2)                            +  // 12pt 표 본문(td)
+    makeCharPr(CHAR_PR.TBL_BOLD,    1200, 0, 2, { bold: true })            +  // 12pt B 표 헤더(th)
     extraCharPrXml +
     `</hh:charProperties>` +
     // tabProperties
     `<hh:tabProperties itemCnt="1">` +
     `<hh:tabPr id="0" autoTabLeft="0" autoTabRight="0"/>` +
     `</hh:tabProperties>` +
-    // paraProperties (6개) — 본문 및 목록은 한국어 자연 줄바꿈(BREAK_WORD)
-    `<hh:paraProperties itemCnt="6">` +
+    // paraProperties (7개) — 본문 및 목록은 한국어 자연 줄바꿈(BREAK_WORD)
+    `<hh:paraProperties itemCnt="7">` +
     makeParaPr(PARA_PR.BASE,   { lineSpacing: 160, borderFillId: 1, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.CENTER, { align: 'CENTER', lineSpacing: 160, borderFillId: 2, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.NORMAL, { lineSpacing: 160, breakNonLatin: 'BREAK_WORD' })                 +
     makeParaPr(PARA_PR.H2,     { lineSpacing: 160, nextMargin: 1000, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.H3,     { lineSpacing: 160, prevMargin: 1500, nextMargin: 600, breakNonLatin: 'BREAK_WORD' }) +
     makeParaPr(PARA_PR.LIST,   { lineSpacing: 160, indent: -6910, breakNonLatin: 'BREAK_WORD' })  +
+    makeParaPr(PARA_PR.RIGHT,  { align: 'RIGHT',  lineSpacing: 160, borderFillId: 1, breakNonLatin: 'BREAK_WORD' }) +
     `</hh:paraProperties>` +
     // styles
     `<hh:styles itemCnt="1">` +
@@ -369,10 +404,11 @@ const extractRuns = (
         return runs;
     }
 
-    // 인라인 서식 전환 (본문 문맥에서만 적용)
-    const isBodyContext = inheritedCharPr === CHAR_PR.NORMAL;
+    // 인라인 서식 전환
+    const isBodyContext  = inheritedCharPr === CHAR_PR.NORMAL;
+    const isTableContext = inheritedCharPr === CHAR_PR.TBL_NORMAL;
     if (tag === 'strong' || tag === 'b') {
-        charPr = isBodyContext ? CHAR_PR.B_BODY : CHAR_PR.BOLD;
+        charPr = isBodyContext ? CHAR_PR.B_BODY : isTableContext ? CHAR_PR.TBL_BOLD : CHAR_PR.BOLD;
     } else if (tag === 'em' || tag === 'i') {
         if (isBodyContext) charPr = CHAR_PR.I_BODY;
     } else if (tag === 'u' || tag === 'ins') {
@@ -471,19 +507,125 @@ const htmlToDocNodes = (html: string, imgMap: Map<string, PendingImage> = new Ma
             }
 
         } else if (tag === 'table') {
-            // 표 → TableNode
+            // 표 → TableNode (colspan / rowspan 지원)
             const tableRows: CellData[][] = [];
-            for (const tr of Array.from(el.querySelectorAll('tr'))) {
-                const cells: CellData[] = [];
-                for (const cell of Array.from(tr.querySelectorAll('th, td'))) {
-                    const isHeader = cell.tagName.toLowerCase() === 'th';
-                    const charPr   = isHeader ? CHAR_PR.BOLD : CHAR_PR.NORMAL;
-                    const runs     = extractRuns(cell, charPr, imgMap);
-                    cells.push({ isHeader, runs: runs.length ? runs : [{ text: '', charPrId: charPr }] });
+            // rowspan으로 점유된 위치를 추적: key = "rowIdx,colIdx"
+            const covered = new Set<string>();
+
+            // 직접 자식 tr만 수집 (thead/tbody/tfoot 통해 접근, 중첩 테이블 tr 제외)
+            const trs: Element[] = [];
+            for (const child of Array.from(el.children)) {
+                const ct = child.tagName.toLowerCase();
+                if (ct === 'thead' || ct === 'tbody' || ct === 'tfoot') {
+                    for (const tr of Array.from(child.children)) {
+                        if (tr.tagName.toLowerCase() === 'tr') trs.push(tr as Element);
+                    }
+                } else if (ct === 'tr') {
+                    trs.push(child);
                 }
-                if (cells.length > 0) tableRows.push(cells);
             }
-            if (tableRows.length > 0) nodes.push({ type: 'table', rows: tableRows });
+
+            // 열 너비 비율 추출: colgroup > col 우선, 없으면 첫 행 셀 width
+            let rawColWidths: number[] | undefined;
+
+            // 1) colgroup > col (Tiptap: data-colwidth 또는 style="width: Npx")
+            for (const child of Array.from(el.children)) {
+                if (child.tagName.toLowerCase() !== 'colgroup') continue;
+                const ws: number[] = [];
+                for (const col of Array.from(child.children)) {
+                    if (col.tagName.toLowerCase() !== 'col') continue;
+                    const dcw = col.getAttribute('data-colwidth');
+                    if (dcw) { ws.push(parseFloat(dcw) || 0); continue; }
+                    const s = col.getAttribute('style') ?? '';
+                    const m = s.match(/width\s*:\s*([\d.]+)/i);
+                    ws.push(m ? (parseFloat(m[1]!) || 0) : 0);
+                }
+                if (ws.length > 0 && ws.some(w => w > 0)) { rawColWidths = ws; break; }
+            }
+
+            // 2) 첫 행 셀 style="width" 또는 width 속성 (colgroup 없는 경우)
+            if (!rawColWidths && trs.length > 0) {
+                const firstRow = trs[0]!;
+                const ws: number[] = [];
+                for (const cell of Array.from(firstRow.children)) {
+                    const ct = cell.tagName.toLowerCase();
+                    if (ct !== 'th' && ct !== 'td') continue;
+                    const s = cell.getAttribute('style') ?? '';
+                    const m = s.match(/(?:^|;)\s*width\s*:\s*([\d.]+)/i);
+                    const wa = cell.getAttribute('width');
+                    const w  = m ? (parseFloat(m[1]!) || 0) : wa ? (parseFloat(wa) || 0) : 0;
+                    const cs = Math.max(1, Number.parseInt(cell.getAttribute('colspan') ?? '1', 10) || 1);
+                    for (let i = 0; i < cs; i++) ws.push(w / cs);
+                }
+                if (ws.length > 0 && ws.some(w => w > 0)) rawColWidths = ws;
+            }
+
+            let rowIndex = 0;
+            for (const tr of trs) {
+                const cells: CellData[] = [];
+                let colIndex = 0;
+
+                for (const cell of Array.from(tr.children)) {
+                    const ct = cell.tagName.toLowerCase();
+                    if (ct !== 'th' && ct !== 'td') continue;
+
+                    // 이전 행 rowspan이 점유한 열은 건너뜀
+                    while (covered.has(`${rowIndex},${colIndex}`)) colIndex++;
+
+                    const isHeader = ct === 'th';
+                    const charPr   = isHeader ? CHAR_PR.TBL_BOLD : CHAR_PR.TBL_NORMAL;
+                    const runs     = extractRuns(cell, charPr, imgMap);
+                    const colSpan  = Math.max(1, Number.parseInt(cell.getAttribute('colspan') ?? '1', 10) || 1);
+                    const rowSpan  = Math.max(1, Number.parseInt(cell.getAttribute('rowspan') ?? '1', 10) || 1);
+
+                    // HTML 셀의 background-color / text-align 스타일 추출
+                    const cellStyle  = cell.getAttribute('style') ?? '';
+                    const bgMatch    = cellStyle.match(/(?:^|;)\s*background-color\s*:\s*([^;]+)/i);
+                    const rawBgColor = bgMatch ? cssColorToHex(bgMatch[1]!.trim()) : undefined;
+                    const bgColor    = rawBgColor && rawBgColor !== 'transparent' ? rawBgColor : undefined;
+
+                    const alignMatch = cellStyle.match(/(?:^|;)\s*text-align\s*:\s*(left|center|right|justify)/i);
+                    const rawAlign   = alignMatch ? alignMatch[1]!.toLowerCase() : undefined;
+                    const textAlign  = rawAlign === 'justify' ? 'left'
+                        : (rawAlign as 'left' | 'center' | 'right' | undefined);
+
+                    cells.push({
+                        isHeader,
+                        runs: runs.length ? runs : [{ text: '', charPrId: charPr }],
+                        colSpan,
+                        rowSpan,
+                        colAddr: colIndex,
+                        bgColor,
+                        textAlign,
+                    });
+
+                    // 다음 행(들)에서 rowspan이 점유할 위치 표시
+                    for (let dr = 1; dr < rowSpan; dr++) {
+                        for (let dc = 0; dc < colSpan; dc++) {
+                            covered.add(`${rowIndex + dr},${colIndex + dc}`);
+                        }
+                    }
+
+                    colIndex += colSpan;
+                }
+
+                if (cells.length > 0) tableRows.push(cells);
+                rowIndex++;
+            }
+
+            // 비율 → HWPUNIT 변환 (합산이 정확히 TABLE_WIDTH가 되도록 마지막 열 조정)
+            let tableCellWidths: number[] | undefined;
+            if (rawColWidths && rawColWidths.length > 0) {
+                const total = rawColWidths.reduce((a, b) => a + b, 0);
+                if (total > 0) {
+                    const computed = rawColWidths.map(w => Math.floor((w / total) * TABLE_WIDTH));
+                    const sumExceptLast = computed.slice(0, -1).reduce((a, b) => a + b, 0);
+                    computed[computed.length - 1] = TABLE_WIDTH - sumExceptLast;
+                    tableCellWidths = computed;
+                }
+            }
+
+            if (tableRows.length > 0) nodes.push({ type: 'table', rows: tableRows, cellWidths: tableCellWidths });
 
         } else if (tag === 'img') {
             // Block-level <img> — Tiptap의 NodeView 이미지는 <p> 바깥에 배치되므로
@@ -604,8 +746,26 @@ const buildParaXml = (para: ParagraphNode, id: number): string => {
  * - 열 너비: 균등 분배 (TABLE_WIDTH / colCnt)
  */
 const buildTableXml = (table: TableNode, paraId: number): string => {
-    const rowCnt  = table.rows.length;
-    const colCnt  = Math.max(...table.rows.map(r => r.length), 1);
+    const rowCnt = table.rows.length;
+
+    // 논리 열 수 산출:
+    //   colAddr가 설정된 셀이 있으면 "colAddr + colSpan" 최대값을 사용 (병합 테이블).
+    //   colAddr 미설정(Title 표 등 구버전 호환)이면 행의 최대 셀 수 사용.
+    const hasColAddr = table.rows.some(row => row.some(cell => cell.colAddr !== undefined));
+    let colCnt: number;
+    if (hasColAddr) {
+        colCnt = 0;
+        for (const row of table.rows) {
+            for (const cell of row) {
+                const end = (cell.colAddr ?? 0) + (cell.colSpan ?? 1);
+                if (end > colCnt) colCnt = end;
+            }
+        }
+        if (colCnt === 0) colCnt = Math.max(...table.rows.map(r => r.length), 1);
+    } else {
+        colCnt = Math.max(...table.rows.map(r => r.length), 1);
+    }
+
     // 열 너비 — 명시된 cellWidths 사용, 없으면 균등 분배
     const widths: number[] = table.cellWidths && table.cellWidths.length === colCnt
         ? table.cellWidths
@@ -622,14 +782,31 @@ const buildTableXml = (table: TableNode, paraId: number): string => {
 
     const rowsXml = table.rows.map((row, r) => {
         const cellsXml = row.map((cell, c) => {
-            const cellWidth  = widths[c] ?? widths[widths.length - 1]!;
-            // cell.borderFillId/paraPrId이 지정되면 isHeader 기본값보다 우선
-            const bfId       = cell.borderFillId ?? (cell.isHeader ? CELL_BF_TH : CELL_BF_TD);
-            const paraPrId   = cell.paraPrId     ?? (cell.isHeader ? PARA_PR.CENTER : PARA_PR.BASE);
-            const charPrId   = cell.isHeader ? CHAR_PR.BOLD   : CHAR_PR.NORMAL;
-            const runs       = cell.runs.length ? cell.runs : [{ text: '', charPrId }];
+            const colAddr  = cell.colAddr ?? c;
+            const colSpan  = cell.colSpan ?? 1;
+            const rowSpan  = cell.rowSpan ?? 1;
 
-            const runsXml = runs.map(runToXml).join('');
+            // 병합 셀 너비: colspan 구간의 열 너비 합산
+            let cellWidth = 0;
+            for (let dc = 0; dc < colSpan; dc++) {
+                cellWidth += widths[colAddr + dc] ?? 0;
+            }
+            if (cellWidth === 0) cellWidth = widths[colAddr] ?? widths[widths.length - 1] ?? TABLE_WIDTH;
+
+            const cellHeight = rowH * rowSpan;
+
+            // cell.borderFillId/paraPrId이 지정되면 isHeader 기본값보다 우선
+            // textAlign이 있으면 → alignParaPr 우선 적용 (paraPrId 필드로도 덮어씌우기 가능)
+            const alignParaPr: ParaPrId | undefined =
+                cell.textAlign === 'center' ? PARA_PR.CENTER
+                : cell.textAlign === 'right'  ? PARA_PR.RIGHT
+                : cell.textAlign === 'left'   ? PARA_PR.BASE
+                : undefined;
+            const bfId     = cell.borderFillId ?? (cell.isHeader ? CELL_BF_TH : CELL_BF_TD);
+            const paraPrId = cell.paraPrId ?? alignParaPr ?? (cell.isHeader ? PARA_PR.CENTER : PARA_PR.BASE);
+            const charPrId = cell.isHeader ? CHAR_PR.TBL_BOLD : CHAR_PR.TBL_NORMAL;
+            const runs     = cell.runs.length ? cell.runs : [{ text: '', charPrId }];
+            const runsXml  = runs.map(runToXml).join('');
 
             return (
                 `<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="${bfId}">` +
@@ -640,9 +817,9 @@ const buildTableXml = (table: TableNode, paraId: number): string => {
                 DEFAULT_LINESEG +
                 `</hp:p>` +
                 `</hp:subList>` +
-                `<hp:cellAddr colAddr="${c}" rowAddr="${r}"/>` +
-                `<hp:cellSpan colSpan="1" rowSpan="1"/>` +
-                `<hp:cellSz width="${cellWidth}" height="${rowH}"/>` +
+                `<hp:cellAddr colAddr="${colAddr}" rowAddr="${r}"/>` +
+                `<hp:cellSpan colSpan="${colSpan}" rowSpan="${rowSpan}"/>` +
+                `<hp:cellSz width="${cellWidth}" height="${cellHeight}"/>` +
                 `<hp:cellMargin left="510" right="510" top="141" bottom="141"/>` +
                 `</hp:tc>`
             );
@@ -907,10 +1084,45 @@ export const htmlToHwpxBlob = async (
     const titleTable = buildTitleTableNode(titleOpts);
     const nodes: DocNode[] = bodyNodes;
 
-    // 3-a) 색상 charPr 동적 발급 — 모든 run을 순회해 (baseCharPrId, color) 조합마다 ID 할당
-    // 기존 고정 charPr가 ID 0~9를 사용하므로 동적 ID는 10부터 시작
+    // 3-a) 사용자 지정 배경색 → 동적 borderFill 발급 (ID 5부터)
+    const fillRegistry = new Map<string, number>(); // bgColor → borderFill ID
+    let nextFillId = 5;
+
+    for (const n of nodes) {
+        if (n.type === 'table') {
+            for (const row of n.rows) {
+                for (const cell of row) {
+                    if (cell.bgColor && !fillRegistry.has(cell.bgColor)) {
+                        fillRegistry.set(cell.bgColor, nextFillId++);
+                    }
+                }
+            }
+        }
+    }
+
+    // bgColor → borderFillId 인플레이스 해결 (borderFillId 미설정 셀만)
+    for (const n of nodes) {
+        if (n.type === 'table') {
+            for (const row of n.rows) {
+                for (const cell of row) {
+                    if (cell.bgColor && cell.borderFillId === undefined) {
+                        const fid = fillRegistry.get(cell.bgColor);
+                        if (fid !== undefined) cell.borderFillId = fid;
+                    }
+                }
+            }
+        }
+    }
+
+    let extraBorderFillXml = '';
+    for (const [color, fid] of fillRegistry.entries()) {
+        extraBorderFillXml += makeDynamicBorderFill(fid, color);
+    }
+
+    // 3-b) 색상 charPr 동적 발급 — 모든 run을 순회해 (baseCharPrId, color) 조합마다 ID 할당
+    // 고정 charPr ID 0~11 사용 → 동적 ID는 12부터 시작
     const colorRegistry = new Map<string, number>(); // key: "baseId:color" → dynamicId
-    let nextColorId = 10;
+    let nextColorId = 12;
 
     const collectColors = (run: TextRun) => {
         if (!run.color) return;
@@ -937,7 +1149,9 @@ export const htmlToHwpxBlob = async (
         [CHAR_PR.B_BODY]: { height: 1400, bold: true },
         [CHAR_PR.I_BODY]: { height: 1400, italic: true },
         [CHAR_PR.U_BODY]: { height: 1400, underline: true },
-        [CHAR_PR.S_BODY]: { height: 1400, strike: true },
+        [CHAR_PR.S_BODY]:     { height: 1400, strike: true },
+        [CHAR_PR.TBL_NORMAL]: { height: 1200 },
+        [CHAR_PR.TBL_BOLD]:   { height: 1200, bold: true },
     };
     let extraCharPrXml = '';
     for (const [key, dynId] of colorRegistry.entries()) {
@@ -967,7 +1181,7 @@ export const htmlToHwpxBlob = async (
 
     zip.file('mimetype',               'application/hwp+zip', { compression: 'STORE' });
     zip.file('version.xml',            VERSION_XML);
-    zip.file('Contents/header.xml',    buildHeaderXml(resolvedImgs, extraCharPrXml, colorRegistry.size));
+    zip.file('Contents/header.xml',    buildHeaderXml(resolvedImgs, extraCharPrXml, colorRegistry.size, extraBorderFillXml, fillRegistry.size));
     zip.file('Contents/section0.xml',  buildSectionXml(nodes, titleTable));
 
     // 3) 이미지 바이너리를 BinData/imageN.ext 로 추가
