@@ -21,6 +21,7 @@ vi.stubGlobal('useRuntimeConfig', () => ({
     public: { apiBase: 'http://localhost:8080' },
 }));
 vi.stubGlobal('computed', computed);
+vi.stubGlobal('refreshCookie', vi.fn());
 
 const mockFetch = vi.fn();
 vi.stubGlobal('$fetch', mockFetch);

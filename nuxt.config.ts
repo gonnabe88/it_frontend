@@ -27,6 +27,9 @@ export default defineNuxtConfig({
     compatibilityVersion: 4
   },
 
+  /* ── 빌드 디렉토리: node_modules/.cache 경로 대신 .nuxt 사용 (Windows 호환) ── */
+  buildDir: '.nuxt',
+
   /* ── 런타임 설정: 환경변수 기반 API 베이스 URL ── */
   runtimeConfig: {
     public: {
@@ -159,9 +162,12 @@ export default defineNuxtConfig({
       script: [
         {
           /**
-           * FOUC(Flash of Unstyled Content) 방지용 인라인 스크립트
-           * Nuxt 하이드레이션 전에 실행되어 다크 모드 클래스와 color-scheme을 즉시 적용합니다.
-           * colorScheme 설정: 브라우저가 CSS 로드 전 네이티브 다크 배경을 칠하는 문제 방지
+           * 다크모드 + 인증 플래시(FOUC) 방지 인라인 스크립트
+           * Vue 하이드레이션 전에 실행됩니다.
+           *
+           * 1) 다크모드: theme-dark 쿠키로 <html class="dark"> 즉시 적용
+           * 2) 인증 플래시 방지: it-portal-user 쿠키가 없고 /login이 아닌 경우
+           *    SSO 리다이렉트가 완료될 때까지 페이지를 투명하게 유지합니다.
            */
           innerHTML: `
             (function() {
@@ -174,6 +180,11 @@ export default defineNuxtConfig({
               } else {
                 document.documentElement.classList.remove('dark');
                 document.documentElement.style.colorScheme = 'light';
+              }
+              var hasAuth = /(?:^|;\\s*)it-portal-user=/.test(document.cookie);
+              var isLogin = location.pathname === '/login';
+              if (!hasAuth && !isLogin) {
+                document.documentElement.style.visibility = 'hidden';
               }
             })()
           `,

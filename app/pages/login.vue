@@ -27,6 +27,7 @@ definePageMeta({
 /* 인증 composable에서 login 액션 가져오기 */
 const { login } = useAuth();
 const router = useRouter();
+const route = useRoute();
 
 /* ── 다크모드 상태 (AppHeader와 동일한 쿠키 키 공유) ── */
 const isDark = useCookie<boolean>('theme-dark', { default: () => false });
@@ -47,9 +48,49 @@ const toggleTheme = () => {
     document.startViewTransition(() => applyTheme());
 };
 
+/*
+ * SSO 자동 이동 중 여부입니다.
+ *
+ * 일반적인 미인증 보호 페이지 진입은 server/middleware/sso-auth-redirect.ts에서
+ * Nuxt 렌더링 전에 SSO로 빠집니다. 이 값은 사용자가 /login을 직접 열었거나
+ * 서버 미들웨어를 거치지 않는 클라이언트 전환으로 로그인 페이지에 도달했을 때의
+ * fallback입니다.
+ *
+ * true인 동안 로그인 카드를 숨겨 SSO로 이동하기 전 폼이 깜빡 보이지 않게 합니다.
+ * SSO 실패(error=sso)로 돌아온 경우에만 false로 바꿔 수동 로그인 폼을 보여줍니다.
+ */
+const autoRedirecting = ref(true);
+
+/**
+ * 로그인 페이지 진입 직후 SSO 또는 수동 로그인 표시 여부를 결정합니다.
+ *
+ * 동작 방식:
+ * - /login?error=sso: SSO 체인이 실패한 fallback 상태이므로 수동 로그인 폼을 표시합니다.
+ * - /login?redirect=/원본경로 또는 /login?next=/원본경로: 원본 경로를 next로 넘겨 SSO를 시작합니다.
+ * - 쿼리가 없는 /login 직접 접근: SSO 완료 후 루트로 복귀하도록 business.jsp로 이동합니다.
+ *
+ * 이 로직은 서버 미들웨어의 보조 안전망입니다. 정상적인 보호 페이지 최초 진입에서는
+ * 서버 미들웨어가 먼저 302를 반환하므로 이 onMounted까지 오지 않습니다.
+ */
 onMounted(() => {
     document.documentElement.classList.toggle('dark', isDark.value);
     document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
+
+    // SSO 실패로 돌아온 경우 기본 로그인 폼 표시
+    if (route.query.error === 'sso') {
+        autoRedirecting.value = false;
+        return;
+    }
+
+    // SSO로 자동 이동: ?redirect= 또는 ?next= 파라미터를 그대로 전달해 원본 경로 복원
+    const config = useRuntimeConfig();
+    const redirectPath = (route.query.redirect ?? route.query.next) as string | undefined;
+    const searchParams = new URLSearchParams();
+    if (redirectPath?.startsWith('/')) {
+        searchParams.set('next', redirectPath);
+    }
+    searchParams.set('origin', window.location.origin);
+    window.location.replace(`${config.public.apiBase}/sso/business.jsp?${searchParams.toString()}`);
 });
 
 /* ── 폼 입력 상태 ── */
@@ -79,8 +120,10 @@ const handleLogin = async () => {
             password: password.value
         });
 
-        // 로그인 성공 → 홈(/)으로 이동 (index.vue에서 /info로 리다이렉트)
-        router.push('/');
+        // 로그인 성공 → ?next= 쿼리 파라미터 우선, 없으면 홈(/)
+        // 내부 경로(/)만 허용해 오픈 리다이렉트 공격 방지
+        const next = route.query.next as string;
+        router.push(next?.startsWith('/') && !next.startsWith('/login') ? next : '/');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error('Login error:', error);
@@ -118,8 +161,8 @@ const handleKeyPress = (event: KeyboardEvent) => {
         </button>
         <div class="w-full max-w-md">
 
-            <!-- 로그인 카드 -->
-            <div class="bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl p-8">
+            <!-- 로그인 카드: SSO 자동 리다이렉트 중에는 숨김 -->
+            <div v-if="!autoRedirecting" class="bg-white dark:bg-zinc-800 rounded-2xl shadow-2xl p-8">
 
                 <!-- 로고 및 시스템명 -->
                 <div class="text-center mb-8">
@@ -130,8 +173,22 @@ const handleKeyPress = (event: KeyboardEvent) => {
                     <p class="text-zinc-600 dark:text-zinc-400">정보화 사업·예산·인력</p>
                 </div>
 
-                <!-- 로그인 폼 영역 -->
-                <div class="space-y-6">
+                <!-- SSO 리다이렉트 중 -->
+                <div v-if="route.query.error !== 'sso'" class="py-4 text-center text-zinc-500 dark:text-zinc-400">
+                    <i class="pi pi-spin pi-spinner text-2xl" />
+                    <p class="text-sm mt-3">SSO 인증 페이지로 이동 중...</p>
+                </div>
+
+                <!-- SSO 실패 시 기본 로그인 폼 -->
+                <div v-else class="space-y-6">
+
+                    <!-- SSO 실패 안내 -->
+                    <div class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <p class="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                            <i class="pi pi-exclamation-triangle"/>
+                            SSO 인증에 실패했습니다. 기본 로그인을 이용해주세요.
+                        </p>
+                    </div>
 
                     <!-- 사원번호 입력 -->
                     <div>

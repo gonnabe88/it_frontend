@@ -186,6 +186,19 @@ export const useAuthStore = defineStore('auth', () => {
      *  - 이전 후 localStorage 항목은 삭제합니다.
      */
     const restoreSession = (): void => {
+        if (import.meta.client) {
+            /*
+             * generate 산출물은 빌드 시점의 쿠키 없음 상태가 payload에 남을 수 있습니다.
+             * SSO 완료 직후 http://localhost/guide/로 돌아오면 브라우저에는 방금 받은
+             * it-portal-user 쿠키가 있지만, hydration된 useCookie ref는 아직 null일 수 있어
+             * 라우트 가드가 다시 SSO로 보내는 루프가 발생합니다.
+             *
+             * Nuxt의 refreshCookie로 document.cookie의 최신 값을 useCookie ref에 반영한 뒤
+             * 인증 여부를 판단해야 정적 배포 환경에서도 SSO 완료 상태를 즉시 인식합니다.
+             */
+            refreshCookie('it-portal-user');
+        }
+
         if (import.meta.client && !user.value) {
             const stored = localStorage.getItem('user');
             if (stored) {

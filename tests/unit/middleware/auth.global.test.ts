@@ -12,6 +12,7 @@ import authGlobalMiddleware from '~/middleware/auth.global';
 // Mock 설정
 // ============================================================================
 const mockNavigateTo = vi.fn();
+const mockAbortNavigation = vi.fn();
 const mockRestoreSession = vi.fn();
 const mockIsAdmin = vi.fn();
 const mockIsAuthenticated = ref(false);
@@ -19,6 +20,12 @@ type MiddlewareHandler = (...args: unknown[]) => unknown;
 
 vi.stubGlobal('navigateTo', mockNavigateTo);
 vi.stubGlobal('defineNuxtRouteMiddleware', (fn: MiddlewareHandler) => fn);
+vi.stubGlobal('abortNavigation', mockAbortNavigation);
+vi.stubGlobal('useRuntimeConfig', () => ({
+    public: {
+        apiBase: 'http://localhost:8080',
+    },
+}));
 
 vi.stubGlobal('useAuth', () => ({
     isAuthenticated: mockIsAuthenticated,
@@ -29,6 +36,7 @@ vi.stubGlobal('useAuth', () => ({
 describe('middleware/auth.global', () => {
     beforeEach(() => {
         mockNavigateTo.mockReset();
+        mockAbortNavigation.mockReset();
         mockRestoreSession.mockReset();
         mockIsAdmin.mockReset();
         mockIsAuthenticated.value = false;
@@ -53,6 +61,15 @@ describe('middleware/auth.global', () => {
         expect(mockNavigateTo).not.toHaveBeenCalled();
     });
 
+    it('미인증 사용자가 /login?redirect로 접근하면 로그인 페이지 없이 SSO로 이동한다', () => {
+        mockIsAuthenticated.value = false;
+        (authGlobalMiddleware as MiddlewareHandler)(
+            { path: '/login', query: { redirect: '/info/projects/PRJ-2026-0014' } },
+            {},
+        );
+        expect(mockAbortNavigation).toHaveBeenCalledTimes(1);
+    });
+
     it('인증된 사용자가 /login에 접근하면 홈("/")으로 리다이렉트된다', () => {
         mockIsAuthenticated.value = true;
         (authGlobalMiddleware as MiddlewareHandler)({ path: '/login' }, {});
@@ -64,8 +81,8 @@ describe('middleware/auth.global', () => {
     // -------------------------------------------------------------------------
     it('미인증 사용자가 보호 페이지에 접근하면 /login으로 리다이렉트된다', () => {
         mockIsAuthenticated.value = false;
-        (authGlobalMiddleware as MiddlewareHandler)({ path: '/info/projects' }, {});
-        expect(mockNavigateTo).toHaveBeenCalledWith('/login');
+        (authGlobalMiddleware as MiddlewareHandler)({ path: '/info/projects', fullPath: '/info/projects' }, {});
+        expect(mockAbortNavigation).toHaveBeenCalledTimes(1);
     });
 
     it('인증된 사용자는 일반 페이지에 통과한다', () => {

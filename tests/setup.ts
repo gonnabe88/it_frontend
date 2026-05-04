@@ -54,6 +54,7 @@ vi.stubGlobal('useRouter', () => ({ push: vi.fn(), replace: vi.fn() }));
 // ============================================================================
 // Nuxt 유틸리티
 // ============================================================================
+vi.stubGlobal('refreshCookie', vi.fn());
 vi.stubGlobal('useToast', () => ({ add: vi.fn() }));
 vi.stubGlobal('useFetch', vi.fn().mockResolvedValue({
     data: ref(null),

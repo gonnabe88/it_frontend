@@ -22,9 +22,9 @@ definePageMeta({
      * @param to   - 이동하려는 라우트
      * @param from - 이전 라우트
      */
-    function (to, from) {
+    function (to, _from) {
       if (to.path === '/') {
-        return navigateTo('/info')
+        return navigateTo('/info');
       }
     }
   ]

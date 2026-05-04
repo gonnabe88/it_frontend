@@ -272,8 +272,8 @@ npm run postinstall
 # 개발 서버 실행 (기본 포트: 3000)
 npm run dev
 
-# 운영 빌드
-npm run build
+# 운영 빌드 (CSR)
+npm run generate
 ```
 
 ## 7.1 테스트 실행
