@@ -197,6 +197,17 @@ export const useAuthStore = defineStore('auth', () => {
              * 인증 여부를 판단해야 정적 배포 환경에서도 SSO 완료 상태를 즉시 인식합니다.
              */
             refreshCookie('it-portal-user');
+
+            if (!user.value) {
+                const match = document.cookie.match(/(?:^|;\s*)it-portal-user=([^;]*)/);
+                if (match?.[1]) {
+                    try {
+                        user.value = JSON.parse(decodeURIComponent(match[1]));
+                    } catch {
+                        // 손상된 쿠키는 무시하고 기존 fallback으로 진행
+                    }
+                }
+            }
         }
 
         if (import.meta.client && !user.value) {

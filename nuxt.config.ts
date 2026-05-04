@@ -20,7 +20,21 @@ import Aura from '@primevue/themes/aura';
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
-  ssr: process.env.NUXT_SSR !== 'false', // 환경변수에 따라 SSR 비활성화 가능 (E2E 테스트용)
+  /**
+   * SPA 모드 — 정적 SSG에서 발생하던 _payload.json 하이드레이션 이슈 회피
+   *
+   * [전환 사유]
+   *  - npm run generate(SSG) + nginx 서빙 시 SSO 무한 리다이렉트 발생.
+   *  - 원인: 빌드 시점 Pinia 스토어 user=null 상태가 _payload.json에 직렬화되어
+   *          클라이언트 하이드레이션 시 it-portal-user 쿠키 기반 user.value를
+   *          null로 덮어쓰는 타이밍 이슈.
+   *  - 사내 포털이라 SEO 불필요 → 완전 클라이언트 렌더링이 가장 단순한 해결.
+   *
+   * [동작 변화]
+   *  - prerender 미수행 → 모든 라우트가 동일한 index.html에서 클라이언트 라우팅
+   *  - SSR 없음 → 서버 미들웨어/페이로드 추출 무관
+   */
+  ssr: false,
 
   /* ── Nuxt 4 호환 모드: app/ 디렉토리를 소스 루트(~)로 사용 ── */
   future: {
