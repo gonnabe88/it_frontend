@@ -25,7 +25,10 @@
       "Read(//c/tmp/**)",
       "Bash(gunzip -c /c/Users/gonna/.claude/projects/C--it-it-frontend/539b2fd7-c12a-422d-8225-f19fd639bb08/tool-results/webfetch-1776569935351-2spjz9.bin)",
       "Bash(tar -x)",
-      "Bash(timeout 90 npx nuxi build)"
+      "Bash(timeout 90 npx nuxi build)",
+      "Bash(git -C c:/it/it_frontend diff -- app/components/council/committee/CommitteeSelector.vue)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/api/council/ASCT-2026-0002 --cookie \"accessToken=test\")",
+      "Bash(./gradlew build *)"
     ]
   },
   "language": "korean"

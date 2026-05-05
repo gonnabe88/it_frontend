@@ -51,8 +51,21 @@ const meetingDateTime = computed(() => {
 /** 회의 장소 */
 const meetingPlace = computed(() => props.councilDetail?.cnrcPlc ?? '—');
 
-/** 안건: 사업내용 요약 (타당성검토표 prjDes 활용) */
-const agenda = computed(() => props.feasibility?.prjDes ?? '—');
+/** 안건: 사업내용 요약 (타당성검토표 prjDes 활용, HTML 태그 및 엔티티 제거) */
+const agenda = computed(() => {
+    const raw = props.feasibility?.prjDes ?? '';
+    // HTML 태그 제거 후 HTML 엔티티 디코딩 (에디터 저장값 정규화)
+    const stripped = raw
+        .replace(/<[^>]*>/g, '')          // <p>, <br> 등 태그 제거
+        .replace(/&nbsp;/g, ' ')          // 줄바꿈 공백
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+    return stripped || '—';
+});
 
 /** 사업명 */
 const projectName = computed(() => props.feasibility?.prjNm ?? '—');

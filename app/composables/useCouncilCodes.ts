@@ -36,7 +36,7 @@ export const useCouncilCodes = () => {
 
     /** 협의회상태 (ASCT_STS) */
     const { data: statusData } = useApiFetch<CodeItem[]>(`${BASE}/ASCT_STS`, {
-        key: 'ccodem_ASCT_STS_v2',
+        key: 'ccodem_ASCT_STS_v3',
         suppressNotFound: true,
         suppressNetworkError: true,
     });

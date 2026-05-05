@@ -175,10 +175,25 @@ export const useTabs = () => {
         tabs.value = tabs.value.filter(t => t.fullPath === currentFullPath);
     };
 
+    /**
+     * 기존 탭의 제목을 업데이트
+     * 데이터 로드 후 프로젝트명 등 동적 정보를 반영할 때 사용합니다.
+     *
+     * @param path   업데이트할 탭의 경로 (Tab.path)
+     * @param title  새 탭 제목
+     */
+    const updateTabTitle = (path: string, title: string) => {
+        const tab = tabs.value.find(t => t.path === path);
+        if (tab) {
+            tab.title = title;
+        }
+    };
+
     return {
         tabs,
         addTab,
         removeTab,
-        closeAll
+        closeAll,
+        updateTabTitle,
     };
 };

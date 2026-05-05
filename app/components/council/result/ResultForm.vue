@@ -30,17 +30,21 @@ interface Props {
     councilDetail: CouncilDetail | null;
     feasibility: FeasibilityData | null;
     readonly?: boolean;
+    /** true이면 "결과서 확정" 버튼 노출 (RESULT_WRITING 상태 + IT관리자) */
+    confirmable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     readonly: false,
+    confirmable: false,
 });
 
 const emit = defineEmits<{
     (e: 'saved'): void;
+    (e: 'confirmed'): void;
 }>();
 
-const { fetchResult, saveResult, fetchEvaluationSummary } = useCouncil();
+const { fetchResult, saveResult, confirmResult, fetchEvaluationSummary } = useCouncil();
 const toast = useToast();
 
 // ── 결과서 + 평가의견 요약 조회 ──────────────────────────────────────
@@ -97,6 +101,25 @@ const handleSave = async () => {
         toast.add({ severity: 'error', summary: '오류', detail: '저장 중 오류가 발생했습니다.', life: 3000 });
     } finally {
         saving.value = false;
+    }
+};
+
+const confirming = ref(false);
+
+/**
+ * 결과서를 확정합니다. (RESULT_WRITING → RESULT_REVIEW)
+ * confirmable=true 일 때만 호출됩니다.
+ */
+const handleConfirm = async () => {
+    confirming.value = true;
+    try {
+        await confirmResult(props.asctId);
+        toast.add({ severity: 'success', summary: '확정 완료', detail: '결과서가 확정되었습니다.', life: 3000 });
+        emit('confirmed');
+    } catch {
+        toast.add({ severity: 'error', summary: '오류', detail: '결과서 확정 중 오류가 발생했습니다.', life: 3000 });
+    } finally {
+        confirming.value = false;
     }
 };
 
@@ -196,13 +219,21 @@ const formatDate = (dt: string | null): string => {
                 </div>
             </div>
 
-            <!-- 저장 버튼 -->
-            <div v-if="!readonly" class="flex justify-end">
+            <!-- 버튼 영역 -->
+            <div v-if="!readonly" class="flex justify-end gap-2">
                 <Button
                     label="결과서 저장"
                     icon="pi pi-save"
+                    severity="secondary"
                     :loading="saving"
                     @click="handleSave"
+                />
+                <Button
+                    v-if="confirmable"
+                    label="결과서 확정"
+                    icon="pi pi-check-circle"
+                    :loading="confirming"
+                    @click="handleConfirm"
                 />
             </div>
 

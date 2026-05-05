@@ -4,7 +4,7 @@
 > **Feature**: council
 > **Author**: ssuno
 > **Date**: 2026-03-31
-> **Status**: Draft
+> **Status**: Final
 > **Architecture**: Option B — Clean Architecture
 
 ---
@@ -105,7 +105,7 @@ public class Basctm extends BaseEntity {
     @Column(name = "PRJ_SNO")                   // 프로젝트순번 (FK)
     private Integer prjSno;
 
-    @Column(name = "ASCT_STS", length = 20)     // 협의회상태 (Enum: DRAFT~COMPLETED)
+    @Column(name = "ASCT_STS", length = 30)     // 협의회상태 (Enum: DRAFT~COMPLETED, ALTER TABLE 적용)
     private String asctSts;
 
     @Column(name = "DBR_TP", length = 20)       // 심의유형 (INFO_SYS/INFO_SEC/ETC)
@@ -326,8 +326,9 @@ public enum CouncilStatus {
     EVALUATING,         // 평가중 (평가위원 의견 작성 중)
     RESULT_WRITING,     // 결과서작성 (IT기획부 담당자 작성 중)
     RESULT_REVIEW,      // 결과서검토 (평가위원 확인 중)
-    FINAL_APPROVAL,     // 결과결재 (IT기획팀장→부장 결재 중)
-    COMPLETED           // 완료 (모든 절차 종료)
+    FINAL_APPROVAL,           // 결과결재 (IT기획팀장→부장 결재 중)
+    RESULT_APPROVAL_PENDING,  // 결과보고 결재 중 (CCODEM: ASCT-STS-013, '결과보고 결재 중')
+    COMPLETED                 // 완료 (모든 절차 종료)
 }
 ```
 
@@ -362,14 +363,17 @@ public enum HearingType {
 | POST | `/api/council/{cnclId}/schedule` | ScheduleService | 일정 입력 (평가위원) | 위원 |
 | PUT | `/api/council/{cnclId}/schedule/confirm` | ScheduleService | 일정 확정 (회의장소 포함) | ITPAD001 |
 | GET | `/api/council/{cnclId}/qna` | CouncilService | 사전질의응답 목록 조회 | 위원+담당자 |
-| POST | `/api/council/{cnclId}/qna` | CouncilService | 사전질의 등록 | 위원 |
-| PUT | `/api/council/{cnclId}/qna/{qtnId}` | CouncilService | 사전질의 답변 | ITPZZ001 |
+| POST | `/api/council/{cnclId}/qna` | QnaService | 사전질의 등록 | 위원+ITPAD001 |
+| PATCH | `/api/council/{cnclId}/qna/{qtnId}` | QnaService | 사전질의 내용 수정 (본인 질의만) | 위원+ITPAD001 |
+| PUT | `/api/council/{cnclId}/qna/{qtnId}` | QnaService | 사전질의 답변 등록/수정 | ITPZZ001 |
+| PATCH | `/api/council/{cnclId}/start` | CouncilService | 협의회 개최 (SCHEDULED→IN_PROGRESS) | ITPAD001 |
 | POST | `/api/council/{cnclId}/evaluation` | EvaluationService | 평가의견 작성 | 위원 |
 | GET | `/api/council/{cnclId}/evaluation` | EvaluationService | 평가의견 전체 조회 (평균 포함) | ITPAD001 |
 | GET | `/api/council/{cnclId}/result` | ResultService | 결과서 조회 | ITPZZ001+ |
 | POST | `/api/council/{cnclId}/result` | ResultService | 결과서 작성 | ITPAD001 |
 | PUT | `/api/council/{cnclId}/result` | ResultService | 결과서 수정 | ITPAD001 |
 | PUT | `/api/council/{cnclId}/result/confirm` | ResultService | 결과서 확인 (평가위원) | 위원 |
+| POST | `/api/council/{asctId}/notify` | CouncilService | 추진부서 통보 (COMPLETED 상태) — NotifyResponse 반환 | ITPAD001 |
 
 ### 2.6 CouncilDto 구조
 
@@ -415,7 +419,7 @@ public class CouncilDto {
 
     /** 위원 항목 */
     public record CommitteeMemberRequest(
-        String eno, String cmTp                     // 사번, 위원유형
+        String eno, String vlrTp                    // 사번, 위원유형 (MAND/CALL/SECR)
     ) {}
 
     /** 일정 입력 요청 (평가위원) */
@@ -449,6 +453,14 @@ public class CouncilDto {
         String ckgOpnn,      // 타당성검토의견
         String flMngNo      // 관련자료 첨부파일
     ) {}
+
+    /** 추진부서 통보 응답 — fstEnrUsid(최초등록자사번)로 수신자 조회 */
+    public record NotifyResponse(
+        String eno,          // 수신자 사번
+        String usrNm,        // 수신자 이름
+        String bbrNm,        // 소속 부서명 (CorgnI.bbrNm)
+        String temNm         // 소속 팀명 (CuserI.temNm)
+    ) {}
 }
 ```
 
@@ -472,27 +484,30 @@ app/pages/info/council/
 
 ```
 app/components/council/
-├── CouncilStatusBadge.vue          // 협의회 진행상태 뱃지
+├── CouncilStatusBadge.vue          // 협의회 진행상태 뱃지 (12단계)
 ├── feasibility/
-│   ├── FeasibilityForm.vue         // 타당성검토표 전체 폼
+│   ├── FeasibilityForm.vue         // 타당성검토표 전체 폼 (래퍼)
 │   ├── FeasibilityOverview.vue     // 1. 사업개요 섹션
 │   ├── FeasibilityChecklist.vue    // 2. 타당성 자체점검 6항목
 │   └── FeasibilityPerformance.vue  // 3. 성과관리 자체계획 (동적 추가/삭제)
 ├── committee/
-│   ├── CommitteeSelector.vue       // 심의유형 선택 + 당연위원 자동표출
+│   ├── CommitteeSelector.vue       // 심의유형 선택 + 당연위원 자동표출 + 소집/간사 추가
 │   └── CommitteeList.vue           // 평가위원 목록 (수정 가능)
 ├── schedule/
-│   ├── ScheduleInput.vue           // 평가위원 일정 입력 (날짜×시간대 체크박스)
-│   └── ScheduleStatus.vue          // 일정 입력 현황 + 확정 버튼
+│   ├── ScheduleInput.vue           // 평가위원 일정 입력 (2주 평일 × 4시간대 체크박스)
+│   └── ScheduleStatus.vue          // 일정 입력 현황 + 확정 버튼 (회의장소 포함)
 ├── notice/
-│   └── CouncilNotice.vue           // 일정공지 (안건/회의개요/진행순서/자료)
+│   └── CouncilNotice.vue           // 일정공지 (안건/회의개요/진행순서/관련자료)
 ├── qna/
-│   └── CouncilQna.vue              // 사전질의응답 목록 + 입력
+│   └── CouncilQna.vue              // 사전질의응답
+│                                   //   canAsk: 평가위원·IT관리자 질의 등록/수정
+│                                   //   canReply: 추진부서 담당자 답변 입력
 ├── evaluation/
-│   └── EvaluationForm.vue          // 평가의견 작성 (6항목, 조건부 필수)
+│   ├── EvaluationForm.vue          // 평가의견 작성 (6항목, 1~2점 의견 필수)
+│   └── EvalSummaryPanel.vue        // 평가의견 집계 (IT관리자용, 평균점수 표출)
 └── result/
-    ├── ResultForm.vue              // 결과서 작성 (1page + 2page)
-    └── ResultReview.vue            // 결과서 검토 확인 버튼
+    ├── ResultForm.vue              // 결과서 작성 (종합의견 + 타당성검토의견)
+    └── ResultReview.vue            // 결과서 검토 확인 버튼 (평가위원 확인)
 ```
 
 ### 3.3 Composable 설계
@@ -562,14 +577,36 @@ export type CheckItemCode =
   | 'DUP_SYS'   // 유사/중복 시스템 유무
   | 'ETC';      // 기타
 
-/** 협의회 목록 항목 */
+/** 협의회 목록 항목 (index.vue 용) */
 export interface CouncilListItem {
-  cnclId: string;
+  asctId: string | null;        // 협의회ID (신청 전이면 null)
   prjMngNo: string;
-  prjNm: string;
-  asctSts: CouncilStatus;
+  prjSno: number;
+  prjNm: string | null;
+  asctSts: CouncilStatus | null;
   dbrTp: HearingType | null;
   cnrcDt: string | null;
+  applied: boolean;             // 협의회 신청 여부
+  prjYy: string | null;         // 사업연도
+  prjTp: string | null;         // 사업유형 (NEW/CNT/MNT/ETC)
+  svnDpm: string | null;        // 주관부서코드
+  prjBg: number | null;         // 사업예산
+  sttDt: string | null;         // 사업시작일
+  endDt: string | null;         // 사업종료일
+  itDpm: string | null;         // IT담당부서코드
+  prjDes: string | null;        // 사업설명 (HTML 포함 가능)
+}
+
+/** 사전질의응답 항목 */
+export interface QnaItem {
+  qtnId: string;
+  qtnEno: string;
+  qtnNm: string | null;
+  qtnCone: string;
+  repEno: string | null;
+  repNm: string | null;
+  repCone: string | null;
+  repYn: 'Y' | 'N';
 }
 
 /** 타당성검토표 */
@@ -671,8 +708,10 @@ export interface PerformanceItem {
 탭 구조로 구성:
 - **탭1: 평가위원 선정** — 심의유형 선택 → 당연위원 자동표출 → 소집위원/간사 추가 → 확정
 - **탭2: 일정 취합** — 위원별 가능 일정 현황, 전원 입력 시 일정확정 버튼 활성화
+  - SCHEDULED 상태: **"협의회 개최" 버튼** 표출 (SCHEDULED→IN_PROGRESS)
 - **탭3: 일정공지** — 안건/회의개요/진행순서/관련자료 표출 (수정 가능)
-- **탭4: 사전질의응답** — 질의 목록 + 추진부서 담당자 답변
+- **탭4: 사전질의응답** — 질의 목록 + IT관리자·평가위원 질의 등록/수정 + 추진부서 담당자 답변
+- **탭5: 결과서** — EVALUATING 이상 상태에서 활성화, EvalSummaryPanel + ResultForm + 결과서 확정 버튼
 
 ### 4.4 result/[id].vue — 협의회 개최 (Step 3)
 
@@ -927,3 +966,4 @@ CREATE TABLE TAAABB_BRSLTM (
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-03-31 | Initial design (Option B — Clean Architecture) | ssuno |
+| 1.0 | 2026-04-26 | 실제 구현 기준으로 업데이트: QnaItem 타입 추가, CouncilListItem 필드 전체 반영, CommitteeMemberRequest.vlrTp 수정, 협의회 개최 API 추가, CouncilQna canAsk props, 탭5 결과서, EvalSummaryPanel, 카드 UI 개선 반영 | ssuno |
