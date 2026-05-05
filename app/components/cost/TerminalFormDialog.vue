@@ -31,12 +31,21 @@ const props = defineProps<{
     parentCostId?: string;
     /** 연결 신규 모드: 예산연도 */
     bgYy?: string;
+    /**
+     * 로컬 모드: 미저장 신규 행의 ItCost 데이터
+     * - 이 prop이 제공되면 API 호출 없이 로컬에서만 터미널 목록을 편집
+     * - 저장 시 API를 호출하지 않고 update:local-terminals 이벤트로 부모에 반환
+     * - 부모의 일괄 저장([저장] 버튼) 시 서버에 함께 저장됨
+     */
+    localCost?: ItCost;
 }>();
 
 const emit = defineEmits<{
     'update:visible': [value: boolean];
     /** 저장 완료 후 부모 컴포넌트가 목록을 새로고침하도록 알림 */
     'saved': [];
+    /** 로컬 모드에서 편집 완료 후 갱신된 터미널 목록을 부모에 반환 */
+    'update:local-terminals': [terminals: Terminal[]];
 }>();
 
 const confirm = useConfirm();
@@ -57,6 +66,7 @@ const currencyOptions = computed(() => Object.keys(exchangeRates.value));
 /* ── 데이터 상태 ────────────────────────────────────────── */
 const cost = ref<ItCost | null>(null);
 const loading = ref(false);
+const loadError = ref(false);
 
 /** 단말기 목록 (cost.terminals의 양방향 바인딩용) */
 const terminals = computed({
@@ -66,10 +76,16 @@ const terminals = computed({
     }
 });
 
-/** 단말기 금액 원화 환산 합계 (전산업무비 예산 자동 계산) */
+/** 단말기 금액 원화 환산 합계 (전산업무비 예산 자동 계산)
+ *  xcr > 1: 사용자 직접 입력 환율 사용 / 그 외: 공통환율 API 사용 */
 const totalBudget = computed(() =>
-    terminals.value.reduce((sum, item) =>
-        sum + convertToKRW(item.tmlAmt || 0, item.cur || 'KRW'), 0)
+    terminals.value.reduce((sum, item) => {
+        const cur = item.cur || 'KRW';
+        const rate = (cur !== 'KRW' && item.xcr && item.xcr > 1)
+            ? item.xcr
+            : (exchangeRates.value[cur] || 1);
+        return sum + Math.round((item.tmlAmt || 0) * rate);
+    }, 0)
 );
 
 /* ── 공통코드 로드 ──────────────────────────────────────── */
@@ -128,24 +144,34 @@ const loadForLinked = async () => {
     };
 };
 
-/** 다이얼로그 열릴 때 옵션 + 데이터 로드 */
-watch(() => props.visible, async (visible) => {
-    if (!visible) return;
+/** 옵션 + 본문 데이터 로드 (watch와 수동 reload에서 공통 사용) */
+const loadAll = async () => {
     cost.value = null;
+    loadError.value = false;
     loading.value = true;
     try {
         await loadOptions();
-        if (props.itMngcNo) {
+        if (props.localCost !== undefined) {
+            /* 로컬 모드: API 호출 없이 전달받은 데이터로 초기화 (terminals 배열 shallow copy) */
+            cost.value = { ...props.localCost, terminals: [...(props.localCost.terminals ?? [])] };
+        } else if (props.itMngcNo) {
             await loadForEdit();
         } else if (props.parentCostId) {
             await loadForLinked();
         }
     } catch (e) {
         console.error('단말기 다이얼로그 데이터 로드 실패', e);
+        loadError.value = true;
         toast.add({ severity: 'error', summary: '오류', detail: '데이터를 불러오는 중 오류가 발생했습니다.', life: 3000 });
     } finally {
         loading.value = false;
     }
+};
+
+/** 다이얼로그 열릴 때 옵션 + 데이터 로드 */
+watch(() => props.visible, (visible) => {
+    if (!visible) return;
+    loadAll();
 });
 
 /* ── 저장 ──────────────────────────────────────────────── */
@@ -162,6 +188,13 @@ const formatDate = (date: Date | null | string | undefined): string => {
 const executeSave = async () => {
     if (!cost.value) {
         toast.add({ severity: 'warn', summary: '알림', detail: '저장할 데이터가 없습니다.', life: 3000 });
+        return;
+    }
+
+    /* 로컬 모드: API 저장 없이 터미널 목록만 부모로 반환 (부모의 [저장] 버튼 클릭 시 일괄 저장) */
+    if (props.localCost !== undefined) {
+        emit('update:local-terminals', terminals.value.map(t => ({ ...t, xcrBseDt: formatDate(t.xcrBseDt) })));
+        emit('update:visible', false);
         return;
     }
 
@@ -196,8 +229,9 @@ const executeSave = async () => {
 };
 
 const handleSave = () => {
+    const isLocal = props.localCost !== undefined;
     confirm.require({
-        message: props.itMngcNo ? '수정하시겠습니까?' : '등록하시겠습니까?',
+        message: isLocal ? '단말기 목록을 적용하시겠습니까?' : (props.itMngcNo ? '수정하시겠습니까?' : '등록하시겠습니까?'),
         header: '확인',
         icon: 'pi pi-question-circle',
         acceptLabel: '확인',
@@ -213,7 +247,7 @@ const handleClose = () => emit('update:visible', false);
     <Dialog
         :visible="visible"
         modal
-        header="단말기 상세목록"
+        header="금융정보단말기"
         :style="{ width: '95vw', height: '85vh' }"
         :content-style="{ height: 'calc(85vh - 8rem)', overflowY: 'auto' }"
         @update:visible="emit('update:visible', $event)">
@@ -223,20 +257,31 @@ const handleClose = () => emit('update:visible', false);
             <ProgressSpinner />
         </div>
 
+        <!-- 로드 실패: 수동 Reload 버튼 -->
+        <div v-else-if="loadError" class="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
+            <i class="pi pi-exclamation-circle text-3xl text-red-400" />
+            <p>데이터를 불러오지 못했습니다.</p>
+            <Button label="다시 불러오기" icon="pi pi-refresh" severity="secondary" @click="loadAll" />
+        </div>
+
         <!-- 단말기 상세목록 테이블 -->
         <div v-else-if="cost" class="pt-2">
             <TerminalTableSection
+                :flat="true"
+                :show-save="true"
                 :model-value="terminals"
                 :dfr-cle-options="dfrCleOptions"
                 :tmn-svc-options="tmnSvcOptions"
                 :currency-options="currencyOptions"
                 @update:model-value="val => { if (cost) cost.terminals = val }"
+                @save="handleSave"
             />
         </div>
 
         <template #footer>
-            <Button label="취소" severity="secondary" outlined @click="handleClose" />
-            <Button label="저장" icon="pi pi-save" :disabled="!cost || loading" @click="handleSave" />
+            <AppDialogFooter>
+                <Button label="닫기" severity="secondary" outlined @click="handleClose" />
+            </AppDialogFooter>
         </template>
     </Dialog>
 </template>

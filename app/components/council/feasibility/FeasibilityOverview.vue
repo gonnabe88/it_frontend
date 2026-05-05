@@ -93,7 +93,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 사업명 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 사업명 <span class="text-red-500">*</span>
             </label>
             <div class="md:col-span-3">
@@ -109,7 +109,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 사업기간 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 사업기간
             </label>
             <div class="md:col-span-3">
@@ -125,7 +125,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 필요성 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 필요성
             </label>
             <div class="md:col-span-3">
@@ -143,7 +143,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 소요예산 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 소요예산 (원)
             </label>
             <div class="md:col-span-3">
@@ -161,7 +161,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 전결권자 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 전결권자
             </label>
             <div class="md:col-span-3">
@@ -177,7 +177,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 사업내용 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 사업내용
             </label>
             <div class="md:col-span-3">
@@ -200,7 +200,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 법률규제대응여부 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 법률규제 대응 여부
             </label>
             <div class="md:col-span-3 flex items-center gap-6">
@@ -229,7 +229,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 관련법률규제명 (법률규제=Y일 때만 표출) -->
         <div v-if="modelValue.lglRglYn === 'Y'" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 관련 법률규제명
             </label>
             <div class="md:col-span-3">
@@ -245,7 +245,7 @@ const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 
         <!-- 기대효과 -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
-            <label class="font-semibold text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
+            <label class="font-medium text-sm text-zinc-700 dark:text-zinc-300 md:pt-2">
                 기대효과
             </label>
             <div class="md:col-span-3">

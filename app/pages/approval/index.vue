@@ -1,398 +1,331 @@
-<!--
-================================================================================
-[pages/approval/index.vue] 전자결재 목록 페이지
-================================================================================
-기안된 전자결재 내역을 조회하고, 결재 처리(승인/반려)를 수행하는 페이지입니다.
-
-[주요 기능]
-  - 전자결재 목록 DataTable 조회 (전체 기안 건)
-  - 결재 차례 판별: isMyTurn()으로 현재 대기자가 로그인 사용자인지 확인
-  - 개별 결재: 행의 승인/반려 버튼으로 단건 처리
-  - 일괄 결재: 체크박스 선택 후 '일괄 결재' 버튼으로 다건 일괄 처리
-  - 결재 진행 상황 타임라인: ApprovalTimeline 컴포넌트로 분리 (기안자 + 결재자 수평 타임라인)
-  - PDF 보고서 뷰어: 신청서명 클릭 시 원문 PDF 생성 후 iframe으로 표시
-
-[선택 가능 조건]
-  - DataTable 체크박스는 isMyTurn()이 true인 행만 선택 가능
-  - 비활성화 행은 CSS(.row-disabled-checkbox)로 체크박스 숨김 처리
-
-[isMyTurn 판별 로직]
-  1. 이미 최종 승인/반려된 건은 false 반환
-  2. 결재자 목록(approvers)을 dcdSqn 오름차순 정렬
-  3. dcdDt(처리일자)가 없는 첫 번째 결재자가 로그인 사용자(dcdEno === user.eno)이면 true
-
-[결재 다이얼로그]
-  - targetApprovalStatus: null이면 일괄(승인/반려 버튼 모두 표시)
-  - '승인'이면 승인 버튼만, '반려'면 반려 버튼만 표시
-
-[라우팅]
-  - 접근: /approval
-================================================================================
--->
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useAuth } from '~/composables/useAuth';
-import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
-import StyledDataTable from '~/components/common/StyledDataTable.vue';
-
-import { useApprovals, type BulkApprovalItem } from '~/composables/useApprovals';
-
-const { fetchApprovals, bulkApprove } = useApprovals();
-
-const { user } = useAuth();
-/** 전자결재 목록 데이터 및 새로고침 함수 */
-const { data: approvals, error, refresh } = await fetchApprovals();
-/** 직원 검색 다이얼로그 표시 여부 */
-const showEmployeeSearch = ref(false);
-/** 체크박스로 선택된 결재 항목 목록 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const selectedApprovals = ref<any[]>([]);
-
-/* ── 결재 처리 다이얼로그 상태 ── */
-const showApprovalDialog = ref(false);
-/** 결재 의견 입력값 */
-const approvalOpinion = ref('');
-/** 결재 처리 중 로딩 상태 (버튼 비활성화용) */
-const isSubmitting = ref(false);
-
-/* ── 결재 완료 다이얼로그 상태 ── */
-/** 결재 완료 다이얼로그 표시 여부 */
-const showResultDialog = ref(false);
-/** 결재 완료 메시지 */
-const resultMessage = ref('');
-
 /**
- * 직원 검색 선택 콜백 (미래 구현용 placeholder)
+ * ============================================================================
+ * [전자결재 Home 대시보드]
+ * ----------------------------------------------------------------------------
+ * 로그인 사용자의 부서(bbrC) + 사원번호(eno) 기준으로 전자결재 현황과
+ * 본인 결재 대기 목록을 한눈에 보여주는 메인 대시보드 페이지입니다.
  *
- * @param _user - 선택된 직원 정보 (현재 미사용)
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const onEmployeeSelect = (_user: any) => {
-    // Future implementation: handle selection
-};
-
-/**
- * 현재 로그인한 사용자가 해당 결재 건의 다음 결재자인지 판별
- * 결재 차례 아닌 행의 체크박스를 비활성화하는 데 사용합니다.
+ * [구성]
+ *  1) KPI 카드 4종 (결재 대기 / 진행 중 / 당월 완료 / 반려)
+ *  2) 월별 결재 완료 추이 (최근 6개월, 순수 CSS 막대 차트 — Chart.js 미사용)
+ *  3) 내 결재 대기 목록 (최대 5건, 항목 클릭 시 결재 상세 페이지로 이동)
+ *  4) 하단 [전체 목록 보기] 버튼
  *
- * @param data - 결재 항목 데이터 (approvers 배열 포함)
- * @returns 현재 사용자가 결재 차례이면 true, 아니면 false
+ * [데이터 소스]
+ *  - useApprovalDashboard() composable → /api/applications/dashboard
+ * ============================================================================
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isMyTurn = (data: any) => {
-    if (!user.value || !data.approvers) return false;
+import Button from 'primevue/button';
+import Skeleton from 'primevue/skeleton';
 
-    // 이미 최종 승인/반려된 건은 불가
-    if (data.apfSts === '승인' || data.apfSts === '반려') return false;
+definePageMeta({ layout: 'default' });
 
-    // 결재자 목록을 순번(dcdSqn) 오름차순 정렬 (안전한 로직을 위해 필수)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sortedApprovers = [...data.approvers].sort((a: any, b: any) => Number(a.dcdSqn) - Number(b.dcdSqn));
+// 대시보드 집계 데이터 조회 (bbrC, eno는 composable 내부에서 자동 주입)
+const { data, pending } = useApprovalDashboard();
 
-    // 결재자 목록에서 아직 처리일자(dcdDt)가 없는 첫 번째 대기자 찾기
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nextApprover = sortedApprovers.find((a: any) => !a.dcdDt);
-
-    if (!nextApprover) return false;
-
-    // 디버깅용 로그 (필요시 주석 처리)
-    // console.log(`Doc: ${data.apfMngNo}, My: ${user.value.eno}, Next: ${nextApprover.dcdEno}, IsMe: ${String(nextApprover.dcdEno) === String(user.value.eno)}`);
-
-    // 대기자가 있고, 그 대기자가 본인(dcdEno)인 경우만 true
-    return String(nextApprover.dcdEno) === String(user.value.eno);
-};
+// 월별 차트 최대 막대 높이(px) — CSS 막대 차트 렌더링 기준값
+const maxBarHeight = 120;
 
 /**
- * DataTable 행 선택 가능 여부 판단 (isDataSelectable prop에 전달)
- * PrimeVue 버전에 따라 event.data 또는 event 자체가 행 데이터임.
- *
- * @param event - PrimeVue DataTable 선택 이벤트
- * @returns 결재 차례인 행만 true 반환
+ * 월별 결재 완료 추이에서 최대 건수 계산
+ * 모든 막대 높이 비율의 기준값입니다. 데이터가 없거나 모두 0일 경우 1을 반환하여
+ * 0으로 나누는 오류를 방지합니다.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isRowSelectable = (event: any) => {
-    // PrimeVue 버전에 따라 event.data 또는 event 자체가 데이터일 수 있음
-    const data = event.data || event;
-    return isMyTurn(data);
-};
-
-/**
- * 결재 대상 상태값 (개별 처리용)
- * null: 일괄 처리 (승인/반려 버튼 모두 표시)
- * '승인': 승인 버튼만 표시
- * '반려': 반려 버튼만 표시
- */
-const targetApprovalStatus = ref<'승인' | '반려' | null>(null);
-
-/**
- * 일괄 결재 다이얼로그 열기
- * 선택된 항목이 없으면 아무 동작도 하지 않습니다.
- */
-const openApprovalDialog = () => {
-    if (selectedApprovals.value.length === 0) return;
-    targetApprovalStatus.value = null; // 일괄 처리 모드로 초기화
-    approvalOpinion.value = '';
-    showApprovalDialog.value = true;
-};
-
-/**
- * 선택된 항목 감시하여 비활성화 항목 제거 (안전장치)
- * isMyTurn이 false인 항목이 선택 목록에 포함될 경우 자동 제거합니다.
- */
-watch(selectedApprovals, (newVal) => {
-    const validSelection = newVal.filter(item => isMyTurn(item));
-    if (newVal.length !== validSelection.length) {
-        selectedApprovals.value = validSelection;
-    }
+const maxMonthlyCount = computed<number>(() => {
+    const trend = data.value?.monthlyTrend ?? [];
+    if (trend.length === 0) return 1;
+    const max = Math.max(...trend.map((m) => m.count));
+    return max > 0 ? max : 1;
 });
 
 /**
- * 행 CSS 클래스 결정
- * 결재 차례가 아닌 행에 row-disabled-checkbox 클래스를 적용하여
- * scoped 스타일로 체크박스를 숨깁니다.
- *
- * @param data - DataTable 행 데이터
- * @returns CSS 클래스 문자열
+ * 특정 월 건수를 픽셀 높이로 변환
+ * - 0건: 4px (최소 가시성 유지)
+ * - 그 외: (count / max) * maxBarHeight
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const rowClass = (data: any) => {
-    return !isMyTurn(data) ? 'row-disabled-checkbox' : '';
+const barHeight = (count: number): string => {
+    if (count <= 0) return '4px';
+    const ratio = count / maxMonthlyCount.value;
+    const height = Math.max(4, Math.round(ratio * maxBarHeight));
+    return `${height}px`;
 };
 
 /**
- * 개별 결재 다이얼로그 열기
- * 단건 항목을 선택 목록에 설정하고 지정된 처리 상태로 다이얼로그를 엽니다.
- *
- * @param item - 결재 처리할 단건 항목
- * @param status - 처리 상태 ('승인' | '반려')
+ * 본인 결재 대기 목록 상위 5건만 노출
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const openIndividualApprovalDialog = (item: any, status: '승인' | '반려') => {
-    selectedApprovals.value = [item];
-    targetApprovalStatus.value = status;
-    approvalOpinion.value = '';
-    showApprovalDialog.value = true;
-};
-
-/**
- * 결재 처리 실행 (승인 또는 반려)
- * 선택된 모든 항목에 대해 bulkApprove API를 호출합니다.
- * 성공 시 목록을 새로고침하고 선택 상태를 초기화합니다.
- *
- * @param status - 처리 상태 ('승인' | '반려')
- */
-const processApproval = async (status: '승인' | '반려') => {
-    if (!user.value) return;
-
-    isSubmitting.value = true;
-    try {
-        /* 선택된 항목들을 BulkApprovalItem 형식으로 변환 */
-        const items: BulkApprovalItem[] = selectedApprovals.value.map(item => ({
-            apfMngNo: item.apfMngNo,
-            dcdEno: user.value!.eno,
-            dcdOpnn: approvalOpinion.value,
-            dcdSts: status
-        }));
-
-        await bulkApprove(items);
-
-        await refresh(); // 목록 새로고침
-        selectedApprovals.value = []; // 선택 초기화
-        showApprovalDialog.value = false;
-        resultMessage.value = `${items.length}건이 ${status} 처리되었습니다.`;
-        showResultDialog.value = true;
-    } catch (e) {
-        console.error('Approval failed', e);
-        alert('결재 처리 중 오류가 발생했습니다.');
-    } finally {
-        isSubmitting.value = false;
-    }
-};
-
-/* ── 결재 진행 상황 타임라인 (ApprovalTimeline 컴포넌트 연동) ── */
-const showTimelineDialog = ref(false);
-/** 타임라인에 전달할 선택된 결재 항목 데이터 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const selectedTimelineData = ref<any>(null);
-
-/**
- * 결재 진행 상황 타임라인 다이얼로그 열기
- * 선택된 결재 데이터를 ApprovalTimeline 컴포넌트에 전달합니다.
- *
- * @param data - 결재 항목 데이터 (rqsEno, rqsDt 등 기안 정보 포함)
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const openTimeline = (data: any) => {
-    selectedTimelineData.value = data;
-    showTimelineDialog.value = true;
-};
-
-/* ── 신청서 조회 PDF 뷰어 다이얼로그 ── */
-/** ApplicationViewerDialog 표시 여부 */
-const showReportDialog = ref(false);
-/** 조회할 신청관리번호 */
-const currentApfMngNo = ref('');
-
-/**
- * 신청서 조회 다이얼로그 열기
- * @param data - 결재 항목 데이터 (apfMngNo 포함)
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const openReport = (data: any) => {
-    if (!data.apfMngNo) {
-        alert('신청관리번호가 없습니다.');
-        return;
-    }
-    currentApfMngNo.value = data.apfMngNo;
-    showReportDialog.value = true;
-};
-
-definePageMeta({
-    title: '전자결재 목록'
+const topPending = computed(() => {
+    const list = data.value?.pendingList ?? [];
+    return list.slice(0, 5);
 });
+
+/**
+ * 요청 일시를 YYYY-MM-DD 형식으로 변환
+ * ISO 8601 문자열을 가볍게 슬라이싱 (시간대 변환 없이 표시용)
+ */
+const formatDate = (iso: string): string => {
+    if (!iso) return '-';
+    return iso.slice(0, 10);
+};
+
+/**
+ * 긴급도 배지 스타일 매핑
+ * urgent: 빨간색 / normal: 회색
+ */
+const urgencyBadgeClass = (urgency: 'urgent' | 'normal'): string => {
+    if (urgency === 'urgent') {
+        return 'bg-red-100 text-red-700 border border-red-200';
+    }
+    return 'bg-zinc-100 text-zinc-600 border border-zinc-200';
+};
+
+const urgencyLabel = (urgency: 'urgent' | 'normal'): string => {
+    return urgency === 'urgent' ? '긴급' : '일반';
+};
+
+/**
+ * 결재 상세 페이지로 이동
+ */
+const goDetail = (apfMngNo: string): void => {
+    navigateTo(`/approval/${apfMngNo}`);
+};
+
+/**
+ * 전체 결재 목록 페이지로 이동
+ */
+const goList = (): void => {
+    navigateTo('/approval/list');
+};
+
+/** V4 세그먼트 바: 결재 상태 합계 대비 각 비율 계산 */
+const approvalTotal = computed(() =>
+    (data.value?.pendingCount ?? 0) +
+    (data.value?.inProgressCount ?? 0) +
+    (data.value?.monthlyCompletedCount ?? 0) +
+    (data.value?.rejectedCount ?? 0)
+);
+const toPct = (n: number): number => {
+    const t = approvalTotal.value;
+    return t > 0 ? Math.round(n / t * 100) : 0;
+};
 </script>
 
 <template>
     <div class="space-y-6">
+        <PageHeader title="전자결재 현황" subtitle="내 결재 대기 목록과 부서 결재 처리 현황을 확인합니다.">
+            <template #actions>
+                <Button icon="pi pi-list" label="전체 목록" severity="secondary" outlined @click="goList" />
+            </template>
+        </PageHeader>
 
-        <!-- 페이지 헤더: 제목 + 설명 + 액션 버튼 그룹 -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">전자결재 목록</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    신청한 결재 내역을 조회합니다.
-                </p>
+        <!-- KPI 카드 4종 (V4: 아이콘 배지 + 내러티브 + 세그먼트 분해) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            <!-- 결재 대기 -->
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-amber-100 text-amber-700">
+                        <i class="pi pi-inbox" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">결재 대기</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.pendingCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 즉시 처리 필요</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-amber-500" :style="{ width: `${toPct(data?.pendingCount ?? 0)}%` }" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />전체 대비 {{ toPct(data?.pendingCount ?? 0) }}%</span>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <!-- 직원 검색 다이얼로그 열기 -->
-                <Button label="직원 조회" icon="pi pi-search" outlined @click="showEmployeeSearch = true" />
-                <!-- 선택된 항목이 있을 때만 일괄 결재 버튼 표시 -->
-                <Button v-if="selectedApprovals.length > 0" label="일괄 결재" icon="pi pi-check-square" severity="success"
-                    @click="openApprovalDialog" />
-                <!-- 목록 새로고침 -->
-                <Button icon="pi pi-refresh" outlined rounded @click="refresh()" />
+
+            <!-- 결재 진행 중 -->
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-blue-100 text-blue-700">
+                        <i class="pi pi-spinner" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">결재 진행 중</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.inProgressCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 결재 단계 처리</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-blue-500" :style="{ width: `${toPct(data?.inProgressCount ?? 0)}%` }" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-blue-500" />전체 대비 {{ toPct(data?.inProgressCount ?? 0) }}%</span>
+                </div>
+            </div>
+
+            <!-- 당월 완료 -->
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-emerald-100 text-emerald-700">
+                        <i class="pi pi-check-circle" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">당월 완료</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.monthlyCompletedCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 이번 달 누적</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-emerald-500" :style="{ width: `${toPct(data?.monthlyCompletedCount ?? 0)}%` }" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />전체 대비 {{ toPct(data?.monthlyCompletedCount ?? 0) }}%</span>
+                </div>
+            </div>
+
+            <!-- 반려 -->
+            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-red-100 text-red-700">
+                        <i class="pi pi-times-circle" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">반려</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <Skeleton v-if="pending" width="4rem" height="2.25rem" />
+                    <span v-else class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">{{ data?.rejectedCount ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">건 · 당월 누적</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                    <span class="h-full bg-red-500" :style="{ width: `${toPct(data?.rejectedCount ?? 0)}%` }" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-red-500" />전체 대비 {{ toPct(data?.rejectedCount ?? 0) }}%</span>
+                </div>
             </div>
         </div>
 
-        <!-- 전자결재 목록 DataTable -->
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <StyledDataTable :value="approvals || []" dataKey="apfMngNo" v-model:selection="selectedApprovals"
-                :isDataSelectable="isRowSelectable" :rowClass="rowClass" sortField="apfMngNo" :sortOrder="-1"
-                stripedRows paginator :rows="10" :rowsPerPageOptions="[10, 20, 50]">
-                <template #empty>
-                    <div class="text-center py-8 text-zinc-500">
-                        데이터가 없습니다.
+        <!-- 월별 결재 완료 추이 + 내 결재 대기 목록 (같은 Row) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <!-- 월별 결재 완료 추이 (순수 CSS 막대 차트) -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-zinc-900">월별 결재 완료 추이</h2>
+                    <span class="text-xs text-zinc-400">최근 6개월</span>
+                </div>
+
+                <!-- 로딩 스켈레톤 -->
+                <div v-if="pending" class="flex items-end justify-around gap-3 h-40">
+                    <Skeleton v-for="n in 6" :key="n" width="2.5rem" :height="`${40 + n * 10}px`" />
+                </div>
+
+                <!-- 실제 차트 -->
+                <div v-else-if="data && data.monthlyTrend.length > 0" class="flex items-end justify-around gap-3 pt-4">
+                    <div
+                        v-for="m in data.monthlyTrend"
+                        :key="m.month"
+                        class="flex flex-col items-center flex-1 min-w-0"
+                    >
+                        <!-- 막대 위 건수 표시 -->
+                        <div class="text-xs font-medium text-zinc-700 mb-1">{{ m.count }}</div>
+                        <!-- CSS 막대: 높이는 최대값 대비 비율로 계산 -->
+                        <div
+                            class="w-full max-w-[48px] rounded-t-md bg-gradient-to-b from-emerald-500 to-emerald-700 transition-all hover:from-emerald-600 hover:to-emerald-800"
+                            :style="{ height: barHeight(m.count) }"
+                            :title="`${m.month}: ${m.count}건`"
+                        />
+                        <!-- 월 레이블 -->
+                        <div class="text-xs text-zinc-500 mt-2 whitespace-nowrap">{{ m.month }}</div>
                     </div>
-                </template>
+                </div>
 
-                <!-- 다중 선택 체크박스: 결재 차례인 행만 활성화 -->
-                <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+                <!-- 빈 상태 -->
+                <div v-else class="h-40 flex items-center justify-center text-sm text-zinc-400">
+                    <i class="pi pi-chart-bar mr-2" />
+                    표시할 월별 데이터가 없습니다.
+                </div>
+            </div>
 
-                <!-- 신청서명: 클릭 시 PDF 보고서 뷰어 열기 -->
-                <Column field="apfNm" header="신청서명" sortable class="font-medium">
-                    <template #body="{ data }">
-                        <span @click="openReport(data)" class="text-blue-600 hover:underline cursor-pointer">
-                            {{ data.apfNm }}
-                        </span>
-                    </template>
-                </Column>
+            <!-- 내 결재 대기 목록 (최대 5건) -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-zinc-900">내 결재 대기 목록</h2>
+                    <span class="text-xs text-zinc-400">최대 5건</span>
+                </div>
 
-                <!-- 결재 상태: 클릭 시 진행 상황 타임라인 다이얼로그 열기 -->
-                <Column field="apfSts" header="상태" sortable>
-                    <template #body="{ data }">
-                        <Tag :value="data.apfSts" :class="getApprovalTagClass(data.apfSts)"
-                            class="cursor-pointer hover:opacity-80 transition-opacity" @click="openTimeline(data)"
-                            v-tooltip="'결재 진행 상황 보기'" />
-                    </template>
-                </Column>
-
-                <Column field="rqsEno" header="신청자" sortable></Column>
-                <Column field="rqsDt" header="신청일자" sortable></Column>
-                <Column field="rqsOpnn" header="신청의견" class="max-w-xs truncate"></Column>
-
-                <!-- 개별 결재 처리: isMyTurn인 행에만 승인/반려 버튼 표시 -->
-                <Column header="결재 처리" class="text-center" style="width: 12rem">
-                    <template #body="{ data }">
-                        <div v-if="isMyTurn(data)" class="flex justify-center gap-2">
-                            <Button label="승인" icon="pi pi-check" severity="success" size="small"
-                                @click="openIndividualApprovalDialog(data, '승인')" />
-                            <Button label="반려" icon="pi pi-times" severity="danger" size="small"
-                                @click="openIndividualApprovalDialog(data, '반려')" />
+                <!-- 로딩 스켈레톤 5행 -->
+                <div v-if="pending" class="space-y-3">
+                    <div
+                        v-for="n in 5"
+                        :key="n"
+                        class="flex items-center gap-4 p-3 border border-zinc-100 rounded-lg"
+                    >
+                        <Skeleton shape="circle" size="2.5rem" />
+                        <div class="flex-1 space-y-2">
+                            <Skeleton width="60%" height="1rem" />
+                            <Skeleton width="40%" height="0.75rem" />
                         </div>
-                    </template>
-                </Column>
-            </StyledDataTable>
+                        <Skeleton width="4rem" height="1.5rem" />
+                    </div>
+                </div>
+
+                <!-- 실제 목록 -->
+                <ul v-else-if="topPending.length > 0" class="divide-y divide-zinc-100">
+                    <li
+                        v-for="item in topPending"
+                        :key="item.apfMngNo"
+                        class="py-3 flex items-center gap-4 cursor-pointer hover:bg-zinc-50 rounded-lg px-3 -mx-3 transition-colors"
+                        @click="goDetail(item.apfMngNo)"
+                    >
+                        <!-- 결재 아이콘 -->
+                        <div class="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 shrink-0">
+                            <i class="pi pi-send" />
+                        </div>
+
+                        <!-- 본문 영역 -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-mono text-zinc-400">{{ item.apfMngNo }}</span>
+                            </div>
+                            <div class="text-sm font-medium text-zinc-900 truncate">{{ item.title }}</div>
+                            <div class="text-xs text-zinc-500 mt-0.5">
+                                <i class="pi pi-user text-[10px] mr-1" />{{ item.requesterName }}
+                                <span class="mx-1.5 text-zinc-300">·</span>
+                                <i class="pi pi-calendar text-[10px] mr-1" />{{ formatDate(item.requestedAt) }}
+                            </div>
+                        </div>
+
+                        <!-- 긴급도 배지 -->
+                        <span
+                            class="px-2.5 py-1 rounded-full text-xs font-medium shrink-0"
+                            :class="urgencyBadgeClass(item.urgency)"
+                        >
+                            {{ urgencyLabel(item.urgency) }}
+                        </span>
+
+                        <i class="pi pi-angle-right text-zinc-300 shrink-0" />
+                    </li>
+                </ul>
+
+                <!-- 빈 상태 -->
+                <div v-else class="py-10 flex flex-col items-center justify-center text-zinc-400">
+                    <i class="pi pi-inbox text-3xl mb-2" />
+                    <span class="text-sm">결재 대기 중인 항목이 없습니다</span>
+                </div>
+            </div>
+
         </div>
 
-        <!-- 직원 검색 다이얼로그 -->
-        <EmployeeSearchDialog v-model:visible="showEmployeeSearch" @select="onEmployeeSelect" />
-
-        <!-- 결재 처리 다이얼로그 (승인/반려 의견 입력) -->
-        <Dialog v-model:visible="showApprovalDialog"
-            :header="targetApprovalStatus ? `${targetApprovalStatus} 처리` : '일괄 결재 처리'" modal
-            :style="{ width: '400px' }">
-            <div class="flex flex-col gap-4">
-                <p class="text-zinc-600 dark:text-zinc-300">
-                    선택한 <span class="font-bold">{{ selectedApprovals.length }}</span>건에 대해 결재를 진행합니다.
-                </p>
-                <div class="flex flex-col gap-2">
-                    <label for="opinion" class="font-medium">결재 의견</label>
-                    <Textarea id="opinion" v-model="approvalOpinion" rows="4" placeholder="의견을 입력하세요" class="w-full" />
-                </div>
-            </div>
-            <template #footer>
-                <div class="flex justify-end gap-2">
-                    <Button label="취소" severity="secondary" text @click="showApprovalDialog = false" />
-
-                    <!-- 승인 버튼: 일괄 처리 또는 승인 개별 처리 시 표시 -->
-                    <Button v-if="!targetApprovalStatus || targetApprovalStatus === '승인'" label="승인" severity="success"
-                        icon="pi pi-check" :loading="isSubmitting" @click="processApproval('승인')" />
-
-                    <!-- 반려 버튼: 일괄 처리 또는 반려 개별 처리 시 표시 -->
-                    <Button v-if="!targetApprovalStatus || targetApprovalStatus === '반려'" label="반려" severity="danger"
-                        icon="pi pi-times" :loading="isSubmitting" @click="processApproval('반려')" />
-                </div>
-            </template>
-        </Dialog>
-
-
-        <!-- 결재 진행 상황 타임라인 (컴포넌트 분리) -->
-        <ApprovalTimeline v-model:visible="showTimelineDialog" :approvalData="selectedTimelineData" />
-
-
-        <!-- 결재 완료 다이얼로그 -->
-        <Dialog v-model:visible="showResultDialog" header="결재 처리 완료" modal :closable="false"
-            :style="{ width: '400px' }">
-            <div class="flex items-center gap-3">
-                <i class="pi pi-check-circle text-green-500 text-2xl"></i>
-                <span>{{ resultMessage }}</span>
-            </div>
-            <template #footer>
-                <Button label="확인" icon="pi pi-check" @click="showResultDialog = false" />
-            </template>
-        </Dialog>
-
-        <!-- 신청서 조회 PDF 뷰어 다이얼로그 (재사용 컴포넌트) -->
-        <ApplicationViewerDialog
-            v-model:visible="showReportDialog"
-            :apfMngNo="currentApfMngNo" />
+        <!-- 하단 전체 목록 보기 버튼 -->
+        <div class="flex justify-center pt-2">
+            <Button
+                label="전체 목록 보기"
+                icon="pi pi-arrow-right"
+                icon-pos="right"
+                @click="goList"
+            />
+        </div>
     </div>
 </template>
-
-
-<style scoped>
-/**
- * 결재 차례가 아닌 행의 체크박스 숨김 처리
- * isMyTurn()이 false인 행에 row-disabled-checkbox 클래스를 적용하여
- * 선택 자체가 불가능함을 UI로 명시합니다.
- */
-:deep(.row-disabled-checkbox .p-checkbox),
-:deep(.row-disabled-checkbox .p-selection-column .p-checkbox) {
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-
-:deep(.row-disabled-checkbox .p-selection-column) {
-    pointer-events: none !important;
-}
-</style>

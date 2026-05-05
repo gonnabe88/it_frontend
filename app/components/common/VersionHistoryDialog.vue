@@ -77,7 +77,7 @@ const isCurrent = (item: VersionHistoryItem): boolean => {
         v-model:visible="isVisible"
         :header="header"
         modal
-        :style="{ width: '420px' }">
+        :style="{ width: 'var(--dialog-sm)' }">
         <!-- 버전 목록 -->
         <ul
             v-if="versions.length > 0"
@@ -107,7 +107,9 @@ const isCurrent = (item: VersionHistoryItem): boolean => {
         </p>
 
         <template #footer>
-            <Button label="닫기" severity="secondary" @click="isVisible = false" />
+            <AppDialogFooter>
+                <Button label="닫기" severity="secondary" @click="isVisible = false" />
+            </AppDialogFooter>
         </template>
     </Dialog>
 </template>

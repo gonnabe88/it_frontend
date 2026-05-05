@@ -164,7 +164,7 @@ const pendingReviewers = computed(() =>
     v-model:visible="showReviewerSelect"
     header="검토완료 처리"
     :modal="true"
-    :style="{ width: '400px' }"
+    :style="{ width: 'var(--dialog-sm)' }"
   >
     <p class="mb-3 text-sm text-surface-600">검토를 완료할 검토자를 선택하세요.</p>
     <div class="space-y-2">
@@ -189,8 +189,10 @@ const pendingReviewers = computed(() =>
       </div>
     </div>
     <template #footer>
-      <Button label="취소" text @click="showReviewerSelect = false" />
-      <Button label="확인" icon="pi pi-check" :disabled="!selectedReviewer" @click="confirmReview" />
+        <AppDialogFooter>
+            <Button label="취소" severity="secondary" outlined @click="showReviewerSelect = false" />
+            <Button label="확인" icon="pi pi-check" :disabled="!selectedReviewer" @click="confirmReview" />
+        </AppDialogFooter>
     </template>
   </Dialog>
 </template>

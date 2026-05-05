@@ -91,16 +91,16 @@ watch(() => props.approvalData, (data) => {
     <Dialog v-model:visible="isVisible" modal class="w-[90vw]" :style="{ maxWidth: '1000px' }" :show-header="false">
         <!-- 커스텀 헤더: 신청서명 + 관리번호 표시 -->
         <div
-            class="flex items-start justify-between p-6 border-b border-gray-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-t-lg">
+            class="flex items-start justify-between p-6 border-b border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-t-lg">
             <div class="flex gap-4">
                 <div
-                    class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                    <i class="pi pi-sitemap text-xl text-blue-600 dark:text-blue-400"/>
+                    class="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                    <i class="pi pi-sitemap text-xl text-indigo-600 dark:text-indigo-400"/>
                 </div>
                 <div>
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">결재 진행 상황</h3>
-                    <div class="flex flex-col gap-0.5 text-sm text-gray-500 dark:text-gray-400">
-                        <span class="font-medium text-gray-700 dark:text-gray-300">{{ currentApfNm }}</span>
+                    <h3 class="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">결재 진행 상황</h3>
+                    <div class="flex flex-col gap-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                        <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ currentApfNm }}</span>
                         <span class="text-xs font-mono">No. {{ currentApfMngNo }}</span>
                     </div>
                 </div>
@@ -112,7 +112,7 @@ watch(() => props.approvalData, (data) => {
         <div class="p-6 bg-slate-50 dark:bg-zinc-900/50 overflow-x-auto rounded-b-lg">
             <div class="relative flex items-start justify-between min-w-[600px] px-4 pt-4 pb-8">
                 <!-- 수평 연결선 (배경) -->
-                <div class="absolute top-9 left-10 right-10 h-0.5 bg-gray-200 dark:bg-gray-700 -z-0"/>
+                <div class="absolute top-9 left-10 right-10 h-0.5 bg-zinc-200 dark:bg-zinc-700 -z-0"/>
 
                 <!-- 타임라인 각 항목 (기안자 + 결재자) -->
                 <div
@@ -125,8 +125,8 @@ class="w-10 h-10 rounded-full flex items-center justify-center border-4 border-w
                             'bg-indigo-100 text-indigo-600 ring-4 ring-indigo-50': approver.dcdTp === '기안',
                             'bg-green-100 text-green-600 ring-4 ring-green-50': approver.dcdTp !== '기안' && (approver.dcdSts === '승인' || (!approver.dcdSts && approver.dcdDt)),
                             'bg-red-100 text-red-600 ring-4 ring-red-50': approver.dcdSts === '반려',
-                            'bg-gray-100 text-gray-400': !approver.dcdSts && !approver.dcdDt && approver.dcdTp !== '기안',
-                            'bg-blue-100 text-blue-600': approver.dcdSts === '결재중'
+                            'bg-zinc-100 text-zinc-400': !approver.dcdSts && !approver.dcdDt && approver.dcdTp !== '기안',
+                            'bg-indigo-100 text-indigo-600': approver.dcdSts === '결재중'
                         }">
                         <i
 class="pi" :class="{
@@ -140,24 +140,24 @@ class="pi" :class="{
 
                     <!-- 결재자 정보 카드 -->
                     <div
-                        class="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-zinc-700 w-full max-w-[220px] text-center group relative">
+                        class="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-zinc-100 dark:border-zinc-700 w-full max-w-[220px] text-center group relative">
                         <!-- 카드 위쪽 삼각형 포인터 -->
                         <div
-                            class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-zinc-800 border-t border-l border-gray-100 dark:border-zinc-700 transform rotate-45 transition-colors"/>
+                            class="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-zinc-800 border-t border-l border-zinc-100 dark:border-zinc-700 transform rotate-45 transition-colors"/>
 
                         <div class="flex flex-col items-center gap-1 mb-2">
                             <Badge
                                 :value="approver.dcdTp || '결재'"
                                 :severity="approver.dcdTp === '기안' ? 'info' : 'secondary'" size="small" class="mb-1" />
-                            <span class="font-bold text-gray-900 dark:text-gray-100 text-lg">{{ approver.dcdEno
+                            <span class="font-bold text-zinc-900 dark:text-zinc-100 text-lg">{{ approver.dcdEno
                             }}</span>
-                            <span class="text-xs text-gray-500 font-mono">{{ approver.dcdDt || '-' }}</span>
+                            <span class="text-xs text-zinc-500 font-mono">{{ approver.dcdDt || '-' }}</span>
                         </div>
 
                         <!-- 결재 상태 및 의견 표시 -->
                         <div
 v-if="approver.dcdSts || approver.dcdDt || approver.dcdOpnn"
-                            class="mt-3 pt-3 border-t border-gray-100 dark:border-zinc-700">
+                            class="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-700">
                             <div class="mb-2">
                                 <span
 class="font-bold text-sm px-2 py-0.5 rounded" :class="{
@@ -172,11 +172,11 @@ class="font-bold text-sm px-2 py-0.5 rounded" :class="{
                             </div>
                             <p
 v-if="approver.dcdOpnn"
-                                class="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-zinc-900/50 p-2 rounded text-left break-keep italic">
+                                class="text-sm text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/50 p-2 rounded text-left break-keep italic">
                                 "{{ approver.dcdOpnn }}"
                             </p>
                         </div>
-                        <div v-else class="mt-2 text-sm text-gray-400">
+                        <div v-else class="mt-2 text-sm text-zinc-400">
                             대기 중
                         </div>
                     </div>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Brand — IT Portal</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin:0; padding:40px; background:#f4f4f5; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { font-size:12px; font-weight:500; color:var(--fg3); letter-spacing:0.05em; text-transform:uppercase; margin:0 0 8px; }
+  .title   { font-size:28px; font-weight:700; color:var(--fg1); margin:0 0 4px; letter-spacing:-0.01em; }
+  .subtitle{ font-size:14px; color:var(--fg3); margin:0 0 32px; max-width:720px; line-height:1.6; }
+  h3 { font-size:13px; font-weight:600; color:var(--fg2); text-transform:uppercase; letter-spacing:0.05em; margin:36px 0 14px; }
+  h3:first-of-type { margin-top:0; }
+
+  .panel { background:#fff; border:1px solid var(--border-1); border-radius:12px; padding:24px; }
+
+  .logos { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  .logo-cell { background:#fff; border:1px solid var(--border-1); border-radius:12px; padding:40px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-height:220px; }
+  .logo-cell.dark { background:#18181b; border-color:#27272a; }
+  .logo-cell img { max-width:220px; max-height:100px; object-fit:contain; }
+  .logo-cell .m { font-family:var(--font-mono); font-size:11px; color:var(--fg3); }
+  .logo-cell.dark .m { color:#71717a; }
+
+  .sizes { display:flex; align-items:flex-end; gap:30px; padding:30px; background:#fff; border:1px solid var(--border-1); border-radius:12px; }
+  .sizes .s { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .sizes img { object-fit:contain; }
+  .sizes .m { font-family:var(--font-mono); font-size:11px; color:var(--fg3); }
+
+  .clear { background:#fff; border:1px dashed var(--zinc-300); border-radius:12px; padding:40px; display:flex; justify-content:center; align-items:center; position:relative; }
+  .clear::before { content:""; position:absolute; inset:20px; border:1px dashed var(--indigo-300); border-radius:8px; }
+
+  .dont { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+  .dont .d { background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:20px; display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center; min-height:180px; justify-content:center; }
+  .dont .d img { max-height:40px; }
+  .dont .lbl { font-size:12px; font-weight:600; color:var(--fg1); }
+  .dont .why { font-size:11px; color:var(--fg3); }
+  .dont.no { position:relative; }
+  .dont.no::after { content:"✕"; position:absolute; top:10px; right:12px; color:#dc2626; font-weight:700; font-size:16px; }
+
+  .voice { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .voice .c { background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:16px; }
+  .voice h4 { margin:0 0 8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+  .voice .c.ok h4 { color:#16a34a; }
+  .voice .c.no h4 { color:#dc2626; }
+  .voice ul { margin:0; padding-left:18px; font-size:13px; color:var(--fg2); line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">브랜드 · Brand</p>
+  <h1 class="title">Brand identity</h1>
+  <p class="subtitle">The IT mark — a stout wordmark with an indigo spherical accent over the "I" — is the only identity element. No product sub-brands, no mascots, no illustrations. The mark sits on white; in dark mode it is inverted via CSS.</p>
+
+  <h3>Logo · primary / inverted</h3>
+  <div class="logos">
+    <div class="logo-cell">
+      <img src="../assets/logo.png" alt="IT logo" />
+      <div class="m">assets/logo.png · on white</div>
+    </div>
+    <div class="logo-cell dark">
+      <img src="../assets/logo.png" alt="IT logo inverted" style="filter: invert(1);" />
+      <div class="m">dark:invert · on zinc-900</div>
+    </div>
+  </div>
+
+  <h3>Size · scales down to 24 px header mark</h3>
+  <div class="sizes">
+    <div class="s"><img src="../assets/logo.png" style="height:24px;"/><div class="m">24 px · favicon</div></div>
+    <div class="s"><img src="../assets/logo.png" style="height:40px;"/><div class="m">40 px · header</div></div>
+    <div class="s"><img src="../assets/logo.png" style="height:64px;"/><div class="m">64 px · login card</div></div>
+    <div class="s"><img src="../assets/logo.png" style="height:96px;"/><div class="m">96 px · splash</div></div>
+  </div>
+
+  <h3>Clear space · 0.5× mark height on all sides</h3>
+  <div class="clear"><img src="../assets/logo.png" style="height:64px;" /></div>
+
+  <h3>Don't</h3>
+  <div class="dont">
+    <div class="d no" style="background: linear-gradient(135deg,#ff0080,#7928ca);"><img src="../assets/logo.png" style="filter:invert(1);" /><div class="lbl" style="color:#fff;">Gradient bg</div><div class="why" style="color:#ffffffb3;">Only login card uses blue→indigo gradient, never behind the mark.</div></div>
+    <div class="d no"><img src="../assets/logo.png" style="transform: skewX(-12deg);" /><div class="lbl">Skew or rotate</div><div class="why">The mark is always upright and un-transformed.</div></div>
+    <div class="d no"><img src="../assets/logo.png" style="filter: hue-rotate(120deg);" /><div class="lbl">Recolor</div><div class="why">Only two treatments: black mark + indigo sphere, or fully inverted.</div></div>
+  </div>
+
+  <h3>Voice · do / don't</h3>
+  <div class="voice">
+    <div class="c ok">
+      <h4>✓ Do — institutional, noun-led</h4>
+      <ul>
+        <li>사원번호와 비밀번호를 입력해주세요.</li>
+        <li>결재 대기 7 · 3건 처리지연</li>
+        <li>© 2026 IT기획부. All rights reserved.</li>
+        <li>문의사항은 IT기획부 IT기획팀에 연락해주세요.</li>
+      </ul>
+    </div>
+    <div class="c no">
+      <h4>✕ Don't — casual, "you", exclamations</h4>
+      <ul>
+        <li>예산 작성하러 가볼까요? 😊</li>
+        <li>당신의 결재를 기다리고 있어요!</li>
+        <li>오류났어요! 다시 해주세요!!</li>
+        <li>Hey, welcome back — let's get started.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Color usage on the mark</h3>
+  <div class="panel" style="display:flex; gap:24px; align-items:center;">
+    <img src="../assets/logo.png" style="height:80px;" />
+    <div style="flex:1;">
+      <div style="font-size:14px; color:var(--fg2); line-height:1.7;">
+        The indigo sphere on the mark matches <code style="background:#f4f4f5; padding:2px 6px; border-radius:4px;">--indigo-600 · #4f46e5</code>, the product's primary brand hue. The wordmark is near-black (<code style="background:#f4f4f5; padding:2px 6px; border-radius:4px;">zinc-900 · #18181b</code>) in light mode, pure white in dark mode via <code style="background:#f4f4f5; padding:2px 6px; border-radius:4px;">filter: invert(1)</code>.
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

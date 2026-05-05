@@ -452,15 +452,17 @@ v-model:visible="previewVisible" header="AI 응답 미리보기" modal
 class="prose prose-zinc dark:prose-invert max-w-none text-sm leading-relaxed"
             v-html="DOMPurify.sanitize(previewContent)"/>
         <template #footer>
-            <Button label="닫기" severity="secondary" @click="previewVisible = false" />
-            <Button
+            <AppDialogFooter>
+                <Button label="닫기" severity="secondary" @click="previewVisible = false" />
+                <Button
 label="반영하기" icon="pi pi-check"
-                @click="() => { previewVisible = false; openConfirm(previewContent); }" />
+                    @click="() => { previewVisible = false; openConfirm(previewContent); }" />
+            </AppDialogFooter>
         </template>
     </Dialog>
 
     <!-- ─── 반영 확인 다이얼로그 ─── -->
-    <Dialog v-model:visible="confirmVisible" header="내용 반영" modal :style="{ width: '400px' }">
+    <Dialog v-model:visible="confirmVisible" header="내용 반영" modal :style="{ width: 'var(--dialog-sm)' }">
         <div class="flex items-start gap-3 py-2">
             <i class="pi pi-exclamation-triangle text-2xl text-amber-500 flex-shrink-0 mt-0.5"/>
             <div>
@@ -469,8 +471,10 @@ label="반영하기" icon="pi pi-check"
             </div>
         </div>
         <template #footer>
-            <Button label="취소" severity="secondary" @click="confirmVisible = false" />
-            <Button label="반영하기" icon="pi pi-check" severity="danger" @click="doApply" />
+            <AppDialogFooter>
+                <Button label="취소" severity="secondary" outlined @click="confirmVisible = false" />
+                <Button label="반영하기" icon="pi pi-check" severity="danger" @click="doApply" />
+            </AppDialogFooter>
         </template>
     </Dialog>
 </template>

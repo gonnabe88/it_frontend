@@ -21,7 +21,13 @@
  *   - 테이블 헤더 / 컬럼 리사이저 (.p-datatable-header-cell,
  *     .p-datatable-column-resizer)
  *
- * [사용 예시]
+ * [표준 적용]
+ *   - StyledDataTable.vue가 기본으로 이 composable을 호출하므로 표준 테이블은
+ *     별도 설정 없이 셀 선택/복사를 지원합니다.
+ *   - 편집 모드처럼 셀 선택이 방해가 되는 화면은
+ *     <StyledDataTable :cell-selectable="false" ...>로 비활성화합니다.
+ *
+ * [직접 사용 예시]
  *   const tableContainerRef = ref<HTMLElement | null>(null);
  *   useTableCellSelection(tableContainerRef);
  *   <div ref="tableContainerRef" class="cell-select-host">
@@ -59,6 +65,10 @@ export function useTableCellSelection(
     let focus: CellCoord | null = null;
     /** 마우스 드래그 진행 여부 */
     let dragging = false;
+    /** 현재 이벤트가 바인딩된 컨테이너 */
+    let boundContainer: HTMLElement | null = null;
+    /** ref watch 정리 함수 */
+    let stopContainerWatch: (() => void) | null = null;
 
     /** 이벤트 타깃에서 소속 <td>의 DOM 좌표(tbody 내 행/열 index)를 추출 */
     const getCellCoord = (el: HTMLElement, container: HTMLElement): (CellCoord & { td: HTMLElement }) | null => {
@@ -227,11 +237,29 @@ export function useTableCellSelection(
         return (el.textContent ?? '').replace(/\s+/g, ' ').trim();
     };
 
-    onMounted(() => {
-        const container = containerRef.value;
-        if (!container) return;
+    /** 컨테이너 DOM에 셀 선택 이벤트를 바인딩 */
+    const bindContainer = (container: HTMLElement | null) => {
+        if (!container || boundContainer === container) return;
+        unbindContainer();
         container.addEventListener('mousedown', onMouseDown);
         container.addEventListener('mousemove', onMouseMove);
+        boundContainer = container;
+    };
+
+    /** 이전 컨테이너 DOM의 이벤트 바인딩 해제 */
+    const unbindContainer = () => {
+        if (!boundContainer) return;
+        boundContainer.removeEventListener('mousedown', onMouseDown);
+        boundContainer.removeEventListener('mousemove', onMouseMove);
+        boundContainer = null;
+    };
+
+    onMounted(() => {
+        stopContainerWatch = watch(
+            containerRef,
+            (container) => bindContainer(container),
+            { immediate: true, flush: 'post' },
+        );
         document.addEventListener('mouseup', onMouseUp);
         document.addEventListener('copy', onCopy);
         document.addEventListener('mousedown', onDocumentMouseDown);
@@ -249,11 +277,9 @@ export function useTableCellSelection(
     }
 
     onBeforeUnmount(() => {
-        const container = containerRef.value;
-        if (container) {
-            container.removeEventListener('mousedown', onMouseDown);
-            container.removeEventListener('mousemove', onMouseMove);
-        }
+        stopContainerWatch?.();
+        stopContainerWatch = null;
+        unbindContainer();
         document.removeEventListener('mouseup', onMouseUp);
         document.removeEventListener('copy', onCopy);
         document.removeEventListener('mousedown', onDocumentMouseDown);

@@ -17,6 +17,8 @@ import { useAdminApi } from '~/composables/useAdminApi';
 import { formatDateTime } from '~/utils/common';
 import EmployeeSearchDialog from '~/components/common/EmployeeSearchDialog.vue';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import TableSearchInput from '~/components/common/TableSearchInput.vue';
+import { exportRowsToExcel } from '~/utils/excel';
 
 definePageMeta({ middleware: 'admin', layout: 'admin' });
 
@@ -24,6 +26,32 @@ const { fetchFiles } = useAdminApi();
 
 // 첨부파일 목록 (반응형)
 const { data: files, pending } = await fetchFiles();
+
+// 통합검색어
+const search = ref('');
+
+// 검색 필터링된 파일 목록
+const filteredFiles = computed(() => {
+    const q = search.value.trim().toLowerCase();
+    if (!q) return files.value ?? [];
+    return (files.value ?? []).filter(f =>
+        [f.flMngNo, f.orcFlNm, f.flDtt, f.orcDtt, f.fstEnrUsNm]
+            .some(v => v?.toLowerCase().includes(q))
+    );
+});
+
+// 엑셀 다운로드
+const downloadExcel = async () => {
+    const rows = filteredFiles.value.map(f => ({
+        '파일관리번호': f.flMngNo,
+        '원본파일명': f.orcFlNm,
+        '파일구분': f.flDtt,
+        '원본구분': f.orcDtt,
+        '등록자': f.fstEnrUsNm,
+        '등록시간': f.fstEnrDtm,
+    }));
+    await exportRowsToExcel(rows, '첨부파일', `첨부파일_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
 
 // 직원정보 팝업 상태
 const employeeDialogVisible = ref(false);
@@ -43,24 +71,31 @@ const flDttSeverity = (flDtt: string): string => {
 </script>
 
 <template>
-    <div>
+    <div class="flex flex-col h-full gap-6">
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">첨부파일</h1>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                    TAAABB_CFILEM — 시스템 전체 첨부파일 현황 (조회 전용)
-                </p>
-            </div>
-        </div>
+        <PageHeader title="첨부파일" subtitle="TAAABB_CFILEM — 시스템 전체 첨부파일 현황 (조회 전용)" />
 
         <!-- 첨부파일 DataTable -->
+        <TableCard fill icon="pi-paperclip" title="첨부파일 목록" :count="filteredFiles.length">
+
+            <template #toolbar>
+                <TableSearchInput v-model="search" placeholder="파일명, 파일구분, 등록자 검색..." width="30rem" />
+                <div class="flex-1" />
+                <button
+                    class="inline-flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-sm font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                    @click="downloadExcel">
+                    <i class="pi pi-file-excel text-xs" style="color:#16a34a;" />
+                    Excel
+                </button>
+            </template>
+
+        <div class="flex-1 min-h-0 flex flex-col">
         <StyledDataTable
-            :value="files ?? []"
+            :value="filteredFiles"
             :loading="pending"
             data-key="flMngNo"
             scrollable
-            scroll-height="calc(100vh - 300px)"
+            scroll-height="flex"
             class="p-datatable-sm"
             striped-rows>
 
@@ -89,7 +124,7 @@ const flDttSeverity = (flDtt: string): string => {
                 <template #body="{ data }">
                     <span
 v-if="data.fstEnrUsid"
-                          class="cursor-pointer text-blue-500 hover:underline"
+                          class="cursor-pointer text-indigo-600 hover:underline"
                           @click="showEmployeeDialog(data.fstEnrUsid)">
                         {{ data.fstEnrUsNm || data.fstEnrUsid }}
                     </span>
@@ -102,6 +137,8 @@ v-if="data.fstEnrUsid"
                 </template>
             </Column>
         </StyledDataTable>
+        </div>
+        </TableCard>
 
         <!-- 직원정보 팝업 -->
         <EmployeeSearchDialog v-model:visible="employeeDialogVisible" />

@@ -17,7 +17,7 @@
 -->
 <script setup lang="ts">
 /* 페이지 탭 제목 설정 (useTabs composable이 이 값을 읽어 탭 이름으로 사용) */
-const title = '정보화 홈';
+const title = '사업·예산 홈';
 definePageMeta({
     title
 });
@@ -28,60 +28,94 @@ definePageMeta({
         <!-- 메인 콘텐츠 영역 -->
         <div class="flex-1 space-y-6 min-w-0">
 
-            <!-- KPI 요약 카드 (4개 그리드) -->
+            <!-- KPI 요약 카드 (V4: 아이콘 배지 + 내러티브 + 세그먼트 분해) -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
                 <!-- 진행중인 사업 수 -->
-                <div
-                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-zinc-500 font-medium">진행중인 사업</span>
-                        <i class="pi pi-briefcase text-primary-500 bg-primary-50 p-2 rounded-lg"/>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-primary-50 text-primary-600">
+                            <i class="pi pi-briefcase" />
+                        </span>
+                        <span class="text-[13px] font-medium text-zinc-600">진행중인 사업</span>
                     </div>
-                    <div class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">12</div>
-                    <div class="mt-2 text-sm text-green-600 flex items-center">
-                        <i class="pi pi-arrow-up text-xs mr-1"/>
-                        <span>전월 대비 2건 증가</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">12</span>
+                        <span class="text-xs text-zinc-400">전월 대비 <b class="font-semibold text-emerald-700">+2</b></span>
+                    </div>
+                    <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                        <span class="h-full bg-primary-600" style="width:42%" />
+                        <span class="h-full bg-primary-400" style="width:33%" />
+                        <span class="h-full bg-primary-200" style="width:25%" />
+                    </div>
+                    <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums flex-wrap">
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-primary-600" />사업추진 5</span>
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-primary-400" />사전협의 4</span>
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-primary-200" />예산작성 3</span>
                     </div>
                 </div>
 
                 <!-- 금년 집행 예산 -->
-                <div
-                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-zinc-500 font-medium">금년 집행 예산</span>
-                        <i class="pi pi-wallet text-indigo-500 bg-indigo-50 p-2 rounded-lg"/>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-blue-100 text-blue-700">
+                            <i class="pi pi-wallet" />
+                        </span>
+                        <span class="text-[13px] font-medium text-zinc-600">금년 집행 예산</span>
                     </div>
-                    <div class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">8.4억</div>
-                    <div class="mt-2 text-sm text-zinc-500">
-                        <span>전체 예산의 42%</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">8.4</span>
+                        <span class="text-xs text-zinc-400">억원 · 목표 <b class="text-zinc-700 dark:text-zinc-300 font-semibold">20억</b></span>
+                    </div>
+                    <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                        <span class="h-full bg-blue-700" style="width:42%" />
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-zinc-400 tabular-nums">
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-blue-700" />집행 완료 42%</span>
+                        <span>잔여 58%</span>
                     </div>
                 </div>
 
                 <!-- 접수된 요청 수 (처리지연 경고 포함) -->
-                <div
-                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-zinc-500 font-medium">접수된 요청</span>
-                        <i class="pi pi-inbox text-orange-500 bg-orange-50 p-2 rounded-lg"/>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-amber-100 text-amber-700">
+                            <i class="pi pi-inbox" />
+                        </span>
+                        <span class="text-[13px] font-medium text-zinc-600">접수된 요청</span>
                     </div>
-                    <div class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">5</div>
-                    <div class="mt-2 text-sm text-orange-600 flex items-center">
-                        <i class="pi pi-exclamation-circle text-xs mr-1"/>
-                        <span>3건 처리지연</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">5</span>
+                        <span class="text-xs text-zinc-400">지연 <b class="font-semibold text-amber-700">3건</b></span>
+                    </div>
+                    <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                        <span class="h-full bg-blue-700" style="width:40%" />
+                        <span class="h-full bg-amber-500" style="width:60%" />
+                    </div>
+                    <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-blue-700" />정상 2</span>
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />지연 3</span>
                     </div>
                 </div>
 
                 <!-- 시스템 가동률 -->
-                <div
-                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-zinc-500 font-medium">시스템 가동률</span>
-                        <i class="pi pi-server text-green-500 bg-green-50 p-2 rounded-lg"/>
+                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-emerald-100 text-emerald-700">
+                            <i class="pi pi-server" />
+                        </span>
+                        <span class="text-[13px] font-medium text-zinc-600">시스템 가동률</span>
                     </div>
-                    <div class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">99.9%</div>
-                    <div class="mt-2 text-sm text-green-600">
-                        <span>정상 운영 중</span>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-[36px] font-bold text-zinc-900 dark:text-zinc-100 leading-none tracking-[-0.03em] tabular-nums">99.9</span>
+                        <span class="text-xs text-zinc-400">% · 127일 무중단</span>
+                    </div>
+                    <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex">
+                        <span class="h-full bg-emerald-500" style="width:100%" />
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-zinc-400 tabular-nums">
+                        <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />정상 운영 중</span>
+                        <span>최근 2026.04.17</span>
                     </div>
                 </div>
             </div>
@@ -169,10 +203,10 @@ to="/guide"
                     <!-- [주석] 요구사항 작성기: 중요도 5 -->
                     <NuxtLink
 to="/info/documents"
-                        class="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all cursor-pointer group">
+                        class="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer group">
                         <div class="flex items-center gap-3">
                             <div
-                                class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-800 flex items-center justify-center text-blue-600 dark:text-blue-300 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-300 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
                                 <i class="pi pi-file-edit"/>
                             </div>
                             <span class="font-medium text-zinc-700 dark:text-zinc-200">요구사항 작성기</span>

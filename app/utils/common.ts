@@ -241,7 +241,7 @@ export const formatFileSize = (bytes: number | null | undefined): string => {
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
 // ============================================================================
@@ -288,6 +288,28 @@ export const getHearingTypeLabel = (dbrTp: string | null | undefined): string =>
         case 'ETC':      return '기타';
         default:         return '-';
     }
+};
+
+/**
+ * API 에러 메시지에서 사용자에게 표시할 간결한 메시지를 추출합니다.
+ *
+ * Oracle DB 에러(ORA-XXXXX)가 포함된 경우 에러 코드와 설명만 추출하고
+ * SQL 쿼리문·URL·기술 상세 정보는 제거합니다.
+ * 일반 메시지는 최대 200자로 제한합니다.
+ *
+ * @param message - API 응답에서 받은 원시 에러 메시지
+ * @returns 사용자 친화적으로 정제된 에러 메시지
+ *
+ * @example
+ * formatApiError('could not execute statement [ORA-00001: 무결성 제약 조건(...)] [insert into ...]')
+ * // → 'ORA-00001: 무결성 제약 조건(...)에 위배됩니다'
+ */
+export const formatApiError = (message: string): string => {
+    // Oracle 에러 코드 패턴 추출 (ORA-XXXXX: 설명 부분만 반환)
+    const oraMatch = message.match(/ORA-\d+:\s*([^\n\r[]+)/);
+    if (oraMatch) return oraMatch[0].trim();
+    // 일반 메시지는 200자로 제한
+    return message.length > 200 ? message.slice(0, 200) + '...' : message;
 };
 
 /**

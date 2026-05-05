@@ -68,6 +68,7 @@ export interface PlanProjectItem {
     prjBg: number;
     assetBg: number;
     costBg: number;
+    pulDtt?: string;    // 사업구분 (신규, 계속)
 }
 
 /**

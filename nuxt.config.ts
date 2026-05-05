@@ -20,12 +20,29 @@ import Aura from '@primevue/themes/aura';
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
-  ssr: process.env.NUXT_SSR !== 'false', // 환경변수에 따라 SSR 비활성화 가능 (E2E 테스트용)
+  /**
+   * SPA 모드 — 정적 SSG에서 발생하던 _payload.json 하이드레이션 이슈 회피
+   *
+   * [전환 사유]
+   *  - npm run generate(SSG) + nginx 서빙 시 SSO 무한 리다이렉트 발생.
+   *  - 원인: 빌드 시점 Pinia 스토어 user=null 상태가 _payload.json에 직렬화되어
+   *          클라이언트 하이드레이션 시 it-portal-user 쿠키 기반 user.value를
+   *          null로 덮어쓰는 타이밍 이슈.
+   *  - 사내 포털이라 SEO 불필요 → 완전 클라이언트 렌더링이 가장 단순한 해결.
+   *
+   * [동작 변화]
+   *  - prerender 미수행 → 모든 라우트가 동일한 index.html에서 클라이언트 라우팅
+   *  - SSR 없음 → 서버 미들웨어/페이로드 추출 무관
+   */
+  ssr: false,
 
   /* ── Nuxt 4 호환 모드: app/ 디렉토리를 소스 루트(~)로 사용 ── */
   future: {
     compatibilityVersion: 4
   },
+
+  /* ── 빌드 디렉토리: node_modules/.cache 경로 대신 .nuxt 사용 (Windows 호환) ── */
+  buildDir: '.nuxt',
 
   /* ── 런타임 설정: 환경변수 기반 API 베이스 URL ── */
   runtimeConfig: {
@@ -41,21 +58,6 @@ export default defineNuxtConfig({
     // timeline은 메모리를 많이 소비하므로 비활성화
     timeline: {
       enabled: false
-    }
-  },
-  hooks: {
-    ready() { // 'modules:done'보다 더 이른 시점인 'ready' 권장
-      /* 파워쉘에서 다음의 명령어로 심볼릭 링크를 생성해야 함
-      New-Item -ItemType SymbolicLink -Path "$env:LocalAppData\Programs\Antigravity\code.exe" -Target "$env:LocalAppData\Programs\Antigravity\Antigravity.exe"
-      */
-      const editorPath = '%LocalAppData%\\Programs\\Antigravity\\code.exe';
-
-      // launch-editor가 참조하는 기본 변수들
-      process.env.LAUNCH_EDITOR = editorPath;
-      process.env.EDITOR = editorPath;
-
-      // VS Code 기반임을 속이기 위해 환경 변수에 속성 부여 (일부 라이브러리 대응)
-      process.env.NODE_ENV_EDITOR = 'code';
     }
   },
   /* ── Vue 컴파일러: Web Component 등록 ── */
@@ -174,24 +176,34 @@ export default defineNuxtConfig({
       script: [
         {
           /**
-           * FOUC(Flash of Unstyled Content) 방지용 인라인 스크립트
-           * Nuxt 하이드레이션 전에 실행되어 다크 모드 클래스를 즉시 적용합니다.
-           * 쿠키 'theme-dark' 값 또는 시스템 다크 모드 설정을 기준으로 판단합니다.
-           * (localStorage 대신 쿠키 사용 — SSR 하이드레이션 불일치 방지)
+           * 다크모드 + 인증 플래시(FOUC) 방지 인라인 스크립트
+           * Vue 하이드레이션 전에 실행됩니다.
+           *
+           * 1) 다크모드: theme-dark 쿠키로 <html class="dark"> 즉시 적용
+           * 2) 인증 플래시 방지: it-portal-user 쿠키가 없고 /login이 아닌 경우
+           *    SSO 리다이렉트가 완료될 때까지 페이지를 투명하게 유지합니다.
            */
           innerHTML: `
             (function() {
               var m = document.cookie.match('(^|;\\s*)theme-dark=([^;]*)');
               var saved = m ? decodeURIComponent(m[2]) : null;
-              var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-              if (saved === 'true' || (!saved && systemDark)) {
+              var dark = saved === 'true';
+              if (dark) {
                 document.documentElement.classList.add('dark');
+                document.documentElement.style.colorScheme = 'dark';
               } else {
                 document.documentElement.classList.remove('dark');
+                document.documentElement.style.colorScheme = 'light';
+              }
+              var hasAuth = /(?:^|;\\s*)it-portal-user=/.test(document.cookie);
+              var isLogin = location.pathname === '/login';
+              if (!hasAuth && !isLogin) {
+                document.documentElement.style.visibility = 'hidden';
               }
             })()
           `,
-          type: 'text/javascript'
+          type: 'text/javascript',
+          tagPriority: 0
         }
       ]
     }

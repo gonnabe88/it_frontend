@@ -450,23 +450,16 @@ const submitApproval = async () => {
     <div class="space-y-6 max-w-4xl mx-auto">
 
         <!-- ── 페이지 헤더 ── -->
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <!-- 뒤로가기 -->
+        <PageHeader :title="title">
+            <template #leading>
                 <Button
-                    v-tooltip.top="'목록으로'"
-                    icon="pi pi-arrow-left"
-                    severity="secondary"
-                    text
-                    @click="navigateTo('/info/council-request')"
-                />
-                <div>
-                    <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-                </div>
-            </div>
-            <!-- 진행상태 뱃지 -->
-            <CouncilStatusBadge v-if="councilData" :status="councilData.asctSts" size="md" />
-        </div>
+v-tooltip.top="'목록으로'" icon="pi pi-arrow-left" severity="secondary" text
+                    @click="navigateTo('/info/council-request')" />
+            </template>
+            <template #actions>
+                <CouncilStatusBadge v-if="councilData" :status="councilData.asctSts" size="md" />
+            </template>
+        </PageHeader>
 
         <!--
             ── 읽기 전용 안내 (SUBMITTED 이상) ──
@@ -493,9 +486,9 @@ const submitApproval = async () => {
             - 생략: 협의회 불필요 판단 → SKIPPED 전이, 사업 '요건 상세화'로 이동
             - 개최준비 진행: 평가위원 선정 등 다음 단계로 이동
         -->
-        <div v-if="isApproved && isAdmin()" class="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-5">
-            <p class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">IT 관리자 확인</p>
-            <p class="text-sm text-blue-700 dark:text-blue-300 mb-4">
+        <div v-if="isApproved && isAdmin()" class="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950 p-5">
+            <p class="text-sm font-semibold text-indigo-800 dark:text-indigo-200 mb-1">IT 관리자 확인</p>
+            <p class="text-sm text-indigo-700 dark:text-indigo-300 mb-4">
                 타당성검토표 결재가 완료되었습니다. 이 사업의 정보화실무협의회 개최 여부를 결정하세요.
             </p>
             <div class="flex justify-end gap-3">
@@ -624,7 +617,7 @@ const submitApproval = async () => {
 
             <!-- 결재자(팀장) 검색 -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold text-sm">
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     결재자 (팀장)
                     <span class="text-red-500">*</span>
                 </label>
@@ -648,7 +641,7 @@ const submitApproval = async () => {
 
             <!-- 신청의견 (선택) -->
             <div class="flex flex-col gap-2">
-                <label class="font-semibold text-sm">신청의견 (선택)</label>
+                <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">신청의견 (선택)</label>
                 <Textarea
                     v-model="approvalForm.rqsOpnn"
                     placeholder="신청의견을 입력하세요 (선택)"
@@ -659,19 +652,21 @@ const submitApproval = async () => {
         </div>
 
         <template #footer>
-            <Button
-                label="나중에"
-                severity="secondary"
-                outlined
-                @click="closeApprovalDialog"
-            />
-            <Button
-                label="결재 요청"
-                icon="pi pi-send"
-                :loading="approvalPending"
-                :disabled="!approvalForm.approverEno"
-                @click="submitApproval"
-            />
+            <AppDialogFooter>
+                <Button
+                    label="나중에"
+                    severity="secondary"
+                    outlined
+                    @click="closeApprovalDialog"
+                />
+                <Button
+                    label="결재 요청"
+                    icon="pi pi-send"
+                    :loading="approvalPending"
+                    :disabled="!approvalForm.approverEno"
+                    @click="submitApproval"
+                />
+            </AppDialogFooter>
         </template>
     </Dialog>
 

@@ -18,7 +18,10 @@
 -->
 <script setup lang="ts">
 import { usePendingApprovalCount } from '~/composables/usePendingApprovalCount';
+import { useDocumentBadgeCount } from '~/composables/useDocumentDashboard';
+import { useApprovalBadgeCount } from '~/composables/useApprovalDashboard';
 import IconCrown from '~/components/icons/IconCrown.vue';
+import { ADMIN_LOG_TABLES } from '~/utils/adminLogs';
 
 /**
  * 사이드바 축소 상태
@@ -36,6 +39,12 @@ const { isAdmin: _isAdmin } = useAuth();
 // 새로고침 시 중복 요청으로 인한 네트워크 오류 토스트가 발생하지 않습니다.
 const { data: pendingCountData } = usePendingApprovalCount();
 
+/* ── 사전협의 검토 진행 중 배지 ── */
+const { reviewingCount: docReviewingCount } = useDocumentBadgeCount();
+
+/* ── 전자결재 결재 대기 / 기안 진행 중 배지 ── */
+const { pendingCount: approvalPendingCount, inProgressCount: approvalInProgressCount } = useApprovalBadgeCount();
+
 /**
  * 결재 상신 가능한 항목 수 (정보화사업 + 전산업무비)
  * 사이드바의 [결재 상신] 메뉴 옆 배지에 표시됩니다.
@@ -49,12 +58,100 @@ const toggleSidebar = () => {
 
 const route = useRoute();
 const context = computed(() => {
+    if (route.path.startsWith('/info/documents')) return 'documents';
+    if (route.path.startsWith('/approval')) return 'approval';
     if (route.path.startsWith('/audit')) return 'audit';
     if (route.path.startsWith('/admin')) return 'admin';
     return 'info';
 });
 
+const getAdminLogMenuItem = (key: string) => {
+    const log = ADMIN_LOG_TABLES.find(item => item.key === key);
+    return {
+        label: log?.menuLabel ?? log?.title.replace(' 로그', '') ?? key,
+        to: `/admin/logs/${key}`
+    };
+};
+
+const adminLogMenuGroups = [
+    {
+        label: '전산예산',
+        icon: 'pi pi-wallet',
+        items: ['bbugt'].map(getAdminLogMenuItem)
+    },
+    {
+        label: '정보기술부문 계획',
+        icon: 'pi pi-chart-bar',
+        items: ['bplanm'].map(getAdminLogMenuItem)
+    },
+    {
+        label: '정보화사업',
+        icon: 'pi pi-briefcase',
+        items: ['bprojm', 'bitemm'].map(getAdminLogMenuItem)
+    },
+    {
+        label: '전산업무비',
+        icon: 'pi pi-desktop',
+        items: ['bcostm', 'btermm'].map(getAdminLogMenuItem)
+    },
+    {
+        label: '사전협의',
+        icon: 'pi pi-file-check',
+        items: ['brdocm', 'brivgm', 'bgdocm'].map(getAdminLogMenuItem)
+    },
+    {
+        label: '정보화협의체 운영',
+        icon: 'pi pi-users',
+        items: ['basctm', 'bchklc', 'bcmmtm', 'bevalm', 'bpovwm', 'bpqnam', 'brsltm', 'bschdm', 'bperfm'].map(getAdminLogMenuItem)
+    },
+    {
+        label: '전자결재·공통관리',
+        icon: 'pi pi-shield',
+        items: ['capplm', 'ccodem'].map(getAdminLogMenuItem)
+    },
+];
+
 const menuItems = computed(() => {
+    // 사전협의 컨텍스트
+    if (context.value === 'documents') {
+        return [
+            { label: 'Home', icon: 'pi pi-home', to: '/info/documents' },
+            {
+                label: '사전협의', icon: 'pi pi-folder', items: [
+                    { label: '요청 목록', to: '/info/documents/list' },
+                    { label: '신규 작성', to: '/info/documents/form' }
+                ]
+            },
+            {
+                label: '상태별 현황', icon: 'pi pi-chart-pie', items: [
+                    { label: '검토 중', to: '/info/documents/list?status=reviewing', badge: 'docReviewing' },
+                    { label: '협의 완료', to: '/info/documents/list?status=completed' },
+                    { label: '지연', to: '/info/documents/list?status=overdue' }
+                ]
+            }
+        ];
+    }
+
+    // 전자결재 컨텍스트
+    if (context.value === 'approval') {
+        return [
+            { label: 'Home', icon: 'pi pi-home', to: '/approval' },
+            {
+                label: '결재함', icon: 'pi pi-inbox', items: [
+                    { label: '결재 대기', to: '/approval/list?tab=pending', badge: 'approvalPending' },
+                    { label: '결재 완료', to: '/approval/list?tab=done' }
+                ]
+            },
+            {
+                label: '기안함', icon: 'pi pi-send', items: [
+                    { label: '결재 진행 중', to: '/approval/list?tab=in-progress', badge: 'approvalInProgress' },
+                    { label: '완료 기안', to: '/approval/list?tab=draft-done' },
+                    { label: '반려 기안', to: '/approval/list?tab=draft-rejected' }
+                ]
+            }
+        ];
+    }
+
     if (context.value === 'audit') {
         return [
             { label: '홈', icon: 'pi pi-home', to: '/audit' },
@@ -99,13 +196,15 @@ const menuItems = computed(() => {
                     { label: '첨부파일', to: '/admin/files' },
                 ]
             },
+            {
+                label: '상세 로그', icon: 'pi pi-history', items: adminLogMenuGroups
+            },
         ];
     }
 
     // Default: Info
     return [
         { label: 'Home', icon: 'pi pi-home', to: '/info' },
-        { label: '사전협의', icon: 'pi pi-file-edit', to: '/info/documents' },
         { label: '사업 가이드', icon: 'pi pi-book', to: '/guide' },
         {
             label: '전산예산', icon: 'pi pi-wallet', items: [
@@ -155,12 +254,18 @@ const toggleGroup = (label: string) => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getFirstNavigationTarget = (item: any): string | undefined => {
+    if (item.to) return item.to;
+    if (!item.items?.length) return undefined;
+    return getFirstNavigationTarget(item.items[0]);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleGroupClick = (item: any) => {
     if (collapsed.value) {
         // 접힌 상태에서는 첫 번째 하위 메뉴로 이동
-        if (item.items && item.items.length > 0) {
-            navigateTo(item.items[0].to);
-        }
+        const target = getFirstNavigationTarget(item);
+        if (target) navigateTo(target);
     } else {
         // 펼쳐진 상태에서는 그룹 토글
         toggleGroup(item.label);
@@ -185,6 +290,59 @@ const onLeave = (el: Element) => {
     element.style.height = '0';
 };
 
+/**
+ * 서브메뉴 항목 활성 여부 판단
+ * route.fullPath와 완전 일치 비교합니다.
+ * - 쿼리스트링이 없는 항목(/info/documents/list)은 현재 URL에 쿼리가 붙어 있으면 매칭되지 않습니다.
+ * - 쿼리스트링이 있는 항목(?status=reviewing)은 정확히 일치할 때만 활성화됩니다.
+ */
+const isSubItemActive = (to: string): boolean => {
+    return route.fullPath === to;
+};
+
+type SidebarMenuNode = {
+    label?: string;
+    icon?: string;
+    to?: string;
+    badge?: string;
+    admin?: boolean;
+    items?: SidebarMenuNode[];
+};
+
+const asSidebarMenuNode = (item: unknown): SidebarMenuNode => item as SidebarMenuNode;
+
+const hasNestedItems = (item: unknown): boolean => {
+    return Array.isArray(asSidebarMenuNode(item).items);
+};
+
+const getMenuTo = (item: unknown): string => {
+    return asSidebarMenuNode(item).to ?? '';
+};
+
+const getMenuBadge = (item: unknown): string | undefined => {
+    return asSidebarMenuNode(item).badge;
+};
+
+const getMenuIcon = (item: unknown): string => {
+    return asSidebarMenuNode(item).icon ?? 'pi pi-folder';
+};
+
+const getMenuCount = (item: unknown): number => {
+    return getNestedItems(item).length;
+};
+
+const isAdminOnlyMenu = (item: unknown): boolean => {
+    return asSidebarMenuNode(item).admin === true;
+};
+
+const getNestedItems = (item: unknown): SidebarMenuNode[] => {
+    return asSidebarMenuNode(item).items ?? [];
+};
+
+const isMenuCategoryActive = (item: unknown): boolean => {
+    return getNestedItems(item).some(sub => sub.to ? isSubItemActive(sub.to) : false);
+};
+
 // Initialize expanded
 watch(menuItems, (items) => {
     items.forEach(item => {
@@ -206,7 +364,7 @@ id="sidebar-header"
                 <Transition name="fade">
                     <span
 v-if="!collapsed"
-                        class="font-bold text-xl tracking-wider text-primary-600 dark:text-primary-400">정보화
+                        class="font-bold text-xl tracking-wider text-zinc-900 dark:text-zinc-100">정보화
                         Portal</span>
                 </Transition>
             </div>
@@ -231,8 +389,7 @@ v-else class="absolute right-[-12px] top-6 bg-white dark:bg-zinc-800 border bord
                         <NuxtLink
 v-tooltip="{ value: item.label, disabled: !collapsed, placement: 'right' }"
                             :to="item.to"
-                            class="flex items-center py-3 rounded-lg text-indigo-800 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3"
-                            active-class="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium">
+                            :class="['flex items-center py-3 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors duration-300 group px-3', isSubItemActive(item.to!) ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-medium' : 'text-indigo-800 dark:text-indigo-400']">
                             <div class="flex items-center">
                                 <i :class="[item.icon, 'text-xl w-8 text-center']"/>
                                 <Transition name="fade">
@@ -264,20 +421,74 @@ v-if="!collapsed"
                                 v-if="!collapsed && expandedGroups[item.label]"
                                 class="ml-6 mt-1 space-y-1 border-l border-zinc-200 dark:border-zinc-700 pl-2 overflow-hidden">
                                 <li v-for="sub in item.items" :key="sub.label">
+                                    <div v-if="hasNestedItems(sub)" class="pt-2 first:pt-1">
+                                        <div
+                                            :class="[
+                                                'flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md transition-colors',
+                                                isMenuCategoryActive(sub)
+                                                    ? 'text-indigo-800 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-900/25'
+                                                    : 'text-zinc-600 dark:text-zinc-300 bg-zinc-50/80 dark:bg-zinc-800/40'
+                                            ]">
+                                            <span class="flex items-center min-w-0 gap-2">
+                                                <span
+                                                    :class="[
+                                                        'w-5 h-5 rounded flex items-center justify-center shrink-0',
+                                                        isMenuCategoryActive(sub)
+                                                            ? 'bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-200'
+                                                            : 'bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400'
+                                                    ]">
+                                                    <i :class="[getMenuIcon(sub), 'text-xs']"/>
+                                                </span>
+                                                <span class="text-[13px] font-semibold truncate">{{ sub.label }}</span>
+                                            </span>
+                                            <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/70 dark:bg-zinc-900/70 text-zinc-500 dark:text-zinc-400">
+                                                {{ getMenuCount(sub) }}
+                                            </span>
+                                        </div>
+                                        <ul class="mt-1 ml-3 space-y-0.5 border-l border-zinc-200 dark:border-zinc-700 pl-2">
+                                            <li v-for="nested in getNestedItems(sub)" :key="nested.label">
+                                                <NuxtLink
+                                                    :to="getMenuTo(nested)"
+                                                    :class="['flex items-center justify-between py-1.5 px-2.5 rounded-md text-[13px] hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors', isSubItemActive(getMenuTo(nested)) ? 'text-indigo-800 dark:text-indigo-300 font-medium bg-indigo-50 dark:bg-indigo-900/50' : 'text-zinc-500 dark:text-zinc-400']">
+                                                    <span class="flex items-center whitespace-nowrap">
+                                                        {{ nested.label }}
+                                                    </span>
+                                                </NuxtLink>
+                                            </li>
+                                        </ul>
+                                    </div>
                                     <NuxtLink
-                                        :to="sub.to"
-                                        class="flex items-center justify-between py-2 px-3 rounded text-sm text-zinc-500 dark:text-zinc-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors"
-                                        active-class="text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50">
+                                        v-else
+                                        :to="getMenuTo(sub)"
+                                        :class="['flex items-center justify-between py-2 px-3 rounded text-sm hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors', isSubItemActive(getMenuTo(sub)) ? 'text-indigo-800 dark:text-indigo-400 font-medium bg-indigo-100 dark:bg-indigo-800/50' : 'text-zinc-500 dark:text-zinc-400']">
                                         <span class="flex items-center whitespace-nowrap">
                                             {{ sub.label }}
                                             <!-- 관리자 전용 메뉴: 왕관 아이콘 -->
-                                            <IconCrown v-if="sub.admin" class="w-4 h-4 ml-1 shrink-0 text-yellow-500" />
+                                            <IconCrown v-if="isAdminOnlyMenu(sub)" class="w-4 h-4 ml-1 shrink-0 text-yellow-500" />
                                         </span>
                                         <!-- 결재 상신 메뉴: 미상신 항목 수 배지 표시 -->
                                         <span
-v-if="sub.to === '/budget/approval' && approvalCount > 0"
+v-if="getMenuTo(sub) === '/budget/approval' && approvalCount > 0"
                                             class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold leading-none">
                                             {{ approvalCount > 99 ? '99+' : approvalCount }}
+                                        </span>
+                                        <!-- 사전협의: 검토 중 배지 -->
+                                        <span
+                                            v-if="getMenuBadge(sub) === 'docReviewing' && docReviewingCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">
+                                            {{ docReviewingCount > 99 ? '99+' : docReviewingCount }}
+                                        </span>
+                                        <!-- 전자결재: 결재 대기 배지 -->
+                                        <span
+                                            v-if="getMenuBadge(sub) === 'approvalPending' && approvalPendingCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                                            {{ approvalPendingCount > 99 ? '99+' : approvalPendingCount }}
+                                        </span>
+                                        <!-- 전자결재: 기안 진행 중 배지 -->
+                                        <span
+                                            v-if="getMenuBadge(sub) === 'approvalInProgress' && approvalInProgressCount > 0"
+                                            class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">
+                                            {{ approvalInProgressCount > 99 ? '99+' : approvalInProgressCount }}
                                         </span>
                                     </NuxtLink>
                                 </li>

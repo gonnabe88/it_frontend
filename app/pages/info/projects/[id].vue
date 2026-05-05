@@ -1,47 +1,13 @@
-<!--
-================================================================================
-[pages/info/projects/[id].vue] 정보화사업 상세 페이지
-================================================================================
-URL 파라미터(id = prjMngNo)로 특정 정보화사업의 상세 정보를 표시합니다.
-수정, 삭제 기능을 제공하며, 결재 중/완료 건은 삭제 버튼이 숨겨집니다.
-
-[라우팅]
-  - 접근: /info/projects/:id
-  - 목록 이동: /info/projects
-  - 수정 이동: /info/projects/form?id=:id
-
-[UI 구성 (총 9개 섹션, xl 2-col 레이아웃)]
-  전체 row: 사업 진행 현황 (11단계 타임라인, 현재 단계 강조)
-  xl 2-col 상단:
-    좌) 7. 담당 조직: 주관부서(Business Owner) + IT부서(IT Partner) 카드
-        8. 추진시기 및 소요예산: 총예산/전결권/보고상태 + 시작일/종료일/추진가능성
-    우) 9. 소요자원 상세: DataTable (구분/품목명/수량/단가/통화/소계/산정근거/일정주기) + 합계 Footer
-  이하:
-  2. 사업 개요: RichText 설명 + 현황/필요성/기대효과/미추진시문제점 4개 박스
-  3. 사업 범위: RichText 전산 요구사항
-  4. 진행 상황: 추진 경과 + 향후 계획 (2열)
-  5. 사업 구분: 업무구분/사업유형/기술유형/주요사용자
-  6. 편성 기준: 중복여부/법규상완료시기
-
-[보안]
-  - prjDes, prjRng (Rich Text HTML): DOMPurify(isomorphic-dompurify)로 XSS 방어
-
-[삭제 조건]
-  - apfSts가 '결재중', '결재완료', '승인'이면 삭제 버튼 숨김
-  - 그 외 상태에서만 삭제 확인 다이얼로그 표시
-
-[타임라인 단계]
-  예산 작성 → 사전 협의 → 정실협 → 요건 상세화 → 소요예산 산정
-  → 과심위 → 입찰/계약 → 사업 추진 → 대금지급 → 성과평가 → 완료
-================================================================================
--->
+<!-- 정보화사업 상세 페이지: URL의 prjMngNo로 사업 상세, 결재 상태, 리치 텍스트 본문을 조회합니다. -->
 <script setup lang="ts">
 import 'quill/dist/quill.core.css';
 import DOMPurify from 'isomorphic-dompurify';
 import { useToast } from 'primevue/usetoast';
-import { PROJECT_STAGES, getProjectTagClass, getApprovalAuthorityBasis } from '~/utils/common';
+import { getProjectTagClass, getApprovalAuthorityBasis } from '~/utils/common';
 import { useCurrencyRates } from '~/composables/useCurrencyRates';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import ProjectOverviewSection from '~/components/projects/ProjectOverviewSection.vue';
+import ProjectProgressSection from '~/components/projects/ProjectProgressSection.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -51,10 +17,14 @@ const prjMngNo = route.params.id;
 const { fetchProject, deleteProject } = useProjects();
 // RBAC 권한 헬퍼: 수정/삭제 버튼 표시 여부 판단에 사용
 const { canModify } = useAuth();
-const { data: project, error, refresh: refreshProject } = await fetchProject(prjMngNo as string);
+const { data: project, error, pending, refresh: refreshProject } = await fetchProject(prjMngNo as string);
 
-/** KeepAlive 재활성화 시 최신 데이터 재조회 */
-onActivated(() => refreshProject());
+/** KeepAlive 재활성화 시 최신 데이터 재조회 + scrollspy 재연결 */
+onActivated(() => {
+    refreshProject();
+    attachScrollSpy();
+});
+onDeactivated(() => detachScrollSpy());
 const confirm = useConfirm();
 const toast = useToast();
 
@@ -167,31 +137,6 @@ const approvalBasisText = computed(() => {
         project.value?.costBg ?? 0
     );
     return `${label} ${formatCurrency(amount)} 기준으로 결정`;
-});
-
-/**
- * 현재 프로젝트 상태의 단계 인덱스 반환
- * 타임라인에서 완료/현재/예정 표시를 결정하는 데 사용합니다.
- *
- * @param status - 현재 프로젝트 상태 문자열
- * @returns 단계 인덱스 (0-based), 없으면 -1
- */
-const getCurrentStageIndex = (status?: string) => {
-    if (!status) return -1;
-    return PROJECT_STAGES.indexOf(status);
-};
-
-/**
- * 타임라인 진행선(인디고)의 너비 계산
- * 첫 번째 원 중심 ~ 현재 단계 원 중심까지의 너비를 CSS calc로 반환합니다.
- * flex-1 기준으로 각 step의 너비는 100%/total이고, 원 중심은 그 절반에 위치합니다.
- */
-const timelineProgressWidth = computed(() => {
-    const idx = getCurrentStageIndex(project.value?.prjSts);
-    if (idx <= 0) return '0%';
-    const total = PROJECT_STAGES.length;
-    const fraction = idx / (total - 1);
-    return `calc((100% - 100% / ${total}) * ${fraction})`;
 });
 
 /**
@@ -326,67 +271,68 @@ const tocItems = computed(() => {
 });
 
 const activeSection = ref('section-progress');
-let observer: IntersectionObserver | null = null;
-const visibleSections = new Set<string>();
 
 const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
         const container = el.closest('main') || document.querySelector('main');
         if (container) {
-            const yOffset = -24; // 스티키 여백 고려
-            // 컨테이너 스크롤 top + 요소의 상대 위치 - 컨테이너의 상대 위치 + 여백
+            const yOffset = -24;
             const y = el.getBoundingClientRect().top + container.scrollTop - container.getBoundingClientRect().top + yOffset;
             container.scrollTo({ top: y, behavior: 'smooth' });
         } else {
-            const yOffset = -80;
-            const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
+            const y = el.getBoundingClientRect().top + window.scrollY - 80;
             window.scrollTo({ top: y, behavior: 'smooth' });
         }
     }
 };
 
-onMounted(() => {
-    // 옵저버 생성 시 root를 main 컨테이너로 설정 (레이아웃 scroll-container 기준)
-    const rootContainer = document.querySelector('main');
+/** 현재 스크롤 위치에서 화면 상단에 가장 가까운 섹션 ID를 반환 */
+const computeActiveSection = (): string => {
+    const container = document.querySelector<HTMLElement>('main');
+    if (!container) return activeSection.value;
+    // main 상단으로부터 120px 아래를 기준선으로 삼아, 기준선을 지난 마지막 섹션을 활성화
+    const threshold = container.getBoundingClientRect().top + 120;
+    const allIds = allTocItems.flatMap(item => [item.id, ...(item.children?.map(c => c.id) || [])]);
+    let active = allIds[0] ?? 'section-progress';
+    for (const id of allIds) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= threshold) {
+            active = id;
+        }
+    }
+    return active;
+};
 
-    observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                visibleSections.add(entry.target.id);
-            } else {
-                visibleSections.delete(entry.target.id);
-            }
+let ticking = false;
+const onScrollSpy = () => {
+    if (!ticking) {
+        requestAnimationFrame(() => {
+            activeSection.value = computeActiveSection();
+            ticking = false;
         });
+        ticking = true;
+    }
+};
 
-        // 화면에 보여지는 섹션 중 가장 상단(목차 순서상 먼저 나오는) 것을 activeSection으로 지정
-        const allIds = allTocItems.flatMap(item => [item.id, ...(item.children?.map(c => c.id) || [])]);
-        for (const id of allIds) {
-            if (visibleSections.has(id)) {
-                activeSection.value = id;
-                break;
-            }
-        }
-    }, {
-        root: rootContainer,
-        rootMargin: '-10px 0px -60% 0px' // 스크롤 시 상단 바로 아래부터 감지하도록 여백 조정
-    });
+let scrollAttached = false;
+const attachScrollSpy = () => {
+    if (scrollAttached) return;
+    const container = document.querySelector<HTMLElement>('main');
+    if (container) {
+        container.addEventListener('scroll', onScrollSpy, { passive: true });
+        activeSection.value = computeActiveSection();
+        scrollAttached = true;
+    }
+};
+const detachScrollSpy = () => {
+    if (!scrollAttached) return;
+    document.querySelector<HTMLElement>('main')?.removeEventListener('scroll', onScrollSpy);
+    scrollAttached = false;
+};
 
-    allTocItems.forEach(item => {
-        const el = document.getElementById(item.id);
-        if (el && observer) observer.observe(el);
-        if (item.children) {
-            item.children.forEach(child => {
-                const childEl = document.getElementById(child.id);
-                if (childEl && observer) observer.observe(childEl);
-            });
-        }
-    });
-});
-
-onUnmounted(() => {
-    if (observer) observer.disconnect();
-});
+onMounted(() => attachScrollSpy());
+onUnmounted(() => detachScrollSpy());
 </script>
 
 <template>
@@ -394,13 +340,15 @@ onUnmounted(() => {
     <div v-if="project" class="space-y-8 pb-20">
 
         <!-- 상단 헤더: 사업명 + 상태 태그 + 액션 버튼 -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-start gap-4">
-                <!-- 뒤로 가기 버튼 -->
+        <PageHeader>
+            <template #leading>
                 <Button
-icon="pi pi-arrow-left" text rounded aria-label="Back" class="mt-1 w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
+icon="pi pi-arrow-left" text rounded aria-label="Back"
+                    class="w-10 h-10 bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
                     @click="router.back()" />
-                <div class="space-y-2">
+            </template>
+            <template #title>
+                <div class="space-y-1">
                     <!-- 사업 유형 태그 + 관리번호 + 기간 -->
                     <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                         <Tag
@@ -408,13 +356,13 @@ v-if="isOrdinary" value="경상사업"
                             class="bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <Tag
-                            :value="getPrjTpName(project.prjTp)"
+:value="getPrjTpName(project.prjTp)"
                             class="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border-0 px-2.5 py-0.5 font-medium"
                             rounded />
                         <span class="font-mono text-zinc-400">#{{ project.prjMngNo }}</span>
                         <span class="text-zinc-300 dark:text-zinc-700">|</span>
                         <div
-                            v-if="!isOrdinary"
+v-if="!isOrdinary"
                             class="flex items-center gap-1.5 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded-full text-xs font-medium">
                             <i class="pi pi-calendar text-zinc-400"/>
                             <span>{{ project.sttDt }} ~ {{ project.endDt }}</span>
@@ -423,33 +371,29 @@ v-if="isOrdinary" value="경상사업"
                     </div>
                     <!-- 사업명 + 진행 상태 태그 -->
                     <div class="flex flex-wrap items-center gap-3">
-                        <h1 class="text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">{{
-                            project.prjNm }}</h1>
+                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ project.prjNm }}</h1>
                         <Tag
-                            :value="project.prjSts" :class="getProjectTagClass(project.prjSts || '')"
+:value="project.prjSts" :class="getProjectTagClass(project.prjSts || '')"
                             class="text-sm px-3 py-1 font-bold shadow-sm" rounded />
                     </div>
                 </div>
-            </div>
-
-            <!-- 액션 버튼: 목록 / 삭제(조건부) / 수정 -->
-            <div class="flex gap-2 self-end md:self-center">
+            </template>
+            <template #actions>
                 <Button
-label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined class="bg-white dark:bg-zinc-900"
-                    @click="router.back()" />
+label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined
+                    class="bg-white dark:bg-zinc-900" @click="router.back()" />
                 <!-- 결재 중이거나 완료된 경우, 또는 수정 권한이 없는 경우 삭제 버튼 숨김 -->
                 <Button
-v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts)
-                    && canModify(project.fstEnrUsid, project.svnDpm)" label="삭제"
-                    icon="pi pi-trash" severity="danger" outlined class="bg-white dark:bg-zinc-900"
-                    @click="handleDelete" />
+                    v-if="!['결재중', '결재완료', '승인'].includes(project.applicationInfo?.apfSts) && canModify(project.fstEnrUsid, project.svnDpm)"
+                    label="삭제" icon="pi pi-trash" severity="danger" outlined
+                    class="bg-white dark:bg-zinc-900" @click="handleDelete" />
                 <!-- 수정 권한이 있는 경우에만 수정 버튼 표시 -->
                 <Button
-v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-pencil"
-                    class="shadow-lg shadow-indigo-500/20"
+v-if="canModify(project.fstEnrUsid, project.svnDpm)"
+                    label="수정" icon="pi pi-pencil" class="shadow-lg shadow-indigo-500/20"
                     @click="navigateTo(`/info/projects/form?id=${project.prjMngNo}${isOrdinary ? '&ordinary=true' : ''}`)" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 본문 영역: col1(상세 내용) / col2(바로가기 목차) -->
         <div class="grid grid-cols-1 xl:grid-cols-4 gap-8 items-stretch relative">
@@ -457,174 +401,18 @@ v-if="canModify(project.fstEnrUsid, project.svnDpm)" label="수정" icon="pi pi-
             <!-- col1: 상세 내용 영역 (75%) -->
             <div class="xl:col-span-3 flex flex-col gap-10 w-full">
 
-                <!-- 섹션 1: 사업 진행 현황 타임라인 -->
-                <section
-id="section-progress"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md overflow-visible">
-                    <div class="flex items-center justify-between mb-8">
-                        <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                            <i class="pi pi-step-forward-alt text-indigo-500"/>
-                            사업 진행 현황
-                        </h3>
-                        <!-- 현재 단계 뱃지 -->
-                        <span
-                            class="text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800">
-                            {{ project.prjSts }}
-                        </span>
-                    </div>
+                <ProjectProgressSection :status="project.prjSts" />
 
-                    <!-- 타임라인 컨테이너 -->
-                    <div class="relative w-full px-2">
-                        <!-- 전체 기준선 (회색): 첫 원 중심 ~ 마지막 원 중심 -->
-                        <div
-class="absolute h-[2px] bg-zinc-200 dark:bg-zinc-700"
-                            :style="{ top: '20px', left: `calc(100% / ${PROJECT_STAGES.length * 2})`, right: `calc(100% / ${PROJECT_STAGES.length * 2})` }"/>
-                        <!-- 완료 진행선 (인디고): 첫 원 중심 ~ 현재 단계 원 중심 -->
-                        <div
-class="absolute h-[2px] bg-indigo-500 transition-all duration-700"
-                            :style="{ top: '20px', left: `calc(100% / ${PROJECT_STAGES.length * 2})`, width: timelineProgressWidth }"/>
-
-                        <div class="flex items-start justify-between w-full">
-                            <!-- 각 단계 스텝 -->
-                            <div
-v-for="(step, index) in PROJECT_STAGES" :key="index"
-                                class="relative flex flex-col items-center flex-1 group">
-
-                                <!-- 원형 마커: 완료(체크)/현재(진행 텍스트+링)/예정(숫자) -->
-                                <div
-class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 relative z-10 mb-3 shrink-0"
-                                    :class="[
-                                        getCurrentStageIndex(project.prjSts) > Number(index)
-                                            ? 'border-indigo-200 bg-indigo-50 text-indigo-400 dark:border-indigo-800 dark:bg-indigo-900/10 dark:text-indigo-500'
-                                            : getCurrentStageIndex(project.prjSts) === Number(index)
-                                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 scale-110 ring-4 ring-indigo-50 dark:ring-indigo-900/20'
-                                                : 'border-zinc-200 text-zinc-300 dark:border-zinc-700 dark:text-zinc-600 bg-white dark:bg-zinc-900'
-                                    ]">
-
-                                    <!-- 완료 단계: 체크 아이콘 -->
-                                    <i
-v-if="getCurrentStageIndex(project.prjSts) > Number(index)"
-                                        class="pi pi-check text-lg font-bold"/>
-                                    <!-- 현재 단계: '진행' 텍스트 -->
-                                    <span
-v-else-if="getCurrentStageIndex(project.prjSts) === Number(index)"
-                                        class="text-[10px] font-bold tracking-tighter">진행</span>
-                                    <!-- 예정 단계: 순번 숫자 -->
-                                    <span v-else>{{ Number(index) + 1 }}</span>
-
-                                    <!-- 현재 단계 핑 애니메이션 -->
-                                    <span
-v-if="getCurrentStageIndex(project.prjSts) === Number(index)"
-                                        class="absolute inset-0 rounded-full animate-ping bg-indigo-500 opacity-20"/>
-                                </div>
-
-                                <!-- 단계 라벨 텍스트 -->
-                                <div class="h-10 flex items-start justify-center w-full">
-                                    <span
-                                        class="text-[10px] sm:text-xs font-medium text-center break-keep leading-tight px-0.5 transition-colors duration-300 w-full"
-                                        :class="[
-                                            getCurrentStageIndex(project.prjSts) === Number(index)
-                                                ? 'text-indigo-700 dark:text-indigo-400 font-bold'
-                                                : getCurrentStageIndex(project.prjSts) > Number(index)
-                                                    ? 'text-zinc-500 dark:text-zinc-500'
-                                                    : 'text-zinc-300 dark:text-zinc-600'
-                                        ]">
-                                        {{ step }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 섹션 2: 사업 개요 -->
-                <section
-id="section-overview"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
-
-                    <div id="sub-overview-desc" class="scroll-mt-6">
-                        <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-4">
-                            <i class="pi pi-info-circle text-blue-500"/>
-                            사업 개요
-                        </h3>
-                        <!-- 사업 주요내용 (Rich Text - XSS 방어 적용) -->
-                        <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md block mb-2">사업 주요내용</label>
-                        <div
-class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dark:text-zinc-300 leading-relaxed border border-zinc-100 dark:border-zinc-800"
-                            style="height: 200px; overflow-y: auto;"
-                            v-html="sanitizeHtml(project.prjDes || '<span class=\'text-zinc-400 italic\'>내용 없음</span>')"/>
-                    </div>
-                    <!-- 현황 / 필요성 / 기대효과 / 미추진 시 문제점 (2x2 타임라인 스타일) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <!-- 현황 -->
-                        <div id="sub-overview-status" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
-                            <div class="relative pl-10">
-                                <div
-                                    class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                    <i class="pi pi-chart-bar text-sm"/>
-                                </div>
-                                <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">현황</label>
-                                <div
-                                    class="p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl border border-zinc-100 dark:border-zinc-800 h-[100px] overflow-y-auto text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-                                    {{ project.saf || '-' }}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- 필요성 -->
-                        <div id="sub-overview-need" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-100 dark:bg-zinc-800"/>
-                            <div class="relative pl-10">
-                                <div
-                                    class="absolute left-0 top-0 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                                    <i class="pi pi-question-circle text-sm"/>
-                                </div>
-                                <label class="font-bold text-zinc-900 dark:text-zinc-100 text-md mb-3 block">필요성</label>
-                                <div
-                                    class="p-4 bg-zinc-50 dark:bg-zinc-950/30 rounded-xl border border-zinc-100 dark:border-zinc-800 h-[100px] overflow-y-auto text-sm text-zinc-600 dark:text-zinc-400 whitespace-pre-wrap">
-                                    {{ project.ncs || '-' }}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- 기대효과 (경상사업 숨김) -->
-                        <div v-if="!isOrdinary" id="sub-overview-expect" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-50 dark:bg-blue-900/20"/>
-                            <div class="relative pl-10">
-                                <div
-                                    class="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500">
-                                    <i class="pi pi-star text-sm"/>
-                                </div>
-                                <label
-                                    class="font-bold text-blue-900 dark:text-blue-100 text-md mb-3 block">기대효과</label>
-                                <div
-                                    class="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 h-[100px] overflow-y-auto text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-                                    {{ project.xptEff || '-' }}
-                                </div>
-                            </div>
-                        </div>
-                        <!-- 미추진 시 문제점 (경상사업 숨김) -->
-                        <div v-if="!isOrdinary" id="sub-overview-problem" class="relative scroll-mt-6">
-                            <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-red-50 dark:bg-red-900/20"/>
-                            <div class="relative pl-10">
-                                <div
-                                    class="absolute left-0 top-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500">
-                                    <i class="pi pi-exclamation-triangle text-sm"/>
-                                </div>
-                                <label class="font-bold text-red-900 dark:text-red-100 text-md mb-3 block">미추진 시
-                                    문제점</label>
-                                <div
-                                    class="p-4 bg-red-50/50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30 h-[100px] overflow-y-auto text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-                                    {{ project.plm || '-' }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <ProjectOverviewSection
+                    :project="project"
+                    :is-ordinary="isOrdinary"
+                    :sanitize-html="sanitizeHtml"
+                />
 
                 <!-- 섹션 3 & 4: 사업 범위 및 일정 + 진행 상황 + 추진시기 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-scope"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md flex flex-col gap-6">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
 
                     <!-- 사업 범위 및 일정 -->
                     <div id="sub-scope-range" class="scroll-mt-6">
@@ -735,7 +523,7 @@ class="ql-editor p-2 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl text-zinc-700 dar
                 <!-- 섹션 5: 사업 구분 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-category"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-tags text-purple-500"/>
                         사업 구분
@@ -763,7 +551,7 @@ v-if="!isOrdinary" id="section-category"
                 <!-- 섹션 6: 편성 기준 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-criteria"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-check-circle text-teal-500"/>
                         편성 기준
@@ -785,7 +573,7 @@ v-if="!isOrdinary" id="section-criteria"
                 <!-- 섹션 7: 담당 조직 (경상사업 숨김) -->
                 <section
 v-if="!isOrdinary" id="section-org"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-users text-cyan-500"/>
                         담당 조직
@@ -794,17 +582,17 @@ v-if="!isOrdinary" id="section-org"
                         <!-- 주관부서 정보 카드 (Business Owner) -->
                         <div
 id="sub-org-business"
-                            class="scroll-mt-6 flex flex-col gap-4 p-6 bg-gradient-to-br from-blue-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-blue-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
+                            class="scroll-mt-6 flex flex-col gap-4 p-6 bg-gradient-to-br from-indigo-50 to-white dark:from-zinc-800 dark:to-zinc-900 rounded-2xl border border-indigo-100 dark:border-zinc-700 shadow-sm relative overflow-hidden group">
                             <div
-                                class="absolute right-0 top-0 w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"/>
+                                class="absolute right-0 top-0 w-24 h-24 bg-indigo-100 dark:bg-indigo-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"/>
                             <!-- 부서 아이콘 + 이름 -->
                             <div class="flex items-center gap-3 z-10">
                                 <div
-                                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-50 dark:border-zinc-700 shrink-0">
+                                    class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-50 dark:border-zinc-700 shrink-0">
                                     <i class="pi pi-briefcase text-lg"/>
                                 </div>
                                 <div>
-                                    <div class="text-xs font-bold text-blue-500 uppercase tracking-wider">주관부서</div>
+                                    <div class="text-xs font-bold text-indigo-500 uppercase tracking-wider">주관부서</div>
                                     <div
                                         class="font-extrabold text-base text-zinc-900 dark:text-zinc-100 leading-tight">
                                         {{
@@ -813,7 +601,7 @@ id="sub-org-business"
                                 </div>
                             </div>
                             <!-- 담당팀장 / 담당자 -->
-                            <div class="flex flex-col gap-2 pt-3 border-t border-blue-100 dark:border-zinc-700 z-10">
+                            <div class="flex flex-col gap-2 pt-3 border-t border-indigo-100 dark:border-zinc-700 z-10">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs text-zinc-400 font-medium">담당팀장</span>
                                     <span class="text-zinc-900 dark:text-zinc-100 font-bold text-sm">{{
@@ -872,7 +660,7 @@ id="sub-org-it"
                 <!-- 섹션 8: 추진시기 및 소요예산 -->
                 <section
 id="section-budget"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md">
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-wallet text-yellow-500"/>
                         소요예산
@@ -909,18 +697,18 @@ id="sub-budget-total"
                         <!-- 전결권 카드 -->
                         <div
 id="sub-budget-auth"
-                            class="scroll-mt-6 flex flex-col justify-between p-6 bg-blue-50/[0.6] dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden">
+                            class="scroll-mt-6 flex flex-col justify-between p-6 bg-indigo-50/[0.6] dark:bg-indigo-900/10 rounded-2xl border border-indigo-100 dark:border-indigo-900/20 text-center relative overflow-hidden">
                             <div
-                                class="absolute -right-4 -top-4 w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl"/>
+                                class="absolute -right-4 -top-4 w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full blur-xl"/>
                             <div class="z-10">
                                 <div
-                                    class="text-sm font-bold text-blue-600 dark:text-blue-500 uppercase tracking-wide mb-2">
+                                    class="text-sm font-bold text-indigo-600 dark:text-indigo-500 uppercase tracking-wide mb-2">
                                     전결권</div>
                                 <div class="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">{{
                                     project.edrt || '-' }}</div>
                             </div>
                             <!-- 전결권 결정 근거 -->
-                            <div class="mt-4 pt-3 border-t border-blue-100 dark:border-blue-900/30 z-10">
+                            <div class="mt-4 pt-3 border-t border-indigo-100 dark:border-indigo-900/30 z-10">
                                 <p class="text-xs text-zinc-400 leading-relaxed">
                                     {{ approvalBasisText }}
                                 </p>
@@ -952,13 +740,13 @@ v-if="!isOrdinary" id="sub-budget-report"
                 <!-- 섹션 9: 소요자원 상세내용 DataTable -->
                 <section
 id="section-resource"
-                    class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-md"
+                    class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
                     style="height: 1000px;">
                     <h3 class="font-bold text-xl text-zinc-900 dark:text-zinc-100 flex items-center gap-2 mb-6">
                         <i class="pi pi-box text-pink-500"/>
                         소요자원 상세내용
                     </h3>
-                    <div class="rounded-xl overflow-hidden">
+                    <div class="overflow-hidden">
                         <StyledDataTable
                             :value="project.items || []" size="small"
                             striped-rows class="resource-table-modern">
@@ -973,9 +761,11 @@ id="section-resource"
                                 field="gclDtt" header="구분" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
                                 style="min-width: 100px">
                                 <template #body="{ data }">
-                                    <Tag
-                                        :value="getCodeNm(data.gclDtt)" :severity="getCategorySeverity(data.gclDtt)" rounded
-                                        class="text-xs"/>
+                                    <div class="flex justify-center">
+                                        <Tag
+                                            :value="getCodeNm(data.gclDtt)" :severity="getCategorySeverity(data.gclDtt)" rounded
+                                            class="text-xs"/>
+                                    </div>
                                 </template>
                             </Column>
                             <Column
@@ -987,37 +777,37 @@ id="section-resource"
                             </Column>
                             <Column
                                 field="gclQtt" header="수량" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
-                                class="text-right" style="width: 80px" />
+                                style="width: 80px">
+                                <template #body="{ data }">
+                                    <div class="text-right">{{ data.gclQtt }}</div>
+                                </template>
+                            </Column>
                             <!-- 단가: 소계 ÷ 수량으로 계산 -->
                             <Column
                                 field="upr" header="단가" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
-                                class="text-right" style="min-width: 120px">
+                                style="min-width: 120px">
                                 <template #body="{ data }">
-                                    <span class="text-zinc-600 dark:text-zinc-400">{{ formatCurrency(data.gclAmt /
-                                        data.gclQtt
-                                        || 0, data.cur) }}</span>
+                                    <div class="text-right text-zinc-600 dark:text-zinc-400">{{ formatCurrency(data.gclAmt / data.gclQtt || 0, data.cur) }}</div>
                                 </template>
                             </Column>
                             <Column
                                 field="cur" header="통화" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
-                                class="text-right bg-zinc-50/50 dark:bg-zinc-900" style="width: 60px">
+                                class="bg-zinc-50/50 dark:bg-zinc-900" style="width: 60px">
                                 <template #body="{ data }">
-                                    <span class="text-xs">
+                                    <div class="text-center text-xs">
                                         {{ data.cur }}
                                         <span v-if="data.cur && data.cur !== 'KRW' && data.xcr" class="text-zinc-500">
                                             ({{ data.xcr.toLocaleString() }})
                                         </span>
-                                    </span>
+                                    </div>
                                 </template>
                             </Column>
                             <!-- 소계 -->
                             <Column
                                 field="amt" header="소계" header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
-                                class="text-right bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 140px">
+                                class="bg-zinc-50/50 dark:bg-zinc-900" style="min-width: 140px">
                                 <template #body="{ data }">
-                                    <span class="font-medium text-zinc-900 dark:text-zinc-100">{{
-                                        formatCurrency(data.gclAmt ||
-                                            0, data.cur) }}</span>
+                                    <div class="text-right font-medium text-zinc-900 dark:text-zinc-100">{{ formatCurrency(data.gclAmt || 0, data.cur) }}</div>
                                 </template>
                             </Column>
                             <Column
@@ -1054,33 +844,43 @@ id="section-resource"
                             <Column
                                 field="infPrtYn" header="정보보호"
                                 header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
-                                class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="width: 80px">
+                                class="bg-zinc-50/50 dark:bg-zinc-900" style="width: 80px">
                                 <template #body="{ data }">
-                                    <Tag
-                                        :value="data.infPrtYn === 'Y' ? 'Y' : 'N'"
-                                        :severity="data.infPrtYn === 'Y' ? 'success' : 'secondary'" rounded
-                                        class="text-xs"/>
+                                    <div class="flex justify-center">
+                                        <Tag
+                                            :value="data.infPrtYn === 'Y' ? 'Y' : 'N'"
+                                            :severity="data.infPrtYn === 'Y' ? 'success' : 'secondary'" rounded
+                                            class="text-xs"/>
+                                    </div>
                                 </template>
                             </Column>
                             <!-- 통합인프라 여부 -->
                             <Column
                                 field="itrInfrYn" header="통합인프라"
                                 header-class="bg-zinc-50/80 dark:bg-zinc-800 text-center"
-                                class="text-center bg-zinc-50/50 dark:bg-zinc-900" style="width: 90px">
+                                class="bg-zinc-50/50 dark:bg-zinc-900" style="width: 90px">
                                 <template #body="{ data }">
-                                    <Tag
-                                        :value="data.itrInfrYn === 'Y' ? 'Y' : 'N'"
-                                        :severity="data.itrInfrYn === 'Y' ? 'success' : 'secondary'" rounded
-                                        class="text-xs"/>
+                                    <div class="flex justify-center">
+                                        <Tag
+                                            :value="data.itrInfrYn === 'Y' ? 'Y' : 'N'"
+                                            :severity="data.itrInfrYn === 'Y' ? 'success' : 'secondary'" rounded
+                                            class="text-xs"/>
+                                    </div>
                                 </template>
                             </Column>
                             <!-- Footer: 소요자원 총 합계 -->
                             <ColumnGroup type="footer">
                                 <Row>
-                                    <Column footer="총 합계 (원화 환산)" :colspan="5" footer-class="text-center font-bold" />
-                                    <Column
-                                        :footer="formatCurrency(totalItemsAmount, 'KRW')"
-                                        footer-class="text-center font-medium text-indigo-600 dark:text-indigo-400" />
+                                    <Column :colspan="5">
+                                        <template #footer>
+                                            <div class="text-center font-bold">총 합계 (원화 환산)</div>
+                                        </template>
+                                    </Column>
+                                    <Column footer-class="bg-zinc-50/50 dark:bg-zinc-900">
+                                        <template #footer>
+                                            <div class="text-right font-medium text-indigo-600 dark:text-indigo-400">{{ formatCurrency(totalItemsAmount, 'KRW') }}</div>
+                                        </template>
+                                    </Column>
                                     <Column :colspan="5" />
                                 </Row>
                             </ColumnGroup>
@@ -1142,8 +942,8 @@ class="py-1 px-3 rounded-md cursor-pointer transition-colors duration-200 text-[
         <Button label="목록으로" link class="mt-2" @click="router.back()" />
     </div>
 
-    <!-- 데이터 없음 (존재하지 않는 ID) -->
-    <div v-else class="flex flex-col items-center justify-center py-32 text-center opacity-50">
+    <!-- 데이터 없음 (존재하지 않는 ID): refresh() 중 pending 상태에서는 표시하지 않음 -->
+    <div v-else-if="!pending" class="flex flex-col items-center justify-center py-32 text-center opacity-50">
         <div class="text-6xl mb-6 grayscale filter">😢</div>
         <h2 class="text-2xl font-bold text-zinc-800 dark:text-zinc-200">찾으시는 사업 정보가 없습니다.</h2>
         <p class="text-zinc-500 mt-2">삭제되었거나 존재하지 않는 프로젝트 ID입니다.</p>

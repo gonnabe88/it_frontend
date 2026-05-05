@@ -342,9 +342,9 @@ const loading = computed(() => loadingCouncil.value || loadingFeasibility.value 
     <div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
         <!-- 상단 헤더 -->
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <div class="flex items-center gap-2 mb-1">
+        <PageHeader title="협의회 개최" :subtitle="feasibilityData?.prjNm">
+            <template #leading>
+                <div class="flex items-center gap-1">
                     <NuxtLink
 to="/info/council-request"
                         class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
@@ -353,15 +353,11 @@ to="/info/council-request"
                     <span class="text-zinc-300 dark:text-zinc-600 text-xs">/</span>
                     <span class="text-xs text-zinc-500">협의회 개최</span>
                 </div>
-                <h1 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">협의회 개최</h1>
-                <p v-if="feasibilityData?.prjNm" class="text-sm text-zinc-500 mt-1">
-                    {{ feasibilityData.prjNm }}
-                </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
+            </template>
+            <template #actions>
                 <CouncilStatusBadge v-if="councilStatus" :status="councilStatus" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 안내 메시지 -->
         <Message v-if="statusGuide" severity="info" :closable="false">
@@ -440,7 +436,8 @@ class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
                 >
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">2</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">사전질의</h2>
                     </div>
@@ -478,7 +475,8 @@ v-if="councilStatus === 'COMPLETED'"
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
                 >
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">사전질의 답변</h2>
                     </div>
@@ -507,7 +505,8 @@ v-if="councilStatus === 'COMPLETED'"
                     v-if="councilStatus === 'PREPARING'"
                     class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div class="flex items-center gap-2 p-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
+                        <span
+class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600
                                      dark:text-indigo-400 text-xs font-bold flex items-center justify-center">1</span>
                         <h2 class="font-semibold text-zinc-800 dark:text-zinc-200">일정 응답 현황</h2>
                     </div>

@@ -264,9 +264,9 @@ export const useReviewStore = defineStore('review', () => {
           const { $apiFetch } = useNuxtApp();
           const config = useRuntimeConfig();
           const base = `${config.public.apiBase}/api/documents`;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const doc = await ($apiFetch as any)<{ reqCone: string }>(
-            `${base}/${session.value.docMngNo}?version=${parseFloat(version)}`,
+          type SimpleFetch = (url: string) => Promise<{ reqCone: string }>;
+          const doc = await ($apiFetch as unknown as SimpleFetch)(
+            `${base}/${session.value.docMngNo}?version=${Number.parseFloat(version)}`,
           );
           ver.content = doc.reqCone ?? '';
         } catch {
@@ -278,7 +278,7 @@ export const useReviewStore = defineStore('review', () => {
     // 해당 버전의 코멘트 로드 (버전 복귀 시 현재 버전 코멘트로 재조회)
     try {
       const api = useReviewCommentApi();
-      const comments = await api.fetchComments(session.value.docMngNo, parseFloat(targetVersion));
+      const comments = await api.fetchComments(session.value.docMngNo, Number.parseFloat(targetVersion));
       session.value.comments = comments;
     } catch {
       session.value.comments = [];

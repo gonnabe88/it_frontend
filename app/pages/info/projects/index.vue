@@ -7,7 +7,6 @@
 [주요 기능]
   - 정보화사업 + 경상사업 통합 DataTable 조회
   - 구분(정보화/경상) 필터링
-  - 다중 선택 체크박스 + 결재신청 버튼
   - 예산 단위 변환 (원/천원/백만원/억원)
   - 상세 조회 Drawer (오른쪽 슬라이드): 조건 다중 필터링
   - 사업명 클릭 → 상세 페이지 이동
@@ -45,40 +44,8 @@ onActivated(() => refreshProjects());
 /* ── 공통코드 코드명 변환 ── */
 const { getCodeName: getPrjTpName } = useCodeOptions('PRJ_TP');
 
-/* ── 사업등록 SplitButton 메뉴 ── */
-const registerMenuItems = ref([
-    {
-        label: '경상사업 등록',
-        icon: 'pi pi-plus',
-        command: () => navigateTo('/info/projects/form?ordinary=true')
-    }
-]);
-
 /** 정보화사업 목록 (null 안전 처리) */
 const projects = computed(() => projectsData.value || []);
-/** DataTable 다중 선택 항목 */
-const selectedProjects = ref([]);
-
-/**
- * 결재신청 처리
- * 선택된 프로젝트들의 관리번호를 sessionStorage에 저장 후 보고서 페이지로 이동합니다.
- * 선택 없이 호출 시 알림만 표시합니다.
- */
-const requestApproval = () => {
-    if (selectedProjects.value.length === 0) {
-        alert('결재할 프로젝트를 선택해주세요.');
-        return;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ids = selectedProjects.value.map((p: any) => p.prjMngNo);
-
-    /* 쿼리 파라미터 대신 sessionStorage 사용 (URL 길이 제한 우회) */
-    if (import.meta.client) {
-        sessionStorage.setItem('selectedProjectIds', JSON.stringify(ids));
-    }
-
-    navigateTo('/info/projects/report');
-};
 
 /* ── 검색 Drawer 상태 ── */
 /** 우측 검색 Drawer 표시 여부 */
@@ -236,37 +203,24 @@ const formatBudget = (amount: number) => formatBudgetUtil(amount, selectedUnit.v
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="flex flex-col h-full gap-6">
 
-        <!-- 페이지 헤더: 제목 + 액션 버튼 그룹 -->
-        <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-4">
-                <!-- 예산 단위 SelectButton -->
+        <PageHeader :title="title">
+            <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" aria-labelledby="basic" />
-                <!-- 상세 검색 Drawer 열기 -->
                 <Button label="조회" icon="pi pi-search" severity="secondary" outlined @click="visibleDrawer = true" />
-                <!-- 신규 사업 등록: 기본=정보화사업, 드롭다운=경상사업 -->
-                <SplitButton
-label="사업등록" icon="pi pi-plus" :model="registerMenuItems"
-                    @click="navigateTo('/info/projects/form')" />
-                <!-- 선택된 항목이 있을 때만 활성화 -->
-                <Button
-label="결재신청" icon="pi pi-check-square" severity="help" :disabled="selectedProjects.length === 0"
-                    @click="requestApproval" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- 정보화사업 DataTable -->
-        <div class="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+        <TableCard fill>
             <div v-if="error" class="p-4 text-red-500">
                 데이터를 불러오는 중 오류가 발생했습니다: {{ error.message }}
             </div>
+            <div v-else class="flex-1 min-h-0 flex flex-col">
             <StyledDataTable
-v-else v-model:selection="selectedProjects" :value="filteredProjects" paginator :rows="10"
+scrollable scroll-height="flex" :value="filteredProjects" paginator :rows="10"
                 :rows-per-page-options="[10, 20, 50]" sort-field="prjMngNo" :sort-order="-1" data-key="prjMngNo">
-                <!-- 다중 선택 체크박스 -->
-                <Column selection-mode="multiple" header-style="width: 3rem"/>
 
                 <!-- 구분: 정보화사업/경상사업 태그 -->
                 <Column field="ornYn" header="구분" sortable header-style="width: 7rem">
@@ -345,7 +299,8 @@ v-else v-model:selection="selectedProjects" :value="filteredProjects" paginator 
                     </template>
                 </Column>
             </StyledDataTable>
-        </div>
+            </div>
+        </TableCard>
 
         <!-- 상세 조회 Drawer (오른쪽 슬라이드) -->
         <Drawer v-model:visible="visibleDrawer" header="상세 조회" position="right" class="!w-full md:!w-[600px]">
@@ -353,13 +308,13 @@ v-else v-model:selection="selectedProjects" :value="filteredProjects" paginator 
 
                 <!-- 사업명 텍스트 검색 -->
                 <div class="flex flex-col gap-2">
-                    <label for="name" class="font-semibold">사업명</label>
+                    <label for="name" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업명</label>
                     <InputText id="name" v-model="searchFilters.name" placeholder="사업명을 입력하세요" />
                 </div>
 
                 <!-- 구분 (정보화/경상) 필터 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">구분</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">구분</label>
                     <SelectButton
 v-model="searchFilters.category" :options="categoryOptions" option-label="label"
                         option-value="value" />
@@ -367,7 +322,7 @@ v-model="searchFilters.category" :options="categoryOptions" option-label="label"
 
                 <!-- 주관부문 및 본부 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
-                    <label for="major_hdq" class="font-semibold">주관부문 및 본부</label>
+                    <label for="major_hdq" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">주관부문 및 본부</label>
                     <AutoComplete
 id="major_hdq" v-model="searchFilters.major_hdq" :suggestions="filteredMajorHdqs"
                         multiple dropdown placeholder="주관부문 및 본부 선택 (다중)" fluid @complete="searchMajorHdq" />
@@ -375,7 +330,7 @@ id="major_hdq" v-model="searchFilters.major_hdq" :suggestions="filteredMajorHdqs
 
                 <!-- 주관부서 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
-                    <label for="major_dept" class="font-semibold">주관부서</label>
+                    <label for="major_dept" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">주관부서</label>
                     <AutoComplete
 id="major_dept" v-model="searchFilters.major_department"
                         :suggestions="filteredMajorDepartments" multiple dropdown placeholder="주관부서 선택 (다중)"
@@ -384,7 +339,7 @@ id="major_dept" v-model="searchFilters.major_department"
 
                 <!-- IT부서 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
-                    <label for="it_dept" class="font-semibold">IT부서</label>
+                    <label for="it_dept" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">IT부서</label>
                     <AutoComplete
 id="it_dept" v-model="searchFilters.it_department"
                         :suggestions="filteredItDepartments" multiple dropdown placeholder="IT부서 선택 (다중)"
@@ -393,7 +348,7 @@ id="it_dept" v-model="searchFilters.it_department"
 
                 <!-- 예산 범위: 최소/최대 -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">예산 (원)</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">예산 (원)</label>
                     <div class="flex items-center gap-2">
                         <InputNumber
 v-model="searchFilters.budgetMin" placeholder="최소" mode="currency" currency="KRW"
@@ -408,7 +363,7 @@ v-model="searchFilters.budgetMax" placeholder="최대" mode="currency" currency=
 
                 <!-- 사업 기간: 시작일/종료일 DatePicker -->
                 <div class="flex flex-col gap-2">
-                    <label class="font-semibold">사업 기간</label>
+                    <label class="text-sm font-medium text-zinc-700 dark:text-zinc-300">사업 기간</label>
                     <div class="flex flex-col gap-2">
                         <DatePicker
 v-model="searchFilters.startDate" placeholder="시작일" show-icon fluid
@@ -421,7 +376,7 @@ v-model="searchFilters.endDate" placeholder="종료일" show-icon fluid
 
                 <!-- 진행 상태 다중 선택 AutoComplete -->
                 <div class="flex flex-col gap-2">
-                    <label for="status" class="font-semibold">진행 상태</label>
+                    <label for="status" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">진행 상태</label>
                     <AutoComplete
 id="status" v-model="searchFilters.status" :suggestions="filteredStatuses"
                         multiple dropdown placeholder="상태 선택 (다중)" fluid @complete="searchStatus" />

@@ -20,6 +20,7 @@ IT관리자(ITPAD001)가 심의유형 선택 → 당연위원 자동표출 → �
 <script setup lang="ts">
 import type { CommitteeMember, CommitteeType } from '~/types/council';
 import { useToast } from 'primevue/usetoast';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 interface Props {
     asctId: string;
@@ -260,7 +261,8 @@ const typeLabel = (type: CommitteeType): string => getMemberTypeLabel(type);
                 빈 상태 안내: 아직 위원이 한 명도 없을 때 기본 위원 자동 배정 버튼 표출
                 '기본 위원 배정' 클릭 → 심의유형(dbrTp)별 당연위원 후보를 서버에서 불러옵니다.
             -->
-            <div v-if="isEmpty && !readonly"
+            <div
+v-if="isEmpty && !readonly"
                 class="flex flex-col items-center gap-3 py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl mb-4">
                 <i class="pi pi-users text-3xl text-zinc-300 dark:text-zinc-600" />
                 <p class="text-sm text-zinc-500 dark:text-zinc-400">등록된 평가위원이 없습니다.</p>
@@ -288,28 +290,12 @@ v-if="mandatoryList.length === 0"
                     당연위원이 없습니다.
                 </div>
 
-                <div v-else class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                                <th class="text-left px-3 py-2 font-medium">사번</th>
-                                <th class="text-left px-3 py-2 font-medium">성명</th>
-                                <th class="text-left px-3 py-2 font-medium">부서</th>
-                                <th class="text-left px-3 py-2 font-medium">직위</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-v-for="m in mandatoryList" :key="m.eno"
-                                class="border-t border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                <td class="px-3 py-2 text-zinc-500">{{ m.eno }}</td>
-                                <td class="px-3 py-2 font-medium">{{ m.usrNm }}</td>
-                                <td class="px-3 py-2 text-zinc-500">{{ m.bbrNm }}</td>
-                                <td class="px-3 py-2 text-zinc-500">{{ m.ptCNm }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <StyledDataTable v-else :value="mandatoryList" data-key="eno">
+                    <Column field="eno" header="사번" />
+                    <Column field="usrNm" header="성명" />
+                    <Column field="bbrNm" header="부서" />
+                    <Column field="ptCNm" header="직위" />
+                </StyledDataTable>
             </div>
 
             <!-- ── 소집위원 섹션 ── -->
@@ -336,34 +322,17 @@ v-if="callList.length === 0"
                     소집위원을 추가해 주세요.
                 </div>
 
-                <div v-else class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                                <th class="text-left px-3 py-2 font-medium">사번</th>
-                                <th class="text-left px-3 py-2 font-medium">성명</th>
-                                <th class="text-left px-3 py-2 font-medium">부서</th>
-                                <th class="text-left px-3 py-2 font-medium">직위</th>
-                                <th v-if="!readonly" class="px-3 py-2 font-medium w-16"/>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-v-for="m in callList" :key="m.eno"
-                                class="border-t border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                <td class="px-3 py-2 text-zinc-500">{{ m.eno }}</td>
-                                <td class="px-3 py-2 font-medium">{{ m.usrNm }}</td>
-                                <td class="px-3 py-2 text-zinc-500">{{ m.bbrNm }}</td>
-                                <td class="px-3 py-2 text-zinc-500">{{ m.ptCNm }}</td>
-                                <td v-if="!readonly" class="px-3 py-2 text-center">
-                                    <Button
-icon="pi pi-trash" severity="danger" text rounded size="small"
-                                        @click="removeMember('CALL', m.eno)" />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <StyledDataTable v-else :value="callList" data-key="eno">
+                    <Column field="eno" header="사번" />
+                    <Column field="usrNm" header="성명" />
+                    <Column field="bbrNm" header="부서" />
+                    <Column field="ptCNm" header="직위" />
+                    <Column v-if="!readonly" style="width: 56px">
+                        <template #body="{ data }">
+                            <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="removeMember('CALL', data.eno)" />
+                        </template>
+                    </Column>
+                </StyledDataTable>
             </div>
 
             <!-- ── 간사 섹션 ── -->
@@ -389,34 +358,17 @@ v-if="secretaryList.length === 0"
                     간사를 추가해 주세요.
                 </div>
 
-                <div v-else class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                                <th class="text-left px-3 py-2 font-medium">사번</th>
-                                <th class="text-left px-3 py-2 font-medium">성명</th>
-                                <th class="text-left px-3 py-2 font-medium">부서</th>
-                                <th class="text-left px-3 py-2 font-medium">직위</th>
-                                <th v-if="!readonly" class="px-3 py-2 font-medium w-16"/>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-v-for="m in secretaryList" :key="m.eno"
-                                class="border-t border-zinc-100 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                                <td class="px-3 py-2 text-zinc-500">{{ m.eno }}</td>
-                                <td class="px-3 py-2 font-medium">{{ m.usrNm }}</td>
-                                <td class="px-3 py-2 text-zinc-500">{{ m.bbrNm }}</td>
-                                <td class="px-3 py-2 text-zinc-500">{{ m.ptCNm }}</td>
-                                <td v-if="!readonly" class="px-3 py-2 text-center">
-                                    <Button
-icon="pi pi-trash" severity="danger" text rounded size="small"
-                                        @click="removeMember('SECR', m.eno)" />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <StyledDataTable v-else :value="secretaryList" data-key="eno">
+                    <Column field="eno" header="사번" />
+                    <Column field="usrNm" header="성명" />
+                    <Column field="bbrNm" header="부서" />
+                    <Column field="ptCNm" header="직위" />
+                    <Column v-if="!readonly" style="width: 56px">
+                        <template #body="{ data }">
+                            <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="removeMember('SECR', data.eno)" />
+                        </template>
+                    </Column>
+                </StyledDataTable>
             </div>
 
             <!-- ── 저장 버튼 ── -->

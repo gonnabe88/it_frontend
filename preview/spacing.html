@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Spacing, radii &amp; shadows — IT Portal</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin:0; padding:40px; background:#f4f4f5; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { font-size:12px; font-weight:500; color:var(--fg3); letter-spacing:0.05em; text-transform:uppercase; margin:0 0 8px; }
+  .title   { font-size:28px; font-weight:700; color:var(--fg1); margin:0 0 4px; letter-spacing:-0.01em; }
+  .subtitle{ font-size:14px; color:var(--fg3); margin:0 0 32px; max-width:720px; line-height:1.6; }
+  h3 { font-size:13px; font-weight:600; color:var(--fg2); text-transform:uppercase; letter-spacing:0.05em; margin:40px 0 14px; }
+  h3:first-of-type { margin-top:0; }
+
+  .panel { background:#fff; border:1px solid var(--border-1); border-radius:12px; padding:24px; }
+
+  /* Spacing */
+  .spacing { display:grid; grid-template-columns: repeat(6, 1fr); gap:12px; }
+  .spacing .s { background:#fff; border:1px solid var(--border-1); border-radius:8px; padding:16px 14px; }
+  .spacing .bar { background: var(--indigo-500); height:10px; border-radius:3px; margin-bottom:10px; }
+  .spacing .nm { font-weight:600; font-size:12px; color:var(--fg1); font-family:var(--font-mono); }
+  .spacing .px { font-size:11px; color:var(--fg3); font-family:var(--font-mono); margin-top:2px; }
+
+  /* Radii */
+  .radii { display:grid; grid-template-columns: repeat(6, 1fr); gap:16px; }
+  .radii .r { background:#fff; border:1px solid var(--border-1); padding:20px 16px; display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .radii .box { width:100%; height:64px; background: linear-gradient(135deg, var(--indigo-500), var(--indigo-700)); }
+  .radii .nm { font-family:var(--font-mono); font-size:12px; color:var(--fg1); font-weight:600; }
+  .radii .v  { font-family:var(--font-mono); font-size:11px; color:var(--fg3); }
+
+  /* Shadows */
+  .shadows { display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; padding:30px; background:#fafafa; border-radius:12px; }
+  .shadows .sh { background:#fff; border-radius:12px; padding:24px; text-align:center; }
+  .shadows .sh .ttl { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--fg1); margin-bottom:4px; }
+  .shadows .sh .u   { font-size:11px; color:var(--fg3); }
+
+  /* Layout spec */
+  .layout { background:#fff; border:1px solid var(--border-1); border-radius:12px; overflow:hidden; height:340px; display:flex; flex-direction:column; }
+  .layout .head { height:52px; background:#fff; border-bottom:1px solid var(--border-1); display:flex; align-items:center; padding:0 18px; color:var(--fg3); font-size:11px; font-family:var(--font-mono); justify-content:space-between; }
+  .layout .body { flex:1; display:flex; }
+  .layout .sb   { width:180px; background:#fff; border-right:1px solid var(--border-1); padding:14px; color:var(--fg3); font-size:11px; font-family:var(--font-mono); }
+  .layout .main { flex:1; background:#f4f4f5; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .layout .tabs { height:36px; background:#fff; border:1px solid var(--border-1); border-radius:6px; display:flex; align-items:center; padding:0 10px; color:var(--fg3); font-size:11px; font-family:var(--font-mono); }
+  .layout .content { flex:1; background:#fff; border:1px solid var(--border-1); border-radius:10px; padding:12px; color:var(--fg3); font-size:11px; font-family:var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">공간 · Space</p>
+  <h1 class="title">Spacing, radii &amp; shadows</h1>
+  <p class="subtitle">A Tailwind-native spacing scale, modest utilitarian radii (4 → 20 px), and shadow steps that lean functional rather than decorative — every card is <code>shadow-sm</code>; only modals, flyouts, and the login card escalate.</p>
+
+  <h3>Spacing scale · 4 px base</h3>
+  <div class="spacing">
+    <div class="s"><div class="bar" style="width:4px;"></div><div class="nm">space-1</div><div class="px">4 px</div></div>
+    <div class="s"><div class="bar" style="width:8px;"></div><div class="nm">space-2</div><div class="px">8 px</div></div>
+    <div class="s"><div class="bar" style="width:12px;"></div><div class="nm">space-3</div><div class="px">12 px</div></div>
+    <div class="s"><div class="bar" style="width:16px;"></div><div class="nm">space-4</div><div class="px">16 px</div></div>
+    <div class="s"><div class="bar" style="width:24px;"></div><div class="nm">space-6 ★</div><div class="px">24 px · card padding</div></div>
+    <div class="s"><div class="bar" style="width:32px;"></div><div class="nm">space-8</div><div class="px">32 px · section gap</div></div>
+    <div class="s"><div class="bar" style="width:40px;"></div><div class="nm">space-10</div><div class="px">40 px</div></div>
+    <div class="s"><div class="bar" style="width:48px;"></div><div class="nm">space-12</div><div class="px">48 px</div></div>
+    <div class="s"><div class="bar" style="width:64px;"></div><div class="nm">space-16</div><div class="px">64 px · page margin</div></div>
+    <div class="s"><div class="bar" style="width:80px;"></div><div class="nm">space-20</div><div class="px">80 px</div></div>
+    <div class="s"><div class="bar" style="width:120px;"></div><div class="nm">space-30</div><div class="px">120 px</div></div>
+    <div class="s"><div class="bar" style="width:160px;"></div><div class="nm">space-40</div><div class="px">160 px</div></div>
+  </div>
+
+  <h3>Corner radii · mostly 6 – 12</h3>
+  <div class="radii">
+    <div class="r"><div class="box" style="border-radius:4px;"></div><div class="nm">sm</div><div class="v">4 px · tags</div></div>
+    <div class="r"><div class="box" style="border-radius:6px;"></div><div class="nm">base ★</div><div class="v">6 px · inputs</div></div>
+    <div class="r"><div class="box" style="border-radius:8px;"></div><div class="nm">md</div><div class="v">8 px · buttons</div></div>
+    <div class="r"><div class="box" style="border-radius:12px;"></div><div class="nm">lg ★</div><div class="v">12 px · KPI cards</div></div>
+    <div class="r"><div class="box" style="border-radius:16px;"></div><div class="nm">xl</div><div class="v">16 px · panels</div></div>
+    <div class="r"><div class="box" style="border-radius:20px;"></div><div class="nm">2xl</div><div class="v">20 px · login</div></div>
+  </div>
+
+  <h3>Elevation · shadow steps</h3>
+  <div class="shadows">
+    <div class="sh" style="box-shadow: var(--shadow-sm);"><div class="ttl">shadow-sm ★</div><div class="u">cards, inputs</div></div>
+    <div class="sh" style="box-shadow: var(--shadow-md);"><div class="ttl">shadow-md</div><div class="u">dropdowns, popovers</div></div>
+    <div class="sh" style="box-shadow: var(--shadow-lg);"><div class="ttl">shadow-lg</div><div class="u">flyout menus</div></div>
+    <div class="sh" style="box-shadow: var(--shadow-xl);"><div class="ttl">shadow-xl</div><div class="u">sidebar, mobile drawer</div></div>
+    <div class="sh" style="box-shadow: var(--shadow-2xl);"><div class="ttl">shadow-2xl</div><div class="u">login card only</div></div>
+    <div class="sh" style="box-shadow: 0 -2px 5px rgb(0 0 0 / 0.02);"><div class="ttl">tab-active</div><div class="u">negative-y, under tab</div></div>
+  </div>
+
+  <h3>App layout · fixed chrome + fluid content</h3>
+  <div class="layout">
+    <div class="head"><span>Header · 76 px</span><span>logo · search · theme · user</span></div>
+    <div class="body">
+      <div class="sb">Sidebar<br/>288 px → 80 px collapsed<br/>transition 300 ms</div>
+      <div class="main">
+        <div class="tabs">Tab bar · 50 px · h-[50px] · border-b-2 active</div>
+        <div class="content">max-w-7xl · p-6 · grid-cols-1 md:grid-cols-2 lg:grid-cols-4 · gap-6</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

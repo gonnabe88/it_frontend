@@ -16,7 +16,7 @@ import { ROLE } from '~/types/auth';
 import { useAuth } from '~/composables/useAuth';
 
 export default defineNuxtRouteMiddleware(() => {
-    // SSR 환경에서는 localStorage 접근 불가 → 세션 복원 전이므로 체크 생략
+    // SSR에서는 라우트별 쿠키 상태와 클라이언트 hydration 타이밍이 다를 수 있어 체크를 생략합니다.
     // 클라이언트에서 auth.global.ts가 동일한 ADMIN 체크를 수행합니다.
     if (import.meta.server) return;
 

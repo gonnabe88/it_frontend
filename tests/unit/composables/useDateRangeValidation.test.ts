@@ -2,185 +2,17 @@
  * ============================================================================
  * [tests/unit/composables/useDateRangeValidation.test.ts] 날짜 범위 유효성 검사 단위 테스트
  * ============================================================================
- * composables/useDateRangeValidation.ts의 핵심 검증 로직을 테스트합니다.
+ * composables/useDateRangeValidation.ts를 직접 import하여 커버리지를 측정합니다.
  *
  * [테스트 전략]
- * - useDateRangeValidation 로직을 인라인으로 구현하여 Nuxt auto-import 없이 테스트
- * - ref를 직접 사용하여 시작일/종료일 상태 제어
- * - 형식 오류, 존재하지 않는 날짜, 범위 역전 시나리오를 검증
+ * - useDateRangeValidation은 vue 함수만 사용하므로 Nuxt mock 없이 직접 import 가능
+ * - primevue/datepicker의 DatePickerBlurEvent는 type-only import로 런타임 영향 없음
  * ============================================================================
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ref, computed, type Ref } from 'vue';
+import { ref, nextTick, type Ref } from 'vue';
+import { useDateRangeValidation } from '~/composables/useDateRangeValidation';
 
-// ============================================================================
-// useDateRangeValidation 인라인 구현 (Nuxt auto-import 미지원 환경용)
-// ============================================================================
-
-/** YYYY-MM-DD 형식 + 월(01-12) + 일(01-31) 정규식 */
-const DATE_REGEX = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
-
-/**
- * 날짜 텍스트 유효성 검사 (형식 + 실제 존재 여부)
- */
-function isValidDateText(text: string): boolean {
-    if (!DATE_REGEX.test(text)) return false;
-    const d = new Date(text);
-    return d instanceof Date && !Number.isNaN(d.getTime());
-}
-
-/**
- * 날짜 범위(시작일/종료일) 유효성 검사 composable 인라인 구현
- */
-function useDateRangeValidation(
-    startDate: Ref<Date | null>,
-    endDate: Ref<Date | null>
-) {
-    const startError = ref('');
-    const endError = ref('');
-
-    const validateStartText = (text: string) => {
-        if (!text) {
-            startError.value = '';
-            return;
-        }
-        startError.value = isValidDateText(text)
-            ? ''
-            : '올바른 날짜를 입력해주세요. (YYYY-MM-DD)';
-    };
-
-    const validateEndText = (text: string) => {
-        if (!text) {
-            endError.value = '';
-            return;
-        }
-        if (!isValidDateText(text)) {
-            endError.value = '올바른 날짜를 입력해주세요. (YYYY-MM-DD)';
-            return;
-        }
-        if (startDate.value) {
-            const stt = new Date(startDate.value);
-            const end = new Date(text);
-            stt.setHours(0, 0, 0, 0);
-            end.setHours(0, 0, 0, 0);
-            endError.value = end < stt ? '종료일은 시작일보다 크거나 같아야 합니다.' : '';
-        } else {
-            endError.value = '';
-        }
-    };
-
-    const revalidateRange = () => {
-        if (!startDate.value || !endDate.value) return;
-        const stt = new Date(startDate.value);
-        const end = new Date(endDate.value);
-        stt.setHours(0, 0, 0, 0);
-        end.setHours(0, 0, 0, 0);
-        if (end < stt) {
-            endError.value = '종료일은 시작일보다 크거나 같아야 합니다.';
-        } else if (endError.value === '종료일은 시작일보다 크거나 같아야 합니다.') {
-            endError.value = '';
-        }
-    };
-
-    const onStartInput = (event: Event) => {
-        const text = (event.target as HTMLInputElement)?.value ?? '';
-        if (!text) {
-            startError.value = '';
-        } else if (text.length === 10) {
-            validateStartText(text);
-        }
-    };
-
-    const onEndInput = (event: Event) => {
-        const text = (event.target as HTMLInputElement)?.value ?? '';
-        if (!text) {
-            endError.value = '';
-        } else if (text.length === 10) {
-            validateEndText(text);
-        }
-    };
-
-    const onStartBlur = (event: { value: string }) => {
-        validateStartText(event.value ?? '');
-    };
-
-    const onEndBlur = (event: { value: string }) => {
-        validateEndText(event.value ?? '');
-    };
-
-    const validate = (): boolean => !startError.value && !endError.value;
-
-    return {
-        startError,
-        endError,
-        startInvalid: computed(() => !!startError.value),
-        endInvalid: computed(() => !!endError.value),
-        onStartInput,
-        onEndInput,
-        onStartBlur,
-        onEndBlur,
-        validate,
-        // 테스트용 내부 함수 노출
-        _validateStartText: validateStartText,
-        _validateEndText: validateEndText,
-        _revalidateRange: revalidateRange,
-    };
-}
-
-// ============================================================================
-// isValidDateText 단위 테스트
-// ============================================================================
-describe('isValidDateText', () => {
-    // --- 유효한 날짜 ---
-    it('올바른 날짜 형식 "2026-04-10"은 true를 반환한다', () => {
-        expect(isValidDateText('2026-04-10')).toBe(true);
-    });
-
-    it('1월 1일 "2026-01-01"은 true를 반환한다', () => {
-        expect(isValidDateText('2026-01-01')).toBe(true);
-    });
-
-    it('12월 31일 "2026-12-31"은 true를 반환한다', () => {
-        expect(isValidDateText('2026-12-31')).toBe(true);
-    });
-
-    it('윤년 2월 29일 "2024-02-29"은 true를 반환한다', () => {
-        expect(isValidDateText('2024-02-29')).toBe(true);
-    });
-
-    // --- 형식 오류 ---
-    it('형식이 YYYYMMDD이면 false를 반환한다', () => {
-        expect(isValidDateText('20260410')).toBe(false);
-    });
-
-    it('월이 13인 경우 false를 반환한다', () => {
-        expect(isValidDateText('2026-13-01')).toBe(false);
-    });
-
-    it('월이 0인 경우 false를 반환한다', () => {
-        expect(isValidDateText('2026-00-01')).toBe(false);
-    });
-
-    it('일이 0인 경우 false를 반환한다', () => {
-        expect(isValidDateText('2026-01-00')).toBe(false);
-    });
-
-    it('일이 32인 경우 false를 반환한다', () => {
-        expect(isValidDateText('2026-01-32')).toBe(false);
-    });
-
-    it('빈 문자열은 false를 반환한다', () => {
-        expect(isValidDateText('')).toBe(false);
-    });
-
-    // --- 존재하지 않는 날짜 ---
-    it('2026-02-29는 형식 정규식(01~31)을 통과하므로 true를 반환한다 (JS Date 오버플로우 한계)', () => {
-        // 주의: JavaScript new Date('2026-02-29')는 NaN이 아닌 3월 1일로 파싱되므로
-        // isValidDateText의 NaN 검사로는 걸러지지 않습니다.
-        // 더 엄밀한 날짜 유효성 검사가 필요할 경우 날짜 역변환(date→string) 비교 방식으로 개선해야 합니다.
-        expect(isValidDateText('2026-02-29')).toBe(true);
-    });
-});
 
 // ============================================================================
 // useDateRangeValidation 통합 테스트
@@ -286,34 +118,19 @@ describe('useDateRangeValidation', () => {
     });
 
     // -------------------------------------------------------------------------
-    // _revalidateRange (캘린더 선택 시 범위 재검증)
+    // onEndBlur 추가 케이스 (빈값 초기화, startDate 없을 때)
     // -------------------------------------------------------------------------
-    describe('_revalidateRange', () => {
-        it('시작일 > 종료일인 경우 종료일 에러를 설정한다', () => {
-            startDate.value = new Date('2026-06-01');
-            endDate.value = new Date('2026-05-01');
-            const { endError, _revalidateRange } = useDateRangeValidation(startDate, endDate);
-
-            _revalidateRange();
-
-            expect(endError.value).toContain('종료일은 시작일보다 크거나 같아야 합니다');
-        });
-
-        it('시작일 <= 종료일이면 기존 범위 에러를 해소한다', () => {
-            startDate.value = new Date('2026-06-01');
-            endDate.value = new Date('2026-05-01'); // 처음엔 역전
-            const { endError, _revalidateRange } = useDateRangeValidation(startDate, endDate);
-            _revalidateRange(); // 에러 설정
-
-            endDate.value = new Date('2026-07-01'); // 이후 수정
-            _revalidateRange(); // 에러 해소
-
+    describe('onEndBlur 추가 케이스', () => {
+        it('빈 값 입력 시 에러를 초기화한다', () => {
+            const { endError, onEndBlur } = useDateRangeValidation(startDate, endDate);
+            onEndBlur({ value: '2026-13-01' });
+            onEndBlur({ value: '' });
             expect(endError.value).toBe('');
         });
 
-        it('startDate나 endDate가 null이면 아무 동작도 하지 않는다', () => {
-            const { endError, _revalidateRange } = useDateRangeValidation(startDate, endDate);
-            expect(() => _revalidateRange()).not.toThrow();
+        it('startDate가 없으면 범위 검사를 건너뛴다', () => {
+            const { endError, onEndBlur } = useDateRangeValidation(startDate, endDate);
+            onEndBlur({ value: '2026-06-01' });
             expect(endError.value).toBe('');
         });
     });
@@ -351,6 +168,53 @@ describe('useDateRangeValidation', () => {
             onStartInput(event);
 
             expect(startError.value).toBe('');
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // onEndInput (10자리 완성 시 검증)
+    // -------------------------------------------------------------------------
+    describe('onEndInput', () => {
+        it('10자리 미만 입력 시 검증을 수행하지 않는다', () => {
+            const { endError, onEndInput } = useDateRangeValidation(startDate, endDate);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const event = { target: { value: '2026-04' } } as any;
+            onEndInput(event);
+            expect(endError.value).toBe('');
+        });
+
+        it('10자리 완성 + 형식 오류이면 에러를 설정한다', () => {
+            const { endError, onEndInput } = useDateRangeValidation(startDate, endDate);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const event = { target: { value: '2026-13-01' } } as any;
+            onEndInput(event);
+            expect(endError.value).toContain('올바른 날짜를 입력해주세요');
+        });
+
+        it('종료일 10자리 완성 + 시작일보다 이전이면 범위 에러를 설정한다', () => {
+            startDate.value = new Date('2026-06-01');
+            const { endError, onEndInput } = useDateRangeValidation(startDate, endDate);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const event = { target: { value: '2026-05-31' } } as any;
+            onEndInput(event);
+            expect(endError.value).toContain('종료일은 시작일보다 크거나 같아야 합니다');
+        });
+
+        it('빈 값 입력 시 에러를 초기화한다', () => {
+            const { endError, onEndInput } = useDateRangeValidation(startDate, endDate);
+            endError.value = '기존 에러';
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const event = { target: { value: '' } } as any;
+            onEndInput(event);
+            expect(endError.value).toBe('');
+        });
+
+        it('10자리 완성 + 유효한 날짜 + startDate 없으면 에러가 없다', () => {
+            const { endError, onEndInput } = useDateRangeValidation(startDate, endDate);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const event = { target: { value: '2026-06-01' } } as any;
+            onEndInput(event);
+            expect(endError.value).toBe('');
         });
     });
 
@@ -393,6 +257,76 @@ describe('useDateRangeValidation', () => {
             const { startError, startInvalid } = useDateRangeValidation(startDate, endDate);
             startError.value = '';
             expect(startInvalid.value).toBe(false);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // watch: startDate 변경 시 재검증 (lines 122-129)
+    // -------------------------------------------------------------------------
+    describe('watch(startDate) 반응형 재검증', () => {
+        it('startDate 변경 시 startError가 초기화된다', async () => {
+            const { startError, onStartBlur } = useDateRangeValidation(startDate, endDate);
+            onStartBlur({ value: '2026-13-01' }); // 오류 유발
+            expect(startError.value).not.toBe('');
+            startDate.value = new Date('2026-04-01');
+            await nextTick();
+            expect(startError.value).toBe('');
+        });
+
+        it('startDate 변경 후 endDate가 이전이면 범위 오류가 설정된다', async () => {
+            endDate.value = new Date('2026-03-01');
+            const { endError } = useDateRangeValidation(startDate, endDate);
+            startDate.value = new Date('2026-04-01');
+            await nextTick();
+            expect(endError.value).toContain('종료일은 시작일보다 크거나 같아야 합니다');
+        });
+
+        it('startDate 변경 후 endDate가 이후이면 기존 범위 오류가 해소된다', async () => {
+            startDate.value = new Date('2026-01-01');
+            endDate.value = new Date('2026-03-01');
+            const { endError } = useDateRangeValidation(startDate, endDate);
+            endError.value = '종료일은 시작일보다 크거나 같아야 합니다.';
+            startDate.value = new Date('2026-02-01');
+            await nextTick();
+            expect(endError.value).toBe('');
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // watch: endDate 변경 시 재검증 (lines 131-136)
+    // -------------------------------------------------------------------------
+    describe('watch(endDate) 반응형 재검증', () => {
+        it('endDate 변경 시 범위 재검증이 수행된다', async () => {
+            startDate.value = new Date('2026-06-01');
+            const { endError } = useDateRangeValidation(startDate, endDate);
+            endDate.value = new Date('2026-05-01');
+            await nextTick();
+            expect(endError.value).toContain('종료일은 시작일보다 크거나 같아야 합니다');
+        });
+
+        it('endDate가 startDate 이후로 변경되면 에러가 없다', async () => {
+            startDate.value = new Date('2026-01-01');
+            const { endError } = useDateRangeValidation(startDate, endDate);
+            endDate.value = new Date('2026-12-31');
+            await nextTick();
+            expect(endError.value).toBe('');
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // revalidateRange: 에러 해소 케이스 (line 112-114)
+    // -------------------------------------------------------------------------
+    describe('revalidateRange 범위 오류 해소', () => {
+        it('범위 오류가 있을 때 startDate가 endDate 이전으로 변경되면 해소된다', async () => {
+            startDate.value = new Date('2026-06-01');
+            endDate.value = new Date('2026-12-31');
+            const { endError } = useDateRangeValidation(startDate, endDate);
+            // 수동으로 범위 오류 설정 (동일 에러 메시지)
+            endError.value = '종료일은 시작일보다 크거나 같아야 합니다.';
+            // startDate를 endDate 이전으로 변경 → 범위 오류 해소되어야 함
+            startDate.value = new Date('2026-01-01');
+            await nextTick();
+            expect(endError.value).toBe('');
         });
     });
 });

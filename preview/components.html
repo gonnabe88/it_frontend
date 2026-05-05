@@ -1,0 +1,2256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Components - IT Portal</title>
+  <link rel="stylesheet" href="https://unpkg.com/primeicons@7.0.0/primeicons.css">
+  <style>
+    @font-face {
+      font-family: "NotoSansKR";
+      src: url("../app/assets/fonts/NotoSansKR-Regular.woff2") format("woff2");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "NotoSansKR";
+      src: url("../app/assets/fonts/NotoSansKR-Medium.woff2") format("woff2");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "NotoSansKR";
+      src: url("../app/assets/fonts/NotoSansKR-Bold.woff2") format("woff2");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --indigo-50: #eef2ff;
+      --indigo-100: #e0e7ff;
+      --indigo-200: #c7d2fe;
+      --indigo-400: #818cf8;
+      --indigo-500: #6366f1;
+      --indigo-600: #4f46e5;
+      --indigo-700: #4338ca;
+      --indigo-800: #3730a3;
+      --zinc-50: #fafafa;
+      --zinc-100: #f4f4f5;
+      --zinc-200: #e4e4e7;
+      --zinc-300: #d4d4d8;
+      --zinc-400: #a1a1aa;
+      --zinc-500: #71717a;
+      --zinc-600: #52525b;
+      --zinc-700: #3f3f46;
+      --zinc-800: #27272a;
+      --zinc-900: #18181b;
+      --blue-900: #1e3a8a;
+      --emerald-50: #ecfdf5;
+      --emerald-500: #10b981;
+      --emerald-600: #059669;
+      --amber-50: #fffbeb;
+      --amber-500: #f59e0b;
+      --amber-600: #d97706;
+      --rose-50: #fff1f2;
+      --rose-500: #f43f5e;
+      --rose-600: #e11d48;
+      --sky-50: #f0f9ff;
+      --sky-500: #0ea5e9;
+      --violet-500: #8b5cf6;
+      --bg-app: #f4f4f5;
+      --bg-surface: #ffffff;
+      --bg-muted: #fafafa;
+      --fg1: #18181b;
+      --fg2: #3f3f46;
+      --fg3: #71717a;
+      --fg4: #a1a1aa;
+      --border-1: #e4e4e7;
+      --border-2: #f4f4f5;
+      --accent-project: #4f46e5;
+      --accent-cost: #059669;
+      --accent-ordinary: #dc2626;
+      --accent-audit: #ea580c;
+      --accent-approval: #2563eb;
+      --accent-admin: #eab308;
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+      --shadow: 0 1px 3px rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+      --radius-sm: 4px;
+      --radius: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-full: 9999px;
+      --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+      --sidebar-w: 288px;
+      --sidebar-w-collapsed: 80px;
+      --header-h: 76px;
+      --tabbar-h: 50px;
+      --dialog-sm: min(420px, 90vw);
+      --dialog-md: min(640px, 90vw);
+      --dialog-lg: min(960px, 90vw);
+      --dialog-xl: min(1100px, 90vw);
+      font-family: "NotoSansKR", ui-sans-serif, system-ui, sans-serif;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-app);
+      color: var(--fg1);
+      font-family: "NotoSansKR", ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 36px 32px 64px;
+    }
+
+    .doc-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--indigo-700);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--fg3);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .doc-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      color: var(--fg3);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }
+
+    .section h2 {
+      margin: 0;
+      color: var(--fg1);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .section-note {
+      margin: 4px 0 0;
+      color: var(--fg3);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .panel {
+      overflow: hidden;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .panel-pad {
+      padding: 22px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+
+    .token {
+      min-height: 88px;
+      padding: 14px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+    }
+
+    .token .swatch {
+      height: 28px;
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      border: 1px solid rgb(0 0 0 / 0.06);
+    }
+
+    .token b {
+      display: block;
+      font-size: 12px;
+      color: var(--fg2);
+    }
+
+    .token span {
+      display: block;
+      margin-top: 3px;
+      color: var(--fg3);
+      font-size: 11px;
+    }
+
+    .type-sample {
+      display: grid;
+      gap: 10px;
+    }
+
+    .type-row {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr) 160px;
+      gap: 16px;
+      align-items: baseline;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-2);
+    }
+
+    .type-row:last-child {
+      border-bottom: 0;
+    }
+
+    .type-label,
+    .type-spec {
+      color: var(--fg3);
+      font-size: 12px;
+    }
+
+    .app-frame {
+      min-height: 520px;
+      display: grid;
+      grid-template-columns: 288px minmax(0, 1fr);
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-xl);
+      background: var(--bg-app);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--border-1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--border-2);
+      font-weight: 700;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-lg);
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+    }
+
+    .side-section {
+      padding: 14px 14px 4px;
+    }
+
+    .side-label {
+      padding: 10px 8px 8px;
+      color: var(--fg4);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .nav-item {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      color: var(--zinc-700);
+      font-size: 14px;
+      transition: background 150ms var(--ease-standard), color 150ms var(--ease-standard);
+    }
+
+    .nav-item:hover,
+    .nav-item.active {
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+    }
+
+    .nav-item.active {
+      font-weight: 700;
+    }
+
+    .nav-item i {
+      width: 18px;
+      text-align: center;
+      color: inherit;
+    }
+
+    .nav-item .badge {
+      margin-left: auto;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 0 20px;
+      background: #fff;
+      border-bottom: 1px solid var(--border-2);
+    }
+
+    .global-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .global-nav button {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--zinc-700);
+      font-weight: 700;
+    }
+
+    .global-nav button.active {
+      color: var(--indigo-700);
+      border-bottom-color: var(--indigo-600);
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tabbar {
+      height: 50px;
+      display: flex;
+      align-items: end;
+      gap: 4px;
+      padding: 0 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--border-1);
+    }
+
+    .tab {
+      min-width: 112px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: -1px;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      color: var(--fg3);
+      font-size: 13px;
+      background: rgb(244 244 245 / 0.72);
+    }
+
+    .tab.active {
+      background: #fff;
+      border-color: var(--border-1);
+      border-bottom-color: #fff;
+      color: var(--indigo-700);
+      font-weight: 700;
+      box-shadow: 0 -2px 5px rgb(0 0 0 / 0.02);
+    }
+
+    .content {
+      min-width: 0;
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .page-header h3 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--zinc-900);
+    }
+
+    .page-header p {
+      margin: 6px 0 0;
+      color: var(--zinc-500);
+      font-size: 14px;
+    }
+
+    .btn {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 150ms var(--ease-standard), border-color 150ms var(--ease-standard), color 150ms var(--ease-standard), box-shadow 150ms var(--ease-standard);
+    }
+
+    .btn.primary {
+      background: var(--indigo-600);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--indigo-700);
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--fg2);
+      border-color: var(--border-1);
+    }
+
+    .btn.secondary:hover {
+      background: var(--zinc-50);
+      border-color: var(--zinc-300);
+    }
+
+    .btn.text {
+      background: transparent;
+      color: var(--indigo-700);
+    }
+
+    .btn.text:hover {
+      background: var(--indigo-50);
+    }
+
+    .btn.danger {
+      background: var(--rose-600);
+      color: #fff;
+    }
+
+    .btn.sm {
+      min-height: 30px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .btn.icon {
+      width: 36px;
+      padding: 0;
+      border-radius: var(--radius-full);
+    }
+
+    .btn.icon.square {
+      border-radius: var(--radius-md);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: var(--fg2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field small {
+      color: var(--fg3);
+      font-size: 11px;
+    }
+
+    .input,
+    .select,
+    .textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--fg1);
+      outline: none;
+      padding: 8px 12px;
+      font-size: 14px;
+      transition: border-color 150ms var(--ease-standard), box-shadow 150ms var(--ease-standard);
+    }
+
+    .textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    .input:focus,
+    .select:focus,
+    .textarea:focus {
+      border-color: var(--indigo-500);
+      box-shadow: 0 0 0 3px rgb(99 102 241 / 0.18);
+    }
+
+    .input.error {
+      border-color: var(--rose-500);
+      box-shadow: 0 0 0 3px rgb(244 63 94 / 0.12);
+    }
+
+    .search {
+      min-width: 260px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 10px 0 12px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--fg4);
+      transition: border-color 150ms var(--ease-standard), box-shadow 150ms var(--ease-standard);
+    }
+
+    .search:focus-within {
+      border-color: var(--indigo-500);
+      box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
+    }
+
+    .search input {
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      outline: 0;
+      color: var(--fg1);
+      font-size: 14px;
+    }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--fg2);
+      font-size: 13px;
+    }
+
+    .box {
+      width: 16px;
+      height: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid var(--zinc-300);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: #fff;
+      font-size: 10px;
+    }
+
+    .check.checked .box {
+      background: var(--indigo-600);
+      border-color: var(--indigo-600);
+    }
+
+    .switch {
+      width: 38px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      padding: 2px;
+      border-radius: var(--radius-full);
+      background: var(--zinc-300);
+    }
+
+    .switch::before {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border-radius: var(--radius-full);
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .switch.on {
+      justify-content: flex-end;
+      background: var(--indigo-600);
+    }
+
+    .badge,
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .tag.indigo,
+    .badge.indigo {
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+    }
+
+    .tag.green {
+      background: var(--emerald-50);
+      color: var(--emerald-600);
+    }
+
+    .tag.amber {
+      background: var(--amber-50);
+      color: var(--amber-600);
+    }
+
+    .tag.red {
+      background: var(--rose-50);
+      color: var(--rose-600);
+    }
+
+    .tag.gray {
+      background: var(--zinc-100);
+      color: var(--zinc-600);
+    }
+
+    .kpi-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 184px;
+      padding: 22px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-xl);
+      background: #fff;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--zinc-300);
+      box-shadow: var(--shadow-md);
+    }
+
+    .kpi-card.summary {
+      border-color: var(--indigo-100);
+      background: linear-gradient(135deg, var(--indigo-50), #fff 72%);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .kpi-card::after {
+      content: "";
+      position: absolute;
+      top: -34px;
+      right: -34px;
+      width: 120px;
+      height: 120px;
+      border-radius: var(--radius-full);
+      background: var(--kpi-glow, var(--indigo-50));
+      filter: blur(18px);
+      opacity: 0.92;
+    }
+
+    .kpi-body {
+      position: relative;
+      z-index: 1;
+    }
+
+    .kpi-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+
+    .kpi-icon {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-lg);
+      background: var(--kpi-tint, var(--indigo-50));
+      color: var(--kpi-accent, var(--indigo-600));
+    }
+
+    .kpi-label {
+      color: var(--kpi-accent, var(--indigo-600));
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .kpi-count {
+      margin-left: auto;
+      color: var(--fg4);
+      font-size: 12px;
+    }
+
+    .kpi-value {
+      color: var(--fg1);
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-value small {
+      color: var(--fg3);
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .kpi-breakdown {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-2);
+    }
+
+    .kpi-breakdown.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .mini-stat {
+      display: grid;
+      grid-template-columns: 6px minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .mini-stat .rail {
+      width: 6px;
+      height: 32px;
+      border-radius: var(--radius-full);
+      background: var(--rail, var(--indigo-500));
+    }
+
+    .mini-stat span {
+      display: block;
+      color: var(--fg4);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .mini-stat b {
+      display: block;
+      margin-top: 2px;
+      color: var(--fg1);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .kpi-standard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card.total {
+      grid-column: span 1;
+      border-color: var(--indigo-100);
+      background: linear-gradient(135deg, var(--indigo-50), #fff 74%);
+    }
+
+    .kpi-progress {
+      height: 6px;
+      display: flex;
+      margin-top: 16px;
+      overflow: hidden;
+      border-radius: var(--radius-full);
+      background: var(--zinc-100);
+    }
+
+    .kpi-progress span {
+      height: 100%;
+      background: var(--kpi-accent, var(--indigo-600));
+    }
+
+    .kpi-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+      color: var(--fg4);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kpi-legend i {
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+      border-radius: 2px;
+      background: var(--kpi-accent, var(--indigo-600));
+    }
+
+    .kpi-score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .kpi-score {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: var(--zinc-50);
+      color: var(--fg2);
+      font-size: 12px;
+    }
+
+    .kpi-score strong {
+      min-width: 34px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+      text-align: center;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-note-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .kpi-note {
+      padding: 12px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--fg3);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .kpi-note b {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--fg1);
+      font-size: 13px;
+    }
+
+    .table-card {
+      background: #fff;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .table-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 20px;
+    }
+
+    .table-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .table-title .icon-box {
+      width: 36px;
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-lg);
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+      flex: none;
+    }
+
+    .table-title h3 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--fg2);
+    }
+
+    .table-title p {
+      margin: 2px 0 0;
+      color: var(--fg4);
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-2);
+      border-bottom: 1px solid var(--border-2);
+      background: #fff;
+    }
+
+    .toolbar-spacer {
+      flex: 1 1 auto;
+      min-width: 12px;
+    }
+
+    .rows-select {
+      min-width: 108px;
+      height: 38px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--fg2);
+      padding: 0 32px 0 12px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .rows-select:focus {
+      border-color: var(--indigo-500);
+      box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
+    }
+
+    .gsearch {
+      min-width: 260px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-radius: 10px;
+      background: var(--zinc-100);
+      color: var(--fg3);
+      transition: background 150ms var(--ease-standard), box-shadow 150ms var(--ease-standard);
+    }
+
+    .gsearch:hover {
+      background: #f3f4f6;
+    }
+
+    .gsearch.is-focus {
+      background: #fff;
+      box-shadow: 0 0 0 2px var(--indigo-500), 0 8px 24px -8px rgb(79 70 229 / 0.25);
+    }
+
+    .gsearch input {
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--fg1);
+      font-size: 14px;
+    }
+
+    .gsearch .gs-clear {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 0;
+      border-radius: var(--radius-full);
+      background: var(--zinc-300);
+      color: #fff;
+      font-size: 9px;
+    }
+
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-2);
+      background: #fff;
+      color: var(--fg3);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+    }
+
+    th {
+      height: 36px;
+      padding: 8px;
+      background: var(--blue-900);
+      border: 1px solid rgb(255 255 255 / 0.2);
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    td {
+      height: 42px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-1);
+      color: var(--fg2);
+      background: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: var(--zinc-50);
+    }
+
+    tr.deleted td {
+      background: var(--zinc-100);
+      color: var(--zinc-400);
+      text-decoration: line-through;
+    }
+
+    td.cell-selected {
+      background: rgba(59, 130, 246, 0.18) !important;
+    }
+
+    td.cell-anchor {
+      outline: 2px solid rgb(59, 130, 246);
+      outline-offset: -2px;
+    }
+
+    .copy-hint {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-2);
+      background: #fff;
+      color: var(--fg3);
+      font-size: 12px;
+    }
+
+    .copy-hint .kbd {
+      padding: 1px 6px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-sm);
+      background: var(--zinc-50);
+      color: var(--fg2);
+      font-size: 11px;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    }
+
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 4px;
+      min-height: 56px;
+      padding: 14px 24px;
+      border-top: 1px solid var(--border-1);
+      background: #fff;
+      flex-wrap: wrap;
+    }
+
+    .page-report {
+      flex: 1 1 0%;
+      min-width: 180px;
+      color: var(--fg3);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .page-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .page-btn {
+      min-width: 30px;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--fg2);
+      font-size: 12px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      transition: all 150ms var(--ease-standard);
+    }
+
+    .page-btn.arrow {
+      padding: 4px 8px;
+      min-width: 28px;
+    }
+
+    .page-btn:hover:not(.active):not(:disabled) {
+      background: var(--zinc-100);
+      color: var(--fg1);
+    }
+
+    .page-btn.active {
+      background: var(--indigo-600);
+      border-color: var(--indigo-600);
+      color: #fff;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .autocomplete-showcase {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .ac-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .ac-box {
+      min-height: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 40px 6px 10px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      position: relative;
+    }
+
+    .ac-box:focus-within {
+      border-color: var(--indigo-500);
+      box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
+    }
+
+    .ac-box input {
+      min-width: 120px;
+      flex: 1;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--fg1);
+      font-size: 14px;
+    }
+
+    .ac-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .ac-dropdown-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--fg4);
+      font-size: 12px;
+    }
+
+    .ac-panel {
+      margin-top: 8px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+    }
+
+    .ac-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      color: var(--fg2);
+      font-size: 13px;
+    }
+
+    .ac-option:hover,
+    .ac-option.active {
+      background: var(--indigo-50);
+    }
+
+    .ac-option .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      background: var(--indigo-500);
+      flex: none;
+    }
+
+    .ac-option .meta {
+      margin-left: auto;
+      color: var(--fg4);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .gs-dropdown-preview {
+      border: 1px solid var(--border-1);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+    }
+
+    .gs-scopes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-1);
+      background: var(--zinc-50);
+    }
+
+    .gs-scope {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-full);
+      background: #fff;
+      color: var(--fg2);
+      font-size: 11px;
+    }
+
+    .gs-scope.on {
+      background: var(--indigo-600);
+      border-color: var(--indigo-600);
+      color: #fff;
+    }
+
+    .gs-count {
+      padding: 0 5px;
+      border-radius: var(--radius-sm);
+      background: rgb(0 0 0 / 0.06);
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .gs-scope.on .gs-count {
+      background: rgb(255 255 255 / 0.2);
+    }
+
+    .gs-section {
+      padding: 6px 0;
+    }
+
+    .gs-section + .gs-section {
+      border-top: 1px solid var(--border-1);
+    }
+
+    .gs-shead {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 14px;
+      color: var(--fg4);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .gs-shead .more {
+      color: var(--indigo-600);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .gs-result {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 8px 14px;
+      border: 0;
+      background: #fff;
+      text-align: left;
+    }
+
+    .gs-result:hover,
+    .gs-result.hi {
+      background: var(--indigo-50);
+    }
+
+    .gsr-ic {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      background: var(--indigo-100);
+      color: var(--indigo-600);
+      flex: none;
+    }
+
+    .gs-result.cost .gsr-ic {
+      background: #d1fae5;
+      color: var(--emerald-600);
+    }
+
+    .gsr-body {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .gsr-title {
+      color: var(--fg1);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .gsr-title mark {
+      padding: 0 2px;
+      border-radius: var(--radius-sm);
+      background: rgb(79 70 229 / 0.18);
+      color: inherit;
+    }
+
+    .gsr-meta {
+      display: flex;
+      gap: 7px;
+      margin-top: 2px;
+      color: var(--fg3);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .gsr-trail {
+      margin-left: auto;
+      color: var(--fg4);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .gs-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 14px;
+      border-top: 1px solid var(--border-1);
+      background: var(--zinc-50);
+      color: var(--fg3);
+      font-size: 11px;
+    }
+
+    .kbd {
+      padding: 1px 5px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--fg2);
+      font-size: 10px;
+    }
+
+    .spec-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border-2);
+      background: var(--zinc-50);
+      color: var(--fg3);
+      font-size: 12px;
+    }
+
+    .spec-strip code {
+      padding: 2px 6px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--fg2);
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: 11px;
+    }
+
+    .dialog-preview {
+      max-width: 640px;
+      overflow: hidden;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-xl);
+      background: #fff;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .dialog-head {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 18px;
+      background: var(--blue-900);
+      color: #fff;
+    }
+
+    .dialog-head b {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 16px;
+    }
+
+    .dialog-body {
+      display: grid;
+      gap: 14px;
+      padding: 22px;
+    }
+
+    .dialog-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--border-1);
+      background: var(--zinc-50);
+    }
+
+    .dark-sample {
+      padding: 20px;
+      border-radius: var(--radius-xl);
+      background: #09090b;
+      color: #fafafa;
+    }
+
+    .dark-sample .panel {
+      background: #18181b;
+      border-color: #27272a;
+    }
+
+    .dark-sample .nav-item {
+      color: #e4e4e7;
+    }
+
+    .dark-sample .nav-item.active,
+    .dark-sample .nav-item:hover {
+      background: rgb(67 56 202 / 0.32);
+      color: #a5b4fc;
+    }
+
+    .rules {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .rules li {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 1px solid var(--border-1);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--fg2);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .rules i {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      background: var(--indigo-50);
+      color: var(--indigo-700);
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        padding: 24px 16px 48px;
+      }
+
+      .doc-header,
+      .grid.cols-2,
+      .grid.cols-3,
+      .grid.cols-4,
+      .kpi-standard-grid,
+      .kpi-score-grid,
+      .kpi-note-grid,
+      .autocomplete-showcase,
+      .app-frame {
+        grid-template-columns: 1fr;
+      }
+
+      .doc-meta {
+        justify-content: flex-start;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        min-height: auto;
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px;
+      }
+
+      .header-actions {
+        margin-left: 0;
+      }
+
+      .page-header {
+        flex-direction: column;
+      }
+
+      .toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .gsearch {
+        width: 100% !important;
+      }
+
+      .kpi-breakdown,
+      .kpi-breakdown.three {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="doc-header">
+      <div>
+        <p class="eyebrow">IT Portal Design System</p>
+        <h1>프론트엔드 표준 컴포넌트</h1>
+        <p class="subtitle">Nuxt 4 + PrimeVue + Tailwind 기반 현행 화면을 기준으로 정리한 디자인 시스템 미리보기입니다. 업무용 포털답게 밝은 서피스, 촘촘한 정보 밀도, 명확한 표 헤더, 제한된 인디고 액센트를 기본값으로 사용합니다.</p>
+      </div>
+      <div class="doc-meta">
+        <span class="tag indigo">Nuxt 4</span>
+        <span class="tag gray">PrimeVue 4</span>
+        <span class="tag green">Noto Sans KR</span>
+      </div>
+    </header>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Foundation</h2>
+          <p class="section-note">앱 글로벌 CSS와 Tailwind 설정에서 쓰는 핵심 토큰입니다.</p>
+        </div>
+      </div>
+      <div class="panel panel-pad grid cols-4">
+        <div class="token"><div class="swatch" style="background: var(--indigo-600)"></div><b>Primary</b><span>--indigo-600 / #4f46e5</span></div>
+        <div class="token"><div class="swatch" style="background: var(--blue-900)"></div><b>Table Header</b><span>--blue-900 / #1e3a8a</span></div>
+        <div class="token"><div class="swatch" style="background: var(--bg-app)"></div><b>App Background</b><span>--bg-app / #f4f4f5</span></div>
+        <div class="token"><div class="swatch" style="background: var(--zinc-900)"></div><b>Foreground</b><span>--fg1 / #18181b</span></div>
+        <div class="token"><div class="swatch" style="background: var(--accent-project)"></div><b>정보화사업</b><span>project accent</span></div>
+        <div class="token"><div class="swatch" style="background: var(--accent-cost)"></div><b>전산업무비</b><span>cost accent</span></div>
+        <div class="token"><div class="swatch" style="background: var(--accent-audit)"></div><b>IT자체감사</b><span>audit accent</span></div>
+        <div class="token"><div class="swatch" style="background: var(--accent-admin)"></div><b>관리자</b><span>admin crown accent</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Typography</h2>
+          <p class="section-note">표준 글꼴은 NotoSansKR입니다. 업무 화면 안에서는 과한 자간이나 뷰포트 기반 글자 크기를 사용하지 않습니다.</p>
+        </div>
+      </div>
+      <div class="panel panel-pad type-sample">
+        <div class="type-row">
+          <span class="type-label">Page title</span>
+          <strong style="font-size:24px">정보화사업 목록</strong>
+          <span class="type-spec">24px / 700</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">Card title</span>
+          <strong style="font-size:16px">사업 현황</strong>
+          <span class="type-spec">16px / 700</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">Body</span>
+          <span style="font-size:14px; color:var(--fg2)">조회 조건과 테이블 데이터를 빠르게 스캔할 수 있는 기본 본문입니다.</span>
+          <span class="type-spec">14px / 400</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">Meta</span>
+          <span style="font-size:12px; color:var(--fg3)">총 128건 중 1-20 표시</span>
+          <span class="type-spec">12px / 500</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Application Shell</h2>
+          <p class="section-note">상단 글로벌 메뉴, 탭 바, 좌측 사이드바, 페이지 헤더를 한 화면에 배치한 표준 업무형 레이아웃입니다.</p>
+        </div>
+      </div>
+      <div class="app-frame">
+        <aside class="sidebar">
+          <div class="sidebar-brand">
+            <span class="brand-mark"><i class="pi pi-desktop"></i></span>
+            <span>IT Portal</span>
+          </div>
+          <div class="side-section">
+            <div class="side-label">사업·예산</div>
+            <div class="nav-item active"><i class="pi pi-home"></i><span>Home</span></div>
+            <div class="nav-item"><i class="pi pi-wallet"></i><span>전산예산</span><span class="badge indigo">4</span></div>
+            <div class="nav-item"><i class="pi pi-briefcase"></i><span>정보화사업</span></div>
+            <div class="nav-item"><i class="pi pi-users"></i><span>정보화협의체 운영</span></div>
+            <div class="nav-item"><i class="pi pi-send"></i><span>결재 상신</span><span class="tag amber">대기</span></div>
+          </div>
+          <div class="side-section">
+            <div class="side-label">운영</div>
+            <div class="nav-item"><i class="pi pi-shield"></i><span>이력 · 보안</span></div>
+            <div class="nav-item"><i class="pi pi-cog"></i><span>시스템 관리</span></div>
+          </div>
+        </aside>
+        <section class="main">
+          <div class="topbar">
+            <nav class="global-nav">
+              <button>사전협의</button>
+              <button class="active">사업·예산</button>
+              <button>IT·AI CDP</button>
+              <button>IT자체감사</button>
+              <button>전자결재</button>
+            </nav>
+            <div class="header-actions">
+              <div class="search"><i class="pi pi-search"></i><input value="" placeholder="통합검색"></div>
+              <button class="btn icon secondary" title="테마"><i class="pi pi-moon"></i></button>
+              <button class="btn icon secondary" title="알림"><i class="pi pi-bell"></i></button>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab active"><span>사업 목록</span><i class="pi pi-times"></i></div>
+            <div class="tab"><span>예산 작성</span><i class="pi pi-times"></i></div>
+            <div class="tab"><span>결재 대기</span><i class="pi pi-times"></i></div>
+          </div>
+          <div class="content">
+            <div class="page-header">
+              <div>
+                <h3>정보화사업 목록</h3>
+                <p>사업 현황을 조회하고 신규 사업을 등록합니다.</p>
+              </div>
+              <div class="row">
+                <button class="btn secondary"><i class="pi pi-download"></i>엑셀</button>
+                <button class="btn primary"><i class="pi pi-plus"></i>사업등록</button>
+              </div>
+            </div>
+            <div class="grid cols-4">
+              <div class="kpi-card summary">
+                <div class="kpi-body">
+                  <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-chart-bar"></i></span><span class="kpi-label">전체 예산 합계</span><span class="kpi-count">128건</span></div>
+                  <div class="kpi-value">24,830 <small>백만원</small></div>
+                  <div class="kpi-breakdown three">
+                    <div class="mini-stat"><span class="rail"></span><div><span>정보화사업</span><b>18,420</b></div></div>
+                    <div class="mini-stat" style="--rail:var(--emerald-500)"><span class="rail"></span><div><span>전산업무비</span><b>5,120</b></div></div>
+                    <div class="mini-stat" style="--rail:var(--amber-500)"><span class="rail"></span><div><span>경상사업</span><b>1,290</b></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="kpi-card" style="--kpi-accent:var(--indigo-600); --kpi-tint:var(--indigo-50); --kpi-glow:var(--indigo-50)">
+                <div class="kpi-body">
+                  <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-desktop"></i></span><span class="kpi-label">정보화사업</span><span class="kpi-count">64건</span></div>
+                  <div class="kpi-value">18,420 <small>백만원</small></div>
+                  <div class="kpi-breakdown">
+                    <div class="mini-stat"><span class="rail"></span><div><span>자본예산</span><b>12,300</b></div></div>
+                    <div class="mini-stat" style="--rail:var(--sky-500)"><span class="rail"></span><div><span>일반관리비</span><b>6,120</b></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="kpi-card" style="--kpi-accent:var(--emerald-600); --kpi-tint:var(--emerald-50); --kpi-glow:var(--emerald-50)">
+                <div class="kpi-body">
+                  <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-wallet"></i></span><span class="kpi-label">전산업무비</span><span class="kpi-count">52건</span></div>
+                  <div class="kpi-value">5,120 <small>백만원</small></div>
+                  <div class="kpi-breakdown">
+                    <div class="mini-stat" style="--rail:var(--emerald-500)"><span class="rail"></span><div><span>전산용역비</span><b>3,880</b></div></div>
+                    <div class="mini-stat" style="--rail:var(--violet-500)"><span class="rail"></span><div><span>전산제비</span><b>1,240</b></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="kpi-card" style="--kpi-accent:var(--amber-600); --kpi-tint:var(--amber-50); --kpi-glow:var(--amber-50)">
+                <div class="kpi-body">
+                  <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-briefcase"></i></span><span class="kpi-label">경상사업</span><span class="kpi-count">12건</span></div>
+                  <div class="kpi-value">1,290 <small>백만원</small></div>
+                  <div class="kpi-breakdown">
+                    <div class="mini-stat" style="--rail:var(--amber-500)"><span class="rail"></span><div><span>자본예산</span><b>720</b></div></div>
+                    <div class="mini-stat" style="--rail:var(--rose-500)"><span class="rail"></span><div><span>일반관리비</span><b>570</b></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>KPI Cards</h2>
+          <p class="section-note">프로젝트에서 쓰는 KPI 표준입니다. `BudgetSummaryCards.vue`의 예산 카드와 `admin/dashboard.vue`의 운영 통계 카드를 기준으로 정리했습니다.</p>
+        </div>
+      </div>
+
+      <div class="kpi-standard-grid">
+        <div class="kpi-card total">
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-icon"><i class="pi pi-chart-bar"></i></span>
+              <span class="kpi-label">전체 예산 합계</span>
+              <span class="kpi-count">128건</span>
+            </div>
+            <div class="kpi-value">24,830 <small>백만원</small></div>
+            <div class="kpi-breakdown three">
+              <div class="mini-stat"><span class="rail"></span><div><span>정보화사업</span><b>18,420</b></div></div>
+              <div class="mini-stat" style="--rail:var(--emerald-500)"><span class="rail"></span><div><span>전산업무비</span><b>5,120</b></div></div>
+              <div class="mini-stat" style="--rail:var(--amber-500)"><span class="rail"></span><div><span>경상사업</span><b>1,290</b></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent:var(--indigo-600); --kpi-tint:var(--indigo-50); --kpi-glow:var(--indigo-50)">
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-icon"><i class="pi pi-desktop"></i></span>
+              <span class="kpi-label">정보화사업</span>
+              <span class="kpi-count">64건</span>
+            </div>
+            <div class="kpi-value">18,420 <small>백만원</small></div>
+            <div class="kpi-breakdown">
+              <div class="mini-stat"><span class="rail"></span><div><span>자본예산</span><b>12,300</b></div></div>
+              <div class="mini-stat" style="--rail:var(--sky-500)"><span class="rail"></span><div><span>일반관리비</span><b>6,120</b></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent:var(--emerald-600); --kpi-tint:var(--emerald-50); --kpi-glow:var(--emerald-50)">
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-icon"><i class="pi pi-wallet"></i></span>
+              <span class="kpi-label">전산업무비</span>
+              <span class="kpi-count">52건</span>
+            </div>
+            <div class="kpi-value">5,120 <small>백만원</small></div>
+            <div class="kpi-breakdown">
+              <div class="mini-stat" style="--rail:var(--emerald-500)"><span class="rail"></span><div><span>전산용역비</span><b>3,880</b></div></div>
+              <div class="mini-stat" style="--rail:var(--violet-500)"><span class="rail"></span><div><span>전산제비</span><b>1,240</b></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-card" style="--kpi-accent:var(--amber-600); --kpi-tint:var(--amber-50); --kpi-glow:var(--amber-50)">
+          <div class="kpi-body">
+            <div class="kpi-head">
+              <span class="kpi-icon"><i class="pi pi-briefcase"></i></span>
+              <span class="kpi-label">경상사업</span>
+              <span class="kpi-count">12건</span>
+            </div>
+            <div class="kpi-value">1,290 <small>백만원</small></div>
+            <div class="kpi-breakdown">
+              <div class="mini-stat" style="--rail:var(--amber-500)"><span class="rail"></span><div><span>자본예산</span><b>720</b></div></div>
+              <div class="mini-stat" style="--rail:var(--rose-500)"><span class="rail"></span><div><span>일반관리비</span><b>570</b></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-head" style="margin-top:18px">
+        <div>
+          <h2>Operational Stats</h2>
+          <p class="section-note">관리자 대시보드처럼 목표 대비 진행률이나 구성 비율이 있는 지표는 하단 progress + legend를 사용합니다.</p>
+        </div>
+      </div>
+      <div class="grid cols-3">
+        <div class="kpi-card" style="--kpi-accent:#2563eb; --kpi-tint:#dbeafe; --kpi-glow:#dbeafe">
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-users"></i></span><span class="kpi-label">전체 사용자</span></div>
+            <div class="kpi-value">3,000 <small>명 · 등록 사용자</small></div>
+            <div class="kpi-progress"><span style="width:100%"></span></div>
+            <div class="kpi-legend"><span><i></i>전체 현황</span></div>
+          </div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent:var(--emerald-600); --kpi-tint:var(--emerald-50); --kpi-glow:var(--emerald-50)">
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-sign-in"></i></span><span class="kpi-label">오늘 로그인</span></div>
+            <div class="kpi-value">846 <small>건 · 금일 누적</small></div>
+            <div class="kpi-progress"><span style="width:28%"></span></div>
+            <div class="kpi-legend"><span><i></i>전체 사용자 대비 28%</span></div>
+          </div>
+        </div>
+        <div class="kpi-card" style="--kpi-accent:var(--amber-600); --kpi-tint:var(--amber-50); --kpi-glow:var(--amber-50)">
+          <div class="kpi-body">
+            <div class="kpi-head"><span class="kpi-icon"><i class="pi pi-chart-line"></i></span><span class="kpi-label">최근 30일 로그인 추이</span></div>
+            <div class="kpi-value">30 <small>일 · 차트 참조</small></div>
+            <div class="kpi-progress"><span style="width:100%"></span></div>
+            <div class="kpi-legend"><span><i></i>로그인 성공 기준</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-pad" style="margin-top:16px">
+        <div class="section-head" style="margin-bottom:12px">
+          <div>
+            <h2>Score Summary</h2>
+            <p class="section-note">협의 평가 평균점수처럼 작고 반복되는 지표는 카드형 KPI 대신 compact score row를 사용합니다.</p>
+          </div>
+        </div>
+        <div class="kpi-score-grid">
+          <div class="kpi-score"><span>사업 필요성</span><strong>4.6</strong></div>
+          <div class="kpi-score"><span>예산 타당성</span><strong>3.8</strong></div>
+          <div class="kpi-score"><span>추진 시급성</span><strong>4.1</strong></div>
+          <div class="kpi-score"><span>기대 효과</span><strong>4.4</strong></div>
+          <div class="kpi-score"><span>리스크 관리</span><strong>3.5</strong></div>
+          <div class="kpi-score"><span>종합 의견</span><strong>4.0</strong></div>
+        </div>
+      </div>
+
+      <div class="kpi-note-grid">
+        <div class="kpi-note"><b>예산 KPI</b>4열 그리드, `rounded-2xl`, `p-6`, 오른쪽 상단 blur glow, 메인 값 `text-3xl` 계열을 사용합니다.</div>
+        <div class="kpi-note"><b>운영 KPI</b>작은 아이콘 배지, 큰 tabular 숫자, 6px progress bar, 11px legend를 한 세트로 둡니다.</div>
+        <div class="kpi-note"><b>색상 규칙</b>전체 합계는 인디고 gradient, 정보화사업은 indigo, 전산업무비는 emerald, 경상사업은 amber를 기본으로 합니다.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Buttons & Controls</h2>
+          <p class="section-note">주요 CTA는 인디고 Primary를 사용하고, 페이지당 1개를 기본으로 합니다. 반복 액션은 Secondary 또는 아이콘 버튼으로 낮춥니다.</p>
+        </div>
+      </div>
+      <div class="panel panel-pad grid cols-2">
+        <div class="stack">
+          <div class="row">
+            <button class="btn primary"><i class="pi pi-plus"></i>등록</button>
+            <button class="btn secondary"><i class="pi pi-save"></i>저장</button>
+            <button class="btn text"><i class="pi pi-refresh"></i>새로고침</button>
+            <button class="btn danger"><i class="pi pi-trash"></i>삭제</button>
+            <button class="btn primary" disabled>처리 중</button>
+          </div>
+          <div class="row">
+            <button class="btn icon secondary square" title="검색"><i class="pi pi-search"></i></button>
+            <button class="btn icon secondary square" title="다운로드"><i class="pi pi-download"></i></button>
+            <button class="btn icon secondary" title="알림"><i class="pi pi-bell"></i></button>
+            <button class="btn icon secondary" title="로그아웃"><i class="pi pi-sign-out"></i></button>
+            <button class="btn sm secondary"><i class="pi pi-filter"></i>필터</button>
+          </div>
+          <div class="row">
+            <span class="tag indigo">기안 진행</span>
+            <span class="tag green">승인</span>
+            <span class="tag amber">검토 중</span>
+            <span class="tag red">반려</span>
+            <span class="tag gray">임시저장</span>
+          </div>
+        </div>
+        <div class="grid cols-2">
+          <div class="field">
+            <label>사업명</label>
+            <input class="input" value="차세대 IT 포털 구축">
+            <small>기본 입력 필드</small>
+          </div>
+          <div class="field">
+            <label>상태</label>
+            <select class="select"><option>검토 중</option><option>승인</option></select>
+            <small>브라우저 기본 select</small>
+          </div>
+          <div class="field">
+            <label>오류 상태</label>
+            <input class="input error" value="필수 값 누락">
+            <small>에러는 rose 계열로 제한</small>
+          </div>
+          <div class="field">
+            <label>권한</label>
+            <div class="row" style="height:38px">
+              <span class="check checked"><span class="box">✓</span>조회</span>
+              <span class="check"><span class="box"></span>수정</span>
+              <span class="switch on"></span>
+            </div>
+            <small>체크박스와 토글</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Table Card</h2>
+          <p class="section-note">TableCard + StyledDataTable 표준입니다. 셀 선택/드래그/복사, 페이지수 Select, TableSearchInput, 필터 표시, blue-900 테이블 헤더, 표준 푸터 페이지네이션을 포함합니다.</p>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-card-head">
+          <div class="table-title">
+            <span class="icon-box"><i class="pi pi-briefcase"></i></span>
+            <div>
+              <h3>정보화사업</h3>
+              <p>사업 목록 및 예산 현황</p>
+            </div>
+            <span class="tag indigo">128건</span>
+          </div>
+          <div class="row">
+            <button class="btn sm secondary"><i class="pi pi-download"></i>엑셀</button>
+            <button class="btn sm primary"><i class="pi pi-plus"></i>추가</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <select class="rows-select" aria-label="페이지당 표시 건수">
+            <option>10건씩</option>
+            <option selected>50건씩</option>
+            <option>100건씩</option>
+            <option>200건씩</option>
+          </select>
+          <div class="gsearch is-focus" style="width:24rem"><i class="pi pi-search"></i><input value="포털" placeholder="사업명, 부서, 담당자 검색"><button class="gs-clear" title="지우기"><i class="pi pi-times"></i></button></div>
+          <select class="select" style="width:150px"><option>전체 상태</option><option>검토 중</option></select>
+          <div class="toolbar-spacer"></div>
+          <button class="btn secondary"><i class="pi pi-filter"></i>조건</button>
+          <button class="btn icon secondary square" title="새로고침"><i class="pi pi-refresh"></i></button>
+        </div>
+        <div class="active-filters">
+          <span>적용된 필터:</span>
+          <span class="tag indigo">검색: 포털</span>
+          <span class="tag amber">상태: 검토 중</span>
+          <span>128건</span>
+        </div>
+        <div class="copy-hint">
+          <span class="tag indigo">표준 기능</span>
+          <span>셀 클릭으로 단일 선택, 드래그 또는 Shift+클릭으로 범위 선택</span>
+          <span><span class="kbd">Ctrl/Cmd</span> + <span class="kbd">C</span> TSV 복사</span>
+          <span>입력/버튼/체크박스 위에서는 선택 시작 제외</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:80px">연도</th>
+              <th>사업명</th>
+              <th style="width:140px">담당부서</th>
+              <th style="width:120px">예산</th>
+              <th style="width:120px">상태</th>
+              <th style="width:110px">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026</td>
+              <td class="cell-anchor cell-selected">차세대 IT 포털 구축</td>
+              <td class="cell-selected">정보기술부</td>
+              <td class="cell-selected">2,400</td>
+              <td><span class="tag green">승인</span></td>
+              <td><button class="btn sm secondary">상세</button></td>
+            </tr>
+            <tr>
+              <td>2026</td>
+              <td class="cell-selected">AI 문서 검토 자동화</td>
+              <td class="cell-selected">디지털전략팀</td>
+              <td class="cell-selected">880</td>
+              <td><span class="tag amber">검토 중</span></td>
+              <td><button class="btn sm secondary">상세</button></td>
+            </tr>
+            <tr class="deleted">
+              <td>2025</td>
+              <td>노후 장비 교체</td>
+              <td>인프라운영팀</td>
+              <td>320</td>
+              <td><span class="tag gray">삭제 표시</span></td>
+              <td><button class="btn sm secondary">복구</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <div class="page-report">총 128건 중 1-50 표시</div>
+          <div class="page-group" aria-label="페이지네이션">
+            <button class="page-btn arrow" disabled title="이전"><i class="pi pi-chevron-left"></i></button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn arrow" title="다음"><i class="pi pi-chevron-right"></i></button>
+          </div>
+        </div>
+        <div class="spec-strip">
+          <span>StyledDataTable 기본값</span>
+          <code>paginator-template="CurrentPageReport PrevPageLink PageLinks NextPageLink"</code>
+          <code>current-page-report-template="총 {totalRecords}건 중 {first}-{last} 표시"</code>
+          <code>:rows-per-page-options="[50, 100, 200]"</code>
+          <code>cellSelectable=true</code>
+          <code>:cell-selectable="false" // 편집 모드 opt-out</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Autocomplete & Search Results</h2>
+          <p class="section-note">필터 Drawer의 다중 AutoComplete와 상단 통합검색 결과 드롭다운 표준입니다. 다중 선택은 칩, 드롭다운 옵션은 hover/active 배경을 인디고 50으로 맞춥니다.</p>
+        </div>
+      </div>
+      <div class="panel panel-pad autocomplete-showcase">
+        <div class="stack">
+          <div class="ac-field">
+            <label class="type-label">다중 선택 AutoComplete</label>
+            <div class="ac-box">
+              <span class="ac-chip">정보기술부 <i class="pi pi-times"></i></span>
+              <span class="ac-chip">디지털전략팀 <i class="pi pi-times"></i></span>
+              <input value="" placeholder="담당부서 선택 (다중)">
+              <i class="pi pi-chevron-down ac-dropdown-icon"></i>
+            </div>
+            <div class="ac-panel">
+              <div class="ac-option active"><span class="dot"></span><span>정보기술부</span><span class="meta">IT본부</span></div>
+              <div class="ac-option"><span class="dot" style="background:var(--emerald-500)"></span><span>디지털전략팀</span><span class="meta">전략</span></div>
+              <div class="ac-option"><span class="dot" style="background:var(--amber-500)"></span><span>인프라운영팀</span><span class="meta">운영</span></div>
+            </div>
+          </div>
+          <div class="ac-field">
+            <label class="type-label">테이블 셀 AutoComplete + 조회 버튼</label>
+            <div class="row" style="gap:6px">
+              <div class="ac-box" style="flex:1; min-width:220px">
+                <input value="홍길동 / 123456" placeholder="담당자 검색">
+                <i class="pi pi-chevron-down ac-dropdown-icon"></i>
+              </div>
+              <button class="btn icon secondary square" title="직원조회"><i class="pi pi-search"></i></button>
+            </div>
+          </div>
+        </div>
+        <div class="gs-dropdown-preview">
+          <div class="gs-scopes">
+            <button class="gs-scope on">전체 <span class="gs-count">8</span></button>
+            <button class="gs-scope">사업 <span class="gs-count">5</span></button>
+            <button class="gs-scope">업무비 <span class="gs-count">3</span></button>
+          </div>
+          <div class="gs-section">
+            <div class="gs-shead"><span>정보화사업 · 2건</span><span class="more">전체보기</span></div>
+            <button class="gs-result proj hi">
+              <div class="gsr-ic"><i class="pi pi-briefcase"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title">차세대 <mark>포털</mark> 구축</div>
+                <div class="gsr-meta"><span>PRJ-2026-001</span><span>·</span><span>정보기술부</span><span>·</span><span class="tag green">승인</span></div>
+              </div>
+              <div class="gsr-trail">Enter 열기</div>
+            </button>
+            <button class="gs-result proj">
+              <div class="gsr-ic"><i class="pi pi-briefcase"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title">AI 문서 검토 자동화</div>
+                <div class="gsr-meta"><span>PRJ-2026-017</span><span>·</span><span>디지털전략팀</span><span>·</span><span class="tag amber">검토 중</span></div>
+              </div>
+            </button>
+          </div>
+          <div class="gs-section">
+            <div class="gs-shead"><span>전산업무비 · 1건</span><span class="more">전체보기</span></div>
+            <button class="gs-result cost">
+              <div class="gsr-ic"><i class="pi pi-wallet"></i></div>
+              <div class="gsr-body">
+                <div class="gsr-title">업무용 SW 라이선스</div>
+                <div class="gsr-meta"><span>COST-2026-024</span><span>·</span><span>인프라운영팀</span></div>
+              </div>
+            </button>
+          </div>
+          <div class="gs-foot">
+            <span><span class="kbd">Enter</span> 열기</span>
+            <span><span class="kbd">Esc</span> 닫기</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Dialog</h2>
+          <p class="section-note">Dialog는 blue-900 헤더, 별도 닫기 버튼, 하단 액션 영역을 표준으로 사용합니다.</p>
+        </div>
+      </div>
+      <div class="panel panel-pad">
+        <div class="dialog-preview">
+          <div class="dialog-head">
+            <b>사업 상세 정보</b>
+            <button class="btn icon text" style="color:#fff" title="닫기"><i class="pi pi-times"></i></button>
+          </div>
+          <div class="dialog-body">
+            <div class="grid cols-2">
+              <div class="field"><label>사업명</label><input class="input" value="차세대 IT 포털 구축"></div>
+              <div class="field"><label>담당부서</label><input class="input" value="정보기술부"></div>
+            </div>
+            <div class="field"><label>검토 의견</label><textarea class="textarea">예산 범위와 추진 일정 확인이 필요합니다.</textarea></div>
+          </div>
+          <div class="dialog-foot">
+            <button class="btn secondary">취소</button>
+            <button class="btn primary">저장</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Dark Mode Sample</h2>
+          <p class="section-note">다크 모드는 서피스와 보더만 낮추고, 업무 화면의 구조와 정보 밀도는 유지합니다.</p>
+        </div>
+      </div>
+      <div class="dark-sample">
+        <div class="panel panel-pad">
+          <div class="row">
+            <div class="nav-item active"><i class="pi pi-chart-line"></i><span>대시보드</span></div>
+            <div class="nav-item"><i class="pi pi-database"></i><span>데이터 관리</span></div>
+            <button class="btn primary"><i class="pi pi-plus"></i>신규 등록</button>
+            <span class="tag indigo">관리자</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Usage Rules</h2>
+          <p class="section-note">새 화면과 컴포넌트를 만들 때 지켜야 할 운영 규칙입니다.</p>
+        </div>
+      </div>
+      <ul class="rules">
+        <li><i class="pi pi-check"></i><span>페이지 최상단은 PageHeader 패턴을 사용하고, 우측 액션은 2-3개 이내로 유지합니다.</span></li>
+        <li><i class="pi pi-check"></i><span>목록 화면은 TableCard와 StyledDataTable을 우선 사용합니다. 테이블 헤더는 blue-900, 행 hover는 zinc-50입니다.</span></li>
+        <li><i class="pi pi-check"></i><span>StyledDataTable은 기본적으로 셀 선택/드래그/TSV 복사를 지원합니다. 편집 화면처럼 충돌 가능성이 있으면 :cell-selectable="false"로 끕니다.</span></li>
+        <li><i class="pi pi-check"></i><span>Primary 버튼은 사용자의 다음 주요 행동 하나에만 씁니다. 보조 기능은 Secondary, 반복 도구는 아이콘 버튼으로 둡니다.</span></li>
+        <li><i class="pi pi-check"></i><span>도메인 색상은 KPI, 상태, 아이콘 박스 같은 작은 면적에만 씁니다. 전체 화면을 한 가지 색으로 덮지 않습니다.</span></li>
+        <li><i class="pi pi-check"></i><span>다이얼로그는 AppDialogHeader 패턴을 사용하고, 헤더 배경은 blue-900으로 통일합니다.</span></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

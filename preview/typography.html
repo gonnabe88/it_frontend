@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Typography — IT Portal</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin:0; padding:40px; background:#f4f4f5; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { font-size:12px; font-weight:500; color:var(--fg3); letter-spacing:0.05em; text-transform:uppercase; margin:0 0 8px; }
+  .title   { font-size:28px; font-weight:700; color:var(--fg1); margin:0 0 4px; letter-spacing:-0.01em; }
+  .subtitle{ font-size:14px; color:var(--fg3); margin:0 0 32px; max-width:720px; line-height:1.6; }
+
+  .panel { background:#fff; border:1px solid var(--border-1); border-radius:12px; padding:24px 28px; margin-bottom:16px; }
+  .row { display:flex; align-items:baseline; gap:24px; padding:12px 0; border-bottom:1px dashed var(--border-1); }
+  .row:last-child { border-bottom: none; }
+  .meta { flex:none; width:200px; font-family:var(--font-mono); font-size:11px; color:var(--fg3); line-height:1.6; }
+  .meta b { display:block; color:var(--fg1); font-family:var(--font-sans); font-size:13px; font-weight:600; margin-bottom:2px; }
+  .sample { flex:1; color:var(--fg1); }
+
+  .weights { display:grid; grid-template-columns:repeat(5, 1fr); gap:16px; }
+  .weights .w { padding:20px; border:1px solid var(--border-1); border-radius:10px; background:#fafafa; text-align:center; }
+  .weights .w .big { font-size:40px; color:var(--fg1); margin:0 0 8px; line-height:1; }
+  .weights .w .lbl { font-family:var(--font-mono); font-size:11px; color:var(--fg3); }
+
+  h3 { font-size:13px; font-weight:600; color:var(--fg2); text-transform:uppercase; letter-spacing:0.05em; margin:32px 0 14px; }
+  h3:first-of-type { margin-top: 0; }
+
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .pair .panel { margin-bottom:0; }
+  .kpi-num { font-size:30px; font-weight:700; color:var(--fg1); letter-spacing:-0.02em; line-height:1.1; }
+  .kpi-lbl { font-size:14px; color:var(--fg3); margin-bottom:4px; }
+
+  code { background:#f4f4f5; padding:2px 6px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">타이포그래피 · Type</p>
+  <h1 class="title">Typography</h1>
+  <p class="subtitle">One family — <b>Noto Sans KR</b> — across the product, at five registered weights. Sizes follow Tailwind defaults; Korean copy sets best at 1.5 line-height for body and 1.2 for tightly-stacked numbers. The family handles Korean, Latin, and CJK numerics without fallback.</p>
+
+  <h3>Weights · 5 registered cuts</h3>
+  <div class="weights">
+    <div class="w"><div class="big" style="font-weight:100;">정보</div><div class="lbl">Thin · 100</div></div>
+    <div class="w"><div class="big" style="font-weight:300;">정보</div><div class="lbl">Light · 300</div></div>
+    <div class="w"><div class="big" style="font-weight:400;">정보</div><div class="lbl">Regular · 400</div></div>
+    <div class="w"><div class="big" style="font-weight:500;">정보</div><div class="lbl">Medium · 500</div></div>
+    <div class="w"><div class="big" style="font-weight:700;">정보</div><div class="lbl">Bold · 700</div></div>
+  </div>
+
+  <h3>Type scale</h3>
+  <div class="panel">
+    <div class="row"><div class="meta"><b>Display · 36/1.2</b>text-4xl · bold<br/>zinc-900</div><div class="sample" style="font-size:36px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;">정보화사업 관리 포털</div></div>
+    <div class="row"><div class="meta"><b>H1 · 30/1.2</b>text-3xl · bold<br/>zinc-900</div><div class="sample" style="font-size:30px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;">진행 중인 사업 현황</div></div>
+    <div class="row"><div class="meta"><b>H2 · 24/1.25</b>text-2xl · bold<br/>zinc-900</div><div class="sample" style="font-size:24px;font-weight:700;line-height:1.25;">2026년도 예산 작성</div></div>
+    <div class="row"><div class="meta"><b>H3 · 20/1.35</b>text-xl · bold<br/>zinc-900</div><div class="sample" style="font-size:20px;font-weight:700;line-height:1.35;">부서별 예산 집행 현황</div></div>
+    <div class="row"><div class="meta"><b>H4 · 18/1.4</b>text-lg · semibold<br/>zinc-900</div><div class="sample" style="font-size:18px;font-weight:600;line-height:1.4;">결재 대기 건수</div></div>
+    <div class="row"><div class="meta"><b>Body · 16/1.5</b>text-base · regular<br/>zinc-700</div><div class="sample" style="font-size:16px;font-weight:400;line-height:1.5;color:var(--fg2);">IT기획부에서 전사 정보화사업의 예산 작성부터 실행, 성과평가까지 전 과정을 관리하는 통합 포털입니다. 약 3천여 명의 임직원이 이용하고 있습니다.</div></div>
+    <div class="row"><div class="meta"><b>Body Sm · 14/1.5</b>text-sm · regular<br/>zinc-600</div><div class="sample" style="font-size:14px;font-weight:400;line-height:1.5;color:var(--fg2);">데이터 조회 중입니다. 잠시만 기다려주세요.</div></div>
+    <div class="row"><div class="meta"><b>Caption · 12/1.5</b>text-xs · regular<br/>zinc-500</div><div class="sample" style="font-size:12px;font-weight:400;line-height:1.5;color:var(--fg3);">전월 대비 2건 증가 · 2026.04.17 기준</div></div>
+    <div class="row"><div class="meta"><b>Mono</b>ui-monospace<br/>form IDs, codes</div><div class="sample" style="font-family:var(--font-mono);font-size:13px;color:var(--fg2);">PROJ-2026-0042 · BUD-A-001-01</div></div>
+  </div>
+
+  <h3>Applied patterns</h3>
+  <div class="pair">
+    <div class="panel">
+      <div class="kpi-lbl">진행중인 사업</div>
+      <div class="kpi-num">12</div>
+      <div style="font-size:12px;color:var(--fg3);margin-top:6px;">전월 대비 <span style="color:#16a34a;font-weight:500;">+2건 증가</span></div>
+      <div style="margin-top:18px;border-top:1px dashed var(--border-1);padding-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--fg3);">KPI Card · label 14 zinc-500 · number 30 bold zinc-900</div>
+    </div>
+    <div class="panel">
+      <div style="font-size:12px;color:var(--fg3);margin-bottom:4px;">사업 단계</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+        <span style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;background:var(--tag-yellow-bg);color:var(--tag-yellow-fg);">예산 작성</span>
+        <span style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;background:var(--tag-indigo-bg);color:var(--tag-indigo-fg);">사전 협의</span>
+        <span style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;background:var(--tag-blue-bg);color:var(--tag-blue-fg);">사업 추진</span>
+        <span style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:500;background:var(--tag-green-bg);color:var(--tag-green-fg);">완료</span>
+      </div>
+      <div style="margin-top:18px;border-top:1px dashed var(--border-1);padding-top:10px;font-family:var(--font-mono);font-size:11px;color:var(--fg3);">Tag · 12 medium · 4×10 padding · radius 6</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

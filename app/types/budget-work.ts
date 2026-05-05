@@ -90,6 +90,8 @@ export interface ProjectSummaryCategory {
     ioePrefix: string
     /** 비목명 */
     cdNm: string
+    /** 코드 설명 (예: 전산임차료 편성 비율) */
+    cdDes?: string
     /** 편성률 (0~100) */
     dupRt: number
 }

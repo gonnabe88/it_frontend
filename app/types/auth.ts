@@ -61,7 +61,7 @@ export type AthId = typeof ROLE[keyof typeof ROLE];
 /**
  * [User] 인증된 사용자 정보 인터페이스
  * 로그인 후 Pinia 스토어(stores/auth.ts)의 user 상태로 저장되며,
- * localStorage에도 직렬화(JSON)되어 세션 복원에 사용됩니다.
+ * useCookie로 직렬화되어 SSR 및 클라이언트 세션 복원에 사용됩니다.
  *
  * 최소한의 필드만 포함하여 인증 목적으로만 사용합니다.
  * 조직도 등 상세 사용자 정보가 필요한 경우 useOrganization의 OrgUser를 사용하세요.

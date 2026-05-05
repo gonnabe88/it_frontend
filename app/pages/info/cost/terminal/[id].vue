@@ -47,33 +47,36 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
 </script>
 
 <template>
-    <div v-if="cost" class="space-y-8 pb-20 max-w-[1440px] mx-auto p-4">
-        <!-- 헤더 -->
-        <div class="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-6">
-            <div class="flex items-center gap-4">
-                <Button icon="pi pi-arrow-left" text rounded @click="router.back()" />
-                <div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <Tag value="금융정보단말기" severity="info" rounded />
-                        <span class="text-sm font-mono text-zinc-500">#{{ cost.itMngcNo }}</span>
+    <div>
+        <div v-if="cost" class="space-y-8 pb-20 max-w-[1440px] mx-auto p-4">
+            <!-- 헤더 -->
+            <PageHeader>
+                <template #leading>
+                    <Button icon="pi pi-arrow-left" text rounded @click="router.back()" />
+                </template>
+                <template #title>
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <Tag value="금융정보단말기" severity="info" rounded />
+                            <span class="text-sm font-mono text-zinc-500">#{{ cost.itMngcNo }}</span>
+                        </div>
+                        <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ cost.cttNm }}</h1>
                     </div>
-                    <h1 class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">{{ cost.cttNm }}</h1>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.back()" />
-                <Button label="삭제" icon="pi pi-trash" severity="danger" outlined @click="handleDelete" />
-                <Button label="수정" icon="pi pi-pencil" @click="terminalDialogVisible = true" />
-            </div>
-        </div>
+                </template>
+                <template #actions>
+                    <Button label="돌아가기" icon="pi pi-arrow-left" severity="secondary" outlined @click="router.back()" />
+                    <Button label="삭제" icon="pi pi-trash" severity="danger" outlined @click="handleDelete" />
+                    <Button label="수정" icon="pi pi-pencil" @click="terminalDialogVisible = true" />
+                </template>
+            </PageHeader>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- 기본 정보 & 단말기 목록 -->
             <div class="lg:col-span-2 space-y-8">
                 <!-- 마스터 정보 -->
-                <section class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                <section class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
-                        <i class="pi pi-info-circle text-blue-500"/> 기본 계약 정보
+                        <i class="pi pi-info-circle text-indigo-500"/> 기본 계약 정보
                     </h2>
                     <div class="grid grid-cols-2 gap-y-6 gap-x-12">
                         <div class="space-y-1">
@@ -96,7 +99,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 </section>
 
                 <!-- 단말기 상세 목록 -->
-                <section class="bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                <section class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
                         <i class="pi pi-list text-indigo-500"/> 단말기 상세 내역 ({{ cost.terminals?.length || 0 }}대)
                     </h2>
@@ -120,7 +123,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                     <div class="space-y-4">
                         <div class="space-y-2">
                             <label class="text-zinc-400 text-sm">총 소요예산 (원)</label>
-                            <p class="text-3xl font-black text-blue-400">
+                            <p class="text-3xl font-black text-indigo-400">
                                 {{ formatCurrency(cost.itMngcBg) }}
                             </p>
                         </div>
@@ -137,13 +140,14 @@ const formatCurrency = (value: number | undefined, currency: string = 'KRW') => 
                 </div>
             </div>
         </div>
-    </div>
+        </div>
 
-    <!-- 단말기 상세목록 수정 다이얼로그 -->
-    <TerminalFormDialog
-        v-if="cost"
-        v-model:visible="terminalDialogVisible"
-        :it-mngc-no="cost.itMngcNo"
-        @saved="refreshCost"
-    />
+        <!-- 단말기 상세목록 수정 다이얼로그 -->
+        <TerminalFormDialog
+            v-if="cost"
+            v-model:visible="terminalDialogVisible"
+            :it-mngc-no="cost.itMngcNo"
+            @saved="refreshCost"
+        />
+    </div>
 </template>

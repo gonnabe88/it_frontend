@@ -103,29 +103,13 @@ const handleDelete = async () => {
     <div class="space-y-6">
 
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-3">
-                <!-- 예산 표시 단위 선택 -->
+        <PageHeader :title="title">
+            <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" />
-                <!-- 목록으로 이동 -->
-                <Button
-                    label="목록"
-                    icon="pi pi-list"
-                    severity="secondary"
-                    outlined
-                    @click="router.back()"
-                />
-                <!-- 삭제 버튼 -->
-                <Button
-                    label="삭제"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    :loading="deleting"
-                    @click="handleDelete"
-                />
-            </div>
-        </div>
+                <Button label="목록" icon="pi pi-list" severity="secondary" outlined @click="router.back()" />
+                <Button label="삭제" icon="pi pi-trash" severity="danger" :loading="deleting" @click="handleDelete" />
+            </template>
+        </PageHeader>
 
         <!-- 로딩 -->
         <div v-if="pending" class="flex items-center justify-center py-16 text-zinc-500">

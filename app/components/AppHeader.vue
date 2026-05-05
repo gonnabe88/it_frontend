@@ -3,14 +3,13 @@
 [components/AppHeader.vue] 상단 헤더 네비게이션 컴포넌트
 ================================================================================
 애플리케이션 상단에 고정된 헤더 바를 렌더링합니다.
-MegaMenu 기반의 주요 메뉴(사업·예산, IT자체감사, 전자결재 등)와
-사용자 정보 드롭다운(프로필, 로그아웃)을 표시합니다.
+각 메뉴 클릭 시 해당 경로로 이동하며 드롭다운 없이 동작합니다.
 
 [메뉴 구성]
-  - 사업·예산   : 정보화사업, 예산관리, 협의회 운영, 계약 관리
-  - IT자체감사  : IT 감사 관련 기능
-  - 전자결재    : 결재 관련 기능
-  - 가이드      : 시스템 사용 가이드
+  - 사업·예산   : /info
+  - IT·AI CDP   : /cdp
+  - IT자체감사  : /audit
+  - 전자결재    : /approval
   - 관리자      : 시스템관리자(ITPAD001) 전용 메뉴
 
 [표시 조건]
@@ -19,142 +18,40 @@ MegaMenu 기반의 주요 메뉴(사업·예산, IT자체감사, 전자결재 �
 -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-import logo from '@/assets/logo.png';
 import IconCrown from '~/components/icons/IconCrown.vue';
+import GlobalSearchBar from '~/components/GlobalSearchBar.vue';
 import { useAuth } from '~/composables/useAuth';
-import { useGlobalSearch, type SearchResult } from '~/composables/useGlobalSearch';
 import { ROLE } from '~/types/auth';
-/** 예산 금액을 백만원 단위로 간략 표시 */
-const fmtBudget = (amt: number) => {
-    if (!amt) return '-';
-    return `${(amt / 1_000_000).toLocaleString('ko-KR', { maximumFractionDigits: 0 })}백만원`;
-};
 
 const route = useRoute();
 const router = useRouter();
 const { user, logout } = useAuth();
 
-/* ── 통합검색 ──────────────────────────────────────────────── */
-const { suggestions, searchByName } = useGlobalSearch();
-const searchQuery = ref('');
-
-/** 통합검색 결과 선택 시 상세 페이지로 이동 */
-const onSearchSelect = (event: { value: SearchResult }) => {
-    searchQuery.value = '';
-    navigateTo(event.value.route);
-};
-
-const isActiveRoot = (label: string) => {
-    if (label === '사업·예산') return route.path.startsWith('/info');
-    if (label === 'IT자체감사') return route.path.startsWith('/audit');
-    if (label === '전자결재') return route.path.startsWith('/approval');
-    return false;
-};
-
 // 시스템관리자 여부 (ITPAD001 역할 보유 시 [관리자] 메뉴 표시)
 const isAdmin = computed(() => user.value?.athIds?.includes(ROLE.ADMIN));
 
-const menuItems = computed(() => [
-    {
-        label: '사업·예산',
-        root: true,
-        items: [
-            [
-                {
-                    items: [
-                        { image: logo, subtext: 'IT Portal System', label: '사업·예산', class: 'w-full' }
-                    ]
-                }
-            ],
-            [
-                {
-                    items: [
-                        { label: '정보화사업', icon: 'pi pi-briefcase', subtext: 'Information Projects', command: () => navigateTo('/info/projects') },
-                        { label: '예산관리', icon: 'pi pi-wallet', subtext: 'Budget Management', command: () => navigateTo('/budget') }
-                    ]
-                }
-            ],
-            [
-                {
-                    items: [
-                        { label: '협의회 운영', icon: 'pi pi-users', subtext: 'Council Operation', command: () => navigateTo('/info/council/working') },
-                        { label: '계약 관리', icon: 'pi pi-file-edit', subtext: 'Contract Management', command: () => navigateTo('/info/contract') }
-                    ]
-                }
-            ],
-        ]
-    },
-    {
-        label: 'IT·AI CDP',
-        root: true,
-        items: [
-            [
-                {
-                    items: [
-                        { image: logo, subtext: 'IT Portal System', label: 'IT·AI CDP', class: 'w-full' }
-                    ]
-                }
-            ],
-            [
-                {
-                    items: [
-                        { label: '정보화사업', icon: 'pi pi-briefcase', subtext: 'Information Projects', command: () => navigateTo('/info/projects') },
-                        { label: '예산관리', icon: 'pi pi-wallet', subtext: 'Budget Management', command: () => navigateTo('/budget') }
-                    ]
-                }
-            ],
-            [
-                {
-                    items: [
-                        { label: '협의회 운영', icon: 'pi pi-users', subtext: 'Council Operation', command: () => navigateTo('/info/council/working') },
-                        { label: '계약 관리', icon: 'pi pi-file-edit', subtext: 'Contract Management', command: () => navigateTo('/info/contract') }
-                    ]
-                }
-            ],
-        ]
-    },
-    {
-        label: 'IT자체감사',
-        root: true,
-        items: [
-            [
-                {
-                    items: [
-                        { image: logo, subtext: 'IT Audit System', label: 'IT자체감사', class: 'w-full' }
-                    ]
-                }
-            ],
-            [
-                {
-                    items: [
-                        { label: '일일감사', icon: 'pi pi-calendar', subtext: 'Daily Audit', command: () => navigateTo('/audit/') },
-                        { label: '월별감사', icon: 'pi pi-calendar-plus', subtext: 'Monthly Audit', command: () => navigateTo('/audit/') }
-                    ]
-                }
-            ],
-            [
-                {
-                    items: [
-                        { label: '감사 운영', icon: 'pi pi-cog', subtext: 'Audit Operation', command: () => navigateTo('/audit') },
-                        { label: '감사 통계', icon: 'pi pi-chart-bar', subtext: 'Audit Statistics', command: () => navigateTo('/audit') }
-                    ]
-                }
-            ],
-        ]
-    },
-    {
-        label: '전자결재',
-        root: true,
-        command: () => navigateTo('/approval')
-    },
-    // 시스템관리자 전용 메뉴 — ITPAD001 역할 보유 시에만 노출
-    ...(isAdmin.value ? [{
-        label: '관리자',
-        root: true,
-        adminIcon: true,
-        command: () => navigateTo('/admin/codes')
-    }] : [])
+interface NavItem {
+    label: string;
+    route: string;
+    activePrefix: string;
+    excludePrefix?: string;
+    adminIcon?: boolean;
+}
+
+/** 단순 네비게이션 메뉴 목록 */
+const navItems = computed<NavItem[]>(() => [
+    { label: '사전협의', route: '/info/documents', activePrefix: '/info/documents' },
+    { label: '사업·예산', route: '/info', activePrefix: '/info', excludePrefix: '/info/documents' },
+    { label: 'IT·AI CDP', route: '/cdp', activePrefix: '/cdp' },
+    { label: 'IT자체감사', route: '/audit', activePrefix: '/audit' },
+    { label: '전자결재', route: '/approval', activePrefix: '/approval' },
+    ...(isAdmin.value ? [{ label: '관리자', route: '/admin/codes', activePrefix: '/admin', adminIcon: true }] : [])
 ]);
+
+/** 현재 경로가 메뉴 항목의 활성 경로에 해당하는지 확인 (excludePrefix가 있으면 해당 경로 제외) */
+const isActive = (item: NavItem) =>
+    route.path.startsWith(item.activePrefix) &&
+    !(item.excludePrefix && route.path.startsWith(item.excludePrefix));
 
 /**
  * 다크모드 상태
@@ -170,6 +67,7 @@ const isDark = useCookie<boolean>('theme-dark', { default: () => false });
 const applyTheme = () => {
     isDark.value = !isDark.value;
     document.documentElement.classList.toggle('dark', isDark.value);
+    document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
 };
 
 /**
@@ -178,12 +76,10 @@ const applyTheme = () => {
  * 미지원 브라우저에서는 applyTheme()을 즉시 실행합니다.
  */
 const toggleTheme = () => {
-    // View Transition API 지원 여부 확인 (Chrome 111+, Edge 111+)
     if (!document.startViewTransition) {
         applyTheme();
         return;
     }
-    // 크로스페이드 트랜지션 실행
     document.startViewTransition(() => applyTheme());
 };
 
@@ -193,14 +89,8 @@ const handleLogout = async () => {
 };
 
 onMounted(() => {
-    // 쿠키 미설정(최초 방문) 시 시스템 다크모드 설정을 초기값으로 사용
-    const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('theme-dark='));
-    if (!hasCookie) {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        isDark.value = systemDark;
-    }
-    // 인라인 스크립트가 이미 DOM에 적용했으나, 쿠키 값과 한 번 더 동기화
     document.documentElement.classList.toggle('dark', isDark.value);
+    document.documentElement.style.colorScheme = isDark.value ? 'dark' : 'light';
 });
 
 const { tabs, addTab, removeTab, closeAll } = useTabs();
@@ -259,7 +149,6 @@ const onDragStart = (e: DragEvent, index: number) => {
     dragIndex.value = index;
     if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
-        // 반투명 드래그 이미지를 위한 설정
         e.dataTransfer.setData('text/plain', String(index));
     }
 };
@@ -279,7 +168,6 @@ const onDrop = (e: DragEvent, targetIndex: number) => {
         dropTargetIndex.value = null;
         return;
     }
-    // 배열에서 드래그한 탭을 빼고 대상 위치에 삽입
     const [moved] = tabs.value.splice(dragIndex.value, 1);
     tabs.value.splice(targetIndex, 0, moved!);
     dragIndex.value = null;
@@ -292,8 +180,8 @@ const onDragEnd = () => {
     dropTargetIndex.value = null;
 };
 
-// 라우트 변경 시 탭 추가
-watch(() => route.path, () => {
+// 라우트 변경 시 탭 추가 (fullPath 감시: 쿼리 파라미터만 변경되어도 탭 추가)
+watch(() => route.fullPath, () => {
     addTab(route);
     nextTick(() => updateScrollState());
 }, { immediate: true });
@@ -327,132 +215,73 @@ const navigateToTab = async (path: string) => {
 </script>
 
 <template>
-    <!-- data-allow-mismatch: SSR(user=null)과 클라이언트(localStorage 복원 user) 간
-         isAdmin 값 차이로 MegaMenu model 크기 및 user 정보가 달라 hydration mismatch 발생.
+    <!-- data-allow-mismatch: SSR 초기 user 상태와 클라이언트 쿠키 복원 후 user 상태 간
+         isAdmin 값 차이로 헤더 표시가 달라질 수 있습니다.
          기능적 문제 없으므로 헤더 전체에서 mismatch 경고를 억제합니다. -->
     <div class="card" data-allow-mismatch>
-        <MegaMenu
-            :model="menuItems" class="p-4 bg-white dark:bg-zinc-900 border-none rounded-none"
-            style="border-radius: 0">
+        <!-- 네비게이션 바 -->
+        <div class="flex items-center bg-white dark:bg-zinc-900 px-4 py-2 border-none">
+            <!-- 메뉴 항목 -->
+            <nav class="flex items-center flex-1 gap-6">
+                <button
+                    v-for="item in navItems"
+                    :key="item.label"
+                    class="flex items-center px-4 py-2 font-semibold text-base whitespace-nowrap transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-800/50 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    :class="isActive(item)
+                        ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'text-zinc-700 dark:text-zinc-200'"
+                    @click="navigateTo(item.route)">
+                    <span>{{ item.label }}</span>
+                    <IconCrown v-if="item.adminIcon" class="w-4 h-4 ml-1.5 text-yellow-500" />
+                </button>
+            </nav>
 
-            <template #item="{ item }">
-                <a
-                    v-if="item.root"
-                    class="flex items-center cursor-pointer px-14 py-2 overflow-hidden relative font-semibold text-lg hover:bg-indigo-50 dark:hover:bg-indigo-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                    :class="[isActiveRoot(typeof item.label === 'string' ? item.label : '') ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'text-zinc-700 dark:text-zinc-200']"
-                    style="border-radius: 0"
-                    @click="item.command ? item.command({ originalEvent: $event, item }) : null">
-                    <!-- 관리자 메뉴: 왕관 아이콘 + 노란색 강조 -->
-                    <template v-if="item.adminIcon">
-                        <span>{{ item.label }}</span>
-                        <IconCrown class="w-4 h-4 ml-2 text-yellow-500" />
-                    </template>
-                    <span v-else>{{ item.label }}</span>
-                </a>
-                <a
-v-else-if="!item.image" class="flex items-center p-4 cursor-pointer mb-2 gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-800/50 rounded-lg transition-colors"
-                    @click="item.command ? item.command({ originalEvent: $event, item }) : null">
+            <!-- 우측 영역: 검색·테마·알림·사용자 -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- 통합검색 (V1 기본 상태 + V2 포커스 드롭다운) -->
+                <GlobalSearchBar />
+
+                <button
+                    class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    @click="toggleTheme">
+                    <i :class="['pi text-lg', isDark ? 'pi-sun' : 'pi-moon']"/>
+                </button>
+                <button
+                    class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors relative">
+                    <i class="pi pi-bell text-lg"/>
                     <span
-                        class="inline-flex items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 w-15 h-15">
-                        <i :class="[item.icon, 'text-lg']"/>
-                    </span>
-                    <span class="inline-flex flex-col gap-1">
-                        <span class="font-bold text-lg text-zinc-800 dark:text-zinc-100">{{ item.label }}</span>
-                        <span class="whitespace-nowrap text-zinc-500 dark:text-zinc-400 text-sm">{{ item.subtext
-                            }}</span>
-                    </span>
-                </a>
-                <div v-else class="flex flex-col items-center w-full">
-                    <img alt="megamenu-demo" :src="logo" class="w-32 h-auto dark:invert animate-float" >
-                    <span class="text-xl font-bold text-zinc-800 dark:text-zinc-100">{{ item.label }}</span>
-                    <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ item.subtext }}</span>
-                </div>
-            </template>
-            <template #end>
-                <div class="flex items-center gap-2">
-                    <!-- 통합검색 AutoComplete -->
-                    <div class="global-search relative" style="width: 16rem">
-                        <AutoComplete
-v-model="searchQuery" :suggestions="suggestions" option-label="name"
-                            placeholder="통합검색" fluid :input-class="'!py-1.5 !text-sm !pr-8'" @complete="searchByName"
-                            @item-select="onSearchSelect">
-                            <template #option="{ option }">
-                                <div
-class="py-1.5 pl-2.5 border-l-[3px]"
-                                    :class="option.type === '정보화사업' ? 'border-blue-900' : 'border-emerald-600'">
-                                    <div class="leading-tight">
-                                        <div class="flex items-baseline gap-1.5">
-                                            <span class="font-semibold text-sm">{{ option.name }}</span>
-                                            <span
-class="text-[11px] rounded px-1"
-                                                :class="option.type === '정보화사업'
-                                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'">
-                                                {{ option.type }}
-                                            </span>
-                                        </div>
-                                        <div class="flex items-center gap-1 text-[11px] text-surface-400 mt-0.5">
-                                            <i class="pi pi-building text-[10px]" />
-                                            <span>{{ option.deptNm || '-' }}</span>
-                                            <span class="text-surface-300">·</span>
-                                            <span>{{ fmtBudget(option.budget) }}</span>
-                                            <template v-if="option.status">
-                                                <span class="text-surface-300">·</span>
-                                                <span>{{ option.status }}</span>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-                        </AutoComplete>
-                        <button
-v-if="searchQuery" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors z-10"
-                            @click="searchQuery = ''">
-                            <i class="pi pi-times text-xs"/>
-                        </button>
+                        class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-zinc-900"/>
+                </button>
+
+                <!-- SSR과 클라이언트 간 user 상태 차이로 발생하는 hydration mismatch를 허용합니다. -->
+                <div
+                    class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700"
+                    data-allow-mismatch>
+                    <div class="text-right hidden md:block">
+                        <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ user?.empNm || '사용자' }}</div>
+                        <div class="text-xs text-zinc-500">{{ user?.eno || '' }}</div>
                     </div>
+                    <Avatar
+                        :label="user?.empNm?.charAt(0) || 'U'"
+                        class="bg-primary-100 text-primary-600 font-bold border border-primary-200" shape="circle"
+                        size="normal" style="width: 2.5rem; height: 2.5rem" />
                     <button
-class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                        @click="toggleTheme">
-                        <i :class="['pi text-lg', isDark ? 'pi-sun' : 'pi-moon']"/>
+                        class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+                        title="로그아웃"
+                        @click="handleLogout">
+                        <i class="pi pi-sign-out text-lg"/>
                     </button>
-                    <button
-                        class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors relative">
-                        <i class="pi pi-bell text-lg"/>
-                        <span
-                            class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-zinc-900"/>
-                    </button>
-                    <!-- SSR과 클라이언트 간 user 상태 차이로 발생하는 hydration mismatch를 허용합니다.
-                         SSR: user=null → fallback 표시 / 클라이언트: localStorage에서 복원된 실 사용자 정보 표시 -->
-                    <div
-class="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-700"
-                         data-allow-mismatch>
-                        <div class="text-right hidden md:block">
-                            <div class="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{{ user?.empNm || '사용자'
-                                }}</div>
-                            <div class="text-xs text-zinc-500">{{ user?.eno || '' }}</div>
-                        </div>
-                        <Avatar
-                            :label="user?.empNm?.charAt(0) || 'U'"
-                            class="bg-primary-100 text-primary-600 font-bold border border-primary-200" shape="circle"
-                            size="normal" style="width: 2.5rem; height: 2.5rem" />
-                        <button
-                            class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
-                            title="로그아웃"
-                            @click="handleLogout">
-                            <i class="pi pi-sign-out text-lg"/>
-                        </button>
-                    </div>
                 </div>
-            </template>
-        </MegaMenu>
+            </div>
+        </div>
 
         <!-- Tab Bar -->
         <div
             class="flex items-end bg-white dark:bg-zinc-900/50 border-t border-b border-zinc-100 dark:border-zinc-800 h-[50px]">
             <!-- 좌측 스크롤 버튼 — 호버: 연속 스크롤 / 클릭: 맨 앞으로 -->
             <button
-class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors" :class="canScrollLeft ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'"
+                class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors"
+                :class="canScrollLeft ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'"
                 @mouseenter="canScrollLeft && startHoverScroll('left')"
                 @mouseleave="stopHoverScroll"
                 @click="canScrollLeft && scrollToEdge('left')">
@@ -461,24 +290,29 @@ class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colo
 
             <!-- 탭 스크롤 영역 -->
             <div
-ref="tabContainer" class="flex items-end flex-1 overflow-x-auto scrollbar-hide h-full px-2 gap-1"
+                ref="tabContainer"
+                class="flex items-end flex-1 overflow-x-auto scrollbar-hide h-full px-2 gap-1"
                 @scroll="updateScrollState">
                 <div
-v-for="(tab, index) in tabs" :key="tab.path" draggable="true"
-                    class="flex items-center px-4 py-2 text-sm rounded-t-lg cursor-pointer transition-all whitespace-nowrap border-t border-x mb-[-1px] relative select-none" :class="[
-                        route.path === tab.path
+                    v-for="(tab, index) in tabs" :key="tab.fullPath" draggable="true"
+                    class="flex items-center px-4 py-2 text-sm rounded-t-lg cursor-pointer transition-all whitespace-nowrap border-t border-x mb-[-1px] relative select-none"
+                    :class="[
+                        route.fullPath === tab.fullPath
                             ? 'bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 border-zinc-200 dark:border-zinc-800 border-b-transparent font-bold shadow-[0_-2px_5px_rgba(0,0,0,0.02)]'
                             : 'bg-zinc-200/50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-500 border-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800',
                         dragIndex === index ? 'opacity-40' : '',
                         dropTargetIndex === index && dragIndex !== index ? 'tab-drop-target' : ''
                     ]"
-                    @dragstart="onDragStart($event, index)" @dragover="onDragOver($event, index)"
+                    @dragstart="onDragStart($event, index)"
+                    @dragover="onDragOver($event, index)"
                     @drop="onDrop($event, index)"
-                    @dragend="onDragEnd" @click="navigateToTab(tab.fullPath)">
+                    @dragend="onDragEnd"
+                    @click="navigateToTab(tab.fullPath)">
                     <span class="mr-2">{{ tab.title }}</span>
                     <button
-v-if="tabs.length > 1" class="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-                        @click.stop="removeTab(tab.path)">
+                        v-if="tabs.length > 1"
+                        class="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                        @click.stop="removeTab(tab.fullPath)">
                         <i class="pi pi-times text-[10px]"/>
                     </button>
                 </div>
@@ -486,7 +320,8 @@ v-if="tabs.length > 1" class="p-0.5 rounded-full hover:bg-zinc-300 dark:hover:bg
 
             <!-- 우측 스크롤 버튼 — 호버: 연속 스크롤 / 클릭: 맨 뒤로 -->
             <button
-class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors" :class="canScrollRight ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'"
+                class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colors"
+                :class="canScrollRight ? 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer' : 'text-transparent cursor-default'"
                 @mouseenter="canScrollRight && startHoverScroll('right')"
                 @mouseleave="stopHoverScroll"
                 @click="canScrollRight && scrollToEdge('right')">
@@ -496,7 +331,8 @@ class="flex-shrink-0 flex items-center justify-center w-7 h-full transition-colo
             <!-- 모두 닫기 버튼 -->
             <div v-if="tabs.length > 0" class="flex-shrink-0 flex items-center px-2 pb-2">
                 <Button
-label="모두 닫기" size="small" severity="secondary" outlined class="bg-stone-300 dark:bg-stone-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors !text-xs !py-1 !px-2 !h-7"
+                    label="모두 닫기" size="small" severity="secondary" outlined
+                    class="bg-stone-300 dark:bg-stone-600 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors !text-xs !py-1 !px-2 !h-7"
                     @click="closeAll" />
             </div>
         </div>
@@ -504,47 +340,6 @@ label="모두 닫기" size="small" severity="secondary" outlined class="bg-stone
 </template>
 
 <style scoped>
-/* Limit the width of the MegaMenu dropdown panel */
-:deep(.p-megamenu-root-list > .p-menuitem) {
-    position: relative !important;
-}
-
-/* 드롭다운 시작 위치 조정 */
-:deep(.p-megamenu-overlay) {
-    margin-top: 1rem;
-    z-index: 9999 !important;
-    /* Animation using global keyframe */
-    animation: menu-slide-fade-in 0.3s ease-out forwards !important;
-    transform-origin: top !important;
-}
-
-/* 드롭다운 내부 내용 위치 조정 */
-:deep(.p-megamenu-panel) {
-    width: auto !important;
-    max-width: none !important;
-    min-width: auto !important;
-    left: 0 !important;
-    right: auto !important;
-    top: 100% !important;
-    /* Position right below the menu item */
-    margin: 0 !important;
-
-}
-
-
-/* 드롭다운 내부 내용 위치 조정 */
-:deep(.p-megamenu-grid) {
-    display: flex !important;
-    width: max-content !important;
-    margin: 0 !important;
-}
-
-/* 드롭다운 내부 내용 위치 조정 */
-:deep(.p-megamenu-col) {
-    width: auto !important;
-    flex: 0 0 auto !important;
-}
-
 /* Custom Scrollbar Hide */
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -563,35 +358,5 @@ label="모두 닫기" size="small" severity="secondary" outlined class="bg-stone
 /* 통합검색 AutoComplete 드롭다운 너비 확장 */
 .global-search :deep(.p-autocomplete-overlay) {
     min-width: 360px !important;
-}
-</style>
-
-<style>
-@keyframes menu-slide-fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-5px);
-    }
-}
-
-.animate-float {
-    animation: float 3s ease-in-out infinite;
 }
 </style>

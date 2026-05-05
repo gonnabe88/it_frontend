@@ -108,12 +108,10 @@ export const usePdfReport = () => {
 
         // 캐시 히트: 이미 로드된 폰트가 있으면 재사용
         if (cachedVfs[vfsKeyRegular] && cachedVfs[vfsKeyBold] && cachedFonts[fontName]) {
-            console.log('Using cached font (local state):', fontName);
             return fontName;
         }
 
         try {
-            console.log('Start loading fonts...');
             // 세 가지 폰트 파일을 병렬로 fetch
             const [regRes, boldRes, extraRes] = await Promise.all([
                 fetch(nanumGothic),
@@ -172,7 +170,6 @@ export const usePdfReport = () => {
                 bolditalics: vfsKeyExtraBold
             };
 
-            console.log('Fonts registered in local cache.');
             return fontName;
         } catch (e) {
             // 폰트 로드 실패 시 기본 Roboto로 폴백
@@ -202,15 +199,12 @@ export const usePdfReport = () => {
         costs: ItCost[] = []
     ) => {
         try {
-            console.log('generateReport START');
-            
             // 방어 로직: 파라미터가 undefined/null로 넘어올 경우 빈 배열 보장
             projects = projects || [];
             costs = costs || [];
 
             // 한글 폰트 로드 (캐시 활용)
             const font = await loadKoreanFont();
-            console.log('Font loaded:', font);
 
             // 로컬 캐시 참조 (VFS와 폰트 설정이 항상 쌍을 이루도록 보장)
             const currentVfs   = cachedVfs;
@@ -949,8 +943,6 @@ export const usePdfReport = () => {
             // @ts-expect-error pdfmake 0.3.x 전용 API로 @types/pdfmake에 미정의
             pdfMake.addFonts(currentFonts);
 
-            console.log('Generating PDF with fonts:', Object.keys(currentFonts));
-
             const pdfGenerator = pdfMake.createPdf(docDefinition);
 
             /**
@@ -961,7 +953,6 @@ export const usePdfReport = () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const blob = await (pdfGenerator as any).getBlob();
             const url = URL.createObjectURL(blob as Blob);
-            console.log('✓ Blob URL created:', url);
             return url;
         } catch (error) {
             console.error('Error in generateReport:', error);

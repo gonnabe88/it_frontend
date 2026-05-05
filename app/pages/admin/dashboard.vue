@@ -73,53 +73,78 @@ const todayCount = computed(() => {
 
 /** 전체 사용자 수 */
 const totalUsers = computed(() => users.value?.length ?? 0);
+
+/** 오늘 로그인 비율: 전체 사용자 대비 */
+const todayLoginPct = computed(() => {
+    if (!totalUsers.value) return 0;
+    return Math.min(Math.round(todayCount.value / totalUsers.value * 100), 100);
+});
 </script>
 
 <template>
     <div class="flex flex-col gap-6">
-        <!-- 요약 통계 카드 -->
+        <!-- 요약 통계 카드 (V4: 아이콘 배지 + 내러티브 + 세그먼트 분해) -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card class="shadow-sm">
-                <template #content>
-                    <div class="flex items-center gap-3">
-                        <div class="rounded-full bg-blue-100 dark:bg-blue-900 p-3">
-                            <i class="pi pi-users text-blue-600 dark:text-blue-300 text-xl" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">전체 사용자</p>
-                            <p class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">{{ totalUsers.toLocaleString() }}</p>
-                        </div>
-                    </div>
-                </template>
-            </Card>
 
-            <Card class="shadow-sm">
-                <template #content>
-                    <div class="flex items-center gap-3">
-                        <div class="rounded-full bg-green-100 dark:bg-green-900 p-3">
-                            <i class="pi pi-sign-in text-green-600 dark:text-green-300 text-xl" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">오늘 로그인</p>
-                            <p class="text-2xl font-bold text-zinc-800 dark:text-zinc-100">{{ todayCount.toLocaleString() }}</p>
-                        </div>
-                    </div>
-                </template>
-            </Card>
+            <!-- 전체 사용자 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-blue-100 text-blue-700">
+                        <i class="pi pi-users" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">전체 사용자</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ totalUsers.toLocaleString() }}</span>
+                    <span class="text-xs text-zinc-400">명 · 등록 사용자</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full bg-blue-500" style="width:100%" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-blue-500" />전체 현황</span>
+                </div>
+            </div>
 
-            <Card class="shadow-sm col-span-2">
-                <template #content>
-                    <div class="flex items-center gap-3">
-                        <div class="rounded-full bg-amber-100 dark:bg-amber-900 p-3">
-                            <i class="pi pi-chart-line text-amber-600 dark:text-amber-300 text-xl" />
-                        </div>
-                        <div>
-                            <p class="text-sm text-zinc-500 dark:text-zinc-400">최근 30일 로그인 추이</p>
-                            <p class="text-sm text-zinc-600 dark:text-zinc-300">아래 차트 참조</p>
-                        </div>
-                    </div>
-                </template>
-            </Card>
+            <!-- 오늘 로그인 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-emerald-100 text-emerald-700">
+                        <i class="pi pi-sign-in" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">오늘 로그인</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ todayCount.toLocaleString() }}</span>
+                    <span class="text-xs text-zinc-400">건 · 금일 누적</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full bg-emerald-500" :style="`width:${todayLoginPct}%`" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-emerald-500" />전체 사용자 대비 {{ todayLoginPct }}%</span>
+                </div>
+            </div>
+
+            <!-- 최근 30일 로그인 추이 -->
+            <div class="bg-white rounded-xl border border-zinc-200 p-5 flex flex-col gap-3 transition-all duration-200 hover:border-zinc-300 hover:shadow-md col-span-2">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-none bg-amber-100 text-amber-700">
+                        <i class="pi pi-chart-line" />
+                    </span>
+                    <span class="text-[13px] font-medium text-zinc-600">최근 30일 로그인 추이</span>
+                </div>
+                <div class="flex items-baseline gap-2">
+                    <span class="text-[36px] font-bold text-zinc-900 leading-none tracking-[-0.03em] tabular-nums">{{ stats?.length ?? 0 }}</span>
+                    <span class="text-xs text-zinc-400">일 · 아래 차트 참조</span>
+                </div>
+                <div class="h-[6px] rounded-full overflow-hidden bg-zinc-100 flex">
+                    <span class="h-full bg-amber-500" style="width:100%" />
+                </div>
+                <div class="flex gap-3.5 text-[11px] text-zinc-400 tabular-nums">
+                    <span class="inline-flex items-center gap-1.5"><i class="inline-block w-2 h-2 rounded-sm bg-amber-500" />로그인 성공 기준</span>
+                </div>
+            </div>
         </div>
 
         <!-- 접속자 수 추이 차트 -->

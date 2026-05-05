@@ -14,7 +14,7 @@
 ================================================================================
 -->
 <script setup lang="ts">
-import type { CommitteeMember, CommitteeList } from '~/types/council';
+import StyledDataTable from '~/components/common/StyledDataTable.vue';
 
 interface Props {
     asctId: string;
@@ -181,7 +181,25 @@ const scoreSeverity = (score: number | null) => {
                 </div>
             </div>
 
-            <template v-if="summary">
+            <!-- 위원별 의견 -->
+            <div v-if="summary.evaluations.length > 0">
+                <h4 class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">위원별 평가의견</h4>
+                <StyledDataTable :value="summary.evaluations">
+                    <Column header="위원">
+                        <template #body="{ data }">{{ data.usrNm ?? data.eno }}</template>
+                    </Column>
+                    <Column field="ckgItmNm" header="항목" />
+                    <Column field="ckgRcrd" header="점수" style="width: 72px; text-align: center">
+                        <template #body="{ data }">
+                            <Tag v-if="data.ckgRcrd" :value="`${data.ckgRcrd}`" :severity="scoreSeverity(data.ckgRcrd)" class="text-xs" />
+                            <span v-else class="text-zinc-300">—</span>
+                        </template>
+                    </Column>
+                    <Column header="의견">
+                        <template #body="{ data }">{{ data.ckgOpnn || '—' }}</template>
+                    </Column>
+                </StyledDataTable>
+            </div>
 
                 <!-- ── 항목별 평균점수 ── -->
                 <div v-if="summary.avgScores.length > 0">

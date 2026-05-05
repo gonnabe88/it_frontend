@@ -10,8 +10,18 @@ export default createConfigForNuxt({
     },
   },
 }).append(
-  // 타입 정보가 없는 JS/MJS 설정 파일은 type-aware 규칙 적용 제외
-  { ignores: ['tailwind.config.js', 'eslint.config.mjs'] },
+  // 타입 정보가 없는 설정/생성물 파일은 type-aware 규칙 적용 제외
+  {
+    ignores: [
+      'tailwind.config.js',
+      'eslint.config.mjs',
+      'coverage/**',
+      'test-results/**',
+      '.nuxt/**',
+      '.output/**',
+      'dist/**',
+    ],
+  },
   {
     rules: {
       // 선언되지 않은 변수/식별자 사용 금지

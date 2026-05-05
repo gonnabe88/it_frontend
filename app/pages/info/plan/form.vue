@@ -24,6 +24,8 @@ import { useCost, type ItCost } from '~/composables/useCost';
 import { usePlan, type PlanProjectItem } from '~/composables/usePlan';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
+import { useTableCellSelection } from '~/composables/useTableCellSelection';
+import { useTableColumnResize } from '~/composables/useTableColumnResize';
 
 /**
  * 정보화사업과 전산업무비를 통합하여 표시하기 위한 인터페이스
@@ -54,11 +56,13 @@ interface UnifiedProject {
 
 /* 페이지 탭 제목 설정 */
 const title = '정보기술부문 계획 등록';
-definePageMeta({ title });
+// key: fullPath 기준으로 KeepAlive 캐시 분리 → 쿼리 파라미터가 다른 탭마다 별개 인스턴스
+definePageMeta({ title, key: route => route.fullPath });
 
 const { fetchProjectsBulk } = useProjects();
 const { fetchCostsBulk } = useCost();
 const { createPlan } = usePlan();
+const route = useRoute();
 const router = useRouter();
 const { removeTab } = useTabs();
 const config = useRuntimeConfig();
@@ -180,6 +184,88 @@ const byDepartment = ref<{ svnHdq: string; projects: PlanProjectItem[] }[]>([]);
 /** 사업유형(PRJ_TP)별 그룹 */
 const byProjectType = ref<{ prjTp: string; projects: PlanProjectItem[] }[]>([]);
 
+/** 정보화사업 카드 테이블 행 타입 */
+interface ItProjectRow {
+    sector: string;                  // 부문/본부명
+    subLabel: string;                // 하위 구분명 (국외점포 / IT / AI·DT / 빈칸)
+    showSector: boolean;             // sector 셀 렌더링 여부 (IT·AI본부 두 번째 행은 false)
+    sectorRowspan: number;           // sector 셀 rowspan (IT·AI본부 첫 번째 행: 2, 나머지: 1)
+    hideSectorRightBorder: boolean;  // sector 셀 오른쪽 테두리 숨김 여부
+    hideSectorBottomBorder: boolean; // sector 셀 아래쪽 테두리 숨김 여부
+    newCount: number;                // 신규 건수
+    continueCount: number;           // 계속 건수
+    budgetBuk: number;               // 편성예산(억원)
+    projects: string[];              // 주요사업 목록
+}
+
+/** 정보화사업 스냅샷 (정보화사업 카드 테이블 렌더링용) */
+const prjSnapshotsRef = ref<PlanProjectItem[]>([]);
+
+/** 정보화사업 테이블 컨테이너 ref (셀 선택/복사용) */
+const itPrjTableRef = ref<HTMLElement | null>(null);
+useTableCellSelection(itPrjTableRef);
+useTableColumnResize(itPrjTableRef);
+
+/**
+ * 정보화사업 요약 테이블 행 계산
+ * - 글로벌사업부문: 국외점포(svnDpm 9XX)를 별도 하위 행으로 분리
+ * - IT·AI본부: svnDpm '185'는 AI·DT, 나머지는 IT로 분리
+ */
+const itProjectRows = computed((): ItProjectRow[] => {
+    const rows: ItProjectRow[] = [];
+    const snapshots = prjSnapshotsRef.value;
+    if (!snapshots.length) return rows;
+
+    const sectorMap = new Map<string, PlanProjectItem[]>();
+    for (const p of snapshots) {
+        const key = p.svnHdq || '미분류';
+        if (!sectorMap.has(key)) sectorMap.set(key, []);
+        sectorMap.get(key)!.push(p);
+    }
+
+    const makeRow = (
+        items: PlanProjectItem[],
+        sector: string,
+        subLabel: string,
+        showSector: boolean,
+        sectorRowspan: number,
+        hideSectorRightBorder: boolean,
+        hideSectorBottomBorder: boolean
+    ): ItProjectRow => ({
+        sector,
+        subLabel,
+        showSector,
+        sectorRowspan,
+        hideSectorRightBorder,
+        hideSectorBottomBorder,
+        newCount: items.filter(p => p.pulDtt === 'PUL_DTT_001').length,
+        continueCount: items.filter(p => p.pulDtt === 'PUL_DTT_002').length,
+        budgetBuk: items.reduce((s, p) => s + (p.prjBg || 0), 0) / 100_000_000,
+        projects: items.map(p => p.prjNm),
+    });
+
+    for (const [sector, items] of sectorMap.entries()) {
+        if (sector === '글로벌사업부문') {
+            // 국외점포(svnDpm이 9로 시작)를 하위 행으로 분리, rowspan=1 + 테두리 숨김으로 시각적 병합
+            const domestic = items.filter(p => !String(p.svnDpm || '').startsWith('9'));
+            const overseas = items.filter(p => String(p.svnDpm || '').startsWith('9'));
+            if (domestic.length) rows.push(makeRow(domestic, sector, '', true, 1, true, !!overseas.length));
+            if (overseas.length) rows.push(makeRow(overseas, domestic.length ? '' : sector, '국외점포', true, 1, false, false));
+        } else if (sector.includes('IT·AI')) {
+            // IT·AI본부: rowspan으로 sector 셀 병합 (원래 방식 유지)
+            const itItems = items.filter(p => p.svnDpm !== '185');
+            const aiItems = items.filter(p => p.svnDpm === '185');
+            const span = (itItems.length ? 1 : 0) + (aiItems.length ? 1 : 0);
+            if (itItems.length) rows.push(makeRow(itItems, sector, 'IT', true, span, false, false));
+            if (aiItems.length) rows.push(makeRow(aiItems, sector, 'AI·DT', !itItems.length, 1, false, false));
+        } else {
+            rows.push(makeRow(items, sector, '', true, 1, true, false));
+        }
+    }
+
+    return rows;
+});
+
 /** 생성 처리 중 여부 */
 const generating = ref(false);
 
@@ -220,7 +306,11 @@ const handleGenerate = async () => {
             prjBg: p.prjBg || 0,
             assetBg: p.assetBg || 0,
             costBg: p.costBg || 0,
+            pulDtt: p.pulDtt || '',
         }));
+
+        // 정보화사업 카드 테이블용 스냅샷 저장
+        prjSnapshotsRef.value = prjSnapshots;
 
         // 전산업무비 스냅샷 변환
         const costSnapshots: PlanProjectItem[] = costDetails.map(c => ({
@@ -315,7 +405,7 @@ const handleSave = async () => {
         });
         alert('계획이 등록되었습니다.');
         await router.push('/info/plan');
-        removeTab('/info/plan/form');
+        removeTab(route.fullPath);
     } catch (e) {
         console.error('계획 저장 실패:', e);
         alert('계획 저장 중 오류가 발생했습니다.');
@@ -329,15 +419,12 @@ const handleSave = async () => {
     <div class="space-y-6">
 
         <!-- 페이지 헤더 -->
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ title }}</h1>
-            <div class="flex items-center gap-3">
-                <!-- 예산 표시 단위 선택 -->
+        <PageHeader :title="title">
+            <template #actions>
                 <SelectButton v-model="selectedUnit" :options="units" />
-                <!-- 뒤로가기 -->
                 <Button label="목록" icon="pi pi-list" severity="secondary" outlined @click="router.push('/info/plan')" />
-            </div>
-        </div>
+            </template>
+        </PageHeader>
 
         <!-- ① 기본 정보 입력 -->
         <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
@@ -516,6 +603,78 @@ const handleSave = async () => {
                         </div>
                         <div class="text-xs text-emerald-400 mt-1">{{ selectedUnit }}</div>
                     </div>
+                </div>
+            </div>
+
+            <!-- 정보화사업 요약 카드 -->
+            <div v-if="prjSnapshotsRef.length > 0" class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+                <h2 class="text-lg font-semibold text-zinc-800 dark:text-zinc-200 border-b pb-2">정보화사업</h2>
+                <div ref="itPrjTableRef" class="kdb-it-table">
+                    <table class="w-full border-collapse">
+                        <colgroup>
+                            <col style="width: 14%">
+                            <col style="width: 9%">
+                            <col style="width: 7%">
+                            <col style="width: 7%">
+                            <col style="width: 13%">
+                            <col style="width: 50%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th colspan="2" rowspan="2" class="border px-3 py-1.5 text-center font-semibold text-white bg-blue-900" style="border-color: rgba(255,255,255,0.2)">부문/본부</th>
+                                <th colspan="2" class="border px-3 py-1.5 text-center font-semibold text-white bg-blue-900" style="border-color: rgba(255,255,255,0.2)">건수</th>
+                                <th rowspan="2" class="border px-3 py-1.5 text-center font-semibold text-white bg-blue-900" style="border-color: rgba(255,255,255,0.2)">편성예산(억원)</th>
+                                <th rowspan="2" class="border px-3 py-1.5 text-center font-semibold text-white bg-blue-900" style="border-color: rgba(255,255,255,0.2)">주요사업내역</th>
+                            </tr>
+                            <tr>
+                                <th class="border px-3 py-1.5 text-center font-semibold text-white bg-blue-900" style="border-color: rgba(255,255,255,0.2)">신규</th>
+                                <th class="border px-3 py-1.5 text-center font-semibold text-white bg-blue-900" style="border-color: rgba(255,255,255,0.2)">계속</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, idx) in itProjectRows" :key="`${row.sector}-${idx}`" class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                                <td
+                                    v-if="row.showSector"
+                                    :rowspan="row.sectorRowspan"
+                                    class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center align-middle text-zinc-800 dark:text-zinc-200 overflow-hidden"
+                                    :style="{
+                                        'border-right-color': row.hideSectorRightBorder ? 'transparent' : '',
+                                        'border-bottom-color': row.hideSectorBottomBorder ? 'transparent' : '',
+                                    }"
+                                >{{ row.sector }}</td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center text-zinc-800 dark:text-zinc-200 overflow-hidden">
+                                    {{ row.subLabel }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center tabular-nums text-zinc-800 dark:text-zinc-200 overflow-hidden">
+                                    {{ row.newCount }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center tabular-nums text-zinc-800 dark:text-zinc-200 overflow-hidden">
+                                    {{ row.continueCount }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-right tabular-nums text-zinc-800 dark:text-zinc-200 overflow-hidden">
+                                    {{ row.budgetBuk.toFixed(1) }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-zinc-800 dark:text-zinc-200 overflow-hidden">
+                                    {{ row.projects.join(', ') }}
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">합계</td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center tabular-nums font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
+                                    {{ itProjectRows.reduce((s, r) => s + r.newCount, 0) }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-center tabular-nums font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
+                                    {{ itProjectRows.reduce((s, r) => s + r.continueCount, 0) }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-right tabular-nums font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
+                                    {{ itProjectRows.reduce((s, r) => s + r.budgetBuk, 0).toFixed(1) }}
+                                </td>
+                                <td class="border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             </div>
 
