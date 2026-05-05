@@ -135,6 +135,7 @@ const onOrgUserSelected = (selected: { eno: string; usrNm: string; bbrNm: string
         bbrNm: selected.bbrNm,
         ptCNm: selected.ptCNm ?? null,
         vlrTp: addingType.value,
+        cnfmYn: 'N',
     };
 
     if (addingType.value === 'CALL') {

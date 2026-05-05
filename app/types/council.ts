@@ -35,9 +35,10 @@ export type CouncilStatus =
   | 'IN_PROGRESS'     // 협의회 진행 중
   | 'EVALUATING'      // 평가의견 작성 중
   | 'RESULT_WRITING'  // 결과서 작성 중
-  | 'RESULT_REVIEW'   // 결과서 검토 중
-  | 'FINAL_APPROVAL'  // 결과보고 결재 중
-  | 'COMPLETED';      // 완료
+  | 'RESULT_REVIEW'          // 결과서 검토 중
+  | 'FINAL_APPROVAL'         // 결과보고 결재 요청 가능
+  | 'RESULT_APPROVAL_PENDING' // 개최결과서 결재 대기 중
+  | 'COMPLETED';             // 완료
 
 /** 심의유형 (CCODEM DBR_TP 기준 5개) */
 export type HearingType = 'MID_PLAN' | 'IT_PLAN' | 'INFO_SYS' | 'INFO_SEC' | 'ETC';
@@ -180,6 +181,8 @@ export interface CommitteeMember {
   bbrNm: string | null;
   ptCNm: string | null;
   vlrTp: CommitteeType;
+  /** 결과서 검토 확인 여부 (N: 미확인, Y: 확인완료) */
+  cnfmYn: 'Y' | 'N';
 }
 
 /**

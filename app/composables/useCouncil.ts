@@ -34,6 +34,16 @@ import type {
 /**
  * 협의회 신청 요청 DTO
  */
+/**
+ * 추진부서 통보 수신자 정보
+ */
+export interface NotifyInfo {
+    eno: string | null;
+    usrNm: string | null;
+    bbrNm: string | null;
+    temNm: string | null;
+}
+
 export interface CreateCouncilRequest {
   /** 프로젝트관리번호 */
   prjMngNo: string;
@@ -368,6 +378,19 @@ export const useCouncil = () => {
     };
 
     /**
+     * 내 평가의견 조회 (로그인한 평가위원 본인)
+     *
+     * 이미 제출한 평가의견을 반환합니다. 제출 이력이 없으면 빈 배열을 반환합니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const fetchMyEvaluation = (asctId: string) => {
+        return useApiFetch<import('~/types/council').EvaluationItem[]>(
+            `${BASE}/${asctId}/evaluation/my`
+        );
+    };
+
+    /**
      * 평가의견 저장 (평가위원)
      *
      * 타당성 점검 6항목별 점수(1~5)와 의견을 저장합니다.
@@ -420,15 +443,83 @@ export const useCouncil = () => {
     };
 
     /**
-     * 결과서 검토 확인 (평가위원)
+     * 결과서 확정 (IT관리자)
      *
-     * 평가위원 전원 확인 시 상태가 RESULT_REVIEW → FINAL_APPROVAL로 전이됩니다.
+     * 작성 완료된 결과서를 확정하고 RESULT_WRITING → RESULT_REVIEW 상태로 전이합니다.
+     * 이후 평가위원 전원이 결과서를 확인해야 FINAL_APPROVAL로 전이됩니다.
      *
      * @param asctId 협의회ID
      */
     const confirmResult = async (asctId: string): Promise<void> => {
         await $apiFetch(`${BASE}/${asctId}/result/confirm`, {
             method: 'PUT',
+        });
+    };
+
+    /**
+     * 평가위원 결과서 검토 확인 (평가위원)
+     *
+     * RESULT_REVIEW 상태에서 평가위원(MAND/CALL)이 결과서를 확인합니다.
+     * 전원 확인 완료 시 RESULT_REVIEW → FINAL_APPROVAL로 자동 전이됩니다.
+     * 간사(SECR)는 버튼이 노출되지 않으며 호출 시 403이 반환됩니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const reviewResult = async (asctId: string): Promise<void> => {
+        await $apiFetch(`${BASE}/${asctId}/result/review`, {
+            method: 'POST',
+        });
+    };
+
+    /**
+     * 본인 결과서 검토 확인 여부 조회 (평가위원)
+     *
+     * 페이지 진입 시 이미 결과서 확인을 완료했는지 조회합니다.
+     * true: 이미 확인 완료 → 완료 UI 표시
+     * false: 미확인 → "결과서 검토 확인" 버튼 표시
+     *
+     * @param asctId 협의회ID
+     * @returns useApiFetch 반환값 (data: boolean)
+     */
+    const fetchMyResultReview = (asctId: string) => {
+        return useApiFetch<boolean>(`${BASE}/${asctId}/result/review/my`);
+    };
+
+    /**
+     * 개최결과서 결재 요청 (IT관리자)
+     *
+     * FINAL_APPROVAL 상태에서 IT관리자가 부장에게 결재를 요청합니다.
+     * 전자결재 시스템에 신청서를 등록하고 RESULT_APPROVAL_PENDING 상태로 전이합니다.
+     *
+     * @param asctId      협의회ID
+     * @param approverEno 결재자(부장) 사번
+     * @param rqsOpnn     신청의견 (선택)
+     * @returns 생성된 신청관리번호 (APF_... 형식)
+     */
+    const requestResultApproval = async (
+        asctId: string,
+        teamLeadEno: string,
+        deptHeadEno: string,
+        rqsOpnn?: string
+    ): Promise<{ apfMngNo: string }> => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return await ($apiFetch as any)(`${BASE}/${asctId}/result/approval`, {
+            method: 'POST',
+            body: { teamLeadEno, deptHeadEno, rqsOpnn },
+        });
+    };
+
+    /**
+     * 추진부서 통보 처리 (IT관리자)
+     *
+     * COMPLETED 상태에서 IT관리자가 추진부서에 결과를 통보합니다.
+     * 백엔드에서 사업 상태(BPROJM.PRJ_STS)를 '요건 상세화'로 변경합니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const notifyCouncil = async (asctId: string): Promise<NotifyInfo> => {
+        return await $apiFetch<NotifyInfo>(`${BASE}/${asctId}/notify`, {
+            method: 'POST',
         });
     };
 
@@ -446,6 +537,25 @@ export const useCouncil = () => {
      */
     const startCouncil = async (asctId: string): Promise<void> => {
         await $apiFetch(`${BASE}/${asctId}/start`, {
+            method: 'PATCH',
+        });
+    };
+
+    // =========================================================================
+    // 협의회 완료 (IT관리자 전용)
+    // =========================================================================
+
+    /**
+     * 협의회 완료 (IN_PROGRESS → RESULT_WRITING)
+     *
+     * 모든 평가위원의 평가 제출이 확인된 후 IT관리자가 클릭합니다.
+     * IN_PROGRESS 상태에서만 호출 가능합니다.
+     * 완료 후 개최결과서 작성 단계로 전이됩니다.
+     *
+     * @param asctId 협의회ID
+     */
+    const completeCouncil = async (asctId: string): Promise<void> => {
+        await $apiFetch(`${BASE}/${asctId}/complete`, {
             method: 'PATCH',
         });
     };
@@ -486,12 +596,18 @@ export const useCouncil = () => {
         updateQna,
         replyQna,
         submitSchedule,
+        fetchMyEvaluation,
         fetchEvaluationSummary,
         saveEvaluation,
         fetchResult,
         saveResult,
         confirmResult,
+        reviewResult,
+        fetchMyResultReview,
+        requestResultApproval,
+        notifyCouncil,
         startCouncil,
+        completeCouncil,
         skipCouncil,
     };
 };

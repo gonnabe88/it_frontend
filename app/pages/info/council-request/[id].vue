@@ -54,6 +54,7 @@ const { isAdmin } = useAuth();
 const { data: councilData, refresh: refreshCouncil } = await fetchCouncil(asctId);
 const { data: feasibilityRaw } = await fetchFeasibility(asctId);
 
+
 // ============================================================================
 // 기본값 정의
 // ============================================================================

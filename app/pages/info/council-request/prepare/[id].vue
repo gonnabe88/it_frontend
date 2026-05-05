@@ -12,11 +12,11 @@ IT관리자(ITPAD001)가 협의회 개최준비 단계에서 사용하는 페이
   탭4: 사전질의응답 — CouncilQna
 
 [진입 조건]
-  index.vue에서 PREPARING / SCHEDULED / IN_PROGRESS 상태인 협의회 클릭 시 라우팅됩니다.
+  index.vue에서 PREPARING / SCHEDULED 이후 상태인 협의회 클릭 시 라우팅됩니다.
 
 [상태별 탭 활성화 규칙]
-  PREPARING                : 탭1만 편집 가능 (탭3 비활성)
-  SCHEDULED / IN_PROGRESS  : 탭1 readonly, 탭2~4 활성
+  PREPARING : 탭1만 편집 가능 (탭3,5 비활성)
+  SCHEDULED : 탭1 readonly, 탭2~5 전체 활성 (결과서 작성 가능)
 
 [Design Ref: §4.3 prepare/[id].vue — 협의회 개최준비 (Step 2, IT관리자)]
 ================================================================================
@@ -29,11 +29,11 @@ import { useToast } from 'primevue/usetoast';
 const route = useRoute();
 const asctId = route.params.id as string;
 
-const { fetchCouncil, fetchFeasibility, skipCouncil, startCouncil, confirmResult } = useCouncil();
+const { fetchCouncil, fetchFeasibility, skipCouncil, startCouncil, completeCouncil, confirmResult } = useCouncil();
 const toast = useToast();
 
 definePageMeta({
-    title: '협의회 개최준비',
+    title: '개최준비',
     middleware: 'admin',  // IT관리자(ITPAD001) 전용 페이지
 });
 
@@ -47,6 +47,7 @@ const {
 const {
     data: feasibilityData,
 } = fetchFeasibility(asctId);
+
 
 /** 협의회 현재 상태 */
 const councilStatus = computed<CouncilStatus | null>(
@@ -72,34 +73,34 @@ const committeeReadonly = computed(
  */
 const noticeTabEnabled = computed(() => {
     const status = councilStatus.value;
-    return status === 'SCHEDULED' || status === 'IN_PROGRESS'
-        || status === 'EVALUATING' || status === 'RESULT_WRITING'
+    return status === 'SCHEDULED' || status === 'IN_PROGRESS' || status === 'RESULT_WRITING'
         || status === 'RESULT_REVIEW' || status === 'FINAL_APPROVAL'
         || status === 'COMPLETED';
 });
 
 /**
  * 결과서 탭 활성화 여부
- * 평가의견 작성이 시작된 EVALUATING 이후에만 표출합니다.
+ * IN_PROGRESS(평가 모니터링용)부터 결과서 탭을 표출합니다.
+ * 단, 결과서 편집은 RESULT_WRITING 상태에서만 허용합니다(resultReadonly 참고).
  */
 const resultTabEnabled = computed(() => {
     const status = councilStatus.value;
-    return status === 'EVALUATING' || status === 'RESULT_WRITING'
+    return status === 'IN_PROGRESS' || status === 'RESULT_WRITING'
         || status === 'RESULT_REVIEW' || status === 'FINAL_APPROVAL'
         || status === 'COMPLETED';
 });
 
 /**
  * 결과서 편집 가능 여부
- * RESULT_WRITING 상태까지만 편집 허용합니다.
+ * '협의회 완료' 버튼으로 RESULT_WRITING 전이 후에만 편집 허용합니다.
  */
 const resultReadonly = computed(() =>
-    !['EVALUATING', 'RESULT_WRITING'].includes(councilStatus.value ?? '')
+    councilStatus.value !== 'RESULT_WRITING'
 );
 
 /**
  * IT관리자 사전질의 등록 가능 여부
- * SCHEDULED 이후 상태에서만 질의 등록이 허용됩니다.
+ * SCHEDULED(협의회 개최 전)과 IN_PROGRESS(진행 중) 상태에서 허용합니다.
  * 답변(canReply)은 추진부서 담당자 전용이므로 이 페이지에서는 false 고정입니다.
  */
 const canAskQna = computed(() =>
@@ -135,38 +136,6 @@ const handleConfirmResult = async () => {
         });
     } finally {
         confirmPending.value = false;
-    }
-};
-
-// ── 협의회 개최 시작 처리 ────────────────────────────────────────────
-
-/** 협의회 개최 시작 진행 중 여부 */
-const startPending = ref(false);
-
-/**
- * 협의회 개최 시작 (SCHEDULED → IN_PROGRESS)
- * IT관리자가 오프라인 협의회가 시작되었음을 확인하는 처리입니다.
- */
-const handleStart = async () => {
-    startPending.value = true;
-    try {
-        await startCouncil(asctId);
-        toast.add({
-            severity: 'success',
-            summary: '협의회 개최',
-            detail: '협의회가 개최 중으로 변경되었습니다.',
-            life: 4000,
-        });
-        await refreshCouncil();
-    } catch {
-        toast.add({
-            severity: 'error',
-            summary: '처리 실패',
-            detail: '협의회 개최 처리 중 오류가 발생했습니다.',
-            life: 4000,
-        });
-    } finally {
-        startPending.value = false;
     }
 };
 
@@ -218,12 +187,82 @@ const onCommitteeSaved = async () => {
 
 /**
  * 일정 확정 완료 후 처리
- * 상태가 SCHEDULED로 전이되므로 상세 정보를 새로고침하고 탭3으로 이동합니다.
+ * 상태가 SCHEDULED로 전이되므로 일정공지 탭(탭3)으로 이동합니다.
  */
 const onScheduleConfirmed = async () => {
     await refreshCouncil();
     /* 일정공지 탭으로 자동 이동 */
     activeTabIndex.value = '2';
+};
+
+// ── 협의회 개최 처리 ─────────────────────────────────────────────────
+
+/** 협의회 개최 진행 중 여부 */
+const startPending = ref(false);
+
+/**
+ * 협의회 개최 (SCHEDULED → IN_PROGRESS)
+ * IT관리자가 오프라인 협의회 개최를 확인합니다.
+ * 개최 후 평가위원들은 본인 화면에서 평가점수와 의견을 입력합니다.
+ */
+const handleStart = async () => {
+    startPending.value = true;
+    try {
+        await startCouncil(asctId);
+        toast.add({
+            severity: 'success',
+            summary: '협의회 개최',
+            detail: '협의회가 개최되었습니다. 평가위원들의 평가를 대기합니다.',
+            life: 4000,
+        });
+        await refreshCouncil();
+    } catch (e: unknown) {
+        const err = e as { data?: { message?: string }; message?: string };
+        toast.add({
+            severity: 'error',
+            summary: '처리 실패',
+            detail: err?.data?.message ?? err?.message ?? '알 수 없는 오류가 발생했습니다.',
+            life: 5000,
+        });
+    } finally {
+        startPending.value = false;
+    }
+};
+
+// ── 협의회 완료 처리 ─────────────────────────────────────────────────
+
+/** 협의회 완료 진행 중 여부 */
+const completePending = ref(false);
+
+/**
+ * 협의회 완료 (IN_PROGRESS → RESULT_WRITING)
+ * 모든 평가위원의 평가 제출이 확인된 후 IT관리자가 클릭합니다.
+ * 완료 후 개최결과서 작성 단계로 전이합니다.
+ */
+const handleComplete = async () => {
+    completePending.value = true;
+    try {
+        await completeCouncil(asctId);
+        toast.add({
+            severity: 'success',
+            summary: '협의회 완료',
+            detail: '협의회가 완료되었습니다. 개최결과서를 작성해 주세요.',
+            life: 4000,
+        });
+        await refreshCouncil();
+        /* 결과서 탭으로 자동 이동 */
+        activeTabIndex.value = '4';
+    } catch (e: unknown) {
+        const err = e as { data?: { message?: string }; message?: string };
+        toast.add({
+            severity: 'error',
+            summary: '처리 실패',
+            detail: err?.data?.message ?? err?.message ?? '알 수 없는 오류가 발생했습니다.',
+            life: 5000,
+        });
+    } finally {
+        completePending.value = false;
+    }
 };
 
 // ── 페이지 상태별 안내 텍스트 ────────────────────────────────────────
@@ -234,9 +273,9 @@ const statusGuide = computed(() => {
         case 'PREPARING':
             return '평가위원을 선정하고 확정하면 위원들에게 일정 입력 요청이 발송됩니다.';
         case 'SCHEDULED':
-            return '일정이 확정되었습니다. 협의회 개최 후 \'협의회 개최\' 버튼을 눌러 주세요.';
+            return '일정이 확정되었습니다. 협의회 개최 당일 \'협의회 개최\' 버튼을 눌러 주세요.';
         case 'IN_PROGRESS':
-            return '협의회가 진행 중입니다.';
+            return '협의회가 진행 중입니다. 결과서 탭에서 평가 현황을 확인하고, 모든 평가위원의 평가가 완료되면 \'협의회 완료\' 버튼을 눌러 주세요.';
         default:
             return '';
     }
@@ -293,7 +332,7 @@ const statusGuide = computed(() => {
 
         <!--
             SCHEDULED 상태: 협의회 개최 버튼
-            오프라인 협의회가 시작되면 IT관리자가 개최 처리하여 IN_PROGRESS로 전이합니다.
+            IT관리자가 오프라인 협의회 개최 당일 클릭하면 IN_PROGRESS로 전이됩니다.
         -->
         <div v-if="councilStatus === 'SCHEDULED'" class="flex justify-end">
             <Button
@@ -302,6 +341,20 @@ const statusGuide = computed(() => {
                 severity="success"
                 :loading="startPending"
                 @click="handleStart"
+            />
+        </div>
+
+        <!--
+            IN_PROGRESS 상태: 협의회 완료 버튼
+            모든 평가위원의 평가 제출 확인 후 IT관리자가 클릭하면 RESULT_WRITING으로 전이됩니다.
+        -->
+        <div v-if="councilStatus === 'IN_PROGRESS'" class="flex justify-end">
+            <Button
+                label="협의회 완료"
+                icon="pi pi-check"
+                severity="warning"
+                :loading="completePending"
+                @click="handleComplete"
             />
         </div>
 
@@ -458,7 +511,7 @@ const statusGuide = computed(() => {
                                     </div>
                                 </template>
                                 <div v-else class="text-sm text-zinc-400 py-8 text-center">
-                                    평가의견 작성 시작 후 표출됩니다.
+                                    일정 확정 후 표출됩니다.
                                 </div>
                             </div>
                         </TabPanel>

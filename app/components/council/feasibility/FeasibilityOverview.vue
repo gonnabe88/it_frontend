@@ -65,6 +65,27 @@ const prjBgValue = computed({
     get: () => props.modelValue.prjBg ?? null,
     set: (v: number | null) => update('prjBg', v),
 });
+
+/**
+ * HTML 태그와 엔티티를 제거한 순수 텍스트로 변환합니다.
+ * 기존 데이터에 리치텍스트 형식(HTML 태그, &nbsp; 등)이 포함된 경우
+ * 읽기 전용 표출 시 원시 HTML이 노출되지 않도록 처리합니다.
+ */
+const stripHtml = (html: string | null | undefined): string => {
+    if (!html) return '';
+    return html
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+};
+
+/** 읽기 전용 표출용 사업내용 (HTML 태그 제거) */
+const prjDesPlain = computed(() => stripHtml(props.modelValue.prjDes));
 </script>
 
 <template>
@@ -160,9 +181,14 @@ const prjBgValue = computed({
                 사업내용
             </label>
             <div class="md:col-span-3">
+                <!-- 읽기 전용: HTML 태그·엔티티를 제거한 순수 텍스트로 표출 -->
+                <p
+                    v-if="readonly"
+                    class="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-line p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg min-h-[5rem]"
+                >{{ prjDesPlain || '—' }}</p>
                 <Textarea
+                    v-else
                     :value="modelValue.prjDes"
-                    :disabled="readonly"
                     placeholder="사업내용을 입력하세요 (최대 1000자)"
                     rows="4"
                     :maxlength="1000"

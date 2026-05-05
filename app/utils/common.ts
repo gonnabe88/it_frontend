@@ -260,8 +260,9 @@ const COUNCIL_STATUS_TAG_MAP: Record<string, string> = {
     EVALUATING:      'kdb-tag-pink',
     RESULT_WRITING:  'kdb-tag-cyan',
     RESULT_REVIEW:   'kdb-tag-rose',
-    FINAL_APPROVAL:  'kdb-tag-blue',
-    COMPLETED:       'kdb-tag-green',
+    FINAL_APPROVAL:          'kdb-tag-blue',
+    RESULT_APPROVAL_PENDING: 'kdb-tag-yellow',
+    COMPLETED:               'kdb-tag-green',
 };
 
 /**
