@@ -311,6 +311,14 @@ body {
     @apply !bg-green-900/30 !text-green-300;
 }
 
+.kdb-tag-emerald {
+    @apply !bg-emerald-100 !text-emerald-800;
+}
+
+.dark .kdb-tag-emerald {
+    @apply !bg-emerald-900/30 !text-emerald-300;
+}
+
 .kdb-tag-blue {
     @apply !bg-blue-100 !text-blue-800;
 }
@@ -325,6 +333,14 @@ body {
 
 .dark .kdb-tag-yellow {
     @apply !bg-yellow-900/30 !text-yellow-300;
+}
+
+.kdb-tag-amber {
+    @apply !bg-amber-100 !text-amber-800;
+}
+
+.dark .kdb-tag-amber {
+    @apply !bg-amber-900/30 !text-amber-300;
 }
 
 .kdb-tag-red {
@@ -381,6 +397,14 @@ body {
 
 .dark .kdb-tag-cyan {
     @apply !bg-cyan-800 !text-cyan-300;
+}
+
+.kdb-tag-sky {
+    @apply !bg-sky-100 !text-sky-800;
+}
+
+.dark .kdb-tag-sky {
+    @apply !bg-sky-900/30 !text-sky-300;
 }
 
 .kdb-tag-slate {

@@ -38,6 +38,9 @@ export interface Project {
     machBg: number;    // 기계장치 (원 단위)
     intanBg: number;   // 기타무형자산 (원 단위)
     costBg: number;    // 일반관리비 (원 단위)
+    dupBg?: number;    // 편성예산 (BBUGTM 기준, 편성률 반영, bulk-get 시에만 설정)
+    assetDupBg?: number; // 자본예산 편성예산 (BBUGTM 기준, bulk-get 시에만 설정)
+    costDupBg?: number;  // 일반관리비 편성예산 (BBUGTM 기준, bulk-get 시에만 설정)
     sttDt: string;     // 시작일 (YYYY-MM-DD)
     endDt: string;     // 종료일 (YYYY-MM-DD)
     prjSts: string;    // 프로젝트 상태 (검토중, 진행중, 완료, 보류 등)
@@ -160,11 +163,12 @@ export const useProjects = () => {
      * @example
      * const projects = await fetchProjectsBulk(['PRJ-001', 'PRJ-002', 'PRJ-003']);
      */
-    const fetchProjectsBulk = async (prjMngNos: string[]) => {
+    const fetchProjectsBulk = async (prjMngNos: string[], bgYy?: string) => {
         return await $apiFetch<ProjectDetail[]>(`${API_BASE_URL}/bulk-get`, {
             method: 'POST',
             body: {
-                prjMngNos
+                prjMngNos,
+                ...(bgYy ? { bgYy } : {})
             }
         });
     };

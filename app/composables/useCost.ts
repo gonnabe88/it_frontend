@@ -77,6 +77,9 @@ export interface ItCost {
     machBg?: number;        // 기계장치 (원 단위, 자본예산 중 cdDes=기계장치)
     intanBg?: number;       // 기타무형자산 (원 단위, 자본예산 중 cdDes=기타무형자산)
     costBg?: number;        // 일반관리비 (원 단위, 비목코드 cttTp=IOE_IDR/IOE_SEVS/IOE_XPN/IOE_LEAFE)
+    dupBg?: number;         // 편성예산 (BBUGTM 기준, 편성률 반영, bulk-get 시에만 설정)
+    assetDupBg?: number;    // 자본예산 편성예산 (BBUGTM 기준, bulk-get 시에만 설정)
+    costDupBg?: number;     // 일반관리비 편성예산 (BBUGTM 기준, bulk-get 시에만 설정)
     apfSts?: string;        // 결재현황 (전자결재 신청 상태)
     delYn?: string;         // 삭제여부 (Y: 삭제됨 / N: 유효, optional)
     terminals?: Terminal[]; // 금융정보단말기 목록 (1:N)
@@ -134,11 +137,12 @@ export const useCost = () => {
      * @example
      * const costs = await fetchCostsBulk(['COST-001', 'COST-002', 'COST-003']);
      */
-    const fetchCostsBulk = async (itMngcNos: string[]) => {
+    const fetchCostsBulk = async (itMngcNos: string[], bgYy?: string) => {
         return await $apiFetch<ItCost[]>(`${API_BASE_URL}/bulk-get`, {
             method: 'POST',
             body: {
-                itMngcNos
+                itMngcNos,
+                ...(bgYy ? { bgYy } : {})
             }
         });
     };

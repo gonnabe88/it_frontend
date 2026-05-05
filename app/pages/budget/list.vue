@@ -184,12 +184,12 @@ const formatBudget = (amount: number) => amount ? formatBudgetUtil(amount, selec
  * '신규': 에메랄드, '계속': 스카이
  *
  * @param type - 사업 유형 ('신규' | '계속')
- * @returns Tailwind CSS 클래스 문자열
+ * @returns kdb-tag-* 커스텀 CSS 클래스 문자열
  */
 const getPrjTypeClass = (type: string) => {
     return type === '신규'
-        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-        : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+        ? 'kdb-tag-emerald'
+        : 'kdb-tag-sky';
 };
 
 /* ── 검색어 필터 ── */
@@ -752,10 +752,10 @@ field="_type" header="구분" sortable style="width: 100px"
                             <Tag
 :value="slotProps.data._type"
                                 :class="slotProps.data._type === '사업'
-                                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                                    ? 'kdb-tag-indigo'
                                     : slotProps.data._type === '경상'
-                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'" class="border-0" rounded />
+                                        ? 'kdb-tag-amber'
+                                        : 'kdb-tag-emerald'" class="border-0" rounded />
                         </template>
                     </Column>
                     <!-- 예산연도 -->

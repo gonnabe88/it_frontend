@@ -184,10 +184,10 @@ const filteredProjects = computed(() => {
  * '신규': 에메랄드, '계속': 스카이
  *
  * @param type - 사업 유형 ('신규' | '계속')
- * @returns Tailwind CSS 클래스 문자열
+ * @returns kdb-tag-* 커스텀 CSS 클래스 문자열
  */
 const getPrjTypeClass = (type: string) => {
-    return type === '신규' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+    return type === '신규' ? 'kdb-tag-emerald' : 'kdb-tag-sky';
 };
 
 /* ── 예산 단위 변환 ── */
@@ -227,7 +227,7 @@ scrollable scroll-height="flex" :value="filteredProjects" paginator :rows="10"
                     <template #body="slotProps">
                         <Tag
 :value="slotProps.data.ornYn === 'Y' ? '경상' : '정보화'"
-                            :class="slotProps.data.ornYn === 'Y' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'"
+                            :class="slotProps.data.ornYn === 'Y' ? 'kdb-tag-amber' : 'kdb-tag-indigo'"
                             class="border-0" rounded />
                     </template>
                 </Column>

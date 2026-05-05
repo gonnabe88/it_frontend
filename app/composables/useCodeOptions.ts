@@ -14,6 +14,8 @@
 export interface CodeOption {
     cdId: string;
     cdNm: string;
+    /** 코드설명 (백엔드 cdDes — ioeCategory 이름 매칭 시 사용) */
+    cdDes?: string | null;
     cdSqn?: number | null;
 }
 
@@ -28,7 +30,9 @@ export const useCodeOptions = (typeCode: string) => {
 
     /** 코드 옵션 목록 (cdSqn 오름차순 정렬) */
     const options = computed(() =>
-        [...(data.value || [])].sort((a, b) => (a.cdSqn ?? Infinity) - (b.cdSqn ?? Infinity))
+        [...(data.value || [])]
+            .sort((a, b) => (a.cdSqn ?? Infinity) - (b.cdSqn ?? Infinity))
+            .map(c => ({ cdId: c.cdId, cdNm: c.cdNm, cdDes: c.cdDes ?? null, cdSqn: c.cdSqn }))
     );
 
     /**

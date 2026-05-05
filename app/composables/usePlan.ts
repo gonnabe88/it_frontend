@@ -68,6 +68,8 @@ export interface PlanProjectItem {
     prjBg: number;
     assetBg: number;
     costBg: number;
+    assetDupBg?: number; // 자본예산 편성예산 (BBUGTM 기준, 예산총계 카드용)
+    costDupBg?: number;  // 일반관리비 편성예산 (BBUGTM 기준, 예산총계 카드용)
     pulDtt?: string;    // 사업구분 (신규, 계속)
 }
 

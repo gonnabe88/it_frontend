@@ -22,6 +22,7 @@ import { ref, computed } from 'vue';
 import { useProjects, type Project } from '~/composables/useProjects';
 import { useCost, type ItCost } from '~/composables/useCost';
 import { usePlan, type PlanProjectItem } from '~/composables/usePlan';
+import { useBudgetAllocationSummary } from '~/composables/useBudgetAllocationSummary';
 import { formatBudget as formatBudgetUtil } from '~/utils/common';
 import StyledDataTable from '~/components/common/StyledDataTable.vue';
 import { useTableCellSelection } from '~/composables/useTableCellSelection';
@@ -46,10 +47,14 @@ interface UnifiedProject {
     svnDpmNm: string;
     /** 총예산 */
     prjBg: number;
-    /** 자본예산 */
+    /** 자본예산 (요청예산, 테이블 표시용) */
     assetBg: number;
-    /** 일반관리비 */
+    /** 일반관리비 (요청예산, 테이블 표시용) */
     costBg: number;
+    /** 자본예산 편성예산 (BBUGTM 기준, 예산총계 카드용) */
+    assetDupBg?: number;
+    /** 일반관리비 편성예산 (BBUGTM 기준, 예산총계 카드용) */
+    costDupBg?: number;
     /** 원본 관리번호 (프로젝트: prjMngNo, 전산업무비: itMngcNo) */
     prjMngNo: string;
 }
@@ -71,6 +76,9 @@ const { $apiFetch } = useNuxtApp();
 /* ── 입력 폼 상태 ── */
 /** 대상년도 (YYYY 형식) */
 const plnYy = ref<string>(String(new Date().getFullYear()));
+
+/* ── 전산예산 편성 결과 (카드 컴포넌트 공유용) ── */
+const { expenseItems, capitalSummaryItems } = useBudgetAllocationSummary(plnYy);
 
 /** 계획구분 옵션 */
 const plnTpOptions = ['신규', '조정'];
@@ -166,6 +174,7 @@ const handleSearch = async () => {
         }));
 
         projects.value = [...unifiedProjects, ...unifiedCosts];
+        selectedProjects.value = [...projects.value];
         searched.value = true;
     } catch (e) {
         console.error('사업 목록 조회 실패:', e);
@@ -200,6 +209,10 @@ interface ItProjectRow {
 
 /** 정보화사업 스냅샷 (정보화사업 카드 테이블 렌더링용) */
 const prjSnapshotsRef = ref<PlanProjectItem[]>([]);
+/** 전산업무비 원본 목록 (PlanExpenseCostCard prop용) */
+const costDetailsRef = ref<ItCost[]>([]);
+/** 전산업무비 itMngcNo → 부모 사업명 맵 (PlanExpenseCostCard 주요 내역용) */
+const costPrjNmRef = ref<Record<string, string>>({});
 
 /** 정보화사업 테이블 컨테이너 ref (셀 선택/복사용) */
 const itPrjTableRef = ref<HTMLElement | null>(null);
@@ -285,14 +298,14 @@ const handleGenerate = async () => {
         const selectedPrjs = selectedProjects.value.filter(p => p.sourceType === 'project');
         const selectedCosts = selectedProjects.value.filter(p => p.sourceType === 'cost');
 
-        // 정보화사업 상세 조회 (선택된 항목이 있을 때만)
+        // 정보화사업 상세 조회 (선택된 항목이 있을 때만) — bgYy 전달로 BBUGTM 편성예산 포함
         const prjDetails = selectedPrjs.length > 0
-            ? await fetchProjectsBulk(selectedPrjs.map(p => p.prjMngNo))
+            ? await fetchProjectsBulk(selectedPrjs.map(p => p.prjMngNo), plnYy.value)
             : [];
 
-        // 전산업무비 상세 조회 (선택된 항목이 있을 때만)
+        // 전산업무비 상세 조회 (선택된 항목이 있을 때만) — bgYy 전달로 BBUGTM 편성예산 포함
         const costDetails = selectedCosts.length > 0
-            ? await fetchCostsBulk(selectedCosts.map(p => p.prjMngNo))
+            ? await fetchCostsBulk(selectedCosts.map(p => p.prjMngNo), plnYy.value)
             : [];
 
         // 정보화사업 스냅샷 변환
@@ -303,14 +316,25 @@ const handleGenerate = async () => {
             svnHdq: p.svnHdq || '미분류',
             svnDpm: p.svnDpm,
             svnDpmNm: p.svnDpmNm || '',
-            prjBg: p.prjBg || 0,
+            prjBg: p.dupBg ?? p.prjBg ?? 0,
             assetBg: p.assetBg || 0,
             costBg: p.costBg || 0,
+            assetDupBg: p.assetDupBg ?? 0,
+            costDupBg: p.costDupBg ?? 0,
             pulDtt: p.pulDtt || '',
         }));
 
         // 정보화사업 카드 테이블용 스냅샷 저장
         prjSnapshotsRef.value = prjSnapshots;
+        // 전산업무비 카드 테이블용 원본 저장
+        costDetailsRef.value = costDetails;
+        // 전산업무비 주요 내역용: itMngcNo → 부모 사업명 (abusC = 사업관리번호)
+        const prjNmByMngNo = new Map(prjDetails.map(p => [p.prjMngNo, p.prjNm]))
+        const costPrjNm: Record<string, string> = {}
+        for (const c of costDetails) {
+            if (c.itMngcNo && c.abusC) costPrjNm[c.itMngcNo] = prjNmByMngNo.get(c.abusC) ?? ''
+        }
+        costPrjNmRef.value = costPrjNm;
 
         // 전산업무비 스냅샷 변환
         const costSnapshots: PlanProjectItem[] = costDetails.map(c => ({
@@ -320,18 +344,20 @@ const handleGenerate = async () => {
             svnHdq: '미분류',
             svnDpm: c.biceDpm,
             svnDpmNm: c.biceDpmNm || '',
-            prjBg: c.itMngcBg,
+            prjBg: c.dupBg ?? c.itMngcBg,
             assetBg: c.assetBg || 0,
             costBg: c.costBg || 0,
+            assetDupBg: c.assetDupBg ?? 0,
+            costDupBg: c.costDupBg ?? 0,
         }));
 
         const snapshots = [...prjSnapshots, ...costSnapshots];
 
-        // 예산 총계 계산
+        // 예산 총계 계산 (편성예산 기준)
         totalBudget.value = {
             ttlBg: snapshots.reduce((sum, p) => sum + (p.prjBg || 0), 0),
-            cptBg: snapshots.reduce((sum, p) => sum + (p.assetBg || 0), 0),
-            mngc: snapshots.reduce((sum, p) => sum + (p.costBg || 0), 0),
+            cptBg: snapshots.reduce((sum, p) => sum + (p.assetDupBg ?? (p.assetBg || 0)), 0),
+            mngc: snapshots.reduce((sum, p) => sum + (p.costDupBg ?? (p.costBg || 0)), 0),
         };
 
         // 부문(SVN_HDQ)별 그룹핑
@@ -677,6 +703,15 @@ const handleSave = async () => {
                     </table>
                 </div>
             </div>
+
+            <!-- 전산예산 카드 -->
+            <PlanBudgetAllocationCard :pln-yy="plnYy" :unit="selectedUnit" />
+
+            <!-- 자본예산 카드 -->
+            <PlanCapitalBudgetCard :capital-summary-items="capitalSummaryItems" :prj-snapshots="prjSnapshotsRef" :unit="selectedUnit" />
+
+            <!-- 일반관리비 카드 -->
+            <PlanExpenseCostCard :expense-items="expenseItems" :cost-details="costDetailsRef" :cost-prj-nm="costPrjNmRef" :unit="selectedUnit" />
 
             <!-- 부문(SVN_HDQ)별 사업목록 -->
             <div class="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">

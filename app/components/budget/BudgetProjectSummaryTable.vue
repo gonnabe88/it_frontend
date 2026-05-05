@@ -52,8 +52,8 @@ defineEmits<{
                     <Tag
                         :value="data.orcTb === 'BPROJM' ? '사업' : '비용'"
                         :class="data.orcTb === 'BPROJM'
-                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
-                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                            ? 'kdb-tag-indigo'
+                            : 'kdb-tag-emerald'"
                         class="border-0"
                         rounded
                     />

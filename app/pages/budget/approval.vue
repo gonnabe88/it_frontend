@@ -173,12 +173,12 @@ const selectedUnit = ref('백만원');
 const formatBudget = (amount: number) => amount ? formatBudgetUtil(amount, selectedUnit.value) : '-';
 
 /**
- * 항목 유형 태그 색상 클래스
+ * 항목 유형 태그 커스텀 색상 클래스
  */
 const getPrjTypeClass = (type: string) =>
     type === '신규'
-        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-        : 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+        ? 'kdb-tag-emerald'
+        : 'kdb-tag-sky';
 
 /* ── 검색 ── */
 /** 텍스트 검색어 */
@@ -493,10 +493,10 @@ v-if="hasInitialData" :projects="categorizedCards.projects" :costs="categorizedC
                     <template #body="slotProps">
                         <Tag
 :value="slotProps.data._type" :class="slotProps.data._type === '사업'
-                            ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400'
+                            ? 'kdb-tag-indigo'
                             : slotProps.data._type === '경상'
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                                ? 'kdb-tag-amber'
+                                : 'kdb-tag-emerald'"
                             class="border-0" rounded />
                     </template>
                 </Column>

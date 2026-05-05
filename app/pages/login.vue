@@ -232,7 +232,7 @@ v-if="errorMessage"
             </div>
 
             <!-- 저작권 푸터 -->
-            <div class="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            <div v-if="!autoRedirecting" class="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
                 <p>&copy; 2026 IT기획부. All rights reserved.</p>
             </div>
         </div>
