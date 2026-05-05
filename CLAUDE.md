@@ -127,11 +127,22 @@ it_frontend/
 - **예산 도메인:** `useProjects`, `useCost`, `usePlan`, `useBudgetPeriod`, `useBudgetStatus`, `useProjectOptions`, `useCurrencyRates`
 - **결재·문서:** `useApprovals`, `useApprovalDashboard`, `useDocuments`, `useGuideDocuments`, `useDocumentDashboard`, `usePendingApprovalCount`
 - **협의회·검토:** `useCouncil`, `useCouncilCodes`, `useReview`, `useReviewCommentApi`, `stores/review.ts`
+  - `stores/review.ts`는 현재 세션 메모리 상태와 서버 코멘트 API를 혼합 사용합니다. 새로고침 복구, 프로젝트별 검토자, 작성자 팀명은 백로그 과제로 관리합니다.
 - **공통 코드/조직:** `useCodeOptions`, `useOrganization`, `useEmployeeSearch`
 - **첨부/내보내기:** `useFiles`, `useExcalidrawAttachment`, `useExcalidrawDialog`, `useHwpxExport`, `usePdfReport`
 - **UI 보조:** `useGlobalSearch`, `useTabs`, `useTableCellSelection`, `useDateRangeValidation`
 - **유틸:** `utils/common.ts`(`formatBudget`, `getApprovalTagClass`, `getProjectTagClass`), `utils/excel.ts`, `utils/hwpx.ts`
 - **타입:** `types/auth.ts`(인증 + `ROLE` 상수), `types/budget-work.ts`, `types/budgetStatus.ts`, `types/council.ts`, `types/review.ts`
+
+### 4.7.1 브라우저 저장소 사용 기준
+- 인증 토큰 저장에는 `localStorage`를 사용하지 않습니다. JWT는 백엔드 httpOnly 쿠키로만 흐릅니다.
+- `localStorage` 허용 범위는 컬럼 표시 설정 등 사용자 UI 선호값과 구버전 `user` 데이터의 일회성 마이그레이션입니다.
+- 신규 인증/권한/개인정보 상태를 브라우저 저장소에 추가하려면 백엔드 쿠키 정책과 함께 재검토합니다.
+
+### 4.7.2 에디터·문서 생성 유틸
+- 요구사항 정의서와 가이드 문서는 Tiptap 기반 편집 흐름을 사용합니다.
+- HWPX/PDF/Excel 내보내기는 `utils/hwpx.ts`, `utils/hwpx-images.ts`, `utils/hwpx-package-xml.ts`, `utils/excel.ts`에 분산되어 있습니다.
+- HWPX 변환 로직은 HTML 파싱, 이미지 패키징, XML 생성이 얽혀 있으므로 수정 시 `tests/unit/utils/hwpx.test.ts`를 함께 갱신합니다.
 
 ### 4.8 관리자 접근 제어 패턴
 관리자 전용 페이지(`/admin/**`)는 3단계로 보호합니다.

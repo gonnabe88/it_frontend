@@ -65,10 +65,11 @@ function toReviewComment(api: ApiComment): ReviewComment {
         id: api.ivgSno,
         type: api.ivgTp === 'I' ? 'inline' : 'general',
         text: api.ivgCone,
-        attachments: [], // TODO: 첨부파일 API 연동 시 서버 응답 매핑 추가
+        // TODO: 서버 응답에 첨부파일 목록이 추가되면 ReviewComment.attachments로 매핑합니다.
+        attachments: [],
         authorEno: api.authorEno,
         authorName: api.authorName,
-        // TODO: 서버 응답에 팀 정보(authorTeam) 추가 시 교체
+        // TODO: ReviewCommentDto.Response에 작성자 팀명 필드가 추가되면 이 임시값을 제거합니다.
         authorTeam: '개발/운영팀',
         createdAt: api.createdAt,
         markId: api.markId ?? undefined,
@@ -112,6 +113,11 @@ export const useReviewCommentApi = () => {
      *
      * @param docMngNo - 문서 관리번호
      * @param payload - 생성 요청 본문
+     * @param payload.docVrs - 문서 버전 번호
+     * @param payload.ivgTp - 협의 유형 (I: 인라인, G: 전반)
+     * @param payload.ivgCone - 협의 내용
+     * @param payload.markId - Tiptap Mark 식별자 (인라인 코멘트 전용)
+     * @param payload.qtdCone - 인용 원문 텍스트 (인라인 코멘트 전용)
      * @returns 생성된 ReviewComment (UI 타입)
      */
     const createComment = async (
