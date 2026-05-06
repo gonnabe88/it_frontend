@@ -19,23 +19,37 @@ interface BudgetPeriodResponse {
     endDate: string;
 }
 
+/** 로컬 날짜를 YYYY-MM-DD 형식으로 반환 (UTC 오프셋 보정) */
+function getLocalDateString(): string {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
 export function useBudgetPeriod() {
     const config = useRuntimeConfig();
 
     /* 공통코드에서 예산 신청 기간 조회 */
-    const { data: periodData } = useApiFetch<BudgetPeriodResponse>(
+    const { data: periodData, pending, error } = useApiFetch<BudgetPeriodResponse>(
         `${config.public.apiBase}/api/ccodem/budget-period`
     );
 
-    /* 현재 기간 내인지 판단 */
+    /* 현재 기간 내인지 판단
+     * - pending: 로딩 중에는 일시 허용 (UI 깜빡임 방지)
+     * - error: API 오류 시 접근 차단 (코드 미등록·유효기간 만료 포함)
+     * - 날짜 비교는 로컬 날짜 기준 (UTC 오프셋 보정)
+     */
     const isWithinPeriod = computed(() => {
-        if (!periodData.value) return true; // 데이터 로딩 중에는 허용
-        const now = new Date().toISOString().slice(0, 10);
-        return now >= periodData.value.startDate && now <= periodData.value.endDate;
+        if (pending.value) return true;
+        if (error.value || !periodData.value) return false;
+        const today = getLocalDateString();
+        return today >= periodData.value.startDate && today <= periodData.value.endDate;
     });
 
     /* 기간 정보 */
     const periodInfo = computed(() => periodData.value);
 
-    return { isWithinPeriod, periodInfo };
+    return { isWithinPeriod, periodInfo, pending, error };
 }

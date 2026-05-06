@@ -32,19 +32,16 @@ definePageMeta({
 });
 
 /* ── REQ-6: 예산 신청 기간 검증 ── */
-const { isWithinPeriod, periodInfo } = useBudgetPeriod();
+const { isWithinPeriod, periodInfo, pending, error } = useBudgetPeriod();
 
 /** 기간 외 안내 다이얼로그 표시 여부 */
 const showPeriodDialog = ref(false);
 
-/** 기간 외일 때 안내 팝업 표시 */
-onMounted(() => {
-    /* periodData 로딩 완료 후 기간 외 여부 확인 */
-    watch(isWithinPeriod, (inPeriod) => {
-        if (!inPeriod) {
-            showPeriodDialog.value = true;
-        }
-    }, { immediate: true });
+/** 로딩 완료(pending=false) 시점에 기간 외 여부 확인 */
+watch(pending, (isPending) => {
+    if (!isPending && !isWithinPeriod.value) {
+        showPeriodDialog.value = true;
+    }
 });
 
 /** 카드 클릭 핸들러: 기간 내일 때만 이동 */
@@ -179,9 +176,9 @@ v-model:visible="showPeriodDialog" modal header="예산 신청 기간 안내"
             <div class="flex flex-col items-center gap-4 py-2">
                 <i class="pi pi-calendar-times text-4xl text-orange-500"/>
                 <p class="text-center text-zinc-700 dark:text-zinc-300">
-                    현재 예산 신청 기간이 아닙니다.
+                    {{ error ? '예산 신청 기간 정보를 불러올 수 없습니다.' : '현재 예산 신청 기간이 아닙니다.' }}
                 </p>
-                <p v-if="periodInfo" class="text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <p v-if="periodInfo && !error" class="text-center text-sm text-zinc-500 dark:text-zinc-400">
                     예산 신청 기간: <strong>{{ periodInfo.startDate }}</strong> ~ <strong>{{ periodInfo.endDate }}</strong>
                 </p>
             </div>

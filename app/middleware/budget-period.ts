@@ -13,15 +13,44 @@
  *
  * [사용 방법]
  *  definePageMeta({ middleware: ['budget-period'] })
+ *
+ * [주의]
+ * useBudgetPeriod()는 lazy fetch를 사용하므로 미들웨어 실행 시점에
+ * 데이터가 없어 항상 허용 판정이 됨. $fetch로 직접 호출해야 정확한 판단 가능.
  * ============================================================================
  */
-export default defineNuxtRouteMiddleware(() => {
+
+interface BudgetPeriodResponse {
+    startDate: string;
+    endDate: string;
+}
+
+function getLocalDateString(): string {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+export default defineNuxtRouteMiddleware(async () => {
     /* SSR 환경에서는 체크 생략 (클라이언트에서만 동작) */
     if (import.meta.server) return;
 
-    const { isWithinPeriod } = useBudgetPeriod();
+    const config = useRuntimeConfig();
 
-    if (!isWithinPeriod.value) {
+    try {
+        const period = await $fetch<BudgetPeriodResponse>(
+            `${config.public.apiBase}/api/ccodem/budget-period`,
+            { credentials: 'include' }
+        );
+        const today = getLocalDateString();
+        const inPeriod = today >= period.startDate && today <= period.endDate;
+        if (!inPeriod) {
+            return navigateTo('/budget');
+        }
+    } catch {
+        /* API 오류(코드 미등록 포함) 시 안전하게 차단 */
         return navigateTo('/budget');
     }
 });
